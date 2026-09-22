@@ -56,6 +56,18 @@ type TeacherAssignment = {
   student_count: number;
 };
 
+type ClassScheduleEntry = {
+  id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  room: string | null;
+  grade_level: number | null;
+  section: string;
+  subject: string;
+  subject_code: string | null;
+};
+
 type Profile = {
   id: string;
   full_name: string;
@@ -222,6 +234,17 @@ function SideNav({
                   <span>Subjects & teachers</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="nav-button"
+                  onClick={() => {
+                    window.location.href = "/portal/admin/schedules";
+                  }}
+                >
+                  <CalendarDays size={19} />
+                  <span>Class schedules</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </>
         )}
@@ -302,6 +325,8 @@ export default function PortalPage() {
   const [page, setPage] = useState<Page>("Overview");
   const [teacherAssignments, setTeacherAssignments] = useState<TeacherAssignment[]>([]);
   const [teacherAssignmentsLoading, setTeacherAssignmentsLoading] = useState(false);
+  const [classSchedules, setClassSchedules] = useState<ClassScheduleEntry[]>([]);
+  const [classSchedulesLoading, setClassSchedulesLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -340,6 +365,23 @@ export default function PortalPage() {
               }
             } finally {
               if (active) setTeacherAssignmentsLoading(false);
+            }
+          }
+
+          if (loadedProfile.role === "teacher" || loadedProfile.role === "student") {
+            setClassSchedulesLoading(true);
+            try {
+              const scheduleResponse = await fetch("/api/academic/my-schedule", {
+                cache: "no-store",
+              });
+              const scheduleResult = await scheduleResponse.json().catch(() => ({}));
+              if (active && scheduleResponse.ok) {
+                setClassSchedules(
+                  (scheduleResult.schedules ?? []) as ClassScheduleEntry[]
+                );
+              }
+            } finally {
+              if (active) setClassSchedulesLoading(false);
             }
           }
         }
@@ -571,6 +613,9 @@ export default function PortalPage() {
                     <button onClick={() => (window.location.href = "/portal/admin/teaching")}>
                       <BookOpen size={18} /> Subjects & teachers
                     </button>
+                    <button onClick={() => (window.location.href = "/portal/admin/schedules")}>
+                      <CalendarDays size={18} /> Class schedules
+                    </button>
                   </div>
                 </section>
               )}
@@ -579,16 +624,17 @@ export default function PortalPage() {
                 <BookOpen size={28} />
                 <h2>Next build phase</h2>
                 <p>
-                  School structure and enrollment are live, and subjects with Teacher
-                  assignments are now connected. Next we can build class schedules,
-                  grades, and attendance.
+                  School structure, enrollment, subjects, Teacher assignments, and
+                  class schedules are now connected. The next major modules are
+                  grades and attendance.
                 </p>
               </section>
             </div>
           )}
 
           {page !== "Overview" &&
-            !(profile.role === "teacher" && page === "Students") && (
+            !(profile.role === "teacher" && page === "Students") &&
+            !((profile.role === "teacher" || profile.role === "student") && page === "Class schedule") && (
               <EmptySection page={page} role={profile.role} />
             )}
 
@@ -631,6 +677,88 @@ export default function PortalPage() {
               )}
             </section>
           )}
+
+          {(profile.role === "teacher" || profile.role === "student") &&
+            page === "Class schedule" && (
+              <section className="panel real-schedule-page">
+                <div className="real-assignment-heading">
+                  <div>
+                    <h2>Class schedule</h2>
+                    <p>
+                      {academicContext?.school_year ?? "Current school year"} ·
+                      official published class schedule
+                    </p>
+                  </div>
+                  <span className="tag blue">
+                    {classSchedules.length} entr{classSchedules.length === 1 ? "y" : "ies"}
+                  </span>
+                </div>
+
+                {classSchedulesLoading ? (
+                  <p className="real-assignment-empty">Loading class schedule…</p>
+                ) : classSchedules.length === 0 ? (
+                  <p className="real-assignment-empty">
+                    No official class schedule has been published for your account yet.
+                  </p>
+                ) : (
+                  <div className="real-schedule-list">
+                    {[1, 2, 3, 4, 5, 6, 7].map((day) => {
+                      const dayEntries = classSchedules.filter(
+                        (item) => item.day_of_week === day
+                      );
+                      if (dayEntries.length === 0) return null;
+                      const dayNames = [
+                        "",
+                        "Monday",
+                        "Tuesday",
+                        "Wednesday",
+                        "Thursday",
+                        "Friday",
+                        "Saturday",
+                        "Sunday",
+                      ];
+
+                      return (
+                        <div className="real-schedule-day" key={day}>
+                          <h3>{dayNames[day]}</h3>
+                          <div>
+                            {dayEntries.map((entry) => (
+                              <article key={entry.id}>
+                                <div className="real-schedule-time">
+                                  <strong>
+                                    {new Date(`1970-01-01T${entry.start_time}`).toLocaleTimeString([], {
+                                      hour: "numeric",
+                                      minute: "2-digit",
+                                    })}
+                                  </strong>
+                                  <span>
+                                    to{" "}
+                                    {new Date(`1970-01-01T${entry.end_time}`).toLocaleTimeString([], {
+                                      hour: "numeric",
+                                      minute: "2-digit",
+                                    })}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span>
+                                    Grade {entry.grade_level ?? ""} · {entry.section}
+                                  </span>
+                                  <strong>
+                                    {entry.subject}
+                                    {entry.subject_code ? ` (${entry.subject_code})` : ""}
+                                  </strong>
+                                  <small>{entry.room || "Room not specified"}</small>
+                                </div>
+                              </article>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            )}
 
           <footer className="page-footer">
             <span>Asuncion National High School</span>
