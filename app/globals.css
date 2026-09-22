@@ -11,3 +11,38 @@ body{margin:0;background:var(--background);color:var(--foreground);font-family:A
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 /* School branding: blue foundations with green navigation and actions. */
 .brand{padding:24px 18px;gap:10px}.brand-mark{width:52px;height:52px;border-radius:0;background:transparent}.brand-mark img{width:52px;height:52px;object-fit:contain}.brand strong{color:#174f83}.brand span{color:#3a775c}.topbar{border-top:4px solid #176eb4}.welcome-card{background:linear-gradient(115deg,#124f91 0%,#176b98 58%,#138351 100%)}.welcome-card p{color:#e0eff5}.welcome-card .tag{color:#fff;background:#ffffff15;border-color:#ffffff35}.welcome-card button{background:#fff;color:#165987}.academic-motif{transform:none;color:#e5f5f0}.academic-motif .hero-logo{width:150px;height:150px;object-fit:contain;filter:drop-shadow(0 5px 12px #06384250)}.academic-motif>span{border-top-color:#ffffff55;font-weight:600;letter-spacing:2px}.academic-motif small{color:#e1f2ee}h1{color:#164b7e}.stat:nth-child(odd){border-top:3px solid #2579b8}.stat:nth-child(even){border-top:3px solid #178b5c}.stat:nth-child(odd)>strong,.stat:nth-child(odd) .stat-label svg{color:#1e6396}.stat:nth-child(even)>strong{color:#16744d}.demo-bar{background:#edf7f1;color:#32694e}.nav-button[data-active=true]{background:#e7f5ec;box-shadow:inset 3px 0 #178b5c;color:#11724b}.school-year{background:#edf4fc;border-color:#d6e6f5}.school-year strong{color:#1b5c91}.help-card{background:#eaf3fb;border-color:#d4e5f3}.help-card h3,.help-card .text-link,.help-card>svg{color:#1b6096}.help-card p{color:#4b6b83}.resource-icon{background:#e8f3fb;color:#2778ad}.subject-icon.color-0{background:#e6f5ec;color:#198554}.subject-icon.color-1{background:#e9f2fc;color:#287bb8}.brand-mark img{display:block}
+
+/* Authenticated portal shell */
+.real-admin-label{margin-top:28px}
+.real-user-badge{display:flex;align-items:center;gap:10px;min-width:0}
+.real-user-badge>div{min-width:0}
+.real-user-badge strong,.real-user-badge span{display:block}
+.real-user-badge strong{font-size:.82rem;color:#355044;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+.real-user-badge span{font-size:.72rem;color:#748477;margin-top:3px}
+.real-status-bar{display:flex;align-items:center;gap:9px;padding:10px 35px;background:#edf7f1;border-bottom:1px solid #dfe9df;color:#32694e;font-size:.78rem}
+.real-role-card{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#fff;border:1px solid #e2e9e4;border-radius:8px;min-width:170px}
+.real-role-card>div span,.real-role-card>div strong{display:block}
+.real-role-card>div span{font-size:.65rem;letter-spacing:1px;color:#78897d}
+.real-role-card>div strong{font-size:.85rem;color:#285743;margin-top:3px}
+.real-overview-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(300px,.8fr);gap:22px}
+.real-welcome{grid-row:span 2}
+.real-profile-card,.real-admin-card,.real-next-card{padding:24px}
+.real-profile-card h2,.real-admin-card h2,.real-next-card h2{margin-bottom:18px}
+.real-profile-card dl{display:grid;gap:14px}
+.real-profile-card dl div{display:grid;grid-template-columns:120px 1fr;gap:14px;padding-bottom:12px;border-bottom:1px solid #edf1ee}
+.real-profile-card dl div:last-child{border-bottom:0;padding-bottom:0}
+.real-profile-card dt{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#7b8e80}
+.real-profile-card dd{margin:0;font-size:.88rem;color:#355044;word-break:break-word}
+.real-admin-card p,.real-next-card p{font-size:.86rem;line-height:1.75;color:#687d6d}
+.real-admin-card>div{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.real-admin-card button,.real-portal-loading button{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:8px;background:linear-gradient(100deg,#155f9d,#147b56);color:#fff;padding:10px 13px;font-weight:700}
+.real-next-card>svg{color:#2b75a8;margin-bottom:14px}
+.real-empty-panel{min-height:340px;display:grid;place-items:center;align-content:center;text-align:center;padding:40px;color:#718376}
+.real-empty-panel svg{color:#5d87a6;margin-bottom:14px}
+.real-empty-panel h2{color:#365443;margin-bottom:10px}
+.real-empty-panel p{max-width:620px;font-size:.9rem;line-height:1.75}
+.real-portal-loading{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;padding:24px;background:#f4f8fb;color:#496252;text-align:center}
+.real-portal-loading img{width:74px;height:74px;object-fit:contain;margin-bottom:8px}
+.real-portal-loading span{color:#748578;font-size:.85rem}
+@media(max-width:1000px){.real-overview-grid{grid-template-columns:1fr}.real-welcome{grid-row:auto}.real-user-badge strong{max-width:150px}}
+@media(max-width:767px){.real-status-bar{padding:10px 18px}.real-user-badge>div{display:none}.real-role-card{display:none}.real-profile-card dl div{grid-template-columns:1fr;gap:5px}}
