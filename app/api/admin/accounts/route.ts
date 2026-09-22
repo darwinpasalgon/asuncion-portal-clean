@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
+const SECTION_OPTIONS: Record<number, readonly string[]> = {
+  7: ["Dahlia", "Daisy", "Gumamela", "Jasmine", "Rosal", "Rose", "Sampaguita", "Santan", "Sunflower", "Vanda", "Waterlily", "Zinnia"],
+  8: ["Acacia", "Almasiga", "Apitong", "Dao", "Falcata", "Gemelina", "Lawaan", "Mahogany", "Molave", "Narra", "Yakal"],
+  9: ["Aguinaldo", "Aquino", "Arroyo", "Macapagal", "Magsaysay", "Marcos", "Osmeña", "Quezon", "Quirino", "Roxas"],
+  10: ["Bonifacio", "Burgos", "Del Pilar", "Gomez", "Jacinto", "Lapu-Lapu", "Luna", "Rizal", "Zamora"],
+  11: [],
+  12: [],
+};
+
 function authHeaders(token: string) {
   return {
     apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -71,7 +80,7 @@ export async function POST(request: NextRequest) {
   }
 
   const lookup = await fetch(
-    `${SUPABASE_URL}/rest/v1/profiles?select=id,requested_role,account_status&id=eq.${encodeURIComponent(id)}&limit=1`,
+    `${SUPABASE_URL}/rest/v1/profiles?select=id,requested_role,account_status,grade_level,section&id=eq.${encodeURIComponent(id)}&limit=1`,
     { headers: authHeaders(token), cache: "no-store" }
   );
 
@@ -84,6 +93,25 @@ export async function POST(request: NextRequest) {
 
   if (!profile || profile.account_status !== "pending") {
     return NextResponse.json({ error: "This account is no longer pending." }, { status: 409 });
+  }
+
+  if (action === "approve" && profile.requested_role === "student") {
+    const gradeLevel = Number(profile.grade_level ?? 0);
+    const allowedSections = SECTION_OPTIONS[gradeLevel] ?? [];
+
+    if (!Number.isInteger(gradeLevel) || gradeLevel < 7 || gradeLevel > 12) {
+      return NextResponse.json(
+        { error: "This student does not have a valid grade level. Update the student record before approval." },
+        { status: 409 }
+      );
+    }
+
+    if (allowedSections.length > 0 && !allowedSections.includes(String(profile.section ?? ""))) {
+      return NextResponse.json(
+        { error: "This student does not have a valid section for the selected grade level." },
+        { status: 409 }
+      );
+    }
   }
 
   const update =
