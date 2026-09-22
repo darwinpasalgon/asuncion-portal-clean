@@ -75,15 +75,31 @@ export async function POST(request: Request) {
   const result = await signup.json().catch(() => ({}));
 
   if (!signup.ok) {
-    const detail = String(
+    const rawMessage = String(
       result?.msg ?? result?.error_description ?? result?.message ?? ""
-    ).toLowerCase();
+    ).trim();
+    const detail = rawMessage.toLowerCase();
 
-    const message = detail.includes("already")
-      ? "An account with that email or LRN may already exist."
-      : "We could not create the account. Check your information and try again.";
+    let message = "We could not create the account. Check your information and try again.";
 
-    return NextResponse.json({ error: message }, { status: signup.status || 400 });
+    if (detail.includes("already") || detail.includes("registered")) {
+      message = "An account with that email or LRN may already exist.";
+    } else if (detail.includes("email address not authorized")) {
+      message = "Supabase is still requiring email confirmation. Turn off Confirm email under Authentication → Providers → Email, then try again.";
+    } else if (detail.includes("signup") && detail.includes("disabled")) {
+      message = "New account registration is disabled in Supabase Authentication settings.";
+    } else if (detail.includes("password")) {
+      message = rawMessage || "The password does not meet the authentication requirements.";
+    } else if (detail.includes("email")) {
+      message = rawMessage || "The email address was rejected by the authentication service.";
+    } else if (rawMessage) {
+      message = rawMessage;
+    }
+
+    return NextResponse.json(
+      { error: message, authStatus: signup.status },
+      { status: signup.status || 400 }
+    );
   }
 
   return NextResponse.json({
