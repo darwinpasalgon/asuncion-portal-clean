@@ -39,6 +39,14 @@ type Page =
   | "Students"
   | "School setup";
 
+type AcademicContext = {
+  school_year: string | null;
+  school_year_id: string | null;
+  grade_level: number | null;
+  section: string | null;
+  enrollment_status: string | null;
+};
+
 type Profile = {
   id: string;
   full_name: string;
@@ -86,7 +94,6 @@ const navigation: Record<Role, { name: Page; icon: typeof LayoutDashboard }[]> =
     commonItems.students,
     commonItems.announcements,
     commonItems.resources,
-    commonItems.setup,
   ],
 };
 
@@ -109,10 +116,12 @@ function SideNav({
   profile,
   page,
   onPage,
+  schoolYear,
 }: {
   profile: Profile;
   page: Page;
   onPage: (page: Page) => void;
+  schoolYear: string;
 }) {
   const { setOpenMobile } = useSidebar();
 
@@ -136,7 +145,7 @@ function SideNav({
       <SidebarContent className="side-content">
         <div className="school-year">
           <span>SCHOOL YEAR</span>
-          <strong>2026 – 2027</strong>
+          <strong>{schoolYear}</strong>
           <span className="year-label">Authenticated workspace</span>
         </div>
 
@@ -180,6 +189,17 @@ function SideNav({
                 >
                   <ShieldCheck size={19} />
                   <span>Password resets</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="nav-button"
+                  onClick={() => {
+                    window.location.href = "/portal/admin/school-setup";
+                  }}
+                >
+                  <Settings2 size={19} />
+                  <span>School setup</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -258,6 +278,7 @@ function EmptySection({ page, role }: { page: Page; role: Role }) {
 
 export default function PortalPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [academicContext, setAcademicContext] = useState<AcademicContext | null>(null);
   const [page, setPage] = useState<Page>("Overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -278,7 +299,10 @@ export default function PortalPage() {
           throw new Error(result.error ?? "Unable to load your profile.");
         }
 
-        if (active) setProfile(result.profile as Profile);
+        if (active) {
+          setProfile(result.profile as Profile);
+          setAcademicContext((result.academicContext ?? null) as AcademicContext | null);
+        }
       } catch (err) {
         if (active) {
           setError(err instanceof Error ? err.message : "Unable to load your profile.");
@@ -323,7 +347,12 @@ export default function PortalPage() {
 
   return (
     <SidebarProvider>
-      <SideNav profile={profile} page={page} onPage={setPage} />
+      <SideNav
+        profile={profile}
+        page={page}
+        onPage={setPage}
+        schoolYear={academicContext?.school_year ?? "2026–2027"}
+      />
 
       <main className="workspace">
         <header className="topbar">
@@ -378,7 +407,9 @@ export default function PortalPage() {
         <div className="page-wrap">
           <div className="page-heading">
             <div>
-              <p className="eyebrow">ASUNCION NATIONAL HIGH SCHOOL · SCHOOL YEAR 2026–2027</p>
+              <p className="eyebrow">
+                ASUNCION NATIONAL HIGH SCHOOL · SCHOOL YEAR {academicContext?.school_year ?? "2026–2027"}
+              </p>
               <h1>
                 {page === "Overview" ? `Welcome, ${profile.full_name}.` : page}
               </h1>
@@ -430,9 +461,11 @@ export default function PortalPage() {
                     <div>
                       <dt>Grade & section</dt>
                       <dd>
-                        {profile.grade_level
-                          ? `Grade ${profile.grade_level}${profile.section ? ` · ${profile.section}` : " · Section not assigned"}`
-                          : "Not assigned yet"}
+                        {academicContext?.grade_level
+                          ? `Grade ${academicContext.grade_level}${academicContext.section ? ` · ${academicContext.section}` : " · Section not assigned"}`
+                          : profile.grade_level
+                            ? `Grade ${profile.grade_level}${profile.section ? ` · ${profile.section}` : " · Section not assigned"}`
+                            : "Not assigned yet"}
                       </dd>
                     </div>
                   )}
@@ -452,6 +485,9 @@ export default function PortalPage() {
                     <button onClick={() => (window.location.href = "/portal/admin/password-resets")}>
                       <ShieldCheck size={18} /> Password reset requests
                     </button>
+                    <button onClick={() => (window.location.href = "/portal/admin/school-setup")}>
+                      <Settings2 size={18} /> School setup
+                    </button>
                   </div>
                 </section>
               )}
@@ -460,8 +496,8 @@ export default function PortalPage() {
                 <BookOpen size={28} />
                 <h2>Next build phase</h2>
                 <p>
-                  Configure the real academic structure: school year, grade levels,
-                  sections, subjects, student enrollment, and teacher assignments.
+                  School year, grade levels, sections, and student enrollment are now live.
+                  The next phase is subjects and teacher assignments.
                 </p>
               </section>
             </div>
