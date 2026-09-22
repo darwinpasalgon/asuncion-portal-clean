@@ -1,66 +1,443 @@
 "use client";
-import { useEffect, useState, type ReactNode } from "react";
-import { BookOpen, LayoutDashboard, GraduationCap, CalendarDays, ClipboardCheck, Megaphone, FolderOpen, Users, ArrowUpRight, ArrowRight, Download, Plus, Check, Clock, ShieldCheck, HelpCircle, FileText, Search, Settings2, CheckCircle2, LogOut } from "lucide-react";
-import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Toaster } from "@/components/ui/sonner";
-import { toast } from "sonner";
-type Role = "Student" | "Teacher" | "Administrator";
-type Page = "Overview" | "Grades" | "Attendance" | "Class schedule" | "Announcements" | "Learning resources" | "Students" | "School setup" | "Portal guide";
-type Student = {id:string;name:string;section:string;status:string};
-const sections = ["Grade 7", "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12"];
-const initialStudents:Student[] = [{id:"DEMO-001",name:"Alex Reyes",section:sections[3],status:"Active"},{id:"DEMO-002",name:"Jamie Cruz",section:sections[3],status:"Active"},{id:"DEMO-003",name:"Sam Garcia",section:sections[3],status:"Active"},{id:"DEMO-004",name:"Taylor Santos",section:sections[4],status:"Pending"},{id:"DEMO-005",name:"Robin Dela Cruz",section:sections[5],status:"Pending"}];
-const subjects = ["English", "Mathematics", "Science", "Filipino", "Araling Panlipunan", "MAPEH", "TLE", "Edukasyon sa Pagpapakatao"];
-const initialGrades = Object.fromEntries(initialStudents.map((s,si)=>[s.id, Object.fromEntries(subjects.map((v,i)=>[v,[88+(i+si)%8, null, null, null]]))])) as Record<string,Record<string,(number|null)[]>>;
-const initialNotices = [{id:1,title:"Welcome to your academic portal",body:"Find your class schedule, quarterly grades and learning materials in one place. This is a demonstration using fictional records.",category:"School update",audience:"Everyone",date:"September 21, 2026"},{id:2,title:"Your next chapter starts with preparation",body:"Review the practice materials in Learning resources before your next class. Ask your subject teacher if you need support.",category:"Learning",audience:"Students",date:"September 18, 2026"},{id:3,title:"Grade encoding checklist",body:"Check the selected student, subject and quarter before saving. All records in this preview are fictional and reset when the page reloads.",category:"Faculty",audience:"Staff",date:"September 17, 2026"}];
-const initialSchedule = subjects.slice(0,6).map((subject,i)=>({id:i,subject,teacher:["M. Santos","J. Rivera","C. Mendoza","A. Flores","R. Ramos","L. Torres"][i],time:["7:30 – 8:30 AM","8:30 – 9:30 AM","9:45 – 10:45 AM","10:45 – 11:45 AM","1:00 – 2:00 PM","2:00 – 3:00 PM"][i],room:`Room ${201+i}`,day:"Monday",section:sections[3]}));
-const nav = [{name:"Overview",icon:LayoutDashboard},{name:"Grades",icon:GraduationCap},{name:"Attendance",icon:ClipboardCheck},{name:"Class schedule",icon:CalendarDays},{name:"Announcements",icon:Megaphone},{name:"Learning resources",icon:FolderOpen},{name:"Students",icon:Users},{name:"School setup",icon:Settings2}] as const;
-function Picker({label,value,values,onChange}:{label:string;value:string;values:string[];onChange:(v:string)=>void}) {return <Select value={value} onValueChange={onChange}><SelectTrigger aria-label={label} className="picker"><SelectValue /></SelectTrigger><SelectContent>{values.map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select>}
-function FormSelect({name,values,value}:{name:string;values:string[];value?:string}){return <Select name={name} defaultValue={value||values[0]}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{values.map(v=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select>}
-function Field({label,children}:{label:string;children:ReactNode}) {return <label className="field"><span>{label}</span>{children}</label>}
-function Tag({children,tone="green"}:{children:ReactNode;tone?:string}) {return <span className={`tag ${tone}`}>{children}</span>}
-function SideNav({page,role,pending,go}:{page:Page;role:Role;pending:number;go:(p:Page)=>void}) {const {setOpenMobile}=useSidebar();return <Sidebar><SidebarHeader className="brand"><div className="brand-mark"><img src="/school-logo.png" alt="Asuncion National High School logo" width={52} height={52}/></div><div><strong>ASUNCION NHS</strong><span>Academic Portal</span></div></SidebarHeader><SidebarContent className="side-content"><div className="school-year"><span>SCHOOL YEAR</span><strong>2026 – 2027</strong><span className="year-label">Demonstration</span></div><p className="nav-label">WORKSPACE</p><SidebarMenu>{nav.filter(n=>n.name!=="Students"&&n.name!=="School setup"||role==="Administrator").map(n=><SidebarMenuItem key={n.name}><SidebarMenuButton isActive={page===n.name} onClick={()=>{go(n.name);setOpenMobile(false)}} className="nav-button"><n.icon size={19}/><span>{n.name}</span>{n.name==="Students"&&pending>0&&<span className="nav-count">{pending}</span>}</SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu><div className="side-tip"><ShieldCheck size={22}/><strong>A space for learning.</strong><p>Stay informed. Stay connected. Make every school day count.</p></div></SidebarContent><SidebarFooter className="side-footer">{role==="Administrator"&&<><SidebarMenuButton onClick={()=>{window.location.href="/portal/admin/accounts"}}><Users size={18}/>Account approvals</SidebarMenuButton><SidebarMenuButton onClick={()=>{window.location.href="/portal/admin/password-resets"}}><ShieldCheck size={18}/>Password resets</SidebarMenuButton></>}<SidebarMenuButton onClick={()=>{go("Portal guide");setOpenMobile(false)}}><HelpCircle size={18}/>Portal guide</SidebarMenuButton><SidebarMenuButton onClick={async()=>{await fetch("/api/auth/logout",{method:"POST"});window.location.href="/"}}><LogOut size={18}/>Sign out</SidebarMenuButton><div className="side-user"><span className="avatar">{role==="Student"?"AR":role==="Teacher"?"MS":"AD"}</span><div><strong>{role==="Student"?"Alex Reyes":role==="Teacher"?"M. Santos":"Administrator"}</strong><span>{role} · Demo account</span></div></div></SidebarFooter></Sidebar>}
-function saveFile(name:string,content:string,type="text/plain"){const url=URL.createObjectURL(new Blob([content],{type}));const a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-export default function Home(){
- const [role,setRole]=useState<Role>("Student"); const [page,setPage]=useState<Page>("Overview");
- const [students,setStudents]=useState(initialStudents);const [grades,setGrades]=useState(initialGrades);const [notices,setNotices]=useState(initialNotices);const [schedule,setSchedule]=useState(initialSchedule);
- const [resources,setResources]=useState([{id:1,title:"Reading with purpose",subject:"English",description:"A short guide to identifying the main idea and supporting details.",file:"reading-practice.txt",url:"",content:"ASUNCION NHS · SAMPLE MATERIAL\nReading with purpose\n\nRead a short news article. Identify its main idea, three supporting details and the writer's purpose. Write a 100-word summary.\n\nDemonstration content only."},{id:2,title:"Patterns and sequences",subject:"Mathematics",description:"Practice questions on arithmetic sequences and number patterns.",file:"sequence-practice.txt",url:"",content:"ASUNCION NHS · SAMPLE MATERIAL\nPatterns and sequences\n\n1. Find the next three terms: 3, 7, 11, ...\n2. Find the tenth term of 5, 10, 15, ...\n3. Write an arithmetic sequence with a common difference of 6.\n\nAnswers: 15, 19, 23; 50; example 2, 8, 14, 20.\nDemonstration content only."}]);
- const [quarter,setQuarter]=useState("Quarter 1");const qi=Number(quarter.slice(-1))-1;
- const [selectedStudent,setSelectedStudent]=useState("DEMO-001");const [search,setSearch]=useState("");const [day,setDay]=useState("Monday");const [section,setSection]=useState(sections[3]);
- const [date,setDate]=useState("2026-09-21");const [attendance,setAttendance]=useState<Record<string,Record<string,string>>>({"2026-09-21":{"DEMO-001":"Present","DEMO-002":"Present","DEMO-003":"Late"},"2026-09-18":{"DEMO-001":"Present","DEMO-002":"Present","DEMO-003":"Present"},"2026-09-17":{"DEMO-001":"Present","DEMO-002":"Absent","DEMO-003":"Present"},"2026-09-16":{"DEMO-001":"Absent","DEMO-002":"Present","DEMO-003":"Present"}});
- const [modal,setModal]=useState<"notice"|"resource"|"student"|"schedule"|"grade"|null>(null);const [editSubject,setEditSubject]=useState("English");const [gradeValue,setGradeValue]=useState("");
- const [schoolName,setSchoolName]=useState("Asuncion National High School");const [schoolYear,setSchoolYear]=useState("2026–2027");
- const isStudent=role==="Student",isAdmin=role==="Administrator";const studentId=isStudent?"DEMO-001":selectedStudent;const currentStudent=students.find(s=>s.id===studentId)||students[0];const pending=students.filter(s=>s.status==="Pending").length;
- const shownNotices=notices.filter(n=>n.audience==="Everyone"||n.audience===(isStudent?"Students":"Staff"));
- const currentGrades=grades[studentId]||{};const marks=subjects.map(s=>currentGrades[s]?.[qi]).filter((n):n is number=>typeof n==="number");const average=marks.length?(marks.reduce((a,b)=>a+b,0)/marks.length).toFixed(1):"—";
- const myAttendance=Object.entries(attendance).filter(([,v])=>v["DEMO-001"]&&v["DEMO-001"]!=="Unmarked");const present=myAttendance.filter(([,v])=>v["DEMO-001"]==="Present"||v["DEMO-001"]==="Late").length;const rate=myAttendance.length?Math.round(present/myAttendance.length*100):0;
- function go(p:Page){setPage(p);setSearch("")}
- function changeRole(r:string){setRole(r as Role);setPage("Overview");setSearch("");setSelectedStudent("DEMO-001");setSection(sections[3]);setQuarter("Quarter 1");toast.info(`${r} demonstration opened`)}
- useEffect(()=>{const context=(document as Document & {modelContext?:{registerTool:(t:unknown,o:unknown)=>void}}).modelContext;if(!context)return;const life=new AbortController();try{context.registerTool({name:"navigate_academic_portal",description:"Open a section of the demonstration portal. Does not change student records.",inputSchema:{type:"object",properties:{page:{type:"string",enum:[...nav.map(n=>n.name),"Portal guide"]}},required:["page"],additionalProperties:false},annotations:{readOnlyHint:false},execute:async(input:unknown)=>{const p=(input as {page?:Page})?.page;if(!p||![...nav.map(n=>n.name),"Portal guide"].includes(p))throw new Error("Unknown portal page");if((p==="Students"||p==="School setup")&&role!=="Administrator")throw new Error("Switch to the administrator demo to open this section");go(p);await new Promise(resolve=>setTimeout(resolve,0));return {page:p,mode:"demonstration"}}},{signal:life.signal})}catch{}return()=>life.abort()},[role]);
- function submitForm(e:React.FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);const v=(k:string)=>String(f.get(k)||"").trim();if(modal!=="grade"&&[...f.entries()].some(([k,val])=>typeof val==="string"&&!val.trim())){toast.error("Complete all fields");return}if(modal==="notice"){setNotices([{id:Date.now(),title:v("title"),body:v("body"),category:"New announcement",audience:v("audience"),date:new Date().toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})},...notices]);toast.success("Announcement added to this demonstration")}
- if(modal==="student"){setStudents([...students,{id:`DEMO-${Date.now()}`,name:v("name"),section:v("section"),status:"Pending"}]);toast.success("Sample registration sent for approval")}
- if(modal==="schedule"){setSchedule([...schedule,{id:Date.now(),subject:v("subject"),teacher:v("teacher"),time:v("time"),room:v("room"),day:v("day"),section:v("section")}]);toast.success("Class added to the sample schedule")}
- if(modal==="grade"){const n=Number(gradeValue);if(!gradeValue.trim()||!Number.isFinite(n)||n<0||n>100){toast.error("Enter a grade from 0 to 100");return}const next=[...(currentGrades[editSubject]||[null,null,null,null])];next[qi]=n;setGrades({...grades,[studentId]:{...currentGrades,[editSubject]:next}});toast.success("Sample grade saved")}
- if(modal==="resource"){const file=f.get("file") as File;if(!file?.size){toast.error("Choose a sample file");return}if(file.size>10*1024*1024){toast.error("Choose a file smaller than 10 MB");return}setResources([...resources,{id:Date.now(),title:v("title"),subject:v("subject"),description:v("body"),file:file.name,url:URL.createObjectURL(file),content:""}]);toast.success("File added for this session only")}
- setModal(null)}
- const subtitles:Record<Page,string>={Overview:isStudent?"Your school day, all in one place.":"A clear view of your academic workspace.",Grades:"Review quarterly results and learning progress.",Attendance:"Every school day counts.","Class schedule":"Know where to be and what comes next.",Announcements:"The latest updates from your school community.","Learning resources":"A little preparation goes a long way.",Students:"Review sample registrations and class lists.","School setup":"Configure the identity of your sample portal.","Portal guide":"Try the demo, then plan a safe school rollout."};
- return <SidebarProvider><SideNav page={page} role={role} pending={pending} go={go}/><main className="workspace"><header className="topbar"><div className="crumb"><SidebarTrigger/><span>Academic Portal</span><span className="slash">/</span><strong>{page}</strong></div><div className="role-switch"><span>Preview as</span><Picker label="Preview role" value={role} values={["Student","Teacher","Administrator"]} onChange={changeRole}/><span className="avatar small">{isStudent?"AR":isAdmin?"AD":"MS"}</span></div></header><div className="demo-bar"><span><ShieldCheck size={15}/><strong>DEMO WORKSPACE</strong><span>Fictional records only. Changes reset on refresh.</span></span><button onClick={()=>go("Portal guide")}>Before going live <ArrowUpRight size={14}/></button></div><div className="page-wrap"><div className="page-heading"><div><p className="eyebrow">{page==="Overview"?"MONDAY, SEPTEMBER 21, 2026 · SAMPLE DAY":`${schoolYear} · ACADEMIC PORTAL`}</p><h1>{page==="Overview"?(isStudent?"Welcome back, Alex.":isAdmin?"Welcome, Administrator.":"Welcome back, Teacher."):page}</h1><p>{subtitles[page]}</p></div>{page==="Overview"?<div className="term-badge"><CalendarDays size={17}/>{schoolYear}<span>Quarter 1</span></div>:page==="Announcements"&&!isStudent?<Button onClick={()=>setModal("notice")}><Plus size={16}/>New announcement</Button>:page==="Learning resources"&&!isStudent?<Button onClick={()=>setModal("resource")}><Plus size={16}/>Add resource</Button>:page==="Students"?<Button onClick={()=>setModal("student")}><Plus size={16}/>Sample registration</Button>:null}</div>
- {page==="Overview"&&<><div className="stats-grid"><div className="stat"><span className="stat-label">{isStudent?"Quarterly average":"Active students"}<GraduationCap size={19}/></span><strong>{isStudent?average:students.filter(s=>s.status==="Active").length}<small>{isStudent?"/ 100":""}</small></strong><span className="stat-foot">{isStudent?`${quarter} · Sample grades`:"Across sample classes"}</span></div><div className="stat"><span className="stat-label">{isStudent?"Attendance rate":"Pending registrations"}<ClipboardCheck size={19}/></span><strong>{isStudent?`${rate}%`:pending}</strong><span className="stat-foot">{isStudent?`${present} of ${myAttendance.length} recorded days attended`:"Awaiting administrator review"}</span></div><div className="stat"><span className="stat-label">Enrolled subjects<BookOpen size={19}/></span><strong>{subjects.length.toString().padStart(2,"0")}</strong><span className="stat-foot">Grade 10 · Section not yet assigned · Sample class</span></div><div className="stat"><span className="stat-label">Learning resources<FolderOpen size={19}/></span><strong>{resources.length.toString().padStart(2,"0")}</strong><button className="text-link stat-foot" onClick={()=>go("Learning resources")}>Ready for your next lesson <ArrowRight size={14}/></button></div></div><div className="overview-grid"><div className="main-column"><section className="welcome-card"><div><Tag tone="gold">LEARNING, ONE DAY AT A TIME</Tag><h2>Your next step<br/>starts here.</h2><p>Check your progress, prepare for class,<br className="desktop-break"/> and keep moving forward.</p><Button onClick={()=>go(isStudent?"Grades":"Attendance")}>{isStudent?"View my grades":"Open attendance"}<ArrowRight size={17}/></Button></div><div className="academic-motif"><img className="hero-logo" src="/school-logo.png" alt="Asuncion National High School seal" width={150} height={150}/><span>ASUNCION NHS</span><small>Learn. Grow. Achieve.</small></div></section><section className="panel"><div className="panel-heading"><div><h2>Announcements</h2><p>What’s happening in your school</p></div><button className="text-link" onClick={()=>go("Announcements")}>View all <ArrowUpRight size={16}/></button></div>{shownNotices.slice(0,2).map((n,i)=><article className="notice-row" key={n.id}><span className={`notice-icon ${i?"blue":""}`}><Megaphone size={20}/></span><div><div className="notice-meta"><Tag tone={i?"blue":"green"}>{n.category}</Tag><span>{n.date}</span></div><button className="notice-title" onClick={()=>go("Announcements")}>{n.title}</button><p>{n.body}</p></div></article>)}</section></div><div className="right-column"><section className="panel schedule-panel"><div className="panel-heading"><div><h2>Monday’s classes</h2><p>Grade 10 · Section not yet assigned · Sample</p></div><CalendarDays size={20}/></div><div className="mini-schedule">{schedule.filter(s=>s.day==="Monday"&&s.section===sections[3]).slice(0,4).map((s,i)=><div className="class-row" key={s.id}><div className="class-number">{String(i+1).padStart(2,"0")}</div><div><strong>{s.subject}</strong><span>{s.time}</span><small>{s.room}</small></div></div>)}</div><button className="full-link" onClick={()=>{setDay("Monday");setSection(sections[3]);go("Class schedule")}}>View full schedule <ArrowRight size={16}/></button></section><section className="help-card"><HelpCircle size={22}/><h3>New to the portal?</h3><p>Take a quick look around. Our guide walks you through each workspace.</p><button className="text-link" onClick={()=>go("Portal guide")}>Open the portal guide <ArrowUpRight size={15}/></button></section></div></div></>}
- {page==="Grades"&&<><div className="toolbar"><div className="filter-group"><Picker label="Quarter" value={quarter} values={["Quarter 1","Quarter 2","Quarter 3","Quarter 4"]} onChange={setQuarter}/>{!isStudent&&<Picker label="Student" value={selectedStudent} values={students.filter(s=>s.status==="Active").map(s=>s.id)} onChange={setSelectedStudent}/>}<span className="muted">{currentStudent.name} · {currentStudent.section}</span></div><Button variant="outline" onClick={()=>saveFile("sample-grades.csv","SAMPLE DATA ONLY\nSubject,Quarter,Grade\n"+subjects.map(s=>`${s},${quarter},${currentGrades[s]?.[qi]??""}`).join("\n"),"text/csv")}><Download size={16}/>Export sample</Button></div><section className="panel"><div className="panel-heading"><div><h2>{quarter} results</h2><p>{marks.length} of {subjects.length} subject grades recorded</p></div><div className="average-pill"><span>Average</span><strong>{average}</strong></div></div><Table><TableHeader><TableRow><TableHead>SUBJECT</TableHead><TableHead>GRADE</TableHead><TableHead>STATUS</TableHead>{!isStudent&&<TableHead className="text-right">ACTION</TableHead>}</TableRow></TableHeader><TableBody>{subjects.map((s,i)=>{const g=currentGrades[s]?.[qi];return <TableRow key={s}><TableCell><div className="subject-cell"><span className={`subject-icon color-${i%4}`}><BookOpen size={18}/></span><strong>{s}</strong></div></TableCell><TableCell className="grade-number">{g??"—"}</TableCell><TableCell><Tag tone={g==null?"gray":g>=75?"green":"gold"}>{g==null?"Not encoded":g>=75?"Passing":"Needs support"}</Tag></TableCell>{!isStudent&&<TableCell className="text-right"><Button variant="ghost" onClick={()=>{setEditSubject(s);setGradeValue(g==null?"":String(g));setModal("grade")}}>Edit grade</Button></TableCell>}</TableRow>})}</TableBody></Table><div className="panel-note">Sample quarterly grades, not an official report card. Average uses encoded subjects only.</div></section></>}
- {page==="Attendance"&&<><div className="toolbar"><div className="filter-group">{!isStudent&&<><Field label="Class date"><Input type="date" value={date} onChange={e=>setDate(e.target.value)}/></Field><Picker label="Grade level" value={section} values={sections} onChange={setSection}/></>}<Tag tone="blue">{isStudent?"Alex Reyes · Sample history":"Changes apply to this demo session"}</Tag></div></div><section className="panel"><Table><TableHeader><TableRow><TableHead>{isStudent?"DATE":"STUDENT"}</TableHead><TableHead>GRADE LEVEL</TableHead><TableHead>ATTENDANCE</TableHead></TableRow></TableHeader><TableBody>{isStudent?myAttendance.sort((a,b)=>b[0].localeCompare(a[0])).map(([d,v])=><TableRow key={d}><TableCell>{d}</TableCell><TableCell>{sections[3]}</TableCell><TableCell><Tag tone={v["DEMO-001"]==="Absent"?"gold":"green"}>{v["DEMO-001"]}</Tag></TableCell></TableRow>):students.filter(s=>s.section===section&&s.status==="Active").map(s=><TableRow key={s.id}><TableCell><strong>{s.name}</strong><span className="cell-sub">{s.id}</span></TableCell><TableCell>{s.section}</TableCell><TableCell><Picker label={`Attendance for ${s.name}`} value={attendance[date]?.[s.id]||"Unmarked"} values={["Unmarked","Present","Absent","Late","Excused"]} onChange={v=>{if(!date){toast.error("Select a date first");return}setAttendance({...attendance,[date]:{...attendance[date],[s.id]:v}});toast.success(`${s.name}: ${v}`)}}/></TableCell></TableRow>)}</TableBody></Table>{!isStudent&&!students.some(s=>s.section===section&&s.status==="Active")&&<div className="empty-state"><Users/><h3>No active students in this grade level</h3><p>Approve a registration from the administrator workspace.</p></div>}<div className="panel-note">Demo attendance only. Late counts as attended. Unmarked days are excluded; all other recorded statuses count toward recorded days.</div></section></>}
- {page==="Class schedule"&&<><div className="toolbar"><div className="filter-group"><Picker label="Day" value={day} values={["Monday","Tuesday","Wednesday","Thursday","Friday"]} onChange={setDay}/><Picker label="Grade level" value={section} values={isStudent?[sections[3]]:sections} onChange={setSection}/></div>{isAdmin&&<Button onClick={()=>setModal("schedule")}><Plus size={16}/>Add class</Button>}</div><section className="panel"><div className="panel-heading"><div><h2>{day}</h2><p>{section} · Sample timetable</p></div><CalendarDays size={23}/></div>{schedule.filter(s=>s.day===day&&s.section===section).length?<Table><TableHeader><TableRow><TableHead>TIME</TableHead><TableHead>SUBJECT</TableHead><TableHead>TEACHER</TableHead><TableHead>ROOM</TableHead></TableRow></TableHeader><TableBody>{schedule.filter(s=>s.day===day&&s.section===section).map(s=><TableRow key={s.id}><TableCell><span className="time-cell"><Clock size={16}/>{s.time}</span></TableCell><TableCell><strong>{s.subject}</strong></TableCell><TableCell>{s.teacher}</TableCell><TableCell>{s.room}</TableCell></TableRow>)}</TableBody></Table>:<div className="empty-state"><CalendarDays/><h3>No sample classes scheduled</h3><p>The administrator can add a class for this day and grade level.</p></div>}</section></>}
- {page==="Announcements"&&<div className="announcement-list">{shownNotices.map(n=><article className="panel announcement" key={n.id}><div className="notice-meta"><Tag tone={n.audience==="Staff"?"blue":"green"}>{n.category}</Tag><span>{n.date}</span></div><h2>{n.title}</h2><p>{n.body}</p><footer><Megaphone size={15}/>For {n.audience.toLowerCase()} · Demonstration announcement</footer></article>)}</div>}
- {page==="Learning resources"&&<><div className="search-box"><Search size={18}/><Input aria-label="Search resources" placeholder="Search titles or subjects…" value={search} onChange={e=>setSearch(e.target.value)}/></div><div className="resource-grid">{resources.filter(r=>(r.title+r.subject).toLowerCase().includes(search.toLowerCase())).map(r=><article className="panel resource" key={r.id}><div className="resource-top"><span className="resource-icon"><FileText size={27}/></span><Tag tone="gray">{r.subject}</Tag></div><h2>{r.title}</h2><p>{r.description}</p><div className="resource-file">{r.file} · {r.url?"Session upload":"Sample material"}</div><Button variant="outline" onClick={()=>{if(r.url){const a=document.createElement("a");a.href=r.url;a.download=r.file;a.click()}else saveFile(r.file,r.content)}}><Download size={16}/>Download material</Button></article>)}</div>{!resources.some(r=>(r.title+r.subject).toLowerCase().includes(search.toLowerCase()))&&<div className="empty-state"><Search/><h3>No matching materials</h3><p>Try another title or subject.</p></div>}</>}
- {page==="Students"&&isAdmin&&<><div className="toolbar"><div className="search-box"><Search size={18}/><Input aria-label="Search students" placeholder="Search sample students…" value={search} onChange={e=>setSearch(e.target.value)}/></div><Tag tone="gold">{pending} pending approval</Tag></div><section className="panel"><Table><TableHeader><TableRow><TableHead>STUDENT</TableHead><TableHead>GRADE LEVEL</TableHead><TableHead>STATUS</TableHead><TableHead className="text-right">ACTION</TableHead></TableRow></TableHeader><TableBody>{students.filter(s=>(s.name+s.section).toLowerCase().includes(search.toLowerCase())).map(s=><TableRow key={s.id}><TableCell><strong>{s.name}</strong><span className="cell-sub">{s.id}</span></TableCell><TableCell>{s.section}</TableCell><TableCell><Tag tone={s.status==="Active"?"green":"gold"}>{s.status}</Tag></TableCell><TableCell className="text-right">{s.status==="Pending"?<Button variant="outline" onClick={()=>{setStudents(students.map(x=>x.id===s.id?{...x,status:"Active"}:x));toast.success(`${s.name} approved in the demonstration`)}}><Check size={16}/>Approve</Button>:<span className="approved"><CheckCircle2 size={16}/>Approved</span>}</TableCell></TableRow>)}</TableBody></Table>{!students.some(s=>(s.name+s.section).toLowerCase().includes(search.toLowerCase()))&&<div className="empty-state">No matching sample students.</div>}<div className="panel-note">Fictional identities and demo IDs. No real LRNs are collected in this version.</div></section></>}
- {page==="School setup"&&isAdmin&&<form className="panel setup-form" onSubmit={e=>{e.preventDefault();toast.success("School details updated for this session")}}><h2>School identity</h2><p className="muted">These settings are temporary in the demonstration.</p><Field label="School name"><Input required maxLength={100} value={schoolName} onChange={e=>setSchoolName(e.target.value)}/></Field><Field label="School year"><Input required maxLength={20} value={schoolYear} onChange={e=>setSchoolYear(e.target.value)}/></Field><Button type="submit">Save sample settings</Button><hr/><h3>Grade levels</h3><p>{sections.join(" / ")}</p><Tag tone="blue">Sections not yet assigned</Tag><p className="muted">Production setup will use Grades 7–12 are included. Sections will be added when provided. Teacher and subject assignments are demonstration examples.</p></form>}
- {page==="Portal guide"&&<div className="guide-layout"><section className="panel guide"><Tag tone="gold">START HERE</Tag><h2>Try your academic portal</h2>{[["Explore as a student","Open Grades, Attendance, Class schedule and Learning resources. Download a sample practice file."],["Switch to Teacher","Use Preview as at the top. Edit a sample grade, mark attendance, add a sample file or post an announcement."],["Switch to Administrator","Open Students and approve a pending registration. Add a sample class under Class schedule."],["Check your changes","Switch back to Student to see Alex’s updated grades and attendance. Refreshing the page resets everything."]].map(([a,b],i)=><div className="guide-step" key={a}><span>{i+1}</span><div><h3>{a}</h3><p>{b}</p></div></div>)}</section><section className="panel guide"><Tag tone="blue">BEFORE SCHOOL ROLLOUT</Tag><h2>From demo to live portal</h2><ol className="launch-list"><li>School logo and blue-and-green theme are set. Grade 7 through Grade 12 are included; provide sections and subject assignments when ready.</li><li>Choose school-owned hosting and a supported student/teacher sign-in provider. Do not share passwords in chat.</li><li>Set up a permanent database and private file storage, with server-enforced access for each user and assigned class.</li><li>Implement verified registration, account approval, password recovery, audit logs and backups.</li><li>Test with fictional records, including attempts to access another student’s grades or an unassigned class.</li><li>Have your authorized school team review privacy, retention and access procedures before importing real data.</li><li>Run a small approved pilot, train users, then launch.</li></ol><div className="guide-warning"><ShieldCheck size={23}/><p><strong>This is not a live student information system.</strong> Role switching previews interfaces, not secure authentication. No real registration, email delivery, permanent storage or official reports are enabled.</p></div></section></div>}
- <footer className="page-footer"><span>{schoolName}</span><span>Academic Portal · Private demonstration</span></footer></div></main>
- <Dialog open={!!modal} onOpenChange={o=>{if(!o)setModal(null)}}><DialogContent className="form-dialog"><DialogHeader><DialogTitle>{modal==="notice"?"New announcement":modal==="resource"?"Add a learning resource":modal==="student"?"Sample student registration":modal==="schedule"?"Add a sample class":"Edit sample grade"}</DialogTitle><DialogDescription>Use fictional information only. Changes remain in this session and reset on refresh.</DialogDescription></DialogHeader><form onSubmit={submitForm} className="dialog-form">
- {modal==="grade"?<><p>{currentStudent.name} · {editSubject} · {quarter}</p><Field label="Quarterly grade (0–100)"><Input type="number" min="0" max="100" step="0.01" required value={gradeValue} onChange={e=>setGradeValue(e.target.value)}/></Field></>:modal==="student"?<><Field label="Fictional student name"><Input name="name" required maxLength={80} placeholder="e.g. Casey Demo"/></Field><Field label="Grade level"><FormSelect name="section" values={sections}/></Field><p className="form-hint">No email, password or LRN is collected. This simulates a pending registration.</p></>:modal==="schedule"?<><Field label="Subject"><Input name="subject" required maxLength={60}/></Field><Field label="Sample teacher"><Input name="teacher" required maxLength={60}/></Field><div className="form-grid"><Field label="Day"><FormSelect name="day" value={day} values={["Monday","Tuesday","Wednesday","Thursday","Friday"]}/></Field><Field label="Grade level"><FormSelect name="section" value={section} values={sections}/></Field></div><Field label="Time"><Input name="time" required maxLength={40} placeholder="e.g. 8:00 – 9:00 AM"/></Field><Field label="Room"><Input name="room" required maxLength={40}/></Field></>:<><Field label="Title"><Input name="title" required maxLength={120}/></Field><Field label={modal==="notice"?"Announcement":"Description"}><Textarea name="body" required maxLength={3000} rows={4}/></Field>{modal==="notice"?<Field label="Audience"><FormSelect name="audience" values={["Everyone","Students","Staff"]}/></Field>:<><Field label="Subject"><FormSelect name="subject" values={subjects}/></Field><Field label="Sample file (up to 10 MB)"><Input name="file" type="file" required accept=".pdf,.txt,.docx,.pptx"/></Field><p className="form-hint">Use a non-sensitive test file. It stays in this browser session and is not uploaded to a server.</p></>}</>}
- <div className="dialog-actions"><Button type="button" variant="outline" onClick={()=>setModal(null)}>Cancel</Button><Button type="submit">{modal==="student"?"Submit sample registration":"Save to demo"}</Button></div></form></DialogContent></Dialog><Toaster position="bottom-right"/></SidebarProvider>
+
+import { useEffect, useMemo, useState } from "react";
+import {
+  BookOpen,
+  CalendarDays,
+  ClipboardCheck,
+  FolderOpen,
+  GraduationCap,
+  LayoutDashboard,
+  LogOut,
+  Megaphone,
+  Settings2,
+  ShieldCheck,
+  UserRound,
+  Users,
+} from "lucide-react";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
+
+type Role = "student" | "teacher" | "administrator";
+type Page =
+  | "Overview"
+  | "Grades"
+  | "Attendance"
+  | "Class schedule"
+  | "Announcements"
+  | "Learning resources"
+  | "Students"
+  | "School setup";
+
+type Profile = {
+  id: string;
+  full_name: string;
+  email: string;
+  lrn: string | null;
+  role: Role;
+  requested_role: "student" | "teacher";
+  account_status: "active";
+  must_change_password: boolean;
+};
+
+const commonItems = {
+  overview: { name: "Overview" as Page, icon: LayoutDashboard },
+  grades: { name: "Grades" as Page, icon: GraduationCap },
+  attendance: { name: "Attendance" as Page, icon: ClipboardCheck },
+  schedule: { name: "Class schedule" as Page, icon: CalendarDays },
+  announcements: { name: "Announcements" as Page, icon: Megaphone },
+  resources: { name: "Learning resources" as Page, icon: FolderOpen },
+  students: { name: "Students" as Page, icon: Users },
+  setup: { name: "School setup" as Page, icon: Settings2 },
+};
+
+const navigation: Record<Role, { name: Page; icon: typeof LayoutDashboard }[]> = {
+  student: [
+    commonItems.overview,
+    commonItems.grades,
+    commonItems.attendance,
+    commonItems.schedule,
+    commonItems.announcements,
+    commonItems.resources,
+  ],
+  teacher: [
+    commonItems.overview,
+    commonItems.students,
+    commonItems.grades,
+    commonItems.attendance,
+    commonItems.schedule,
+    commonItems.announcements,
+    commonItems.resources,
+  ],
+  administrator: [
+    commonItems.overview,
+    commonItems.students,
+    commonItems.announcements,
+    commonItems.resources,
+    commonItems.setup,
+  ],
+};
+
+const roleLabel: Record<Role, string> = {
+  student: "Student",
+  teacher: "Teacher",
+  administrator: "Administrator",
+};
+
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "AN";
+}
+
+function SideNav({
+  profile,
+  page,
+  onPage,
+}: {
+  profile: Profile;
+  page: Page;
+  onPage: (page: Page) => void;
+}) {
+  const { setOpenMobile } = useSidebar();
+
+  function go(pageName: Page) {
+    onPage(pageName);
+    setOpenMobile(false);
+  }
+
+  return (
+    <Sidebar>
+      <SidebarHeader className="brand">
+        <div className="brand-mark">
+          <img src="/school-logo.png" alt="Asuncion National High School logo" />
+        </div>
+        <div>
+          <strong>ASUNCION NHS</strong>
+          <span>Academic Portal</span>
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent className="side-content">
+        <div className="school-year">
+          <span>SCHOOL YEAR</span>
+          <strong>2026 – 2027</strong>
+          <span className="year-label">Authenticated workspace</span>
+        </div>
+
+        <p className="nav-label">WORKSPACE</p>
+        <SidebarMenu>
+          {navigation[profile.role].map((item) => (
+            <SidebarMenuItem key={item.name}>
+              <SidebarMenuButton
+                className="nav-button"
+                isActive={page === item.name}
+                onClick={() => go(item.name)}
+              >
+                <item.icon size={19} />
+                <span>{item.name}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+
+        {profile.role === "administrator" && (
+          <>
+            <p className="nav-label real-admin-label">ADMINISTRATION</p>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="nav-button"
+                  onClick={() => {
+                    window.location.href = "/portal/admin/accounts";
+                  }}
+                >
+                  <Users size={19} />
+                  <span>Account approvals</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="nav-button"
+                  onClick={() => {
+                    window.location.href = "/portal/admin/password-resets";
+                  }}
+                >
+                  <ShieldCheck size={19} />
+                  <span>Password resets</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </>
+        )}
+
+        <div className="side-tip">
+          <ShieldCheck size={22} />
+          <strong>Secure school access</strong>
+          <p>Your portal access is based on your verified school account and assigned role.</p>
+        </div>
+      </SidebarContent>
+
+      <SidebarFooter className="side-footer">
+        <SidebarMenuButton
+          onClick={async () => {
+            await fetch("/api/auth/logout", { method: "POST" });
+            window.location.href = "/";
+          }}
+        >
+          <LogOut size={18} />
+          Sign out
+        </SidebarMenuButton>
+
+        <div className="side-user">
+          <span className="avatar">{initials(profile.full_name)}</span>
+          <div>
+            <strong>{profile.full_name}</strong>
+            <span>{roleLabel[profile.role]}</span>
+          </div>
+        </div>
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
+
+function EmptySection({ page, role }: { page: Page; role: Role }) {
+  const descriptions: Record<Page, string> = {
+    Overview: "Your account is connected. Academic records will appear here as each live module is configured.",
+    Grades: role === "student"
+      ? "No official grades are available in the portal yet."
+      : "Grade encoding will be enabled after subjects, sections, and teaching assignments are configured.",
+    Attendance: role === "student"
+      ? "No official attendance records are available in the portal yet."
+      : "Attendance recording will be enabled after class assignments are configured.",
+    "Class schedule": "No official class schedule has been published in the portal yet.",
+    Announcements: "No official portal announcements have been published yet.",
+    "Learning resources": "No learning resources have been uploaded to the live portal yet.",
+    Students: role === "administrator"
+      ? "Student enrollment records will appear here after the academic database is configured."
+      : "Your assigned students will appear here after teaching assignments are configured.",
+    "School setup": "School year, grade levels, sections, subjects, and assignments will be configured in the next phase.",
+  };
+
+  const icons: Record<Page, typeof BookOpen> = {
+    Overview: LayoutDashboard,
+    Grades: GraduationCap,
+    Attendance: ClipboardCheck,
+    "Class schedule": CalendarDays,
+    Announcements: Megaphone,
+    "Learning resources": FolderOpen,
+    Students: Users,
+    "School setup": Settings2,
+  };
+
+  const Icon = icons[page];
+
+  return (
+    <section className="panel real-empty-panel">
+      <Icon size={34} />
+      <h2>{page}</h2>
+      <p>{descriptions[page]}</p>
+    </section>
+  );
+}
+
+export default function PortalPage() {
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [page, setPage] = useState<Page>("Overview");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadProfile() {
+      try {
+        const response = await fetch("/api/auth/me", { cache: "no-store" });
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok || !result.profile) {
+          if (response.status === 401) {
+            window.location.href = "/";
+            return;
+          }
+          throw new Error(result.error ?? "Unable to load your profile.");
+        }
+
+        if (active) setProfile(result.profile as Profile);
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : "Unable to load your profile.");
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    void loadProfile();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const accountId = useMemo(() => {
+    if (!profile) return "";
+    return profile.role === "student" && profile.lrn
+      ? `LRN ${profile.lrn}`
+      : profile.email;
+  }, [profile]);
+
+  if (loading) {
+    return (
+      <main className="real-portal-loading">
+        <img src="/school-logo.png" alt="" />
+        <strong>Opening your academic portal…</strong>
+      </main>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <main className="real-portal-loading">
+        <ShieldCheck size={34} />
+        <strong>We could not open your portal.</strong>
+        <span>{error || "Please sign in again."}</span>
+        <button onClick={() => (window.location.href = "/")}>Return to sign in</button>
+      </main>
+    );
+  }
+
+  return (
+    <SidebarProvider>
+      <SideNav profile={profile} page={page} onPage={setPage} />
+
+      <main className="workspace">
+        <header className="topbar">
+          <div className="crumb">
+            <SidebarTrigger />
+            <span>Academic Portal</span>
+            <span className="slash">/</span>
+            <strong>{page}</strong>
+          </div>
+
+          <div className="real-user-badge">
+            <span className="avatar small">{initials(profile.full_name)}</span>
+            <div>
+              <strong>{profile.full_name}</strong>
+              <span>{roleLabel[profile.role]}</span>
+            </div>
+          </div>
+        </header>
+
+        <div className="real-status-bar">
+          <ShieldCheck size={16} />
+          <span>
+            Signed in as <strong>{roleLabel[profile.role]}</strong> · {accountId}
+          </span>
+        </div>
+
+        <div className="page-wrap">
+          <div className="page-heading">
+            <div>
+              <p className="eyebrow">ASUNCION NATIONAL HIGH SCHOOL · SCHOOL YEAR 2026–2027</p>
+              <h1>
+                {page === "Overview" ? `Welcome, ${profile.full_name}.` : page}
+              </h1>
+              <p>
+                {page === "Overview"
+                  ? `Your verified ${roleLabel[profile.role].toLowerCase()} account is now connected to the portal.`
+                  : "This live module will use official school records once its database is configured."}
+              </p>
+            </div>
+            <div className="real-role-card">
+              <UserRound size={18} />
+              <div>
+                <span>ACCOUNT ROLE</span>
+                <strong>{roleLabel[profile.role]}</strong>
+              </div>
+            </div>
+          </div>
+
+          {page === "Overview" && (
+            <div className="real-overview-grid">
+              <section className="welcome-card real-welcome">
+                <div>
+                  <span className="tag">VERIFIED PORTAL ACCESS</span>
+                  <h2>Your real account<br />is connected.</h2>
+                  <p>
+                    The demonstration role switch and fictional academic records
+                    have been removed. We can now build each live school module
+                    on top of your authenticated identity.
+                  </p>
+                </div>
+                <div className="academic-motif">
+                  <img
+                    className="hero-logo"
+                    src="/school-logo.png"
+                    alt="Asuncion National High School seal"
+                  />
+                  <span>ASUNCION NHS</span>
+                  <small>Academic Portal</small>
+                </div>
+              </section>
+
+              <section className="panel real-profile-card">
+                <h2>Account information</h2>
+                <dl>
+                  <div><dt>Full name</dt><dd>{profile.full_name}</dd></div>
+                  <div><dt>Role</dt><dd>{roleLabel[profile.role]}</dd></div>
+                  {profile.lrn && <div><dt>LRN</dt><dd>{profile.lrn}</dd></div>}
+                  <div><dt>Email</dt><dd>{profile.email}</dd></div>
+                  <div><dt>Status</dt><dd><span className="tag">Active</span></dd></div>
+                </dl>
+              </section>
+
+              {profile.role === "administrator" && (
+                <section className="panel real-admin-card">
+                  <h2>Administrator tools</h2>
+                  <p>These tools are connected to the live authentication database.</p>
+                  <div>
+                    <button onClick={() => (window.location.href = "/portal/admin/accounts")}>
+                      <Users size={18} /> Account approvals
+                    </button>
+                    <button onClick={() => (window.location.href = "/portal/admin/password-resets")}>
+                      <ShieldCheck size={18} /> Password reset requests
+                    </button>
+                  </div>
+                </section>
+              )}
+
+              <section className="panel real-next-card">
+                <BookOpen size={28} />
+                <h2>Next build phase</h2>
+                <p>
+                  Configure the real academic structure: school year, grade levels,
+                  sections, subjects, student enrollment, and teacher assignments.
+                </p>
+              </section>
+            </div>
+          )}
+
+          {page !== "Overview" && <EmptySection page={page} role={profile.role} />}
+
+          <footer className="page-footer">
+            <span>Asuncion National High School</span>
+            <span>Academic Portal · Authenticated workspace</span>
+          </footer>
+        </div>
+      </main>
+    </SidebarProvider>
+  );
 }
