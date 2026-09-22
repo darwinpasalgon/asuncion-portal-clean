@@ -231,3 +231,26 @@
     justify-content: center;
   }
 }
+
+.panelSpacing {
+  margin-top: 22px;
+}
+.tempPassword {
+  margin: 20px 0 10px;
+  padding: 16px 18px;
+  border: 1px dashed #9eb7c7;
+  border-radius: 10px;
+  background: #f6fafc;
+  color: #173f5f;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: clamp(1.05rem, 3vw, 1.35rem);
+  font-weight: 800;
+  letter-spacing: .08em;
+  word-break: break-all;
+}
+.tempNote {
+  margin: 0 0 18px;
+  color: #6d808c;
+  font-size: .8rem;
+  line-height: 1.65;
+}
