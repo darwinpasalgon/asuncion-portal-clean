@@ -335,7 +335,30 @@ export default function PortalPage() {
           </div>
 
           <div className="real-user-badge">
-            <div className="real-top-avatar" aria-hidden="true">
+            <div
+              aria-hidden="true"
+              style={{
+                width: 38,
+                height: 38,
+                minWidth: 38,
+                minHeight: 38,
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+                padding: 0,
+                margin: 0,
+                lineHeight: 1,
+                textAlign: "center",
+                boxSizing: "border-box",
+                background: "#e3eee7",
+                border: "1px solid #d5e3d9",
+                color: "#386348",
+                fontSize: "0.8rem",
+                fontWeight: 700,
+              }}
+            >
               {initials(profile.full_name)}
             </div>
             <div>
