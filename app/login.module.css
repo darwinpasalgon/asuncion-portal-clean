@@ -578,3 +578,23 @@
     border-radius: 12px;
   }
 }
+
+.inputWrap select {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #17354f;
+  font-size: 0.94rem;
+  cursor: pointer;
+}
+
+.inputWrap select:disabled {
+  color: #9aabb6;
+  cursor: not-allowed;
+}
+
+.inputWrap select option {
+  color: #17354f;
+}
