@@ -388,3 +388,193 @@
     transition: none;
   }
 }
+
+
+.accountPrompt {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  color: #6e808d;
+  font-size: 0.82rem;
+}
+
+.pageCompact {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(31, 120, 177, 0.08), transparent 28%),
+    #f4f8fb;
+  color: #17354f;
+  padding: 38px 20px;
+}
+
+.authShell {
+  width: min(100%, 760px);
+  margin: 0 auto;
+}
+
+.authHeader {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 28px;
+}
+
+.authHeader img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.authHeader strong,
+.authHeader span {
+  display: block;
+}
+
+.authHeader strong {
+  color: #17578d;
+  font-size: 0.9rem;
+  letter-spacing: 0.06em;
+}
+
+.authHeader span {
+  margin-top: 4px;
+  color: #51756a;
+  font-size: 0.78rem;
+}
+
+.authCard {
+  background: #fff;
+  border: 1px solid #dfe7ec;
+  border-radius: 16px;
+  padding: clamp(24px, 5vw, 42px);
+  box-shadow: 0 18px 50px rgba(22, 71, 106, 0.08);
+}
+
+.authCard h1 {
+  margin: 0;
+  color: #153f66;
+  font-size: clamp(1.9rem, 4vw, 2.5rem);
+  letter-spacing: -0.04em;
+}
+
+.authCard > p {
+  margin: 10px 0 28px;
+  color: #6b7f8e;
+  line-height: 1.7;
+}
+
+.roleTabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  padding: 5px;
+  margin-bottom: 24px;
+  background: #eef4f7;
+  border-radius: 11px;
+}
+
+.roleTab {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #637888;
+  min-height: 42px;
+  font-weight: 650;
+}
+
+.roleTabActive {
+  background: white;
+  color: #17679c;
+  box-shadow: 0 2px 8px rgba(25, 72, 103, 0.1);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.spanTwo {
+  grid-column: 1 / -1;
+}
+
+.helpText {
+  margin: -1px 0 0;
+  color: #81909a;
+  font-size: 0.74rem;
+  line-height: 1.55;
+}
+
+.noticeBox {
+  margin: 20px 0 0;
+  padding: 14px 16px;
+  background: #f5f8fa;
+  border: 1px solid #e2e8ec;
+  border-radius: 9px;
+  color: #607581;
+  font-size: 0.78rem;
+  line-height: 1.65;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin-bottom: 18px;
+  color: #176ba4;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.channelGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 14px 0 24px;
+}
+
+.channelCard {
+  padding: 16px;
+  border: 1px solid #dce5ea;
+  border-radius: 10px;
+  background: white;
+  text-align: left;
+  color: #3d5668;
+}
+
+.channelCard strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #24485f;
+}
+
+.channelCard span {
+  color: #718692;
+  font-size: 0.77rem;
+  line-height: 1.5;
+}
+
+.channelCardActive {
+  border-color: #2c7eaf;
+  box-shadow: 0 0 0 3px rgba(44, 126, 175, 0.09);
+}
+
+@media (max-width: 650px) {
+  .formGrid,
+  .channelGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .spanTwo {
+    grid-column: auto;
+  }
+
+  .authCard {
+    border-radius: 12px;
+  }
+}
