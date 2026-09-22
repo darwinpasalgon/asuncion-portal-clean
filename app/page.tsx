@@ -21,7 +21,7 @@ export default function LoginPage() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const email = String(form.get("email") || "").trim();
+    const identifier = String(form.get("identifier") || "").trim();
     const password = String(form.get("password") || "");
 
     if (!email || !password) {
@@ -137,11 +137,11 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className={styles.demoNote}>
+          <div className={styles.accountPrompt}>\n            <span>New to the portal?</span>\n            <button type="button" className={styles.textButton} onClick={() => router.push("/register")}>Create an account</button>\n          </div>\n\n          <div className={styles.demoNote}>
             <ShieldCheck size={17} />
             <p>
               <strong>Demo mode:</strong> authentication is not connected yet.
-              Enter any email and password to preview the existing portal.
+              Enter any LRN/email and password to preview the existing portal while secure authentication is being connected.
             </p>
           </div>
 
