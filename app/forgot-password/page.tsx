@@ -8,17 +8,13 @@ import {
   Eye,
   EyeOff,
   LockKeyhole,
-  Mail,
   MessageSquareText,
   UserRound,
 } from "lucide-react";
 import styles from "../login.module.css";
 
-type Channel = "email" | "sms";
-
 export default function ForgotPasswordPage() {
   const router = useRouter();
-  const [channel, setChannel] = useState<Channel>("email");
   const [identifier, setIdentifier] = useState("");
   const [challengeId, setChallengeId] = useState("");
   const [stage, setStage] = useState<"request" | "verify" | "complete">("request");
@@ -46,7 +42,7 @@ export default function ForgotPasswordPage() {
       const response = await fetch("/api/auth/recovery/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier: value, channel }),
+        body: JSON.stringify({ identifier: value }),
       });
       const result = await response.json().catch(() => ({}));
 
@@ -58,7 +54,7 @@ export default function ForgotPasswordPage() {
       setIdentifier(value);
       setChallengeId(String(result.challenge_id || ""));
       setMessage(
-        "If the account exists, a 6-digit verification code has been sent to the selected recovery method."
+        "If the account exists, a 6-digit verification code has been sent to the registered mobile number."
       );
       setStage("verify");
     } catch {
@@ -132,15 +128,15 @@ export default function ForgotPasswordPage() {
           <img src="/school-logo.png" alt="Asuncion National High School logo" />
           <div>
             <strong>ASUNCION NATIONAL HIGH SCHOOL</strong>
-            <span>Academic Portal · Account Recovery</span>
+            <span>Academic Portal · SMS Account Recovery</span>
           </div>
         </div>
 
         <section className={styles.authCard}>
           <h1>Reset your password</h1>
           <p>
-            Choose email or SMS, enter the one-time verification code, then set
-            your new password.
+            Enter your LRN or registered email address. We will send a 6-digit
+            verification code to the mobile number registered with your account.
           </p>
 
           {stage === "request" && (
@@ -159,36 +155,18 @@ export default function ForgotPasswordPage() {
                 </div>
               </label>
 
-              <div>
-                <span className={styles.field}>Send verification code through</span>
-                <div className={styles.channelGrid}>
-                  <button
-                    type="button"
-                    className={styles.channelCard + (channel === "email" ? " " + styles.channelCardActive : "")}
-                    onClick={() => setChannel("email")}
-                    disabled={loading}
-                  >
-                    <Mail size={19} />
-                    <strong>Email</strong>
-                    <span>Send a one-time code to the registered email address.</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.channelCard + (channel === "sms" ? " " + styles.channelCardActive : "")}
-                    onClick={() => setChannel("sms")}
-                    disabled={loading}
-                  >
-                    <MessageSquareText size={19} />
-                    <strong>SMS</strong>
-                    <span>Send a one-time code to the registered mobile number.</span>
-                  </button>
-                </div>
+              <div className={styles.noticeBox}>
+                <MessageSquareText size={17} />
+                <span>
+                  Recovery is sent by SMS only to the mobile number registered
+                  during account creation.
+                </span>
               </div>
 
               {error && <p className={styles.error}>{error}</p>}
 
               <button className={styles.signInButton} type="submit" disabled={loading}>
-                {loading ? "Sending code..." : "Send verification code"}
+                {loading ? "Sending SMS..." : "Send verification code"}
                 {!loading && <ArrowRight size={18} />}
               </button>
             </form>
@@ -207,7 +185,7 @@ export default function ForgotPasswordPage() {
                     inputMode="numeric"
                     maxLength={6}
                     required
-                    placeholder="6-digit code"
+                    placeholder="6-digit SMS code"
                     disabled={loading}
                   />
                 </div>
@@ -270,7 +248,7 @@ export default function ForgotPasswordPage() {
                 }}
                 disabled={loading}
               >
-                Use a different recovery method
+                Request a new SMS code
               </button>
             </form>
           )}
@@ -290,14 +268,14 @@ export default function ForgotPasswordPage() {
 
           <div className={styles.noticeBox}>
             Recovery codes expire after 10 minutes and are stored only as
-            one-way hashes. For privacy, recovery does not reveal whether an
-            LRN or email exists in the portal.
+            one-way hashes. For privacy, the portal does not reveal whether an
+            LRN or email exists.
           </div>
 
           {stage === "verify" && (
             <p className={styles.helpText}>
-              Recovery requested for {identifier}. If no code arrives, return
-              and try the other registered recovery method.
+              Recovery requested for {identifier}. The code will only be sent
+              to the mobile number already saved on the account.
             </p>
           )}
         </section>
