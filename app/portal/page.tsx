@@ -44,6 +44,8 @@ type Profile = {
   full_name: string;
   email: string;
   lrn: string | null;
+  grade_level: number | null;
+  section: string | null;
   role: Role;
   requested_role: "student" | "teacher";
   account_status: "active";
@@ -399,6 +401,16 @@ export default function PortalPage() {
                   <div><dt>Full name</dt><dd>{profile.full_name}</dd></div>
                   <div><dt>Role</dt><dd>{roleLabel[profile.role]}</dd></div>
                   {profile.lrn && <div><dt>LRN</dt><dd>{profile.lrn}</dd></div>}
+                  {profile.role === "student" && (
+                    <div>
+                      <dt>Grade & section</dt>
+                      <dd>
+                        {profile.grade_level
+                          ? `Grade ${profile.grade_level}${profile.section ? ` · ${profile.section}` : " · Section not assigned"}`
+                          : "Not assigned yet"}
+                      </dd>
+                    </div>
+                  )}
                   <div><dt>Email</dt><dd>{profile.email}</dd></div>
                   <div><dt>Status</dt><dd><span className="tag">Active</span></dd></div>
                 </dl>
