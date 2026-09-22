@@ -8,8 +8,8 @@ import {
   EyeOff,
   GraduationCap,
   LockKeyhole,
-  Mail,
   ShieldCheck,
+  UserRound,
 } from "lucide-react";
 import styles from "./login.module.css";
 
@@ -17,20 +17,44 @@ export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError("");
+
     const form = new FormData(event.currentTarget);
     const identifier = String(form.get("identifier") || "").trim();
     const password = String(form.get("password") || "");
 
-    if (!email || !password) {
-      setError("Enter your email address and password.");
+    if (!identifier || !password) {
+      setError("Enter your LRN or email address and password.");
       return;
     }
 
-    setError("");
-    router.push("/portal");
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier, password }),
+      });
+
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setError(result.error ?? "Unable to sign in.");
+        return;
+      }
+
+      router.replace("/portal");
+      router.refresh();
+    } catch {
+      setError("Unable to reach the sign-in service. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -79,20 +103,24 @@ export default function LoginPage() {
           <div className={styles.intro}>
             <span className={styles.demoPill}>PORTAL ACCESS</span>
             <h2>Welcome back</h2>
-            <p>Sign in using your school account to continue.</p>
+            <p>
+              Students sign in with their LRN. Teachers and staff sign in with
+              their registered email address.
+            </p>
           </div>
 
           <form className={styles.form} onSubmit={handleSubmit}>
             <label className={styles.field}>
-              <span>Email address</span>
+              <span>LRN or email address</span>
               <div className={styles.inputWrap}>
-                <Mail size={18} aria-hidden="true" />
+                <UserRound size={18} aria-hidden="true" />
                 <input
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="name@school.edu.ph"
-                  aria-label="Email address"
+                  name="identifier"
+                  type="text"
+                  autoComplete="username"
+                  placeholder="Student LRN or staff email"
+                  aria-label="LRN or email address"
+                  disabled={loading}
                 />
               </div>
             </label>
@@ -107,12 +135,14 @@ export default function LoginPage() {
                   autoComplete="current-password"
                   placeholder="Enter your password"
                   aria-label="Password"
+                  disabled={loading}
                 />
                 <button
                   type="button"
                   className={styles.passwordToggle}
                   onClick={() => setShowPassword((value) => !value)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
+                  disabled={loading}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -121,27 +151,49 @@ export default function LoginPage() {
 
             <div className={styles.formOptions}>
               <label className={styles.remember}>
-                <input type="checkbox" />
+                <input type="checkbox" disabled={loading} />
                 <span>Remember me</span>
               </label>
-              <button type="button" className={styles.textButton}>
+              <button
+                type="button"
+                className={styles.textButton}
+                onClick={() => router.push("/forgot-password")}
+                disabled={loading}
+              >
                 Forgot password?
               </button>
             </div>
 
             {error && <p className={styles.error}>{error}</p>}
 
-            <button type="submit" className={styles.signInButton}>
-              Sign in
-              <ArrowRight size={18} />
+            <button
+              type="submit"
+              className={styles.signInButton}
+              disabled={loading}
+            >
+              {loading ? "Signing in..." : "Sign in"}
+              {!loading && <ArrowRight size={18} />}
             </button>
           </form>
 
-          <div className={styles.accountPrompt}>\n            <span>New to the portal?</span>\n            <button type="button" className={styles.textButton} onClick={() => router.push("/register")}>Create an account</button>\n          </div>\n\n          <div className={styles.demoNote}>
+          <div className={styles.accountPrompt}>
+            <span>New to the portal?</span>
+            <button
+              type="button"
+              className={styles.textButton}
+              onClick={() => router.push("/register")}
+              disabled={loading}
+            >
+              Create an account
+            </button>
+          </div>
+
+          <div className={styles.demoNote}>
             <ShieldCheck size={17} />
             <p>
-              <strong>Demo mode:</strong> authentication is not connected yet.
-              Enter any LRN/email and password to preview the existing portal while secure authentication is being connected.
+              Accounts must use a registered email address and mobile number.
+              Newly created accounts require school verification before they can
+              access academic records.
             </p>
           </div>
 
