@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -16,25 +16,66 @@ import styles from "../login.module.css";
 
 type Role = "student" | "teacher";
 
-const SECTION_OPTIONS: Record<string, string[]> = {
-  "7": ["Dahlia", "Daisy", "Gumamela", "Jasmine", "Rosal", "Rose", "Sampaguita", "Santan", "Sunflower", "Vanda", "Waterlily", "Zinnia"],
-  "8": ["Acacia", "Almasiga", "Apitong", "Dao", "Falcata", "Gemelina", "Lawaan", "Mahogany", "Molave", "Narra", "Yakal"],
-  "9": ["Aguinaldo", "Aquino", "Arroyo", "Macapagal", "Magsaysay", "Marcos", "Osmeña", "Quezon", "Quirino", "Roxas"],
-  "10": ["Bonifacio", "Burgos", "Del Pilar", "Gomez", "Jacinto", "Lapu-Lapu", "Luna", "Rizal", "Zamora"],
-  "11": [],
-  "12": [],
-};
-
 export default function RegisterPage() {
   const router = useRouter();
   const [role, setRole] = useState<Role>("student");
   const [showPassword, setShowPassword] = useState(false);
   const [gradeLevel, setGradeLevel] = useState("");
   const [section, setSection] = useState("");
+  const [gradeOptions, setGradeOptions] = useState<number[]>([7, 8, 9, 10, 11, 12]);
+  const [sectionOptions, setSectionOptions] = useState<Record<string, string[]>>({});
+  const [optionsReady, setOptionsReady] = useState(false);
+  const [optionsError, setOptionsError] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [complete, setComplete] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadOptions() {
+      try {
+        const response = await fetch("/api/academic/registration-options", {
+          cache: "no-store",
+        });
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(result.error ?? "Unable to load grade and section choices.");
+        }
+
+        const grades = (result.grades ?? [])
+          .map((item: { grade_level?: number }) => Number(item.grade_level))
+          .filter((value: number) => Number.isInteger(value));
+
+        const map: Record<string, string[]> = {};
+        for (const item of result.sections ?? []) {
+          const key = String(item.grade_level ?? "");
+          const name = String(item.name ?? "");
+          if (!key || !name) continue;
+          if (!map[key]) map[key] = [];
+          map[key].push(name);
+        }
+
+        if (active) {
+          if (grades.length) setGradeOptions(grades);
+          setSectionOptions(map);
+          setOptionsReady(true);
+        }
+      } catch {
+        if (active) {
+          setOptionsError("Unable to load the current grade and section choices. Refresh the page and try again.");
+          setOptionsReady(false);
+        }
+      }
+    }
+
+    void loadOptions();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -48,10 +89,15 @@ export default function RegisterPage() {
     const phone = String(data.get("phone") || "").trim();
     const password = String(data.get("password") || "");
     const confirm = String(data.get("confirmPassword") || "");
-    const sectionsForGrade = SECTION_OPTIONS[gradeLevel] ?? [];
+    const sectionsForGrade = sectionOptions[gradeLevel] ?? [];
 
     if (role === "student" && !/^\d{12}$/.test(lrn)) {
       setError("Student LRN must contain exactly 12 digits.");
+      return;
+    }
+
+    if (role === "student" && !optionsReady) {
+      setError("Grade and section choices are still loading. Please wait a moment.");
       return;
     }
 
@@ -215,16 +261,17 @@ export default function RegisterPage() {
                               setGradeLevel(event.target.value);
                               setSection("");
                             }}
-                            disabled={loading}
+                            disabled={loading || !optionsReady}
                             aria-label="Grade level"
                           >
-                            <option value="">Select grade level</option>
-                            <option value="7">Grade 7</option>
-                            <option value="8">Grade 8</option>
-                            <option value="9">Grade 9</option>
-                            <option value="10">Grade 10</option>
-                            <option value="11">Grade 11</option>
-                            <option value="12">Grade 12</option>
+                            <option value="">
+                              {optionsReady ? "Select grade level" : "Loading grade levels..."}
+                            </option>
+                            {gradeOptions.map((grade) => (
+                              <option key={grade} value={grade}>
+                                Grade {grade}
+                              </option>
+                            ))}
                           </select>
                         </div>
                       </label>
@@ -235,19 +282,21 @@ export default function RegisterPage() {
                           <select
                             name="section"
                             value={section}
-                            required={(SECTION_OPTIONS[gradeLevel] ?? []).length > 0}
+                            required={(sectionOptions[gradeLevel] ?? []).length > 0}
                             onChange={(event) => setSection(event.target.value)}
-                            disabled={loading || !gradeLevel}
+                            disabled={loading || !optionsReady || !gradeLevel}
                             aria-label="Section"
                           >
-                            {!gradeLevel ? (
+                            {!optionsReady ? (
+                              <option value="">Loading sections...</option>
+                            ) : !gradeLevel ? (
                               <option value="">Select grade level first</option>
-                            ) : (SECTION_OPTIONS[gradeLevel] ?? []).length === 0 ? (
+                            ) : (sectionOptions[gradeLevel] ?? []).length === 0 ? (
                               <option value="">Sections will be added soon</option>
                             ) : (
                               <>
                                 <option value="">Select section</option>
-                                {(SECTION_OPTIONS[gradeLevel] ?? []).map((name) => (
+                                {(sectionOptions[gradeLevel] ?? []).map((name) => (
                                   <option key={name} value={name}>
                                     {name}
                                   </option>
@@ -256,7 +305,7 @@ export default function RegisterPage() {
                             )}
                           </select>
                         </div>
-                        {gradeLevel && (SECTION_OPTIONS[gradeLevel] ?? []).length === 0 && (
+                        {gradeLevel && optionsReady && (sectionOptions[gradeLevel] ?? []).length === 0 && (
                           <small className={styles.helpText}>
                             Grade {gradeLevel} sections will be added soon.
                           </small>
@@ -338,6 +387,7 @@ export default function RegisterPage() {
                   </label>
                 </div>
 
+                {optionsError && <p className={styles.error}>{optionsError}</p>}
                 {error && <p className={styles.error}>{error}</p>}
 
                 <button
@@ -369,7 +419,7 @@ export default function RegisterPage() {
             handled through administrator-assisted identity verification.
             Administrator accounts cannot be created through public registration.
           </div>
-          <p className={styles.helpText}>Registration build: 2026-09-22.4</p>
+          <p className={styles.helpText}>Registration build: 2026-09-22.5</p>
         </section>
       </div>
     </main>
