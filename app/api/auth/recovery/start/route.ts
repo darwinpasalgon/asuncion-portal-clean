@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         identifier: body.identifier,
-        channel: body.channel,
+        channel: "sms",
       }),
       cache: "no-store",
     }
