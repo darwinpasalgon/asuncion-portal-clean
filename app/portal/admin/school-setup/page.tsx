@@ -93,7 +93,8 @@ export default function SchoolSetupPage() {
     setError("");
     setSuccess("");
 
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     const gradeLevel = Number(data.get("gradeLevel") ?? 0);
     const name = String(data.get("sectionName") ?? "").trim();
 
@@ -111,7 +112,7 @@ export default function SchoolSetupPage() {
       }
 
       setSuccess(`Section ${name} added to Grade ${gradeLevel}.`);
-      event.currentTarget.reset();
+      form.reset();
       await load();
     } catch {
       setError("Unable to reach the school setup service.");
