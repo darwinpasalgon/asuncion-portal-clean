@@ -73,6 +73,9 @@ export default function AccountApprovalsPage() {
         <button className={styles.back} onClick={() => router.push("/portal")}>
           <ArrowLeft size={16} /> Back to portal
         </button>
+        <button className={styles.back} onClick={() => router.push("/portal/admin/password-resets")}>
+          Password reset requests
+        </button>
 
         <header className={styles.header}>
           <div>
