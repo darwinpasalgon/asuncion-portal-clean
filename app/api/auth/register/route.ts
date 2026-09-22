@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
+const SECTION_OPTIONS: Record<number, readonly string[]> = {
+  7: ["Dahlia", "Daisy", "Gumamela", "Jasmine", "Rosal", "Rose", "Sampaguita", "Santan", "Sunflower", "Vanda", "Waterlily", "Zinnia"],
+  8: ["Acacia", "Almasiga", "Apitong", "Dao", "Falcata", "Gemelina", "Lawaan", "Mahogany", "Molave", "Narra", "Yakal"],
+  9: ["Aguinaldo", "Aquino", "Arroyo", "Macapagal", "Magsaysay", "Marcos", "Osmeña", "Quezon", "Quirino", "Roxas"],
+  10: ["Bonifacio", "Burgos", "Del Pilar", "Gomez", "Jacinto", "Lapu-Lapu", "Luna", "Rizal", "Zamora"],
+  11: [],
+  12: [],
+};
+
 function normalizePhone(input: string) {
   const raw = input.replace(/[\s()-]/g, "");
   if (/^09\d{9}$/.test(raw)) return `+63${raw.slice(1)}`;
@@ -17,6 +26,8 @@ export async function POST(request: Request) {
     email?: string;
     phone?: string;
     password?: string;
+    gradeLevel?: number | string;
+    section?: string | null;
   };
 
   try {
@@ -31,6 +42,11 @@ export async function POST(request: Request) {
   const email = String(body.email ?? "").trim().toLowerCase();
   const password = String(body.password ?? "");
   const phone = normalizePhone(String(body.phone ?? "").trim());
+  const gradeLevel = Number(body.gradeLevel ?? 0);
+  const requestedSection = String(body.section ?? "").trim();
+  const allowedSections = SECTION_OPTIONS[gradeLevel] ?? [];
+  const section =
+    role === "student" && allowedSections.length > 0 ? requestedSection : null;
 
   if (!fullName || !email || !phone) {
     return NextResponse.json(
@@ -42,6 +58,27 @@ export async function POST(request: Request) {
   if (role === "student" && !/^\d{12}$/.test(lrn)) {
     return NextResponse.json(
       { error: "Student LRN must contain exactly 12 digits." },
+      { status: 400 }
+    );
+  }
+
+  if (
+    role === "student" &&
+    (!Number.isInteger(gradeLevel) || gradeLevel < 7 || gradeLevel > 12)
+  ) {
+    return NextResponse.json(
+      { error: "Select your current grade level." },
+      { status: 400 }
+    );
+  }
+
+  if (
+    role === "student" &&
+    allowedSections.length > 0 &&
+    !allowedSections.includes(requestedSection)
+  ) {
+    return NextResponse.json(
+      { error: "Select a valid section for your grade level." },
       { status: 400 }
     );
   }
@@ -67,6 +104,8 @@ export async function POST(request: Request) {
         recovery_phone: phone,
         requested_role: role,
         lrn: role === "student" ? lrn : null,
+        grade_level: role === "student" ? gradeLevel : null,
+        section: role === "student" ? section : null,
       },
     }),
     cache: "no-store",
