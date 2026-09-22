@@ -16,10 +16,21 @@ import styles from "../login.module.css";
 
 type Role = "student" | "teacher";
 
+const SECTION_OPTIONS: Record<string, string[]> = {
+  "7": ["Dahlia", "Daisy", "Gumamela", "Jasmine", "Rosal", "Rose", "Sampaguita", "Santan", "Sunflower", "Vanda", "Waterlily", "Zinnia"],
+  "8": ["Acacia", "Almasiga", "Apitong", "Dao", "Falcata", "Gemelina", "Lawaan", "Mahogany", "Molave", "Narra", "Yakal"],
+  "9": ["Aguinaldo", "Aquino", "Arroyo", "Macapagal", "Magsaysay", "Marcos", "Osmeña", "Quezon", "Quirino", "Roxas"],
+  "10": ["Bonifacio", "Burgos", "Del Pilar", "Gomez", "Jacinto", "Lapu-Lapu", "Luna", "Rizal", "Zamora"],
+  "11": [],
+  "12": [],
+};
+
 export default function RegisterPage() {
   const router = useRouter();
   const [role, setRole] = useState<Role>("student");
   const [showPassword, setShowPassword] = useState(false);
+  const [gradeLevel, setGradeLevel] = useState("");
+  const [section, setSection] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,9 +48,24 @@ export default function RegisterPage() {
     const phone = String(data.get("phone") || "").trim();
     const password = String(data.get("password") || "");
     const confirm = String(data.get("confirmPassword") || "");
+    const sectionsForGrade = SECTION_OPTIONS[gradeLevel] ?? [];
 
     if (role === "student" && !/^\d{12}$/.test(lrn)) {
       setError("Student LRN must contain exactly 12 digits.");
+      return;
+    }
+
+    if (role === "student" && !gradeLevel) {
+      setError("Select your current grade level.");
+      return;
+    }
+
+    if (
+      role === "student" &&
+      sectionsForGrade.length > 0 &&
+      !sectionsForGrade.includes(section)
+    ) {
+      setError("Select your section.");
       return;
     }
 
@@ -66,6 +92,8 @@ export default function RegisterPage() {
           email,
           phone,
           password,
+          gradeLevel: role === "student" ? Number(gradeLevel) : null,
+          section: role === "student" && section ? section : null,
         }),
       });
 
@@ -118,7 +146,9 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   className={styles.roleTab + (role === "student" ? " " + styles.roleTabActive : "")}
-                  onClick={() => setRole("student")}
+                  onClick={() => {
+                    setRole("student");
+                  }}
                   disabled={loading}
                 >
                   Student
@@ -126,7 +156,11 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   className={styles.roleTab + (role === "teacher" ? " " + styles.roleTabActive : "")}
-                  onClick={() => setRole("teacher")}
+                  onClick={() => {
+                    setRole("teacher");
+                    setGradeLevel("");
+                    setSection("");
+                  }}
                   disabled={loading}
                 >
                   Teacher
@@ -166,6 +200,69 @@ export default function RegisterPage() {
                         This will be your student login ID.
                       </small>
                     </label>
+                  )}
+
+                  {role === "student" && (
+                    <>
+                      <label className={styles.field}>
+                        <span>Grade level</span>
+                        <div className={styles.inputWrap}>
+                          <select
+                            name="gradeLevel"
+                            required
+                            value={gradeLevel}
+                            onChange={(event) => {
+                              setGradeLevel(event.target.value);
+                              setSection("");
+                            }}
+                            disabled={loading}
+                            aria-label="Grade level"
+                          >
+                            <option value="">Select grade level</option>
+                            <option value="7">Grade 7</option>
+                            <option value="8">Grade 8</option>
+                            <option value="9">Grade 9</option>
+                            <option value="10">Grade 10</option>
+                            <option value="11">Grade 11</option>
+                            <option value="12">Grade 12</option>
+                          </select>
+                        </div>
+                      </label>
+
+                      <label className={styles.field}>
+                        <span>Section</span>
+                        <div className={styles.inputWrap}>
+                          <select
+                            name="section"
+                            value={section}
+                            required={(SECTION_OPTIONS[gradeLevel] ?? []).length > 0}
+                            onChange={(event) => setSection(event.target.value)}
+                            disabled={loading || !gradeLevel}
+                            aria-label="Section"
+                          >
+                            {!gradeLevel ? (
+                              <option value="">Select grade level first</option>
+                            ) : (SECTION_OPTIONS[gradeLevel] ?? []).length === 0 ? (
+                              <option value="">Sections will be added soon</option>
+                            ) : (
+                              <>
+                                <option value="">Select section</option>
+                                {(SECTION_OPTIONS[gradeLevel] ?? []).map((name) => (
+                                  <option key={name} value={name}>
+                                    {name}
+                                  </option>
+                                ))}
+                              </>
+                            )}
+                          </select>
+                        </div>
+                        {gradeLevel && (SECTION_OPTIONS[gradeLevel] ?? []).length === 0 && (
+                          <small className={styles.helpText}>
+                            Grade {gradeLevel} sections will be added soon.
+                          </small>
+                        )}
+                      </label>
+                    </>
                   )}
 
                   <label className={styles.field}>
@@ -272,7 +369,7 @@ export default function RegisterPage() {
             handled through administrator-assisted identity verification.
             Administrator accounts cannot be created through public registration.
           </div>
-          <p className={styles.helpText}>Registration build: 2026-09-22.3</p>
+          <p className={styles.helpText}>Registration build: 2026-09-22.4</p>
         </section>
       </div>
     </main>
