@@ -1,15 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
-const SECTION_OPTIONS: Record<number, readonly string[]> = {
-  7: ["Dahlia", "Daisy", "Gumamela", "Jasmine", "Rosal", "Rose", "Sampaguita", "Santan", "Sunflower", "Vanda", "Waterlily", "Zinnia"],
-  8: ["Acacia", "Almasiga", "Apitong", "Dao", "Falcata", "Gemelina", "Lawaan", "Mahogany", "Molave", "Narra", "Yakal"],
-  9: ["Aguinaldo", "Aquino", "Arroyo", "Macapagal", "Magsaysay", "Marcos", "Osmeña", "Quezon", "Quirino", "Roxas"],
-  10: ["Bonifacio", "Burgos", "Del Pilar", "Gomez", "Jacinto", "Lapu-Lapu", "Luna", "Rizal", "Zamora"],
-  11: [],
-  12: [],
-};
-
 function authHeaders(token: string) {
   return {
     apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -97,7 +88,6 @@ export async function POST(request: NextRequest) {
 
   if (action === "approve" && profile.requested_role === "student") {
     const gradeLevel = Number(profile.grade_level ?? 0);
-    const allowedSections = SECTION_OPTIONS[gradeLevel] ?? [];
 
     if (!Number.isInteger(gradeLevel) || gradeLevel < 7 || gradeLevel > 12) {
       return NextResponse.json(
@@ -106,9 +96,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (allowedSections.length > 0 && !allowedSections.includes(String(profile.section ?? ""))) {
+    const gradeCheck = await fetch(
+      `${SUPABASE_URL}/rest/v1/grade_levels?grade_level=eq.${gradeLevel}&select=grade_level&limit=1`,
+      { headers: authHeaders(token), cache: "no-store" }
+    );
+    const sectionCheck = await fetch(
+      `${SUPABASE_URL}/rest/v1/sections?grade_level=eq.${gradeLevel}&is_active=eq.true&select=name&order=name.asc`,
+      { headers: authHeaders(token), cache: "no-store" }
+    );
+
+    if (!gradeCheck.ok || !sectionCheck.ok) {
       return NextResponse.json(
-        { error: "This student does not have a valid section for the selected grade level." },
+        { error: "Unable to verify the student's academic placement." },
+        { status: 500 }
+      );
+    }
+
+    const gradeRows = await gradeCheck.json().catch(() => []);
+    const sectionRows = await sectionCheck.json().catch(() => []);
+    const activeSections = (sectionRows ?? []).map((item: { name?: string }) =>
+      String(item.name ?? "")
+    );
+
+    if (!gradeRows?.[0]) {
+      return NextResponse.json(
+        { error: "This student does not have a valid grade level." },
+        { status: 409 }
+      );
+    }
+
+    if (
+      activeSections.length > 0 &&
+      !activeSections.includes(String(profile.section ?? ""))
+    ) {
+      return NextResponse.json(
+        { error: "This student does not have a valid active section for the selected grade level." },
         { status: 409 }
       );
     }
