@@ -8,17 +8,14 @@ export async function POST(request: Request) {
   }
 
   const response = await fetch(
-    `${SUPABASE_URL}/functions/v1/password-recovery-start`,
+    `${SUPABASE_URL}/functions/v1/password-reset-request`,
     {
       method: "POST",
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        identifier: body.identifier,
-        channel: "sms",
-      }),
+      body: JSON.stringify({ identifier: body.identifier }),
       cache: "no-store",
     }
   );
