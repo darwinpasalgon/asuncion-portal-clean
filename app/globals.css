@@ -84,3 +84,20 @@ body{margin:0;background:var(--background);color:var(--foreground);font-family:A
 .real-teacher-class-page{overflow:hidden}
 .real-assignment-list.full article{padding-top:18px;padding-bottom:18px}
 @media(max-width:640px){.real-assignment-heading{flex-direction:column}.real-assignment-list article{align-items:flex-start;flex-direction:column;gap:8px}.real-assignment-list article>span{white-space:normal}}
+
+.real-schedule-page{overflow:hidden}
+.real-schedule-list{display:grid}
+.real-schedule-day{display:grid;grid-template-columns:130px 1fr;border-bottom:1px solid #edf1ee}
+.real-schedule-day:last-child{border-bottom:0}
+.real-schedule-day>h3{padding:20px 22px;background:#f6faf7;color:#35624b;font-size:.86rem}
+.real-schedule-day>div{display:grid}
+.real-schedule-day article{display:grid;grid-template-columns:130px 1fr;gap:18px;padding:17px 22px;border-bottom:1px solid #edf1ee}
+.real-schedule-day article:last-child{border-bottom:0}
+.real-schedule-time strong,.real-schedule-time span{display:block}
+.real-schedule-time strong{color:#31536a;font-size:.86rem}
+.real-schedule-time span{color:#87968d;font-size:.72rem;margin-top:4px}
+.real-schedule-day article>div:last-child>span,.real-schedule-day article>div:last-child>strong,.real-schedule-day article>div:last-child>small{display:block}
+.real-schedule-day article>div:last-child>span{color:#6d8877;font-size:.72rem;margin-bottom:4px}
+.real-schedule-day article>div:last-child>strong{color:#31536a;font-size:.88rem}
+.real-schedule-day article>div:last-child>small{color:#81918a;font-size:.72rem;margin-top:5px}
+@media(max-width:640px){.real-schedule-day{grid-template-columns:1fr}.real-schedule-day>h3{padding:14px 18px}.real-schedule-day article{grid-template-columns:1fr;gap:8px;padding:15px 18px}}
