@@ -79,7 +79,7 @@ export default function RegisterPage() {
       setComplete(true);
       setMessage(
         result.message ??
-          "Account created. Check your email and wait for school verification."
+          "Account created. Your account is pending school verification."
       );
     } catch {
       setError("Unable to reach the registration service. Please try again.");
@@ -108,6 +108,7 @@ export default function RegisterPage() {
           <p>
             Register your official contact information. Students will use their
             LRN to sign in; teachers will use their registered email address.
+            Your mobile number will be used for password recovery by SMS.
           </p>
 
           {!complete ? (
@@ -266,7 +267,8 @@ export default function RegisterPage() {
 
           <div className={styles.noticeBox}>
             New accounts start as <strong>pending</strong> until the school
-            validates the student LRN or teacher record. Administrator accounts
+            validates the student LRN or teacher record. The registered mobile
+            number will be used for password recovery. Administrator accounts
             cannot be created through public registration.
           </div>
         </section>
