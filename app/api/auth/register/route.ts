@@ -1,21 +1,41 @@
 import { NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
-const SECTION_OPTIONS: Record<number, readonly string[]> = {
-  7: ["Dahlia", "Daisy", "Gumamela", "Jasmine", "Rosal", "Rose", "Sampaguita", "Santan", "Sunflower", "Vanda", "Waterlily", "Zinnia"],
-  8: ["Acacia", "Almasiga", "Apitong", "Dao", "Falcata", "Gemelina", "Lawaan", "Mahogany", "Molave", "Narra", "Yakal"],
-  9: ["Aguinaldo", "Aquino", "Arroyo", "Macapagal", "Magsaysay", "Marcos", "Osmeña", "Quezon", "Quirino", "Roxas"],
-  10: ["Bonifacio", "Burgos", "Del Pilar", "Gomez", "Jacinto", "Lapu-Lapu", "Luna", "Rizal", "Zamora"],
-  11: [],
-  12: [],
-};
-
 function normalizePhone(input: string) {
   const raw = input.replace(/[\s()-]/g, "");
   if (/^09\d{9}$/.test(raw)) return `+63${raw.slice(1)}`;
   if (/^639\d{9}$/.test(raw)) return `+${raw}`;
   if (/^\+\d{8,15}$/.test(raw)) return raw;
   return null;
+}
+
+async function loadGradeAndSections(gradeLevel: number) {
+  const [gradeResponse, sectionResponse] = await Promise.all([
+    fetch(
+      `${SUPABASE_URL}/rest/v1/grade_levels?grade_level=eq.${gradeLevel}&select=grade_level&limit=1`,
+      {
+        headers: { apikey: SUPABASE_PUBLISHABLE_KEY },
+        cache: "no-store",
+      }
+    ),
+    fetch(
+      `${SUPABASE_URL}/rest/v1/sections?grade_level=eq.${gradeLevel}&is_active=eq.true&select=name&order=name.asc`,
+      {
+        headers: { apikey: SUPABASE_PUBLISHABLE_KEY },
+        cache: "no-store",
+      }
+    ),
+  ]);
+
+  if (!gradeResponse.ok || !sectionResponse.ok) return null;
+
+  const grades = await gradeResponse.json().catch(() => []);
+  const sections = await sectionResponse.json().catch(() => []);
+
+  return {
+    gradeExists: Boolean(grades?.[0]),
+    sections: (sections ?? []).map((item: { name?: string }) => String(item.name ?? "")),
+  };
 }
 
 export async function POST(request: Request) {
@@ -44,9 +64,6 @@ export async function POST(request: Request) {
   const phone = normalizePhone(String(body.phone ?? "").trim());
   const gradeLevel = Number(body.gradeLevel ?? 0);
   const requestedSection = String(body.section ?? "").trim();
-  const allowedSections = SECTION_OPTIONS[gradeLevel] ?? [];
-  const section =
-    role === "student" && allowedSections.length > 0 ? requestedSection : null;
 
   if (!fullName || !email || !phone) {
     return NextResponse.json(
@@ -62,25 +79,40 @@ export async function POST(request: Request) {
     );
   }
 
-  if (
-    role === "student" &&
-    (!Number.isInteger(gradeLevel) || gradeLevel < 7 || gradeLevel > 12)
-  ) {
-    return NextResponse.json(
-      { error: "Select your current grade level." },
-      { status: 400 }
-    );
-  }
+  let section: string | null = null;
 
-  if (
-    role === "student" &&
-    allowedSections.length > 0 &&
-    !allowedSections.includes(requestedSection)
-  ) {
-    return NextResponse.json(
-      { error: "Select a valid section for your grade level." },
-      { status: 400 }
-    );
+  if (role === "student") {
+    if (!Number.isInteger(gradeLevel) || gradeLevel < 7 || gradeLevel > 12) {
+      return NextResponse.json(
+        { error: "Select your current grade level." },
+        { status: 400 }
+      );
+    }
+
+    const structure = await loadGradeAndSections(gradeLevel);
+    if (!structure) {
+      return NextResponse.json(
+        { error: "Unable to verify the selected grade and section." },
+        { status: 503 }
+      );
+    }
+
+    if (!structure.gradeExists) {
+      return NextResponse.json(
+        { error: "Select a valid grade level." },
+        { status: 400 }
+      );
+    }
+
+    if (structure.sections.length > 0) {
+      if (!structure.sections.includes(requestedSection)) {
+        return NextResponse.json(
+          { error: "Select a valid section for your grade level." },
+          { status: 400 }
+        );
+      }
+      section = requestedSection;
+    }
   }
 
   if (password.length < 8) {
@@ -143,7 +175,6 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    message:
-      "Account created. Your account is pending school verification.",
+    message: "Account created. Your account is pending school verification.",
   });
 }
