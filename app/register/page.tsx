@@ -72,7 +72,8 @@ export default function RegisterPage() {
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        setError(result.error ?? "We could not create the account.");
+        const baseError = result.error ?? "We could not create the account.";
+        setError(result.authStatus ? `${baseError} (Auth ${result.authStatus})` : baseError);
         return;
       }
 
@@ -271,6 +272,7 @@ export default function RegisterPage() {
             number will be used for password recovery. Administrator accounts
             cannot be created through public registration.
           </div>
+          <p className={styles.helpText}>Registration build: 2026-09-22.3</p>
         </section>
       </div>
     </main>
