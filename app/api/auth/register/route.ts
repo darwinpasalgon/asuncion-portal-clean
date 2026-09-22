@@ -89,6 +89,6 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     message:
-      "Account created. Check your email for the confirmation message. Your account will be usable after school verification.",
+      "Account created. Your account is pending school verification.",
   });
 }
