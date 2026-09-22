@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
   }
 
   const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/profiles?select=id,full_name,email,recovery_phone,lrn,requested_role,role,account_status,created_at&account_status=eq.pending&order=created_at.asc`,
+    `${SUPABASE_URL}/rest/v1/profiles?select=id,full_name,email,recovery_phone,lrn,grade_level,section,requested_role,role,account_status,created_at&account_status=eq.pending&order=created_at.asc`,
     { headers: authHeaders(token), cache: "no-store" }
   );
 
