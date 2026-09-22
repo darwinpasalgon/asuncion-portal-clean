@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Clock3, RefreshCw, ShieldCheck, UserRound, X } from "lucide-react";
 import styles from "./accounts.module.css";
 
@@ -19,7 +18,6 @@ type PendingAccount = {
 };
 
 export default function AccountApprovalsPage() {
-  const router = useRouter();
   const [accounts, setAccounts] = useState<PendingAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [workingId, setWorkingId] = useState("");
@@ -73,15 +71,13 @@ export default function AccountApprovalsPage() {
     <main className={styles.page}>
       <div className={styles.shell}>
         <nav className={styles.topActions} aria-label="Administrator navigation">
-          <button className={styles.back} onClick={() => router.push("/portal")}>
-            <ArrowLeft size={16} /> Back to portal
-          </button>
-          <button
-            className={styles.back}
-            onClick={() => router.push("/portal/admin/password-resets")}
-          >
-            Password reset requests
-          </button>
+          <a className={styles.topLink} href="/portal">
+            <ArrowLeft size={16} />
+            <span>Back to portal</span>
+          </a>
+          <a className={styles.topLink} href="/portal/admin/password-resets">
+            <span>Password reset requests</span>
+          </a>
         </nav>
 
         <header className={styles.header}>
