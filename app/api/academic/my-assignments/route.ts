@@ -83,15 +83,18 @@ export async function GET(request: NextRequest) {
     ),
   ]);
 
-  const sectionMap = new Map(
-    (sections ?? []).map((item: { id: string; name: string }) => [item.id, item.name])
+  const sectionMap = new Map<string, string>(
+    (sections ?? []).map(
+      (item: { id: string; name: string }) => [item.id, item.name] as [string, string]
+    )
   );
-  const subjectMap = new Map(
+  const subjectMap = new Map<string, { name: string; code: string | null }>(
     (subjects ?? []).map(
-      (item: { id: string; name: string; code: string | null }) => [
-        item.id,
-        { name: item.name, code: item.code },
-      ]
+      (item: { id: string; name: string; code: string | null }) =>
+        [item.id, { name: item.name, code: item.code }] as [
+          string,
+          { name: string; code: string | null }
+        ]
     )
   );
 
