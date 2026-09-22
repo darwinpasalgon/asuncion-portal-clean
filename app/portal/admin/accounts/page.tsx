@@ -72,12 +72,17 @@ export default function AccountApprovalsPage() {
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
-        <button className={styles.back} onClick={() => router.push("/portal")}>
-          <ArrowLeft size={16} /> Back to portal
-        </button>
-        <button className={styles.back} onClick={() => router.push("/portal/admin/password-resets")}>
-          Password reset requests
-        </button>
+        <nav className={styles.topActions} aria-label="Administrator navigation">
+          <button className={styles.back} onClick={() => router.push("/portal")}>
+            <ArrowLeft size={16} /> Back to portal
+          </button>
+          <button
+            className={styles.back}
+            onClick={() => router.push("/portal/admin/password-resets")}
+          >
+            Password reset requests
+          </button>
+        </nav>
 
         <header className={styles.header}>
           <div>
