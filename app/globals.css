@@ -16,9 +16,10 @@ body{margin:0;background:var(--background);color:var(--foreground);font-family:A
 .real-admin-label{margin-top:28px}
 .real-user-badge{display:flex;align-items:center;gap:10px;min-width:0}
 .real-user-badge>div{min-width:0}
-.real-user-badge strong,.real-user-badge span{display:block}
-.real-user-badge strong{font-size:.82rem;color:#355044;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
-.real-user-badge span{font-size:.72rem;color:#748477;margin-top:3px}
+.real-user-badge>div strong,.real-user-badge>div span{display:block}
+.real-user-badge>div strong{font-size:.82rem;color:#355044;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+.real-user-badge>div span{font-size:.72rem;color:#748477;margin-top:3px}
+.real-user-badge .avatar{display:grid;place-items:center;line-height:1;padding:0;text-align:center}
 .real-status-bar{display:flex;align-items:center;gap:9px;padding:10px 35px;background:#edf7f1;border-bottom:1px solid #dfe9df;color:#32694e;font-size:.78rem}
 .real-role-card{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#fff;border:1px solid #e2e9e4;border-radius:8px;min-width:170px}
 .real-role-card>div span,.real-role-card>div strong{display:block}
