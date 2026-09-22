@@ -335,7 +335,9 @@ export default function PortalPage() {
           </div>
 
           <div className="real-user-badge">
-            <span className="avatar small">{initials(profile.full_name)}</span>
+            <div className="real-top-avatar" aria-hidden="true">
+              {initials(profile.full_name)}
+            </div>
             <div>
               <strong>{profile.full_name}</strong>
               <span>{roleLabel[profile.role]}</span>
