@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Check,
@@ -34,7 +33,6 @@ type IssuedPassword = {
 };
 
 export default function PasswordResetRequestsPage() {
-  const router = useRouter();
   const [requests, setRequests] = useState<ResetRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [workingId, setWorkingId] = useState("");
@@ -105,9 +103,15 @@ export default function PasswordResetRequestsPage() {
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
-        <button className={styles.back} onClick={() => router.push("/portal")}>
-          <ArrowLeft size={16} /> Back to portal
-        </button>
+        <nav className={styles.topActions} aria-label="Administrator navigation">
+          <a className={styles.topLink} href="/portal">
+            <ArrowLeft size={16} />
+            <span>Back to portal</span>
+          </a>
+          <a className={styles.topLink} href="/portal/admin/accounts">
+            <span>Account approvals</span>
+          </a>
+        </nav>
 
         <header className={styles.header}>
           <div>
