@@ -11,6 +11,8 @@ type PendingAccount = {
   email: string;
   recovery_phone: string;
   lrn: string | null;
+  grade_level: number | null;
+  section: string | null;
   requested_role: "student" | "teacher";
   account_status: "pending";
   created_at: string;
@@ -134,6 +136,18 @@ export default function AccountApprovalsPage() {
                       <div>
                         <dt>LRN</dt>
                         <dd>{account.lrn}</dd>
+                      </div>
+                    )}
+                    {account.requested_role === "student" && account.grade_level && (
+                      <div>
+                        <dt>Grade</dt>
+                        <dd>Grade {account.grade_level}</dd>
+                      </div>
+                    )}
+                    {account.requested_role === "student" && (
+                      <div>
+                        <dt>Section</dt>
+                        <dd>{account.section || "To be assigned"}</dd>
                       </div>
                     )}
                     <div>
