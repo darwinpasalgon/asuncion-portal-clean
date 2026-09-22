@@ -47,7 +47,12 @@ export default function ForgotPasswordPage() {
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        setError(result.error ?? "We could not send the verification code.");
+        const base = result.error ?? "We could not send the verification code.";
+        const providerDetails =
+          result.provider && result.provider_status
+            ? ` ${result.provider} ${result.provider_status}: ${result.provider_message ?? "Request rejected."}`
+            : "";
+        setError(`${base}${providerDetails}`);
         return;
       }
 
