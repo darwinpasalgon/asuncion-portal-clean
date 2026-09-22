@@ -47,6 +47,15 @@ type AcademicContext = {
   enrollment_status: string | null;
 };
 
+type TeacherAssignment = {
+  id: string;
+  grade_level: number;
+  section: string;
+  subject: string;
+  subject_code: string | null;
+  student_count: number;
+};
+
 type Profile = {
   id: string;
   full_name: string;
@@ -202,6 +211,17 @@ function SideNav({
                   <span>School setup</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="nav-button"
+                  onClick={() => {
+                    window.location.href = "/portal/admin/teaching";
+                  }}
+                >
+                  <BookOpen size={19} />
+                  <span>Subjects & teachers</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </>
         )}
@@ -280,6 +300,8 @@ export default function PortalPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [academicContext, setAcademicContext] = useState<AcademicContext | null>(null);
   const [page, setPage] = useState<Page>("Overview");
+  const [teacherAssignments, setTeacherAssignments] = useState<TeacherAssignment[]>([]);
+  const [teacherAssignmentsLoading, setTeacherAssignmentsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -300,8 +322,26 @@ export default function PortalPage() {
         }
 
         if (active) {
-          setProfile(result.profile as Profile);
+          const loadedProfile = result.profile as Profile;
+          setProfile(loadedProfile);
           setAcademicContext((result.academicContext ?? null) as AcademicContext | null);
+
+          if (loadedProfile.role === "teacher") {
+            setTeacherAssignmentsLoading(true);
+            try {
+              const assignmentResponse = await fetch("/api/academic/my-assignments", {
+                cache: "no-store",
+              });
+              const assignmentResult = await assignmentResponse.json().catch(() => ({}));
+              if (active && assignmentResponse.ok) {
+                setTeacherAssignments(
+                  (assignmentResult.assignments ?? []) as TeacherAssignment[]
+                );
+              }
+            } finally {
+              if (active) setTeacherAssignmentsLoading(false);
+            }
+          }
         }
       } catch (err) {
         if (active) {
@@ -474,6 +514,46 @@ export default function PortalPage() {
                 </dl>
               </section>
 
+              {profile.role === "teacher" && (
+                <section className="panel real-teacher-assignments">
+                  <div className="real-assignment-heading">
+                    <div>
+                      <h2>My teaching assignments</h2>
+                      <p>{academicContext?.school_year ?? "Current school year"}</p>
+                    </div>
+                    <span className="tag blue">
+                      {teacherAssignments.length} class{teacherAssignments.length === 1 ? "" : "es"}
+                    </span>
+                  </div>
+
+                  {teacherAssignmentsLoading ? (
+                    <p className="real-assignment-empty">Loading assignments…</p>
+                  ) : teacherAssignments.length === 0 ? (
+                    <p className="real-assignment-empty">
+                      No active class assignments have been assigned to you yet.
+                    </p>
+                  ) : (
+                    <div className="real-assignment-list">
+                      {teacherAssignments.slice(0, 6).map((assignment) => (
+                        <article key={assignment.id}>
+                          <div>
+                            <span>Grade {assignment.grade_level} · {assignment.section}</span>
+                            <strong>
+                              {assignment.subject}
+                              {assignment.subject_code ? ` (${assignment.subject_code})` : ""}
+                            </strong>
+                          </div>
+                          <span>
+                            {assignment.student_count} student
+                            {assignment.student_count === 1 ? "" : "s"}
+                          </span>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )}
+
               {profile.role === "administrator" && (
                 <section className="panel real-admin-card">
                   <h2>Administrator tools</h2>
@@ -488,6 +568,9 @@ export default function PortalPage() {
                     <button onClick={() => (window.location.href = "/portal/admin/school-setup")}>
                       <Settings2 size={18} /> School setup
                     </button>
+                    <button onClick={() => (window.location.href = "/portal/admin/teaching")}>
+                      <BookOpen size={18} /> Subjects & teachers
+                    </button>
                   </div>
                 </section>
               )}
@@ -496,14 +579,58 @@ export default function PortalPage() {
                 <BookOpen size={28} />
                 <h2>Next build phase</h2>
                 <p>
-                  School year, grade levels, sections, and student enrollment are now live.
-                  The next phase is subjects and teacher assignments.
+                  School structure and enrollment are live, and subjects with Teacher
+                  assignments are now connected. Next we can build class schedules,
+                  grades, and attendance.
                 </p>
               </section>
             </div>
           )}
 
-          {page !== "Overview" && <EmptySection page={page} role={profile.role} />}
+          {page !== "Overview" &&
+            !(profile.role === "teacher" && page === "Students") && (
+              <EmptySection page={page} role={profile.role} />
+            )}
+
+          {profile.role === "teacher" && page === "Students" && (
+            <section className="panel real-teacher-class-page">
+              <div className="real-assignment-heading">
+                <div>
+                  <h2>Assigned classes</h2>
+                  <p>
+                    These are the sections and subjects currently assigned to your
+                    Teacher account.
+                  </p>
+                </div>
+              </div>
+
+              {teacherAssignmentsLoading ? (
+                <p className="real-assignment-empty">Loading assigned classes…</p>
+              ) : teacherAssignments.length === 0 ? (
+                <p className="real-assignment-empty">
+                  No active classes are assigned to you yet.
+                </p>
+              ) : (
+                <div className="real-assignment-list full">
+                  {teacherAssignments.map((assignment) => (
+                    <article key={assignment.id}>
+                      <div>
+                        <span>Grade {assignment.grade_level} · {assignment.section}</span>
+                        <strong>
+                          {assignment.subject}
+                          {assignment.subject_code ? ` (${assignment.subject_code})` : ""}
+                        </strong>
+                      </div>
+                      <span>
+                        {assignment.student_count} enrolled student
+                        {assignment.student_count === 1 ? "" : "s"}
+                      </span>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
 
           <footer className="page-footer">
             <span>Asuncion National High School</span>
