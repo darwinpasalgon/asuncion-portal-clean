@@ -68,3 +68,19 @@ body{margin:0;background:var(--background);color:var(--foreground);font-family:A
   font-size:.8rem;
   font-weight:700;
 }
+
+.real-teacher-assignments{padding:0}
+.real-assignment-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 24px;border-bottom:1px solid #edf1ee}
+.real-assignment-heading h2{color:#355044;margin-bottom:6px}
+.real-assignment-heading p{font-size:.78rem;color:#76897d;line-height:1.6}
+.real-assignment-list{display:grid}
+.real-assignment-list article{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:15px 24px;border-bottom:1px solid #edf1ee}
+.real-assignment-list article:last-child{border-bottom:0}
+.real-assignment-list article>div span,.real-assignment-list article>div strong{display:block}
+.real-assignment-list article>div span{font-size:.72rem;color:#6f8978;margin-bottom:5px}
+.real-assignment-list article>div strong{font-size:.88rem;color:#31536a}
+.real-assignment-list article>span{font-size:.74rem;color:#738995;white-space:nowrap}
+.real-assignment-empty{padding:28px 24px;color:#74877a;font-size:.84rem;line-height:1.7}
+.real-teacher-class-page{overflow:hidden}
+.real-assignment-list.full article{padding-top:18px;padding-bottom:18px}
+@media(max-width:640px){.real-assignment-heading{flex-direction:column}.real-assignment-list article{align-items:flex-start;flex-direction:column;gap:8px}.real-assignment-list article>span{white-space:normal}}
