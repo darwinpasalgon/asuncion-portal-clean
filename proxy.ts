@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
-type AccessState = { valid: boolean; mustChangePassword: boolean };
+type AccessState = {
+  valid: boolean;
+  mustChangePassword: boolean;
+  role: "student" | "teacher" | "administrator" | null;
+  accountStatus: string | null;
+};
 
 async function accessState(token: string): Promise<AccessState> {
   const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
@@ -12,12 +17,16 @@ async function accessState(token: string): Promise<AccessState> {
     cache: "no-store",
   });
 
-  if (!userResponse.ok) return { valid: false, mustChangePassword: false };
+  if (!userResponse.ok) {
+    return { valid: false, mustChangePassword: false, role: null, accountStatus: null };
+  }
   const user = await userResponse.json().catch(() => null);
-  if (!user?.id) return { valid: false, mustChangePassword: false };
+  if (!user?.id) {
+    return { valid: false, mustChangePassword: false, role: null, accountStatus: null };
+  }
 
   const profileResponse = await fetch(
-    `${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=must_change_password&limit=1`,
+    `${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=must_change_password,role,account_status&limit=1`,
     {
       headers: {
         apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -27,11 +36,16 @@ async function accessState(token: string): Promise<AccessState> {
     }
   );
 
-  if (!profileResponse.ok) return { valid: false, mustChangePassword: false };
+  if (!profileResponse.ok) {
+    return { valid: false, mustChangePassword: false, role: null, accountStatus: null };
+  }
   const profiles = await profileResponse.json().catch(() => []);
+  const profile = profiles?.[0];
   return {
-    valid: true,
-    mustChangePassword: Boolean(profiles?.[0]?.must_change_password),
+    valid: profile?.account_status === "active" && Boolean(profile?.role),
+    mustChangePassword: Boolean(profile?.must_change_password),
+    role: profile?.role ?? null,
+    accountStatus: profile?.account_status ?? null,
   };
 }
 
@@ -55,12 +69,22 @@ async function refreshSession(refreshToken: string) {
 
 function destination(request: NextRequest, state: AccessState) {
   const onChangePage = request.nextUrl.pathname === "/change-password";
+  const onAdminPage = request.nextUrl.pathname.startsWith("/portal/admin/");
+
   if (state.mustChangePassword && !onChangePage) {
     return NextResponse.redirect(new URL("/change-password", request.url));
   }
+
   if (!state.mustChangePassword && onChangePage) {
     return NextResponse.redirect(new URL("/portal", request.url));
   }
+
+  if (onAdminPage && state.role !== "administrator") {
+    const url = new URL("/portal", request.url);
+    url.searchParams.set("reason", "forbidden");
+    return NextResponse.redirect(url);
+  }
+
   return NextResponse.next();
 }
 
