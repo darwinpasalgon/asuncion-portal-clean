@@ -48,7 +48,11 @@ export default function LoginPage() {
         return;
       }
 
-      router.replace("/portal");
+      if (result.profile?.must_change_password) {
+        router.replace("/change-password");
+      } else {
+        router.replace("/portal");
+      }
       router.refresh();
     } catch {
       setError("Unable to reach the sign-in service. Please try again.");
@@ -188,9 +192,9 @@ export default function LoginPage() {
           <div className={styles.demoNote}>
             <ShieldCheck size={17} />
             <p>
-              Accounts must use a registered email address and mobile number.
               Newly created accounts require school verification before they can
-              access academic records.
+              access academic records. Forgotten passwords are handled through
+              administrator-assisted identity verification.
             </p>
           </div>
 
