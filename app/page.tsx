@@ -150,10 +150,7 @@ export default function LoginPage() {
             </label>
 
             <div className={styles.formOptions}>
-              <label className={styles.remember}>
-                <input type="checkbox" disabled={loading} />
-                <span>Remember me</span>
-              </label>
+              <span />
               <button
                 type="button"
                 className={styles.textButton}
