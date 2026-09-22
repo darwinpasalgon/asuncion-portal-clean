@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
   const profileResponse = await fetch(
     `${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(
       userId
-    )}&select=id,full_name,email,lrn,role,requested_role,account_status,must_change_password&limit=1`,
+    )}&select=id,full_name,email,lrn,grade_level,section,role,requested_role,account_status,must_change_password&limit=1`,
     {
       headers: authHeaders(token),
       cache: "no-store",
