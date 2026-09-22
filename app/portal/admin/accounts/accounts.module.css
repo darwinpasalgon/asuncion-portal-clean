@@ -8,6 +8,13 @@
   width: min(1100px, 100%);
   margin: 0 auto;
 }
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
 .back {
   display: inline-flex;
   align-items: center;
@@ -16,7 +23,7 @@
   background: transparent;
   color: #176ba4;
   font-weight: 650;
-  margin-bottom: 24px;
+  margin-bottom: 0;
 }
 .header {
   display: flex;
@@ -253,4 +260,12 @@
   color: #6d808c;
   font-size: .8rem;
   line-height: 1.65;
+}
+
+@media (max-width: 520px) {
+  .topActions {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
 }
