@@ -109,7 +109,7 @@ export default function RegisterPage() {
           <p>
             Register your official contact information. Students will use their
             LRN to sign in; teachers will use their registered email address.
-            Your mobile number will be used for password recovery by SMS.
+            Your mobile number is collected as school contact information.
           </p>
 
           {!complete ? (
@@ -197,7 +197,7 @@ export default function RegisterPage() {
                       />
                     </div>
                     <small className={styles.helpText}>
-                      Used for password recovery by SMS.
+                      Saved as school contact information.
                     </small>
                   </label>
 
@@ -268,9 +268,9 @@ export default function RegisterPage() {
 
           <div className={styles.noticeBox}>
             New accounts start as <strong>pending</strong> until the school
-            validates the student LRN or teacher record. The registered mobile
-            number will be used for password recovery. Administrator accounts
-            cannot be created through public registration.
+            validates the student LRN or teacher record. Forgotten passwords are
+            handled through administrator-assisted identity verification.
+            Administrator accounts cannot be created through public registration.
           </div>
           <p className={styles.helpText}>Registration build: 2026-09-22.3</p>
         </section>
