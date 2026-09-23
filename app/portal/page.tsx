@@ -162,6 +162,11 @@ function SideNav({
       return;
     }
 
+    if (pageName === "Learning resources") {
+      window.location.href = "/portal/resources";
+      return;
+    }
+
     onPage(pageName);
     setOpenMobile(false);
   }
