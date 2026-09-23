@@ -1,15 +1,17 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
   Eye,
   EyeOff,
+  KeyRound,
   LockKeyhole,
   Mail,
   Phone,
+  ShieldCheck,
   UserRound,
 } from "lucide-react";
 import styles from "../login.module.css";
@@ -20,62 +22,11 @@ export default function RegisterPage() {
   const router = useRouter();
   const [role, setRole] = useState<Role>("student");
   const [showPassword, setShowPassword] = useState(false);
-  const [gradeLevel, setGradeLevel] = useState("");
-  const [section, setSection] = useState("");
-  const [gradeOptions, setGradeOptions] = useState<number[]>([7, 8, 9, 10, 11, 12]);
-  const [sectionOptions, setSectionOptions] = useState<Record<string, string[]>>({});
-  const [optionsReady, setOptionsReady] = useState(false);
-  const [optionsError, setOptionsError] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [complete, setComplete] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadOptions() {
-      try {
-        const response = await fetch("/api/academic/registration-options", {
-          cache: "no-store",
-        });
-        const result = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-          throw new Error(result.error ?? "Unable to load grade and section choices.");
-        }
-
-        const grades = (result.grades ?? [])
-          .map((item: { grade_level?: number }) => Number(item.grade_level))
-          .filter((value: number) => Number.isInteger(value));
-
-        const map: Record<string, string[]> = {};
-        for (const item of result.sections ?? []) {
-          const key = String(item.grade_level ?? "");
-          const name = String(item.name ?? "");
-          if (!key || !name) continue;
-          if (!map[key]) map[key] = [];
-          map[key].push(name);
-        }
-
-        if (active) {
-          if (grades.length) setGradeOptions(grades);
-          setSectionOptions(map);
-          setOptionsReady(true);
-        }
-      } catch {
-        if (active) {
-          setOptionsError("Unable to load the current grade and section choices. Refresh the page and try again.");
-          setOptionsReady(false);
-        }
-      }
-    }
-
-    void loadOptions();
-    return () => {
-      active = false;
-    };
-  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -83,35 +34,28 @@ export default function RegisterPage() {
     setError("");
 
     const data = new FormData(event.currentTarget);
-    const fullName = String(data.get("fullName") || "").trim();
     const lrn = String(data.get("lrn") || "").trim();
     const email = String(data.get("email") || "").trim();
     const phone = String(data.get("phone") || "").trim();
+    const activationCode = String(data.get("activationCode") || "").trim();
     const password = String(data.get("password") || "");
     const confirm = String(data.get("confirmPassword") || "");
-    const sectionsForGrade = sectionOptions[gradeLevel] ?? [];
 
     if (role === "student" && !/^\d{12}$/.test(lrn)) {
       setError("Student LRN must contain exactly 12 digits.");
       return;
     }
 
-    if (role === "student" && !optionsReady) {
-      setError("Grade and section choices are still loading. Please wait a moment.");
-      return;
-    }
-
-    if (role === "student" && !gradeLevel) {
-      setError("Select your current grade level.");
-      return;
-    }
-
     if (
-      role === "student" &&
-      sectionsForGrade.length > 0 &&
-      !sectionsForGrade.includes(section)
+      role === "teacher" &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     ) {
-      setError("Select your section.");
+      setError("Enter the email address registered in the school masterlist.");
+      return;
+    }
+
+    if (!activationCode) {
+      setError("Enter the activation code issued by the school.");
       return;
     }
 
@@ -133,31 +77,31 @@ export default function RegisterPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           role,
-          fullName,
           lrn: role === "student" ? lrn : null,
-          email,
+          email: role === "teacher" ? email : null,
           phone,
+          activationCode,
           password,
-          gradeLevel: role === "student" ? Number(gradeLevel) : null,
-          section: role === "student" && section ? section : null,
         }),
       });
 
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        const baseError = result.error ?? "We could not create the account.";
-        setError(result.authStatus ? `${baseError} (Auth ${result.authStatus})` : baseError);
+        setError(
+          result.error ??
+            "We could not activate the account. Check the information and try again."
+        );
         return;
       }
 
       setComplete(true);
       setMessage(
         result.message ??
-          "Account created. Your account is pending school verification."
+          "Your ANHS portal account has been activated. You can now sign in."
       );
     } catch {
-      setError("Unable to reach the registration service. Please try again.");
+      setError("Unable to reach the activation service. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -174,16 +118,16 @@ export default function RegisterPage() {
           <img src="/school-logo.png" alt="Asuncion National High School logo" />
           <div>
             <strong>ASUNCION NATIONAL HIGH SCHOOL</strong>
-            <span>Academic Portal · Account Registration</span>
+            <span>Academic Portal · Account Activation</span>
           </div>
         </div>
 
         <section className={styles.authCard}>
-          <h1>Create your account</h1>
+          <h1>Activate your ANHS account</h1>
           <p>
-            Register your official contact information. Students will use their
-            LRN to sign in; teachers will use their registered email address.
-            Your mobile number is collected as school contact information.
+            Use the official activation code issued by the school. Your name,
+            role, grade level, and section come directly from the school
+            masterlist and cannot be selected during activation.
           </p>
 
           {!complete ? (
@@ -191,22 +135,22 @@ export default function RegisterPage() {
               <div className={styles.roleTabs}>
                 <button
                   type="button"
-                  className={styles.roleTab + (role === "student" ? " " + styles.roleTabActive : "")}
-                  onClick={() => {
-                    setRole("student");
-                  }}
+                  className={
+                    styles.roleTab +
+                    (role === "student" ? " " + styles.roleTabActive : "")
+                  }
+                  onClick={() => setRole("student")}
                   disabled={loading}
                 >
                   Student
                 </button>
                 <button
                   type="button"
-                  className={styles.roleTab + (role === "teacher" ? " " + styles.roleTabActive : "")}
-                  onClick={() => {
-                    setRole("teacher");
-                    setGradeLevel("");
-                    setSection("");
-                  }}
+                  className={
+                    styles.roleTab +
+                    (role === "teacher" ? " " + styles.roleTabActive : "")
+                  }
+                  onClick={() => setRole("teacher")}
                   disabled={loading}
                 >
                   Teacher
@@ -215,21 +159,8 @@ export default function RegisterPage() {
 
               <form className={styles.form} onSubmit={handleSubmit}>
                 <div className={styles.formGrid}>
-                  <label className={styles.field + " " + styles.spanTwo}>
-                    <span>Full name</span>
-                    <div className={styles.inputWrap}>
-                      <UserRound size={18} />
-                      <input
-                        name="fullName"
-                        required
-                        placeholder="Complete name"
-                        disabled={loading}
-                      />
-                    </div>
-                  </label>
-
-                  {role === "student" && (
-                    <label className={styles.field}>
+                  {role === "student" ? (
+                    <label className={styles.field + " " + styles.spanTwo}>
                       <span>LRN</span>
                       <div className={styles.inputWrap}>
                         <UserRound size={18} />
@@ -240,124 +171,81 @@ export default function RegisterPage() {
                           maxLength={12}
                           placeholder="12-digit LRN"
                           disabled={loading}
+                          autoComplete="username"
                         />
                       </div>
                       <small className={styles.helpText}>
-                        This will be your student login ID.
+                        Use the LRN listed in the official school masterlist.
+                      </small>
+                    </label>
+                  ) : (
+                    <label className={styles.field + " " + styles.spanTwo}>
+                      <span>Registered email address</span>
+                      <div className={styles.inputWrap}>
+                        <Mail size={18} />
+                        <input
+                          name="email"
+                          type="email"
+                          required
+                          placeholder="teacher@deped.gov.ph"
+                          disabled={loading}
+                          autoComplete="email"
+                        />
+                      </div>
+                      <small className={styles.helpText}>
+                        Use the same email imported by the school Administrator.
                       </small>
                     </label>
                   )}
 
-                  {role === "student" && (
-                    <>
-                      <label className={styles.field}>
-                        <span>Grade level</span>
-                        <div className={styles.inputWrap}>
-                          <select
-                            name="gradeLevel"
-                            required
-                            value={gradeLevel}
-                            onChange={(event) => {
-                              setGradeLevel(event.target.value);
-                              setSection("");
-                            }}
-                            disabled={loading || !optionsReady}
-                            aria-label="Grade level"
-                          >
-                            <option value="">
-                              {optionsReady ? "Select grade level" : "Loading grade levels..."}
-                            </option>
-                            {gradeOptions.map((grade) => (
-                              <option key={grade} value={grade}>
-                                Grade {grade}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </label>
-
-                      <label className={styles.field}>
-                        <span>Section</span>
-                        <div className={styles.inputWrap}>
-                          <select
-                            name="section"
-                            value={section}
-                            required={(sectionOptions[gradeLevel] ?? []).length > 0}
-                            onChange={(event) => setSection(event.target.value)}
-                            disabled={loading || !optionsReady || !gradeLevel}
-                            aria-label="Section"
-                          >
-                            {!optionsReady ? (
-                              <option value="">Loading sections...</option>
-                            ) : !gradeLevel ? (
-                              <option value="">Select grade level first</option>
-                            ) : (sectionOptions[gradeLevel] ?? []).length === 0 ? (
-                              <option value="">Sections will be added soon</option>
-                            ) : (
-                              <>
-                                <option value="">Select section</option>
-                                {(sectionOptions[gradeLevel] ?? []).map((name) => (
-                                  <option key={name} value={name}>
-                                    {name}
-                                  </option>
-                                ))}
-                              </>
-                            )}
-                          </select>
-                        </div>
-                        {gradeLevel && optionsReady && (sectionOptions[gradeLevel] ?? []).length === 0 && (
-                          <small className={styles.helpText}>
-                            Grade {gradeLevel} sections will be added soon.
-                          </small>
-                        )}
-                      </label>
-                    </>
-                  )}
-
-                  <label className={styles.field}>
-                    <span>Email address</span>
+                  <label className={styles.field + " " + styles.spanTwo}>
+                    <span>School activation code</span>
                     <div className={styles.inputWrap}>
-                      <Mail size={18} />
+                      <KeyRound size={18} />
                       <input
-                        name="email"
-                        type="email"
+                        name="activationCode"
                         required
-                        autoComplete="email"
-                        placeholder="you@example.com"
+                        placeholder="ANHS-XXXX-XXXX"
                         disabled={loading}
+                        autoCapitalize="characters"
+                        autoComplete="one-time-code"
                       />
                     </div>
+                    <small className={styles.helpText}>
+                      Activation codes can be used only once.
+                    </small>
                   </label>
 
-                  <label className={styles.field}>
+                  <label className={styles.field + " " + styles.spanTwo}>
                     <span>Mobile number</span>
                     <div className={styles.inputWrap}>
                       <Phone size={18} />
                       <input
                         name="phone"
-                        type="tel"
                         required
-                        autoComplete="tel"
+                        inputMode="tel"
                         placeholder="09XX XXX XXXX"
                         disabled={loading}
+                        autoComplete="tel"
                       />
                     </div>
                     <small className={styles.helpText}>
-                      Saved as school contact information.
+                      Used as school contact information and for identity verification.
                     </small>
                   </label>
 
                   <label className={styles.field}>
-                    <span>Password</span>
+                    <span>Create password</span>
                     <div className={styles.inputWrap}>
                       <LockKeyhole size={18} />
                       <input
                         name="password"
                         type={showPassword ? "text" : "password"}
                         required
-                        autoComplete="new-password"
+                        minLength={8}
                         placeholder="At least 8 characters"
                         disabled={loading}
+                        autoComplete="new-password"
                       />
                       <button
                         type="button"
@@ -377,17 +265,26 @@ export default function RegisterPage() {
                       <LockKeyhole size={18} />
                       <input
                         name="confirmPassword"
-                        type={showPassword ? "text" : "password"}
+                        type={showConfirm ? "text" : "password"}
                         required
-                        autoComplete="new-password"
+                        minLength={8}
                         placeholder="Repeat your password"
                         disabled={loading}
+                        autoComplete="new-password"
                       />
+                      <button
+                        type="button"
+                        className={styles.passwordToggle}
+                        onClick={() => setShowConfirm((value) => !value)}
+                        aria-label={showConfirm ? "Hide password" : "Show password"}
+                        disabled={loading}
+                      >
+                        {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
                     </div>
                   </label>
                 </div>
 
-                {optionsError && <p className={styles.error}>{optionsError}</p>}
                 {error && <p className={styles.error}>{error}</p>}
 
                 <button
@@ -395,7 +292,7 @@ export default function RegisterPage() {
                   type="submit"
                   disabled={loading}
                 >
-                  {loading ? "Creating account..." : "Create account"}
+                  {loading ? "Activating account..." : "Activate account"}
                   {!loading && <ArrowRight size={18} />}
                 </button>
               </form>
@@ -408,18 +305,19 @@ export default function RegisterPage() {
                 type="button"
                 onClick={() => router.push("/")}
               >
-                Return to sign in <ArrowRight size={18} />
+                Continue to sign in <ArrowRight size={18} />
               </button>
             </>
           )}
 
           <div className={styles.noticeBox}>
-            New accounts start as <strong>pending</strong> until the school
-            validates the student LRN or teacher record. Forgotten passwords are
-            handled through administrator-assisted identity verification.
-            Administrator accounts cannot be created through public registration.
+            <ShieldCheck size={17} />
+            <span>
+              Only people included in the official ANHS activation masterlist can
+              create a new portal account. Administrator accounts cannot be
+              activated from this public page.
+            </span>
           </div>
-          <p className={styles.helpText}>Registration build: 2026-09-22.5</p>
         </section>
       </div>
     </main>
