@@ -188,7 +188,13 @@ export default function ReportsPage(){
     }
   }
 
-  useEffect(()=>{void load();},[]);
+  useEffect(()=>{
+    const requestedTab=new URLSearchParams(window.location.search).get("tab");
+    if(["overview","grades","intervention","attendance","classlist"].includes(String(requestedTab))){
+      setTab(requestedTab as ReportTab);
+    }
+    void load();
+  },[]);
 
   useEffect(()=>{
     if(section){
