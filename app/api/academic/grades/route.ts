@@ -14,10 +14,7 @@ async function getRows(path: string, token: string) {
     headers: headers(token),
     cache: "no-store",
   });
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(detail || "Query failed.");
-  }
+  if (!response.ok) throw new Error("Query failed.");
   return response.json();
 }
 
@@ -62,12 +59,6 @@ async function getActiveYear(token: string) {
   return rows?.[0] ?? null;
 }
 
-function numberOrNull(value: unknown) {
-  if (value === null || value === undefined || value === "") return null;
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
-}
-
 export async function GET(request: NextRequest) {
   const identity = await getIdentity(request);
   if (!identity) {
@@ -108,7 +99,7 @@ export async function GET(request: NextRequest) {
           token
         ),
         getRows(
-          "subjects?select=id,grade_level,name,code,grading_scheme,is_active&order=grade_level.asc,name.asc",
+          "subjects?select=id,grade_level,name,code,is_active&order=grade_level.asc,name.asc",
           token
         ),
         getRows(
@@ -124,7 +115,7 @@ export async function GET(request: NextRequest) {
         getRows(
           `student_term_grades?school_year_id=eq.${encodeURIComponent(
             activeYear.id
-          )}&select=id,student_id,teacher_assignment_id,school_year_id,term_no,ww_ps,pt_ps,st1_ps,st2_ps,term_exam_ps,initial_grade,term_grade,status,published_at,updated_at&order=term_no.asc`,
+          )}&select=id,student_id,teacher_assignment_id,school_year_id,term_no,term_grade,status,published_at,updated_at&order=term_no.asc`,
           token
         ),
       ]);
@@ -165,10 +156,18 @@ export async function POST(request: NextRequest) {
     const assignmentId = String(body?.assignmentId ?? "");
     const studentId = String(body?.studentId ?? "");
     const termNo = Number(body?.termNo ?? 0);
+    const termGrade = Number(body?.termGrade);
 
     if (!assignmentId || !studentId || ![1, 2, 3].includes(termNo)) {
       return NextResponse.json(
         { error: "Select a class, student, and term." },
+        { status: 400 }
+      );
+    }
+
+    if (!Number.isInteger(termGrade) || termGrade < 0 || termGrade > 100) {
+      return NextResponse.json(
+        { error: "Enter a whole-number Term Grade from 0 to 100." },
         { status: 400 }
       );
     }
@@ -186,7 +185,7 @@ export async function POST(request: NextRequest) {
         assignmentId
       )}&school_year_id=eq.${encodeURIComponent(
         activeYear.id
-      )}&is_active=eq.true&select=id,section_id,subject_id&limit=1`,
+      )}&is_active=eq.true&select=id,section_id&limit=1`,
       token
     ).catch(() => []);
 
@@ -215,23 +214,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const values = {
-      ww_ps: numberOrNull(body?.wwPs),
-      pt_ps: numberOrNull(body?.ptPs),
-      st1_ps: numberOrNull(body?.st1Ps),
-      st2_ps: numberOrNull(body?.st2Ps),
-      term_exam_ps: numberOrNull(body?.termExamPs),
-    };
-
-    for (const value of Object.values(values)) {
-      if (value !== null && (value < 0 || value > 100)) {
-        return NextResponse.json(
-          { error: "Percentage scores must be between 0 and 100." },
-          { status: 400 }
-        );
-      }
-    }
-
     const existing = await getRows(
       `student_term_grades?student_id=eq.${encodeURIComponent(
         studentId
@@ -241,12 +223,19 @@ export async function POST(request: NextRequest) {
       token
     ).catch(() => []);
 
+    if (existing?.[0]?.status === "published") {
+      return NextResponse.json(
+        { error: "Return this term to Draft before changing a published grade." },
+        { status: 409 }
+      );
+    }
+
     const payload = {
       student_id: studentId,
       teacher_assignment_id: assignmentId,
       school_year_id: activeYear.id,
       term_no: termNo,
-      ...values,
+      term_grade: termGrade,
       encoded_by: userId,
       updated_at: new Date().toISOString(),
     };
@@ -261,9 +250,7 @@ export async function POST(request: NextRequest) {
         method: existing?.[0]?.id ? "PATCH" : "POST",
         headers: { ...headers(token), Prefer: "return=representation" },
         body: JSON.stringify(
-          existing?.[0]?.id
-            ? payload
-            : { ...payload, status: "draft" }
+          existing?.[0]?.id ? payload : { ...payload, status: "draft" }
         ),
         cache: "no-store",
       }
@@ -271,18 +258,8 @@ export async function POST(request: NextRequest) {
 
     const result = await response.json().catch(() => ({}));
     if (!response.ok || !result?.[0]) {
-      const detail = String(
-        result?.message ?? result?.details ?? result?.hint ?? ""
-      );
       return NextResponse.json(
-        {
-          error:
-            detail.includes("percentage scores are required") ||
-            detail.includes("WW") ||
-            detail.includes("PT")
-              ? detail
-              : "Unable to save the grade. Complete all required assessment components.",
-        },
+        { error: "Unable to save the Term Grade." },
         { status: 400 }
       );
     }
@@ -359,7 +336,7 @@ export async function POST(request: NextRequest) {
       if (missing.length > 0) {
         return NextResponse.json(
           {
-            error: `Complete and save grades for all enrolled students before publishing. Missing: ${missing.length}.`,
+            error: `Complete and save Term Grades for all enrolled students before publishing. Missing: ${missing.length}.`,
           },
           { status: 409 }
         );
