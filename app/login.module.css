@@ -15,23 +15,20 @@
   overflow: hidden;
   color: white;
   background:
-    radial-gradient(circle at 82% 16%, rgba(255, 255, 255, 0.13), transparent 30%),
-    radial-gradient(circle at 15% 82%, rgba(32, 168, 102, 0.22), transparent 34%),
-    linear-gradient(145deg, #0e477f 0%, #12649b 52%, #12784f 100%);
+    linear-gradient(rgba(8, 52, 91, 0.42), rgba(8, 67, 91, 0.52)),
+    url("/login-bg.webp") center center / cover no-repeat;
 }
 
 .brandPanel::after {
   content: "";
   position: absolute;
-  width: 440px;
-  height: 440px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 50%;
-  right: -210px;
-  bottom: -180px;
-  box-shadow:
-    0 0 0 55px rgba(255, 255, 255, 0.035),
-    0 0 0 110px rgba(255, 255, 255, 0.025);
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(4, 38, 69, 0.08) 0%,
+    rgba(4, 38, 69, 0.02) 52%,
+    rgba(4, 38, 69, 0.18) 100%
+  );
   pointer-events: none;
 }
 
