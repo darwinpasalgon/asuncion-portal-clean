@@ -157,6 +157,11 @@ function SideNav({
       return;
     }
 
+    if (pageName === "Announcements") {
+      window.location.href = "/portal/announcements";
+      return;
+    }
+
     onPage(pageName);
     setOpenMobile(false);
   }
