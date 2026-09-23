@@ -22,7 +22,6 @@ type Subject = {
   grade_level: number;
   name: string;
   code: string | null;
-  grading_scheme: string;
   is_active: boolean;
 };
 type Teacher = { id: string; full_name: string; email: string };
@@ -132,7 +131,6 @@ export default function TeachingSetupPage() {
           gradeLevel: Number(data.get("gradeLevel") ?? 0),
           name: String(data.get("subjectName") ?? ""),
           code: String(data.get("subjectCode") ?? ""),
-          gradingScheme: String(data.get("gradingScheme") ?? ""),
         }),
       });
       const result = await response.json().catch(() => ({}));
@@ -183,37 +181,6 @@ export default function TeachingSetupPage() {
       setSuccess("Teacher assignment saved.");
       form.reset();
       setAssignmentGrade("");
-      await load();
-    } catch {
-      setError("Unable to reach the teaching setup service.");
-    } finally {
-      setWorking("");
-    }
-  }
-
-  async function setSubjectGradingScheme(subject: Subject, gradingScheme: string) {
-    setWorking(`scheme-${subject.id}`);
-    setError("");
-    setSuccess("");
-
-    try {
-      const response = await fetch("/api/admin/teaching-setup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "set_subject_grading_scheme",
-          id: subject.id,
-          gradingScheme,
-        }),
-      });
-      const result = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        setError(result.error ?? "Unable to update grading profile.");
-        return;
-      }
-
-      setSuccess(`${subject.name} grading profile updated.`);
       await load();
     } catch {
       setError("Unable to reach the teaching setup service.");
@@ -370,18 +337,6 @@ export default function TeachingSetupPage() {
                 <span>Subject code <small>optional</small></span>
                 <input name="subjectCode" maxLength={30} placeholder="e.g. MATH8" />
               </label>
-              <label>
-                <span>DepEd grading profile</span>
-                <select name="gradingScheme" required defaultValue="">
-                  <option value="" disabled>Select assessment weights</option>
-                  <option value="ks23_standard">Grades 7–10 Standard · WW 20 / PT 50 / EX 30</option>
-                  <option value="ks23_tle_mapeh">Grades 7–10 TLE/MAPEH · WW 20 / PT 60 / EX 20</option>
-                  <option value="shs_core_academic">SHS Core/Academic · WW 20 / PT 50 / EX 30</option>
-                  <option value="shs_field_arts_creative">SHS Field/Arts/Creative · WW 15 / PT 70 / EX 15</option>
-                  <option value="shs_research_design">SHS Research/Design · WW 40 / PT 60</option>
-                  <option value="shs_work_immersion">SHS Work Immersion · WW 20 / PT 80</option>
-                </select>
-              </label>
               <button type="submit" disabled={working === "subject"}>
                 <Plus size={17} /> {working === "subject" ? "Adding…" : "Add subject"}
               </button>
@@ -496,28 +451,6 @@ export default function TeachingSetupPage() {
                         <div>
                           <strong>{subject.name}</strong>
                           <span>{subject.code || "No subject code"}</span>
-                          <select
-                            value={subject.grading_scheme}
-                            disabled={working === `scheme-${subject.id}`}
-                            onChange={(event) =>
-                              void setSubjectGradingScheme(subject, event.target.value)
-                            }
-                            aria-label={`${subject.name} grading profile`}
-                          >
-                            {subject.grade_level <= 10 ? (
-                              <>
-                                <option value="ks23_standard">WW 20 / PT 50 / EX 30</option>
-                                <option value="ks23_tle_mapeh">TLE/MAPEH · WW 20 / PT 60 / EX 20</option>
-                              </>
-                            ) : (
-                              <>
-                                <option value="shs_core_academic">Core/Academic · 20 / 50 / 30</option>
-                                <option value="shs_field_arts_creative">Field/Arts/Creative · 15 / 70 / 15</option>
-                                <option value="shs_research_design">Research/Design · 40 / 60</option>
-                                <option value="shs_work_immersion">Work Immersion · 20 / 80</option>
-                              </>
-                            )}
-                          </select>
                         </div>
                         <button
                           className={subject.is_active ? styles.active : styles.inactive}
