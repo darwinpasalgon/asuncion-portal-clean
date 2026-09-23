@@ -14,6 +14,7 @@ import {
   Settings2,
   ShieldCheck,
   UserRound,
+  UserRoundCheck,
   Users,
 } from "lucide-react";
 import {
@@ -225,6 +226,17 @@ function SideNav({
                 >
                   <Users size={19} />
                   <span>Account approvals</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="nav-button"
+                  onClick={() => {
+                    window.location.href = "/portal/admin/masterlist";
+                  }}
+                >
+                  <UserRoundCheck size={19} />
+                  <span>Masterlist & activation</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
