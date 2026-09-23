@@ -194,7 +194,7 @@ export async function GET(request: NextRequest) {
     if (!year) {
       return NextResponse.json({
         activeYear: null,
-        grades: [],
+        gradeLevels: [],
         sections: [],
         subjects: [],
         teachers: [],
@@ -202,7 +202,29 @@ export async function GET(request: NextRequest) {
         students: [],
         gradeRows: [],
         attendanceRows: [],
-        counts: {},
+        counts: {
+          enrolled_students: 0,
+          active_assignments: 0,
+          published_term_grades: 0,
+          draft_term_grades: 0,
+          complete_final_grades: 0,
+          final_passed: 0,
+          final_failed: 0,
+        },
+        gradeDistribution: {
+          advancing: 0,
+          benchmarking: 0,
+          connecting: 0,
+          developing: 0,
+          emerging: 0,
+        },
+        attendanceTotals: {
+          present: 0,
+          absent: 0,
+          late: 0,
+          excused: 0,
+          total: 0,
+        },
       });
     }
 
