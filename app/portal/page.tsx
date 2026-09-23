@@ -232,6 +232,17 @@ function SideNav({
                 <SidebarMenuButton
                   className="nav-button"
                   onClick={() => {
+                    window.location.href = "/portal/admin/users";
+                  }}
+                >
+                  <Users size={19} />
+                  <span>Users & accounts</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="nav-button"
+                  onClick={() => {
                     window.location.href = "/portal/admin/masterlist";
                   }}
                 >
