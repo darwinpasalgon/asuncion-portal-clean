@@ -331,7 +331,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ activeYear: null, roster: [], batches: [] });
     }
 
-    const [roster, batches] = await Promise.all([
+    const [roster, batches, sections] = await Promise.all([
       getRows(
         `account_activation_roster?school_year_id=eq.${encodeURIComponent(
           year.id
@@ -344,9 +344,13 @@ export async function GET(request: NextRequest) {
         )}&select=id,person_type,file_name,total_rows,imported_rows,skipped_rows,created_at&order=created_at.desc&limit=50`,
         token
       ),
+      getRows(
+        "sections?select=id,grade_level,name&order=grade_level.asc,name.asc",
+        token
+      ),
     ]);
 
-    return NextResponse.json({ activeYear: year, roster, batches });
+    return NextResponse.json({ activeYear: year, roster, batches, sections });
   } catch {
     return NextResponse.json(
       { error: "Unable to load the account masterlist." },
