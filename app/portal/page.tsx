@@ -546,7 +546,7 @@ export default function PortalPage() {
               <p>
                 {page === "Overview"
                   ? `Your verified ${roleLabel[profile.role].toLowerCase()} account is now connected to the portal.`
-                  : "This live module will use official school records once its database is configured."}
+                  : "This module uses official records from the live academic database."}
               </p>
             </div>
             <div className="real-role-card">
@@ -563,11 +563,10 @@ export default function PortalPage() {
               <section className="welcome-card real-welcome">
                 <div>
                   <span className="tag">VERIFIED PORTAL ACCESS</span>
-                  <h2>Your real account<br />is connected.</h2>
+                  <h2>Your verified school account<br />is connected.</h2>
                   <p>
-                    The demonstration role switch and fictional academic records
-                    have been removed. We can now build each live school module
-                    on top of your authenticated identity.
+                    Your account role determines the school records, classes, and
+                    administrative tools you are authorized to access in the portal.
                   </p>
                 </div>
                 <div className="academic-motif">
