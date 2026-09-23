@@ -103,6 +103,14 @@ export default function AnnouncementsPage(){
     data.set("announcementType",isAdmin?announcementType:"announcement");
     data.set("audienceScope",profile?.role==="teacher"?"section":audienceScope);
 
+    const expiresLocal=String(data.get("expiresAt")??"");
+    if(expiresLocal){
+      const expiresDate=new Date(expiresLocal);
+      if(!Number.isNaN(expiresDate.getTime())){
+        data.set("expiresAt",expiresDate.toISOString());
+      }
+    }
+
     setWorking("create");setError("");setSuccess("");
     try{
       const r=await fetch("/api/announcements",{method:"POST",body:data});
