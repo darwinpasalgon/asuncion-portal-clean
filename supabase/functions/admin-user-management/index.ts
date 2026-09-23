@@ -175,15 +175,13 @@ Deno.serve(async (req) => {
       .limit(1);
     if ((duplicate ?? []).length) return json({ error: "That LRN is already used by another account." }, 409);
 
-    const { data: rosterDuplicate } = await admin
+    const { data: rosterMatches } = await admin
       .from("account_activation_roster")
-      .select("id")
+      .select("id,claimed_user_id")
       .eq("person_type", "student")
       .eq("lrn", lrn)
-      .neq("claimed_user_id", userId)
-      .neq("status", "disabled")
-      .limit(1);
-    if ((rosterDuplicate ?? []).length) {
+      .neq("status", "disabled");
+    if ((rosterMatches ?? []).some((row) => row.claimed_user_id !== userId)) {
       return json({ error: "That LRN is already assigned to another activation record." }, 409);
     }
 
@@ -226,16 +224,20 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    if (year) {
+    if (year && target.account_status === "active") {
       const { error: enrollmentError } = await admin
         .from("student_enrollments")
-        .update({
-          grade_level: gradeLevel,
-          section_id: section.id,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("student_id", userId)
-        .eq("school_year_id", year.id);
+        .upsert(
+          {
+            student_id: userId,
+            school_year_id: year.id,
+            grade_level: gradeLevel,
+            section_id: section.id,
+            enrollment_status: "active",
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "student_id,school_year_id" }
+        );
 
       if (enrollmentError) {
         await admin.from("profiles").update(oldProfile).eq("id", userId);
@@ -273,15 +275,13 @@ Deno.serve(async (req) => {
     return json({ error: "That email is already used by another portal account." }, 409);
   }
 
-  const { data: rosterEmailDuplicate } = await admin
+  const { data: rosterEmailMatches } = await admin
     .from("account_activation_roster")
-    .select("id")
+    .select("id,claimed_user_id")
     .eq("person_type", "teacher")
     .ilike("email", email)
-    .neq("claimed_user_id", userId)
-    .neq("status", "disabled")
-    .limit(1);
-  if ((rosterEmailDuplicate ?? []).length) {
+    .neq("status", "disabled");
+  if ((rosterEmailMatches ?? []).some((row) => row.claimed_user_id !== userId)) {
     return json({ error: "That email is already assigned to another activation record." }, 409);
   }
 
