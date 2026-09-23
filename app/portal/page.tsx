@@ -168,6 +168,11 @@ function SideNav({
       return;
     }
 
+    if (pageName === "Students" && profile.role === "administrator") {
+      window.location.href = "/portal/admin/reports?tab=classlist";
+      return;
+    }
+
     onPage(pageName);
     setOpenMobile(false);
   }
@@ -671,12 +676,11 @@ export default function PortalPage() {
 
               <section className="panel real-next-card">
                 <BookOpen size={28} />
-                <h2>Next build phase</h2>
+                <h2>System status</h2>
                 <p>
-                  Core academic modules are now connected: enrollment, subjects,
-                  teaching assignments, schedules, grades, attendance, announcements,
-                  memorandums, and learning resources. Reports and analytics are now
-                  available for Administrator review.
+                  Core academic modules are connected: enrollment, subjects, Teacher
+                  assignments, schedules, grades, attendance, announcements,
+                  memorandums, learning resources, and Administrator reports.
                 </p>
               </section>
             </div>
