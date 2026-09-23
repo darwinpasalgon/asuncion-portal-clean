@@ -15,8 +15,8 @@
   overflow: hidden;
   color: white;
   background:
-    linear-gradient(rgba(8, 52, 91, 0.42), rgba(8, 67, 91, 0.52)),
-    url("/login-bg.webp") center center / cover no-repeat;
+    linear-gradient(rgba(8, 52, 91, 0.08), rgba(8, 67, 91, 0.16)),
+    url("/login-bg-clear.jpg") center 58% / cover no-repeat;
 }
 
 .brandPanel::after {
@@ -25,9 +25,9 @@
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(4, 38, 69, 0.08) 0%,
-    rgba(4, 38, 69, 0.02) 52%,
-    rgba(4, 38, 69, 0.18) 100%
+    rgba(4, 38, 69, 0.02) 0%,
+    rgba(4, 38, 69, 0) 52%,
+    rgba(4, 38, 69, 0.08) 100%
   );
   pointer-events: none;
 }
