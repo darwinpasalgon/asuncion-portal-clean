@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
-  BookOpenCheck,
-  CheckCircle2,
   GraduationCap,
   Save,
   Send,
@@ -14,17 +12,8 @@ import {
 import styles from "./grades.module.css";
 
 type Role = "student" | "teacher";
-type ActiveYear = {
-  id: string;
-  name: string;
-  start_year: number;
-  end_year: number;
-};
-type Profile = {
-  id: string;
-  full_name: string;
-  role: Role;
-};
+type ActiveYear = { id: string; name: string; start_year: number; end_year: number };
+type Profile = { id: string; full_name: string; role: Role };
 type Assignment = {
   id: string;
   teacher_id: string;
@@ -32,17 +21,12 @@ type Assignment = {
   section_id: string;
   subject_id: string;
 };
-type Section = {
-  id: string;
-  grade_level: number;
-  name: string;
-};
+type Section = { id: string; grade_level: number; name: string };
 type Subject = {
   id: string;
   grade_level: number;
   name: string;
   code: string | null;
-  grading_scheme: string;
   is_active: boolean;
 };
 type Enrollment = {
@@ -51,103 +35,17 @@ type Enrollment = {
   grade_level: number;
   section_id: string | null;
 };
-type Student = {
-  id: string;
-  full_name: string;
-  lrn: string | null;
-};
+type Student = { id: string; full_name: string; lrn: string | null };
 type Grade = {
   id: string;
   student_id: string;
   teacher_assignment_id: string;
   school_year_id: string;
   term_no: number;
-  ww_ps: number | null;
-  pt_ps: number | null;
-  st1_ps: number | null;
-  st2_ps: number | null;
-  term_exam_ps: number | null;
-  initial_grade: number;
   term_grade: number;
   status: "draft" | "published";
   published_at: string | null;
   updated_at: string;
-};
-
-type GradeDraft = {
-  wwPs: string;
-  ptPs: string;
-  st1Ps: string;
-  st2Ps: string;
-  termExamPs: string;
-};
-
-const SCHEMES: Record<
-  string,
-  {
-    short: string;
-    description: string;
-    ww: number;
-    pt: number;
-    ex: number;
-    stRequired: boolean;
-    termExamRequired: boolean;
-  }
-> = {
-  ks23_standard: {
-    short: "WW 20% · PT 50% · EX 30%",
-    description: "Grades 7–10 Standard",
-    ww: 20,
-    pt: 50,
-    ex: 30,
-    stRequired: true,
-    termExamRequired: true,
-  },
-  ks23_tle_mapeh: {
-    short: "WW 20% · PT 60% · EX 20%",
-    description: "Grades 7–10 TLE / MAPEH",
-    ww: 20,
-    pt: 60,
-    ex: 20,
-    stRequired: true,
-    termExamRequired: true,
-  },
-  shs_core_academic: {
-    short: "WW 20% · PT 50% · EX 30%",
-    description: "SHS Core / Academic",
-    ww: 20,
-    pt: 50,
-    ex: 30,
-    stRequired: true,
-    termExamRequired: true,
-  },
-  shs_field_arts_creative: {
-    short: "WW 15% · PT 70% · TE 15%",
-    description: "SHS Field / Arts / Creative",
-    ww: 15,
-    pt: 70,
-    ex: 15,
-    stRequired: false,
-    termExamRequired: true,
-  },
-  shs_research_design: {
-    short: "WW 40% · PT 60%",
-    description: "SHS Research / Design",
-    ww: 40,
-    pt: 60,
-    ex: 0,
-    stRequired: false,
-    termExamRequired: false,
-  },
-  shs_work_immersion: {
-    short: "WW 20% · PT 80%",
-    description: "SHS Work Immersion",
-    ww: 20,
-    pt: 80,
-    ex: 0,
-    stRequired: false,
-    termExamRequired: false,
-  },
 };
 
 function descriptor(grade: number) {
@@ -156,27 +54,6 @@ function descriptor(grade: number) {
   if (grade >= 75) return "Connecting / Natutungo";
   if (grade >= 65) return "Developing / Napauunlad";
   return "Emerging / Nagsisimula";
-}
-
-function blankDraft(): GradeDraft {
-  return {
-    wwPs: "",
-    ptPs: "",
-    st1Ps: "",
-    st2Ps: "",
-    termExamPs: "",
-  };
-}
-
-function gradeToDraft(grade?: Grade): GradeDraft {
-  if (!grade) return blankDraft();
-  return {
-    wwPs: grade.ww_ps === null ? "" : String(grade.ww_ps),
-    ptPs: grade.pt_ps === null ? "" : String(grade.pt_ps),
-    st1Ps: grade.st1_ps === null ? "" : String(grade.st1_ps),
-    st2Ps: grade.st2_ps === null ? "" : String(grade.st2_ps),
-    termExamPs: grade.term_exam_ps === null ? "" : String(grade.term_exam_ps),
-  };
 }
 
 export default function GradesPage() {
@@ -191,7 +68,7 @@ export default function GradesPage() {
   const [grades, setGrades] = useState<Grade[]>([]);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState("");
   const [selectedTerm, setSelectedTerm] = useState(1);
-  const [drafts, setDrafts] = useState<Record<string, GradeDraft>>({});
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState("");
   const [error, setError] = useState("");
@@ -200,7 +77,6 @@ export default function GradesPage() {
   async function load() {
     setLoading(true);
     setError("");
-
     try {
       const response = await fetch("/api/academic/grades", { cache: "no-store" });
       const result = await response.json().catch(() => ({}));
@@ -250,12 +126,6 @@ export default function GradesPage() {
   const selectedAssignment = assignments.find(
     (item) => item.id === selectedAssignmentId
   );
-  const selectedSubject = selectedAssignment
-    ? subjectMap.get(selectedAssignment.subject_id)
-    : undefined;
-  const scheme = selectedSubject
-    ? SCHEMES[selectedSubject.grading_scheme] ?? SCHEMES.ks23_standard
-    : SCHEMES.ks23_standard;
 
   const classStudents = useMemo(() => {
     if (!selectedAssignment) return [];
@@ -273,7 +143,7 @@ export default function GradesPage() {
   useEffect(() => {
     if (role !== "teacher" || !selectedAssignmentId) return;
 
-    const next: Record<string, GradeDraft> = {};
+    const next: Record<string, string> = {};
     for (const student of classStudents) {
       const grade = grades.find(
         (item) =>
@@ -281,7 +151,7 @@ export default function GradesPage() {
           item.teacher_assignment_id === selectedAssignmentId &&
           item.term_no === selectedTerm
       );
-      next[student.id] = gradeToDraft(grade);
+      next[student.id] = grade ? String(grade.term_grade) : "";
     }
     setDrafts(next);
   }, [role, selectedAssignmentId, selectedTerm, classStudents, grades]);
@@ -291,19 +161,8 @@ export default function GradesPage() {
     return `Grade ${assignment.grade_level} · ${sectionMap.get(assignment.section_id) ?? "Unknown"} · ${subject?.name ?? "Unknown subject"}${subject?.code ? ` (${subject.code})` : ""}`;
   }
 
-  function updateDraft(studentId: string, field: keyof GradeDraft, value: string) {
-    setDrafts((current) => ({
-      ...current,
-      [studentId]: {
-        ...(current[studentId] ?? blankDraft()),
-        [field]: value,
-      },
-    }));
-  }
-
   async function saveGrade(studentId: string) {
     if (!selectedAssignmentId) return;
-    const draft = drafts[studentId] ?? blankDraft();
 
     setWorking(studentId);
     setError("");
@@ -318,21 +177,17 @@ export default function GradesPage() {
           assignmentId: selectedAssignmentId,
           studentId,
           termNo: selectedTerm,
-          wwPs: draft.wwPs,
-          ptPs: draft.ptPs,
-          st1Ps: draft.st1Ps,
-          st2Ps: draft.st2Ps,
-          termExamPs: draft.termExamPs,
+          termGrade: drafts[studentId],
         }),
       });
 
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setError(result.error ?? "Unable to save the grade.");
+        setError(result.error ?? "Unable to save the Term Grade.");
         return;
       }
 
-      setSuccess("Grade saved. Initial Grade and Term Grade were recalculated.");
+      setSuccess(`Term ${selectedTerm} grade saved.`);
       await load();
     } catch {
       setError("Unable to reach the grades service.");
@@ -412,12 +267,7 @@ export default function GradesPage() {
           )
         : null;
 
-      return {
-        assignment,
-        subject,
-        terms,
-        finalGrade,
-      };
+      return { assignment, subject, terms, finalGrade };
     });
   }, [role, assignments, subjectMap, grades]);
 
@@ -445,7 +295,7 @@ export default function GradesPage() {
             <h1>{role === "teacher" ? "Term gradebook" : "My grades"}</h1>
             <p>
               {role === "teacher"
-                ? "Encode assessment percentage scores, review the computed Initial and Term Grades, then publish the term when the class is complete."
+                ? "Enter the official Term Grade for each learner, then publish the term when the class is complete."
                 : "Published Term Grades and Final Grades for the active school year."}
             </p>
           </div>
@@ -461,18 +311,6 @@ export default function GradesPage() {
 
         {error && <div className={styles.error}>{error}</div>}
         {success && <div className={styles.success}>{success}</div>}
-
-        <section className={styles.policy}>
-          <BookOpenCheck size={22} />
-          <div>
-            <strong>DepEd three-term grading</strong>
-            <p>
-              Term 1, Term 2, and Term 3 are used. For SY 2026–2027, Initial
-              Grades are converted through the adjusted transmutation table.
-              Final Grade is the rounded average of the three Term Grades.
-            </p>
-          </div>
-        </section>
 
         {role === "teacher" && (
           <>
@@ -508,43 +346,13 @@ export default function GradesPage() {
               </div>
             </section>
 
-            {selectedAssignment && selectedSubject && (
-              <section className={styles.schemeCard}>
-                <div>
-                  <span>SUBJECT</span>
-                  <strong>
-                    {selectedSubject.name}
-                    {selectedSubject.code ? ` (${selectedSubject.code})` : ""}
-                  </strong>
-                  <small>
-                    Grade {selectedAssignment.grade_level} ·{" "}
-                    {sectionMap.get(selectedAssignment.section_id)}
-                  </small>
-                </div>
-                <div>
-                  <span>ASSESSMENT PROFILE</span>
-                  <strong>{scheme.description}</strong>
-                  <small>{scheme.short}</small>
-                </div>
-                {scheme.ex > 0 && (
-                  <div>
-                    <span>EXAMINATION BREAKDOWN</span>
-                    <strong>
-                      {scheme.stRequired ? "ST1 30% · ST2 30% · TE 40%" : "Term Exam"}
-                    </strong>
-                    <small>Within the Examinations component</small>
-                  </div>
-                )}
-              </section>
-            )}
-
             <section className={styles.gradePanel}>
               <div className={styles.panelHeading}>
                 <div>
-                  <h2>Term {selectedTerm} encoding</h2>
+                  <h2>Term {selectedTerm}</h2>
                   <p>
-                    Enter component Percentage Scores from 0–100. Save each learner
-                    to calculate the official grade.
+                    Enter a whole-number Term Grade from 0–100. Grades below 75
+                    are flagged for intervention.
                   </p>
                 </div>
                 <div className={styles.publishActions}>
@@ -578,14 +386,9 @@ export default function GradesPage() {
                     <thead>
                       <tr>
                         <th>Learner</th>
-                        <th>WW %</th>
-                        <th>PT %</th>
-                        {scheme.stRequired && <th>ST1 %</th>}
-                        {scheme.stRequired && <th>ST2 %</th>}
-                        {scheme.termExamRequired && <th>Term Exam %</th>}
-                        <th>Initial</th>
                         <th>Term Grade</th>
-                        <th>Descriptor / Support</th>
+                        <th>Proficiency Descriptor</th>
+                        <th>Support</th>
                         <th>Status</th>
                         <th></th>
                       </tr>
@@ -598,7 +401,7 @@ export default function GradesPage() {
                             item.teacher_assignment_id === selectedAssignmentId &&
                             item.term_no === selectedTerm
                         );
-                        const draft = drafts[student.id] ?? blankDraft();
+                        const value = drafts[student.id] ?? "";
 
                         return (
                           <tr key={student.id}>
@@ -608,93 +411,55 @@ export default function GradesPage() {
                             </td>
                             <td>
                               <input
+                                className={styles.termInput}
                                 type="number"
                                 min="0"
                                 max="100"
-                                step="0.01"
-                                value={draft.wwPs}
+                                step="1"
+                                value={value}
+                                disabled={saved?.status === "published"}
                                 onChange={(event) =>
-                                  updateDraft(student.id, "wwPs", event.target.value)
+                                  setDrafts((current) => ({
+                                    ...current,
+                                    [student.id]: event.target.value,
+                                  }))
                                 }
+                                aria-label={`${student.full_name} Term ${selectedTerm} grade`}
                               />
-                            </td>
-                            <td>
-                              <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                step="0.01"
-                                value={draft.ptPs}
-                                onChange={(event) =>
-                                  updateDraft(student.id, "ptPs", event.target.value)
-                                }
-                              />
-                            </td>
-                            {scheme.stRequired && (
-                              <td>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  step="0.01"
-                                  value={draft.st1Ps}
-                                  onChange={(event) =>
-                                    updateDraft(student.id, "st1Ps", event.target.value)
-                                  }
-                                />
-                              </td>
-                            )}
-                            {scheme.stRequired && (
-                              <td>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  step="0.01"
-                                  value={draft.st2Ps}
-                                  onChange={(event) =>
-                                    updateDraft(student.id, "st2Ps", event.target.value)
-                                  }
-                                />
-                              </td>
-                            )}
-                            {scheme.termExamRequired && (
-                              <td>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  step="0.01"
-                                  value={draft.termExamPs}
-                                  onChange={(event) =>
-                                    updateDraft(student.id, "termExamPs", event.target.value)
-                                  }
-                                />
-                              </td>
-                            )}
-                            <td className={styles.numberCell}>
-                              {saved ? Number(saved.initial_grade).toFixed(2) : "—"}
-                            </td>
-                            <td className={styles.termGrade}>
-                              {saved?.term_grade ?? "—"}
                             </td>
                             <td>
                               {saved ? (
-                                <>
-                                  <strong>{descriptor(saved.term_grade)}</strong>
-                                  <span className={saved.term_grade < 75 ? styles.intervention : styles.onTrack}>
-                                    {saved.term_grade < 75
-                                      ? "Intervention needed"
-                                      : "Meets minimum standard"}
-                                  </span>
-                                </>
+                                <strong>{descriptor(saved.term_grade)}</strong>
                               ) : (
                                 "—"
                               )}
                             </td>
                             <td>
                               {saved ? (
-                                <span className={saved.status === "published" ? styles.published : styles.draft}>
+                                <span
+                                  className={
+                                    saved.term_grade < 75
+                                      ? styles.intervention
+                                      : styles.onTrack
+                                  }
+                                >
+                                  {saved.term_grade < 75
+                                    ? "Intervention needed"
+                                    : "Meets minimum standard"}
+                                </span>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                            <td>
+                              {saved ? (
+                                <span
+                                  className={
+                                    saved.status === "published"
+                                      ? styles.published
+                                      : styles.draft
+                                  }
+                                >
                                   {saved.status === "published" ? "Published" : "Draft"}
                                 </span>
                               ) : (
@@ -704,7 +469,10 @@ export default function GradesPage() {
                             <td>
                               <button
                                 className={styles.saveButton}
-                                disabled={working === student.id}
+                                disabled={
+                                  working === student.id ||
+                                  saved?.status === "published"
+                                }
                                 onClick={() => void saveGrade(student.id)}
                               >
                                 <Save size={15} />
@@ -727,9 +495,7 @@ export default function GradesPage() {
             <div className={styles.panelHeading}>
               <div>
                 <h2>{profile?.full_name}</h2>
-                <p>
-                  Only grades published by your subject teachers are shown here.
-                </p>
+                <p>Only grades published by your subject teachers are shown here.</p>
               </div>
             </div>
 
@@ -771,9 +537,7 @@ export default function GradesPage() {
                             <>
                               <strong>{term.term_grade}</strong>
                               <small>{descriptor(term.term_grade)}</small>
-                              {term.term_grade < 75 && (
-                                <em>Intervention needed</em>
-                              )}
+                              {term.term_grade < 75 && <em>Intervention needed</em>}
                             </>
                           ) : (
                             <>
@@ -790,7 +554,11 @@ export default function GradesPage() {
                           <>
                             <strong>{finalGrade}</strong>
                             <small>{descriptor(finalGrade)}</small>
-                            <em className={finalGrade >= 75 ? styles.passed : styles.failed}>
+                            <em
+                              className={
+                                finalGrade >= 75 ? styles.passed : styles.failed
+                              }
+                            >
                               {finalGrade >= 75 ? "Passed" : "Failed"}
                             </em>
                           </>
@@ -809,12 +577,8 @@ export default function GradesPage() {
           </section>
         )}
 
-        {!role && !error && (
-          <div className={styles.empty}>No grade workspace is available.</div>
-        )}
-
         <section className={styles.legend}>
-          <h2>Grades 4–12 proficiency descriptors</h2>
+          <h2>Proficiency Descriptors</h2>
           <div>
             <span><strong>90–100</strong> Advancing / Namumukod-tangi</span>
             <span><strong>80–89</strong> Benchmarking / Napamamalas</span>
