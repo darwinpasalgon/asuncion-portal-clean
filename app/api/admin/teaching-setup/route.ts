@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     const [grades, sections, subjects, teachers, assignments] = await Promise.all([
       getRows("grade_levels?select=grade_level,label,sort_order&order=sort_order.asc", token),
       getRows("sections?select=id,grade_level,name,is_active&order=grade_level.asc,name.asc", token),
-      getRows("subjects?select=id,grade_level,name,code,is_active&order=grade_level.asc,name.asc", token),
+      getRows("subjects?select=id,grade_level,name,code,grading_scheme,is_active&order=grade_level.asc,name.asc", token),
       getRows(
         "profiles?role=eq.teacher&account_status=eq.active&select=id,full_name,email&order=full_name.asc",
         token
@@ -111,6 +111,7 @@ export async function POST(request: NextRequest) {
     const name = String(body?.name ?? "").trim().replace(/\s+/g, " ");
     const codeRaw = String(body?.code ?? "").trim().replace(/\s+/g, " ");
     const code = codeRaw || null;
+    const gradingScheme = String(body?.gradingScheme ?? "");
 
     if (!Number.isInteger(gradeLevel) || gradeLevel < 7 || gradeLevel > 12) {
       return NextResponse.json({ error: "Select a valid grade level." }, { status: 400 });
@@ -128,6 +129,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const allowedSchemes =
+      gradeLevel <= 10
+        ? ["ks23_standard", "ks23_tle_mapeh"]
+        : [
+            "shs_core_academic",
+            "shs_field_arts_creative",
+            "shs_research_design",
+            "shs_work_immersion",
+          ];
+
+    if (!allowedSchemes.includes(gradingScheme)) {
+      return NextResponse.json(
+        { error: "Select the correct DepEd grading profile for this subject." },
+        { status: 400 }
+      );
+    }
+
     const response = await fetch(`${SUPABASE_URL}/rest/v1/subjects`, {
       method: "POST",
       headers: { ...authHeaders(token), Prefer: "return=representation" },
@@ -135,6 +153,7 @@ export async function POST(request: NextRequest) {
         grade_level: gradeLevel,
         name,
         code,
+        grading_scheme: gradingScheme,
         is_active: true,
       }),
       cache: "no-store",
@@ -154,6 +173,61 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ ok: true, subject: result?.[0] ?? null });
+  }
+
+  if (action === "set_subject_grading_scheme") {
+    const id = String(body?.id ?? "");
+    const gradingScheme = String(body?.gradingScheme ?? "");
+
+    if (!id) {
+      return NextResponse.json({ error: "Subject is required." }, { status: 400 });
+    }
+
+    const subjectRows = await getRows(
+      `subjects?id=eq.${encodeURIComponent(id)}&select=id,grade_level&limit=1`,
+      token
+    ).catch(() => []);
+
+    const gradeLevel = Number(subjectRows?.[0]?.grade_level ?? 0);
+    const allowedSchemes =
+      gradeLevel <= 10
+        ? ["ks23_standard", "ks23_tle_mapeh"]
+        : [
+            "shs_core_academic",
+            "shs_field_arts_creative",
+            "shs_research_design",
+            "shs_work_immersion",
+          ];
+
+    if (!subjectRows?.[0] || !allowedSchemes.includes(gradingScheme)) {
+      return NextResponse.json(
+        { error: "Select a valid grading profile for this subject." },
+        { status: 400 }
+      );
+    }
+
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/subjects?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        headers: { ...authHeaders(token), Prefer: "return=representation" },
+        body: JSON.stringify({
+          grading_scheme: gradingScheme,
+          updated_at: new Date().toISOString(),
+        }),
+        cache: "no-store",
+      }
+    );
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok || !result?.[0]) {
+      return NextResponse.json(
+        { error: "Unable to update the subject grading profile." },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ ok: true, subject: result[0] });
   }
 
   if (action === "set_subject_active") {
