@@ -14,22 +14,11 @@
   position: relative;
   overflow: hidden;
   color: white;
-  background:
-    linear-gradient(rgba(8, 52, 91, 0.08), rgba(8, 67, 91, 0.16)),
-    url("/login-bg-clear.jpg") center 58% / cover no-repeat;
+  background: url("/login-bg.png") center center / cover no-repeat;
 }
 
 .brandPanel::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(4, 38, 69, 0.02) 0%,
-    rgba(4, 38, 69, 0) 52%,
-    rgba(4, 38, 69, 0.08) 100%
-  );
-  pointer-events: none;
+  display: none;
 }
 
 .brandTop {
