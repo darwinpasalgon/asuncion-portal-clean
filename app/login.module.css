@@ -1,0 +1,586 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(420px, 0.95fr) minmax(480px, 1.05fr);
+  background: #f4f8fb;
+  color: #17354f;
+}
+
+.brandPanel {
+  min-height: 100vh;
+  padding: 54px clamp(38px, 6vw, 86px);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  color: white;
+  background: url("/login-bg.png") center center / cover no-repeat;
+}
+
+.brandPanel::after {
+  display: none;
+}
+
+.brandTop {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  position: relative;
+  z-index: 1;
+}
+
+.logo {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.15));
+}
+
+.schoolLabel {
+  margin: 0;
+  font-size: 0.83rem;
+  font-weight: 750;
+  letter-spacing: 0.11em;
+  line-height: 1.45;
+}
+
+.portalLabel {
+  margin: 6px 0 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.73);
+}
+
+.brandMessage {
+  margin: auto 0;
+  max-width: 610px;
+  position: relative;
+  z-index: 1;
+}
+
+.badge {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 0.76rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+}
+
+.brandMessage h1 {
+  margin: 25px 0 20px;
+  max-width: 570px;
+  color: white;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.7rem, 5vw, 4.7rem);
+  font-weight: 400;
+  line-height: 1.03;
+  letter-spacing: -0.045em;
+}
+
+.brandMessage p {
+  margin: 0;
+  max-width: 560px;
+  color: rgba(238, 248, 255, 0.84);
+  font-size: 1rem;
+  line-height: 1.85;
+}
+
+.brandFooter {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  position: relative;
+  z-index: 1;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.78rem;
+}
+
+.formPanel {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 48px clamp(28px, 7vw, 100px);
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.62)),
+    #f4f8fb;
+}
+
+.formWrap {
+  width: min(100%, 470px);
+}
+
+.mobileBrand {
+  display: none;
+}
+
+.intro {
+  margin-bottom: 31px;
+}
+
+.demoPill {
+  display: inline-block;
+  margin-bottom: 17px;
+  color: #16724e;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.13em;
+}
+
+.intro h2 {
+  margin: 0 0 11px;
+  color: #153f66;
+  font-size: clamp(2rem, 3vw, 2.55rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.intro p {
+  margin: 0;
+  color: #687d8d;
+  line-height: 1.7;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  color: #334f63;
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.inputWrap {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 15px;
+  border: 1px solid #d5e0e7;
+  border-radius: 10px;
+  background: white;
+  color: #7a8f9f;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.inputWrap:focus-within {
+  border-color: #2d7eb7;
+  box-shadow: 0 0 0 4px rgba(45, 126, 183, 0.1);
+}
+
+.inputWrap input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #17354f;
+  font-size: 0.94rem;
+}
+
+.inputWrap input::placeholder {
+  color: #9aabb6;
+}
+
+.passwordToggle,
+.textButton {
+  border: 0;
+  background: transparent;
+}
+
+.passwordToggle {
+  display: grid;
+  place-items: center;
+  padding: 7px;
+  color: #738a99;
+}
+
+.formOptions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-top: -3px;
+  font-size: 0.81rem;
+}
+
+.remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #657b89;
+}
+
+.remember input {
+  width: 16px;
+  height: 16px;
+  accent-color: #16754e;
+}
+
+.textButton {
+  padding: 0;
+  color: #176ba4;
+  font-size: 0.81rem;
+  font-weight: 650;
+}
+
+.error {
+  margin: -4px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #f0caca;
+  border-radius: 8px;
+  background: #fff4f4;
+  color: #a63d3d;
+  font-size: 0.8rem;
+}
+
+.signInButton {
+  min-height: 52px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(100deg, #155f9d, #147b56);
+  color: white;
+  font-weight: 700;
+  box-shadow: 0 10px 24px rgba(24, 91, 129, 0.16);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.signInButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 13px 28px rgba(24, 91, 129, 0.22);
+}
+
+.demoNote {
+  margin-top: 25px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 15px;
+  border: 1px solid #dce9df;
+  border-radius: 9px;
+  background: #f0f8f3;
+  color: #527063;
+}
+
+.demoNote svg {
+  flex: none;
+  margin-top: 2px;
+  color: #247553;
+}
+
+.demoNote p {
+  margin: 0;
+  font-size: 0.77rem;
+  line-height: 1.7;
+}
+
+.footer {
+  margin-top: 36px;
+  padding-top: 20px;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  border-top: 1px solid #dfe8ed;
+  color: #81919d;
+  font-size: 0.72rem;
+}
+
+@media (max-width: 900px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+
+  .brandPanel {
+    display: none;
+  }
+
+  .formPanel {
+    padding: 32px 22px;
+  }
+
+  .mobileBrand {
+    margin-bottom: 55px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .mobileBrand img {
+    width: 52px;
+    height: 52px;
+    object-fit: contain;
+  }
+
+  .mobileBrand strong,
+  .mobileBrand span {
+    display: block;
+  }
+
+  .mobileBrand strong {
+    color: #17578d;
+    font-size: 0.84rem;
+    letter-spacing: 0.06em;
+  }
+
+  .mobileBrand span {
+    margin-top: 4px;
+    color: #477768;
+    font-size: 0.76rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .formPanel {
+    align-items: start;
+    padding-top: 25px;
+  }
+
+  .formWrap {
+    width: 100%;
+  }
+
+  .mobileBrand {
+    margin-bottom: 42px;
+  }
+
+  .formOptions,
+  .footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .footer {
+    gap: 7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signInButton,
+  .inputWrap {
+    transition: none;
+  }
+}
+
+
+.accountPrompt {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  color: #6e808d;
+  font-size: 0.82rem;
+}
+
+.pageCompact {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(31, 120, 177, 0.08), transparent 28%),
+    #f4f8fb;
+  color: #17354f;
+  padding: 38px 20px;
+}
+
+.authShell {
+  width: min(100%, 760px);
+  margin: 0 auto;
+}
+
+.authHeader {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 28px;
+}
+
+.authHeader img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.authHeader strong,
+.authHeader span {
+  display: block;
+}
+
+.authHeader strong {
+  color: #17578d;
+  font-size: 0.9rem;
+  letter-spacing: 0.06em;
+}
+
+.authHeader span {
+  margin-top: 4px;
+  color: #51756a;
+  font-size: 0.78rem;
+}
+
+.authCard {
+  background: #fff;
+  border: 1px solid #dfe7ec;
+  border-radius: 16px;
+  padding: clamp(24px, 5vw, 42px);
+  box-shadow: 0 18px 50px rgba(22, 71, 106, 0.08);
+}
+
+.authCard h1 {
+  margin: 0;
+  color: #153f66;
+  font-size: clamp(1.9rem, 4vw, 2.5rem);
+  letter-spacing: -0.04em;
+}
+
+.authCard > p {
+  margin: 10px 0 28px;
+  color: #6b7f8e;
+  line-height: 1.7;
+}
+
+.roleTabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  padding: 5px;
+  margin-bottom: 24px;
+  background: #eef4f7;
+  border-radius: 11px;
+}
+
+.roleTab {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #637888;
+  min-height: 42px;
+  font-weight: 650;
+}
+
+.roleTabActive {
+  background: white;
+  color: #17679c;
+  box-shadow: 0 2px 8px rgba(25, 72, 103, 0.1);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.spanTwo {
+  grid-column: 1 / -1;
+}
+
+.helpText {
+  margin: -1px 0 0;
+  color: #81909a;
+  font-size: 0.74rem;
+  line-height: 1.55;
+}
+
+.noticeBox {
+  margin: 20px 0 0;
+  padding: 14px 16px;
+  background: #f5f8fa;
+  border: 1px solid #e2e8ec;
+  border-radius: 9px;
+  color: #607581;
+  font-size: 0.78rem;
+  line-height: 1.65;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  margin-bottom: 18px;
+  color: #176ba4;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.channelGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 14px 0 24px;
+}
+
+.channelCard {
+  padding: 16px;
+  border: 1px solid #dce5ea;
+  border-radius: 10px;
+  background: white;
+  text-align: left;
+  color: #3d5668;
+}
+
+.channelCard strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #24485f;
+}
+
+.channelCard span {
+  color: #718692;
+  font-size: 0.77rem;
+  line-height: 1.5;
+}
+
+.channelCardActive {
+  border-color: #2c7eaf;
+  box-shadow: 0 0 0 3px rgba(44, 126, 175, 0.09);
+}
+
+@media (max-width: 650px) {
+  .formGrid,
+  .channelGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .spanTwo {
+    grid-column: auto;
+  }
+
+  .authCard {
+    border-radius: 12px;
+  }
+}
+
+.inputWrap select {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #17354f;
+  font-size: 0.94rem;
+  cursor: pointer;
+}
+
+.inputWrap select:disabled {
+  color: #9aabb6;
+  cursor: not-allowed;
+}
+
+.inputWrap select option {
+  color: #17354f;
+}
