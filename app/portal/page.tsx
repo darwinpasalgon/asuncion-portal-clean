@@ -147,6 +147,11 @@ function SideNav({
   const { setOpenMobile } = useSidebar();
 
   function go(pageName: Page) {
+    if (pageName === "Grades" && (profile.role === "teacher" || profile.role === "student")) {
+      window.location.href = "/portal/grades";
+      return;
+    }
+
     onPage(pageName);
     setOpenMobile(false);
   }
