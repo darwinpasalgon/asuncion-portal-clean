@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  BarChart3,
   BookOpen,
   CalendarDays,
   ClipboardCheck,
@@ -274,6 +275,17 @@ function SideNav({
                 >
                   <ClipboardCheck size={19} />
                   <span>Attendance</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="nav-button"
+                  onClick={() => {
+                    window.location.href = "/portal/admin/reports";
+                  }}
+                >
+                  <BarChart3 size={19} />
+                  <span>Reports & analytics</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -650,6 +662,9 @@ export default function PortalPage() {
                     <button onClick={() => (window.location.href = "/portal/admin/attendance")}>
                       <ClipboardCheck size={18} /> Attendance
                     </button>
+                    <button onClick={() => (window.location.href = "/portal/admin/reports")}>
+                      <BarChart3 size={18} /> Reports & analytics
+                    </button>
                   </div>
                 </section>
               )}
@@ -658,9 +673,10 @@ export default function PortalPage() {
                 <BookOpen size={28} />
                 <h2>Next build phase</h2>
                 <p>
-                  School structure, enrollment, subjects, Teacher assignments, and
-                  class schedules are now connected. The next major modules are
-                  grades and attendance.
+                  Core academic modules are now connected: enrollment, subjects,
+                  teaching assignments, schedules, grades, attendance, announcements,
+                  memorandums, and learning resources. Reports and analytics are now
+                  available for Administrator review.
                 </p>
               </section>
             </div>
