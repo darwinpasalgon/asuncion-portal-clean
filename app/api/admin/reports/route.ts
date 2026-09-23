@@ -124,6 +124,27 @@ type AttendanceRow = {
   status: "present" | "absent" | "late" | "excused";
 };
 
+type SectionMeta = {
+  id: string;
+  grade_level: number;
+  name: string;
+  is_active: boolean;
+};
+
+type SubjectMeta = {
+  id: string;
+  grade_level: number;
+  name: string;
+  code: string | null;
+  is_active: boolean;
+};
+
+type TeacherMeta = {
+  id: string;
+  full_name: string;
+  email: string;
+};
+
 export async function GET(request: NextRequest) {
   const token = tokenFrom(request);
   if (!token || !(await isAdmin(token))) {
@@ -252,11 +273,8 @@ export async function GET(request: NextRequest) {
       token
     );
 
-    const sectionMap = new Map(
-      (sections ?? []).map((item: { id: string; name: string; grade_level: number }) => [
-        item.id,
-        item,
-      ])
+    const sectionMap = new Map<string, SectionMeta>(
+      (sections as SectionMeta[]).map((item) => [item.id, item] as const)
     );
 
     const enrollmentMap = new Map(
@@ -341,15 +359,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const teacherMap = new Map(
-      (teachers ?? []).map((item: { id: string; full_name: string }) => [
-        item.id,
-        item.full_name,
-      ])
+    const teacherMap = new Map<string, string>(
+      (teachers as TeacherMeta[]).map(
+        (item) => [item.id, item.full_name] as const
+      )
     );
-    const subjectMap = new Map(
-      (subjects ?? []).map(
-        (item: { id: string; name: string; code: string | null }) => [item.id, item]
+    const subjectMap = new Map<string, SubjectMeta>(
+      (subjects as SubjectMeta[]).map(
+        (item) => [item.id, item] as const
       )
     );
     const assignmentMap = new Map(
