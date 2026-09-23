@@ -121,29 +121,9 @@ export async function POST(request: NextRequest) {
   if (action === "save_schedule") {
     const id = String(body?.id ?? "");
     const assignmentId = String(body?.assignmentId ?? "");
-    const dayOfWeek = Number(body?.dayOfWeek ?? 0);
-    const startTime = String(body?.startTime ?? "");
-    const endTime = String(body?.endTime ?? "");
-    const roomRaw = String(body?.room ?? "").trim().replace(/\s+/g, " ");
-    const room = roomRaw || null;
 
     if (!assignmentId) {
       return NextResponse.json({ error: "Select a class assignment." }, { status: 400 });
-    }
-    if (!Number.isInteger(dayOfWeek) || dayOfWeek < 1 || dayOfWeek > 7) {
-      return NextResponse.json({ error: "Select a valid day." }, { status: 400 });
-    }
-    if (!validTime(startTime) || !validTime(endTime) || startTime >= endTime) {
-      return NextResponse.json(
-        { error: "Enter a valid start and end time." },
-        { status: 400 }
-      );
-    }
-    if (room && room.length > 80) {
-      return NextResponse.json(
-        { error: "Room or location must be 80 characters or fewer." },
-        { status: 400 }
-      );
     }
 
     const year = await activeYear(token).catch(() => null);
@@ -170,15 +150,82 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const payload = {
-      teacher_assignment_id: assignmentId,
-      day_of_week: dayOfWeek,
-      start_time: startTime,
-      end_time: endTime,
-      room,
-      is_active: true,
-      updated_at: new Date().toISOString(),
-    };
+    const createdBy = (await getUserId(token)) || null;
+
+    const rawEntries = id
+      ? [
+          {
+            dayOfWeek: body?.dayOfWeek,
+            startTime: body?.startTime,
+            endTime: body?.endTime,
+            room: body?.room,
+          },
+        ]
+      : Array.isArray(body?.entries)
+        ? body.entries
+        : [];
+
+    if (!rawEntries.length) {
+      return NextResponse.json(
+        { error: "Select at least one day and enter its schedule." },
+        { status: 400 }
+      );
+    }
+
+    const seenDays = new Set<number>();
+    const payloads: Array<{
+      teacher_assignment_id: string;
+      day_of_week: number;
+      start_time: string;
+      end_time: string;
+      room: string | null;
+      is_active: boolean;
+      updated_at: string;
+      created_by?: string | null;
+    }> = [];
+
+    for (const entry of rawEntries) {
+      const dayOfWeek = Number(entry?.dayOfWeek ?? 0);
+      const startTime = String(entry?.startTime ?? "");
+      const endTime = String(entry?.endTime ?? "");
+      const roomRaw = String(entry?.room ?? "").trim().replace(/\s+/g, " ");
+      const room = roomRaw || null;
+
+      if (!Number.isInteger(dayOfWeek) || dayOfWeek < 1 || dayOfWeek > 7) {
+        return NextResponse.json({ error: "Select a valid day." }, { status: 400 });
+      }
+      if (seenDays.has(dayOfWeek)) {
+        return NextResponse.json(
+          { error: "Each selected day can appear only once in one submission." },
+          { status: 400 }
+        );
+      }
+      seenDays.add(dayOfWeek);
+
+      if (!validTime(startTime) || !validTime(endTime) || startTime >= endTime) {
+        return NextResponse.json(
+          { error: "Enter a valid start and end time for every selected day." },
+          { status: 400 }
+        );
+      }
+      if (room && room.length > 80) {
+        return NextResponse.json(
+          { error: "Room or location must be 80 characters or fewer." },
+          { status: 400 }
+        );
+      }
+
+      payloads.push({
+        teacher_assignment_id: assignmentId,
+        day_of_week: dayOfWeek,
+        start_time: startTime,
+        end_time: endTime,
+        room,
+        is_active: true,
+        updated_at: new Date().toISOString(),
+        ...(id ? {} : { created_by: createdBy }),
+      });
+    }
 
     const response = await fetch(
       id
@@ -187,9 +234,7 @@ export async function POST(request: NextRequest) {
       {
         method: id ? "PATCH" : "POST",
         headers: { ...authHeaders(token), Prefer: "return=representation" },
-        body: JSON.stringify(
-          id ? payload : { ...payload, created_by: (await getUserId(token)) || null }
-        ),
+        body: JSON.stringify(id ? payloads[0] : payloads),
         cache: "no-store",
       }
     );
@@ -202,17 +247,22 @@ export async function POST(request: NextRequest) {
       let message = "Unable to save the schedule.";
       if (detail.includes("teacher or section")) {
         message =
-          "Schedule conflict: the Teacher or Section already has a class during that time.";
+          "Schedule conflict: the Teacher or Section already has a class during one of the selected periods.";
       } else if (detail.includes("room")) {
         message =
-          "Schedule conflict: that room or location is already being used during that time.";
+          "Schedule conflict: a room or location is already being used during one of the selected periods.";
       } else if (detail.includes("end time")) {
         message = "The end time must be later than the start time.";
       }
       return NextResponse.json({ error: message }, { status: 409 });
     }
 
-    return NextResponse.json({ ok: true, schedule: result[0] });
+    return NextResponse.json({
+      ok: true,
+      schedule: result[0],
+      schedules: result,
+      count: result.length,
+    });
   }
 
   if (action === "set_schedule_active") {
