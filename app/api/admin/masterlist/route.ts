@@ -16,6 +16,12 @@ type ParsedRow = {
   error: string;
 };
 
+type ValidationResult = {
+  rows: ParsedRow[];
+  fatal: string;
+  year?: { id: string; name: string } | null;
+};
+
 function authHeaders(token: string) {
   return {
     apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -158,7 +164,11 @@ function validEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-async function validateFile(file: File, personType: PersonType, token: string) {
+async function validateFile(
+  file: File,
+  personType: PersonType,
+  token: string
+): Promise<ValidationResult> {
   if (!file.name.toLowerCase().endsWith(".csv")) {
     return {
       rows: [] as ParsedRow[],
