@@ -35,6 +35,12 @@ type Schedule = {
   is_active: boolean;
 };
 
+type DayDraft = {
+  startTime: string;
+  endTime: string;
+  room: string;
+};
+
 const DAYS = [
   { value: 1, label: "Monday" },
   { value: 2, label: "Tuesday" },
@@ -60,6 +66,8 @@ export default function ClassSchedulesPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [dayDrafts, setDayDrafts] = useState<Record<number, DayDraft>>({});
   const [editId, setEditId] = useState("");
   const [editAssignment, setEditAssignment] = useState("");
   const [editDay, setEditDay] = useState("");
@@ -125,6 +133,58 @@ export default function ClassSchedulesPage() {
     setEditStart("");
     setEditEnd("");
     setEditRoom("");
+    setSelectedDays([]);
+    setDayDrafts({});
+  }
+
+  function toggleDay(day: number) {
+    setSelectedDays((current) => {
+      const exists = current.includes(day);
+      const next = exists
+        ? current.filter((value) => value !== day)
+        : [...current, day].sort((a, b) => a - b);
+
+      setDayDrafts((drafts) => {
+        if (exists) {
+          const copy = { ...drafts };
+          delete copy[day];
+          return copy;
+        }
+        return {
+          ...drafts,
+          [day]: drafts[day] ?? { startTime: "", endTime: "", room: "" },
+        };
+      });
+
+      return next;
+    });
+  }
+
+  function selectWeekdays() {
+    const weekdays = [1, 2, 3, 4, 5];
+    setSelectedDays(weekdays);
+    setDayDrafts((drafts) => {
+      const next = { ...drafts };
+      for (const day of weekdays) {
+        if (!next[day]) next[day] = { startTime: "", endTime: "", room: "" };
+      }
+      return next;
+    });
+  }
+
+  function clearDays() {
+    setSelectedDays([]);
+    setDayDrafts({});
+  }
+
+  function updateDayDraft(day: number, field: keyof DayDraft, value: string) {
+    setDayDrafts((current) => ({
+      ...current,
+      [day]: {
+        ...(current[day] ?? { startTime: "", endTime: "", room: "" }),
+        [field]: value,
+      },
+    }));
   }
 
   function startEdit(schedule: Schedule) {
@@ -147,15 +207,28 @@ export default function ClassSchedulesPage() {
       const response = await fetch("/api/admin/class-schedules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "save_schedule",
-          id: editId || null,
-          assignmentId: editAssignment,
-          dayOfWeek: Number(editDay),
-          startTime: editStart,
-          endTime: editEnd,
-          room: editRoom,
-        }),
+        body: JSON.stringify(
+          editId
+            ? {
+                action: "save_schedule",
+                id: editId,
+                assignmentId: editAssignment,
+                dayOfWeek: Number(editDay),
+                startTime: editStart,
+                endTime: editEnd,
+                room: editRoom,
+              }
+            : {
+                action: "save_schedule",
+                assignmentId: editAssignment,
+                entries: selectedDays.map((day) => ({
+                  dayOfWeek: day,
+                  startTime: dayDrafts[day]?.startTime ?? "",
+                  endTime: dayDrafts[day]?.endTime ?? "",
+                  room: dayDrafts[day]?.room ?? "",
+                })),
+              }
+        ),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -163,7 +236,11 @@ export default function ClassSchedulesPage() {
         return;
       }
 
-      setSuccess(editId ? "Schedule updated." : "Schedule added.");
+      setSuccess(
+        editId
+          ? "Schedule updated."
+          : `${result.count ?? selectedDays.length} schedule entr${(result.count ?? selectedDays.length) === 1 ? "y" : "ies"} added.`
+      );
       resetForm();
       await load();
     } catch {
@@ -275,54 +352,162 @@ export default function ClassSchedulesPage() {
               </select>
             </label>
 
-            <label>
-              <span>Day</span>
-              <select
-                required
-                value={editDay}
-                onChange={(event) => setEditDay(event.target.value)}
+            {editId ? (
+              <div className={styles.editGrid}>
+                <label>
+                  <span>Day</span>
+                  <select
+                    required
+                    value={editDay}
+                    onChange={(event) => setEditDay(event.target.value)}
+                  >
+                    <option value="">Select day</option>
+                    {DAYS.map((day) => (
+                      <option key={day.value} value={day.value}>{day.label}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  <span>Start time</span>
+                  <input
+                    required
+                    type="time"
+                    value={editStart}
+                    onChange={(event) => setEditStart(event.target.value)}
+                  />
+                </label>
+
+                <label>
+                  <span>End time</span>
+                  <input
+                    required
+                    type="time"
+                    value={editEnd}
+                    onChange={(event) => setEditEnd(event.target.value)}
+                  />
+                </label>
+
+                <label>
+                  <span>Room / location <small>optional</small></span>
+                  <input
+                    maxLength={80}
+                    placeholder="e.g. Computer Laboratory"
+                    value={editRoom}
+                    onChange={(event) => setEditRoom(event.target.value)}
+                  />
+                </label>
+              </div>
+            ) : (
+              <>
+                <div className={styles.daySelector}>
+                  <div className={styles.daySelectorHeading}>
+                    <div>
+                      <span>Teaching days</span>
+                      <small>Select every day this class meets. Each day can have a different time and room.</small>
+                    </div>
+                    <div className={styles.dayHelpers}>
+                      <button type="button" className={styles.secondary} onClick={selectWeekdays}>
+                        Select Monday–Friday
+                      </button>
+                      <button type="button" className={styles.secondary} onClick={clearDays}>
+                        Clear days
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className={styles.dayChoices}>
+                    {DAYS.map((day) => {
+                      const selected = selectedDays.includes(day.value);
+                      return (
+                        <button
+                          key={day.value}
+                          type="button"
+                          className={selected ? styles.daySelected : styles.dayChoice}
+                          onClick={() => toggleDay(day.value)}
+                          aria-pressed={selected}
+                        >
+                          {day.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {selectedDays.length > 0 && (
+                  <div className={styles.dayScheduleGrid}>
+                    <div className={styles.dayScheduleHeader}>
+                      <span>Day</span>
+                      <span>Start time</span>
+                      <span>End time</span>
+                      <span>Room / location</span>
+                    </div>
+
+                    {selectedDays.map((day) => {
+                      const dayInfo = DAYS.find((item) => item.value === day);
+                      const draft = dayDrafts[day] ?? {
+                        startTime: "",
+                        endTime: "",
+                        room: "",
+                      };
+
+                      return (
+                        <div className={styles.dayScheduleRow} key={day}>
+                          <strong>{dayInfo?.label}</strong>
+                          <input
+                            required
+                            type="time"
+                            aria-label={`${dayInfo?.label} start time`}
+                            value={draft.startTime}
+                            onChange={(event) =>
+                              updateDayDraft(day, "startTime", event.target.value)
+                            }
+                          />
+                          <input
+                            required
+                            type="time"
+                            aria-label={`${dayInfo?.label} end time`}
+                            value={draft.endTime}
+                            onChange={(event) =>
+                              updateDayDraft(day, "endTime", event.target.value)
+                            }
+                          />
+                          <input
+                            maxLength={80}
+                            aria-label={`${dayInfo?.label} room or location`}
+                            placeholder="Optional"
+                            value={draft.room}
+                            onChange={(event) =>
+                              updateDayDraft(day, "room", event.target.value)
+                            }
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+
+            <div className={styles.formActions}>
+              <button
+                type="submit"
+                disabled={
+                  working === "save" ||
+                  assignments.length === 0 ||
+                  (!editId && selectedDays.length === 0)
+                }
               >
-                <option value="">Select day</option>
-                {DAYS.map((day) => (
-                  <option key={day.value} value={day.value}>{day.label}</option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              <span>Start time</span>
-              <input
-                required
-                type="time"
-                value={editStart}
-                onChange={(event) => setEditStart(event.target.value)}
-              />
-            </label>
-
-            <label>
-              <span>End time</span>
-              <input
-                required
-                type="time"
-                value={editEnd}
-                onChange={(event) => setEditEnd(event.target.value)}
-              />
-            </label>
-
-            <label>
-              <span>Room / location <small>optional</small></span>
-              <input
-                maxLength={80}
-                placeholder="e.g. Computer Laboratory"
-                value={editRoom}
-                onChange={(event) => setEditRoom(event.target.value)}
-              />
-            </label>
-
-            <button type="submit" disabled={working === "save" || assignments.length === 0}>
-              {editId ? <Pencil size={17} /> : <Plus size={17} />}
-              {working === "save" ? "Saving…" : editId ? "Update schedule" : "Add schedule"}
-            </button>
+                {editId ? <Pencil size={17} /> : <Plus size={17} />}
+                {working === "save"
+                  ? "Saving…"
+                  : editId
+                    ? "Update schedule"
+                    : selectedDays.length > 1
+                      ? `Add ${selectedDays.length} schedule entries`
+                      : "Add schedule"}
+              </button>
+            </div>
           </form>
         </section>
 
