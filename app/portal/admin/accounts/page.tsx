@@ -75,9 +75,14 @@ export default function AccountApprovalsPage() {
             <ArrowLeft size={16} />
             <span>Back to portal</span>
           </a>
-          <a className={styles.topLink} href="/portal/admin/password-resets">
-            <span>Password reset requests</span>
-          </a>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <a className={styles.topLink} href="/portal/admin/users">
+              <span>Users & accounts</span>
+            </a>
+            <a className={styles.topLink} href="/portal/admin/password-resets">
+              <span>Password reset requests</span>
+            </a>
+          </div>
         </nav>
 
         <header className={styles.header}>
