@@ -185,16 +185,16 @@ export default function LoginPage() {
               onClick={() => router.push("/register")}
               disabled={loading}
             >
-              Create an account
+              Activate account
             </button>
           </div>
 
           <div className={styles.demoNote}>
             <ShieldCheck size={17} />
             <p>
-              Newly created accounts require school verification before they can
-              access academic records. Forgotten passwords are handled through
-              administrator-assisted identity verification.
+              New accounts are activated only from the official school masterlist
+              using a one-time school-issued activation code. Forgotten passwords
+              are handled through administrator-assisted identity verification.
             </p>
           </div>
 
