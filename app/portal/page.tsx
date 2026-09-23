@@ -152,6 +152,11 @@ function SideNav({
       return;
     }
 
+    if (pageName === "Attendance" && (profile.role === "teacher" || profile.role === "student")) {
+      window.location.href = "/portal/attendance";
+      return;
+    }
+
     onPage(pageName);
     setOpenMobile(false);
   }
@@ -248,6 +253,17 @@ function SideNav({
                 >
                   <CalendarDays size={19} />
                   <span>Class schedules</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="nav-button"
+                  onClick={() => {
+                    window.location.href = "/portal/admin/attendance";
+                  }}
+                >
+                  <ClipboardCheck size={19} />
+                  <span>Attendance</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -620,6 +636,9 @@ export default function PortalPage() {
                     </button>
                     <button onClick={() => (window.location.href = "/portal/admin/schedules")}>
                       <CalendarDays size={18} /> Class schedules
+                    </button>
+                    <button onClick={() => (window.location.href = "/portal/admin/attendance")}>
+                      <ClipboardCheck size={18} /> Attendance
                     </button>
                   </div>
                 </section>
