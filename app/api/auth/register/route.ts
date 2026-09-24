@@ -9,45 +9,18 @@ function normalizePhone(input: string) {
   return null;
 }
 
-async function loadGradeAndSections(gradeLevel: number) {
-  const [gradeResponse, sectionResponse] = await Promise.all([
-    fetch(
-      `${SUPABASE_URL}/rest/v1/grade_levels?grade_level=eq.${gradeLevel}&select=grade_level&limit=1`,
-      {
-        headers: { apikey: SUPABASE_PUBLISHABLE_KEY },
-        cache: "no-store",
-      }
-    ),
-    fetch(
-      `${SUPABASE_URL}/rest/v1/sections?grade_level=eq.${gradeLevel}&is_active=eq.true&select=name&order=name.asc`,
-      {
-        headers: { apikey: SUPABASE_PUBLISHABLE_KEY },
-        cache: "no-store",
-      }
-    ),
-  ]);
-
-  if (!gradeResponse.ok || !sectionResponse.ok) return null;
-
-  const grades = await gradeResponse.json().catch(() => []);
-  const sections = await sectionResponse.json().catch(() => []);
-
-  return {
-    gradeExists: Boolean(grades?.[0]),
-    sections: (sections ?? []).map((item: { name?: string }) => String(item.name ?? "")),
-  };
+function normalizeActivationCode(input: string) {
+  return input.trim().toUpperCase().replace(/[^A-Z0-9-]/g, "");
 }
 
 export async function POST(request: Request) {
   let body: {
     role?: "student" | "teacher";
-    fullName?: string;
     lrn?: string;
     email?: string;
     phone?: string;
+    activationCode?: string;
     password?: string;
-    gradeLevel?: number | string;
-    section?: string | null;
   };
 
   try {
@@ -57,17 +30,29 @@ export async function POST(request: Request) {
   }
 
   const role = body.role === "teacher" ? "teacher" : "student";
-  const fullName = String(body.fullName ?? "").trim();
   const lrn = String(body.lrn ?? "").trim();
-  const email = String(body.email ?? "").trim().toLowerCase();
-  const password = String(body.password ?? "");
+  const emailInput = String(body.email ?? "").trim().toLowerCase();
   const phone = normalizePhone(String(body.phone ?? "").trim());
-  const gradeLevel = Number(body.gradeLevel ?? 0);
-  const requestedSection = String(body.section ?? "").trim();
+  const activationCode = normalizeActivationCode(String(body.activationCode ?? ""));
+  const password = String(body.password ?? "");
 
-  if (!fullName || !email || !phone) {
+  if (!phone) {
     return NextResponse.json(
-      { error: "Complete your name, email address, and mobile number." },
+      { error: "Enter a valid Philippine mobile number." },
+      { status: 400 }
+    );
+  }
+
+  if (!activationCode || activationCode.length < 8) {
+    return NextResponse.json(
+      { error: "Enter the activation code issued by the school." },
+      { status: 400 }
+    );
+  }
+
+  if (password.length < 8) {
+    return NextResponse.json(
+      { error: "Use a password with at least 8 characters." },
       { status: 400 }
     );
   }
@@ -79,48 +64,20 @@ export async function POST(request: Request) {
     );
   }
 
-  let section: string | null = null;
-
-  if (role === "student") {
-    if (!Number.isInteger(gradeLevel) || gradeLevel < 7 || gradeLevel > 12) {
-      return NextResponse.json(
-        { error: "Select your current grade level." },
-        { status: 400 }
-      );
-    }
-
-    const structure = await loadGradeAndSections(gradeLevel);
-    if (!structure) {
-      return NextResponse.json(
-        { error: "Unable to verify the selected grade and section." },
-        { status: 503 }
-      );
-    }
-
-    if (!structure.gradeExists) {
-      return NextResponse.json(
-        { error: "Select a valid grade level." },
-        { status: 400 }
-      );
-    }
-
-    if (structure.sections.length > 0) {
-      if (!structure.sections.includes(requestedSection)) {
-        return NextResponse.json(
-          { error: "Select a valid section for your grade level." },
-          { status: 400 }
-        );
-      }
-      section = requestedSection;
-    }
-  }
-
-  if (password.length < 8) {
+  if (
+    role === "teacher" &&
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput)
+  ) {
     return NextResponse.json(
-      { error: "Use a password with at least 8 characters." },
+      { error: "Enter the email address registered in the school masterlist." },
       { status: 400 }
     );
   }
+
+  const authEmail =
+    role === "student"
+      ? `student.${lrn}@asuncion-nhs.invalid`
+      : emailInput;
 
   const signup = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
     method: "POST",
@@ -129,15 +86,13 @@ export async function POST(request: Request) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      email,
+      email: authEmail,
       password,
       data: {
-        full_name: fullName,
-        recovery_phone: phone,
         requested_role: role,
+        recovery_phone: phone,
+        activation_code: activationCode,
         lrn: role === "student" ? lrn : null,
-        grade_level: role === "student" ? gradeLevel : null,
-        section: role === "student" ? section : null,
       },
     }),
     cache: "no-store",
@@ -151,20 +106,17 @@ export async function POST(request: Request) {
     ).trim();
     const detail = rawMessage.toLowerCase();
 
-    let message = "We could not create the account. Check your information and try again.";
+    let message =
+      "The activation details did not match the school masterlist, or the activation code has already been used.";
 
     if (detail.includes("already") || detail.includes("registered")) {
-      message = "An account with that email or LRN may already exist.";
-    } else if (detail.includes("email address not authorized")) {
-      message = "Supabase is still requiring email confirmation. Turn off Confirm email under Authentication → Providers → Email, then try again.";
-    } else if (detail.includes("signup") && detail.includes("disabled")) {
-      message = "New account registration is disabled in Supabase Authentication settings.";
+      message =
+        "This school record already has a portal account. Try signing in or use Forgot password.";
     } else if (detail.includes("password")) {
-      message = rawMessage || "The password does not meet the authentication requirements.";
-    } else if (detail.includes("email")) {
-      message = rawMessage || "The email address was rejected by the authentication service.";
-    } else if (rawMessage) {
-      message = rawMessage;
+      message =
+        rawMessage || "The password does not meet the authentication requirements.";
+    } else if (detail.includes("signup") && detail.includes("disabled")) {
+      message = "Account activation is currently unavailable.";
     }
 
     return NextResponse.json(
@@ -175,6 +127,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    message: "Account created. Your account is pending school verification.",
+    message:
+      "Your ANHS portal account has been activated. You can now sign in with your LRN or registered email.",
   });
 }
