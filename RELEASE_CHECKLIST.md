@@ -35,7 +35,7 @@ This checklist applies to PR #2 before it is merged into `main`.
   - Imported users receive randomly generated temporary passwords.
   - Temporary passwords are returned for one-time download and are not stored in plaintext by the portal.
   - Every imported user must change the temporary password on first sign-in.
-  - Large files are imported in batches of 50 accounts.
+  - Large files are imported in batches of up to 200 accounts.
 - Database account-creation trigger accepts only school-provisioned Auth users with
   `app_metadata.anhs_provisioned=true`. Public/direct signups are rejected by the database trigger.
 - Applied Supabase migration history is represented in the repository.
