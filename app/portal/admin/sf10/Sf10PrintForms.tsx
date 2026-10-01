@@ -254,7 +254,7 @@ function ShsSemesterBlock({
   designation,
   rows = 9,
 }: {
-  record?: ScholasticRecord;
+  record?: any;
   semester: "1ST" | "2ND";
   school: any;
   track: string;
