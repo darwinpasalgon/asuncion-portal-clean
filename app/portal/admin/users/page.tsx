@@ -18,7 +18,7 @@ import {
 import styles from "./users.module.css";
 
 type PersonType = "student" | "teacher";
-type UserStatus = "pending" | "active" | "suspended";
+type UserStatus = "pending" | "active" | "suspended" | "rejected";
 
 type UserRecord = {
   id: string;
@@ -284,7 +284,7 @@ export default function UsersAccountsPage() {
           </a>
           <div>
             <a href="/portal/admin/accounts">Pending approvals</a>
-            <a href="/portal/admin/masterlist">Masterlist & activation</a>
+            <a href="/portal/admin/masterlist">Bulk account import</a>
             <a href="/portal/admin/password-resets">Password resets</a>
           </div>
         </nav>
@@ -350,7 +350,7 @@ export default function UsersAccountsPage() {
               <option value="all">All statuses</option>
               <option value="active">Active</option>
               <option value="pending">Pending</option>
-              <option value="suspended">Suspended</option>
+              <option value="suspended">Suspended</option>\n              <option value="rejected">Rejected</option>
             </select>
 
             <button
