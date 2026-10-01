@@ -138,17 +138,118 @@ function ShsSemesterBlock({
   );
 }
 
+export function ShsSf10Form({ detail }: { detail: Sf10Detail }) {
+  const record = detail.permanentRecord ?? {};
+  const school = detail.schoolInformation ?? {};
+  const student = detail.student ?? {};
+  const records: any[] = Array.isArray(detail.scholasticRecords) ? detail.scholasticRecords : [];
+  const grade11 = records.filter((item) => Number(item.grade_level) === 11);
+  const grade12 = records.filter((item) => Number(item.grade_level) === 12);
+  const schoolHead = text(school.school_head_name);
+  const designation = text(school.school_head_designation) || "Principal IV";
+  const track = text(record.shs_track) || "ACADEMIC";
+  const strand = text(record.shs_strand);
+  const allSubjects = records.flatMap((item) => item.subjects ?? []);
+  const finalRatings = allSubjects
+    .map((item: any) => item.final_rating)
+    .filter((value: any) => typeof value === "number") as number[];
+  const shsAverage = finalRatings.length
+    ? Math.round((finalRatings.reduce((sum, value) => sum + value, 0) / finalRatings.length) * 100) / 100
+    : "";
 
-export function ShsSf10Form({ detail }: { detail: any }) {
   return (
-    <ShsSemesterBlock
-      record={undefined}
-      semester="1ST"
-      school={{}}
-      track=""
-      strand=""
-      schoolHead=""
-      designation=""
-    />
+    <div className="sf10-form-root shs-root">
+      <section className="sf10-paper shs-paper">
+        <div className="shs-form-code">SF10-SHS</div>
+        <header className="shs-heading">
+          <span>REPUBLIC OF THE PHILIPPINES</span>
+          <span>DEPARTMENT OF EDUCATION</span>
+          <strong>SENIOR HIGH SCHOOL STUDENT PERMANENT RECORD</strong>
+        </header>
+
+        <div className="section-band shs-band">LEARNER&apos;S INFORMATION</div>
+        <table className="info-table shs-info">
+          <tbody>
+            <tr>
+              <td className="label">LAST NAME:</td><td className="value">{text(record.last_name)}</td>
+              <td className="label">FIRST NAME:</td><td className="value">{text(record.first_name)}</td>
+              <td className="label">MIDDLE NAME:</td><td className="value">{text(record.middle_name)}</td>
+            </tr>
+            <tr>
+              <td className="label">LRN:</td><td className="value">{text(student.lrn)}</td>
+              <td className="label">Date of Birth (MM/DD/YYYY):</td><td className="value">{displayDate(record.birth_date)}</td>
+              <td className="label">Sex:</td><td className="value">{text(record.sex).toUpperCase()}</td>
+            </tr>
+            <tr>
+              <td colSpan={4}></td>
+              <td className="label">Date of SHS Admission (MM/DD/YYYY):</td>
+              <td className="value">{displayDate(record.shs_admission_date)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div className="section-band shs-band">ELIGIBILITY FOR SHS ENROLMENT</div>
+        <div className="shs-eligibility">
+          <div>
+            <span className="checkbox-box"></span> High School Completer*
+            <span>Gen. Ave: <u>{text(record.jhs_general_average)}</u></span>
+            <span className="checkbox-box">✓</span> Junior High School Completer
+            <span>Gen. Ave: <u>{text(record.jhs_general_average)}</u></span>
+          </div>
+          <div>
+            <span>Date of Graduation/Completion (MM/DD/YYYY): <u>{displayDate(record.jhs_completion_date)}</u></span>
+            <span>Name of School: <u>{text(record.jhs_school_name) || text(school.school_name)}</u></span>
+            <span>School Address: <u>{text(record.jhs_school_address) || text(school.school_address)}</u></span>
+          </div>
+          <div>
+            <span className="checkbox-box"></span> PEPT Passer** <span>Rating: ______</span>
+            <span className="checkbox-box"></span> ALS A&amp;E Passer*** <span>Rating: ______</span>
+            <span>Others (Pls. Specify): __________________</span>
+          </div>
+          <div>
+            <span>Date of Examination/Assessment (MM/DD/YYYY): __________________</span>
+            <span>Name and Address of Community Learning Center: ______________________________</span>
+          </div>
+          <small>*High School Completers are students who graduated from secondary school under the old curriculum</small>
+          <small>**PEPT - Philippine Educational Placement Test for JHS &nbsp;&nbsp;&nbsp; ***ALS A&amp;E - Alternative Learning System Accreditation and Equivalency Test for JHS</small>
+        </div>
+
+        <div className="section-band shs-band">SCHOLASTIC RECORD</div>
+        <ShsSemesterBlock record={grade11[0]} semester="1ST" school={school} track={track} strand={strand} schoolHead={schoolHead} designation={designation} rows={9} />
+        <ShsSemesterBlock record={grade11[1] ?? grade11[0]} semester="2ND" school={school} track={track} strand={strand} schoolHead={schoolHead} designation={designation} rows={9} />
+      </section>
+
+      <section className="sf10-paper shs-paper">
+        <div className="page-two-head shs-page-two"><span>Page 2</span><span>SF10-SHS</span></div>
+        <ShsSemesterBlock record={grade12[0]} semester="1ST" school={school} track={track} strand={strand} schoolHead={schoolHead} designation={designation} rows={10} />
+        <ShsSemesterBlock record={grade12[1] ?? grade12[0]} semester="2ND" school={school} track={track} strand={strand} schoolHead={schoolHead} designation={designation} rows={10} />
+
+        <section className="shs-completion">
+          <div><b>Track/Strand Accomplished:</b> <u>{[track, strand].filter(Boolean).join(" / ")}</u><span><b>SHS General Average:</b> <u>{shsAverage}</u></span></div>
+          <div><b>Awards/Honors Received:</b> <u>{text(record.awards_honors)}</u><span><b>Date of SHS Graduation (MM/DD/YYYY):</b> <u>{displayDate(record.shs_graduation_date)}</u></span></div>
+          <div className="certified-by"><b>Certified by:</b><span className="seal-title">Place School Seal Here:</span></div>
+          <div className="school-head-cert">
+            <strong>{schoolHead}</strong><span>{displayDate(record.sf10_date_issued)}</span>
+            <small>Signature of School Head over Printed Name</small><small>Date</small>
+            <em>{designation}</em>
+          </div>
+        </section>
+
+        <section className="shs-note">
+          <b>NOTE:</b>
+          <p>
+            This permanent record or a photocopy of this permanent record that bears the seal of the school and the original signature in ink of the School Head shall be considered valid for all legal purposes. Any erasure or alteration made on this copy should be validated by the School Head.
+          </p>
+          <p>
+            If the student transfers to another school, the originating school should produce one (1) certified true copy of this permanent record for safekeeping. The receiving school shall continue filling up the original form.
+          </p>
+          <p>
+            Upon graduation, the school from which the student graduated should keep the original form and produce one (1) certified true copy for the Division Office.
+          </p>
+        </section>
+      </section>
+
+    </div>
   );
 }
+
