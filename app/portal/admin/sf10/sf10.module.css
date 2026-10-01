@@ -3,126 +3,126 @@
 .strengthenedNotice{min-height:420px;display:grid;align-content:center;justify-items:center;text-align:center;gap:8px;padding:30px;background:#fff;border:1px solid #dfe7ec}
 .strengthenedNotice strong{font-size:1rem;color:#31566e}.strengthenedNotice span{max-width:560px;color:#6f838f;font-size:.78rem;line-height:1.6}
 
-:global(.sf10-form-root){font-family:Arial,Helvetica,sans-serif;color:#000;margin:0 auto;line-height:1.05}
-:global(.sf10-paper){position:relative;background:#fff;margin:0 auto 24px;box-sizing:border-box;overflow:hidden;box-shadow:0 3px 18px rgba(0,0,0,.16);break-after:page;page-break-after:always}
-:global(.sf10-paper:last-child){break-after:auto;page-break-after:auto}
-:global(.jhs-paper){width:8.5in;min-width:8.5in;height:14in;padding:.20in .24in .18in .27in;font-size:7.35pt}
-:global(.shs-paper){width:8.5in;min-width:8.5in;height:13in;padding:.18in .22in .10in;font-size:6.6pt}
-:global(.shs-annex-paper){width:8.5in;min-width:8.5in;min-height:11in;padding:.35in .55in;font-size:8pt}
-:global(.sf10-grid){width:100%;border-collapse:collapse;border-spacing:0;table-layout:fixed}
-:global(.sf10-grid th),:global(.sf10-grid td){border:.75px solid #000;color:#000;vertical-align:middle}
-:global(.section-band){height:.19in;display:flex;align-items:center;justify-content:center;margin:.03in 0;background:#d7d3bf;border-top:.55px solid #7b786c;border-bottom:.55px solid #7b786c;font-weight:700;font-size:8pt}
-:global(.info-table){width:100%;border-collapse:collapse;table-layout:auto;margin:0}
-:global(.info-table td){padding:.016in .025in;border:0;border-bottom:.5px solid #777;height:.16in}
-:global(.info-table .label){font-size:5.9pt;white-space:nowrap}
-:global(.info-table .value){font-weight:700;text-align:center;font-size:6.6pt}
-:global(.form-code){position:absolute;left:.28in;top:.12in;font-size:7pt}
-:global(.jhs-heading){text-align:center;margin:.02in 0 .04in}
-:global(.jhs-heading div){font-size:6.7pt;line-height:1.25}
-:global(.jhs-heading strong){display:block;font-size:9.2pt;margin:.035in 0 .015in}
-:global(.jhs-heading em){display:block;font-size:6.6pt}
-:global(.eligibility-box){font-size:6.15pt}
-:global(.eligibility-line){display:grid;grid-template-columns:auto auto 1fr 1.25fr;gap:.05in;align-items:center;min-height:.18in;border-bottom:.5px solid #777;padding:0 .03in}
-:global(.eligibility-line:nth-of-type(2)){grid-template-columns:1.4fr .55fr 1.2fr}
-:global(.credential-line){grid-template-columns:.16in .65fr .52fr .16in .7fr .52fr 1.2fr}
-:global(.checkbox-box){display:inline-flex;align-items:center;justify-content:center;width:.13in;height:.13in;border:.7px solid #777;font-size:6pt}
-:global(.other-credential){padding:.02in 0;font-size:6pt}
-:global(.eligibility-line u){display:inline-block;min-width:.55in;text-align:center;text-decoration:none;border-bottom:.6px solid #222;font-weight:700}
-:global(.jhs-grade-block){margin:.025in 0 .04in}
-:global(.jhs-meta-row){display:flex;align-items:flex-end;gap:.04in;min-height:.17in;padding:.01in .02in;font-size:6.15pt;border-left:.75px solid #000;border-right:.75px solid #000;border-top:.75px solid #000}
-:global(.jhs-meta-row-2){border-top:0}
-:global(.jhs-meta-row span){white-space:nowrap}
-:global(.jhs-meta-row .grow){flex:1}
-:global(.jhs-meta-row u){display:inline-block;min-width:.42in;text-align:center;text-decoration:none;font-weight:700}
-:global(.jhs-grade-table){font-size:6.35pt}
-:global(.jhs-grade-table th){height:.20in;padding:.01in;font-weight:700;text-align:center}
-:global(.jhs-grade-table td){height:.145in;padding:0 .025in;text-align:center}
-:global(.jhs-grade-table .subject-cell){text-align:left;font-weight:500}
-:global(.jhs-grade-table .area-col){width:33%}
-:global(.jhs-grade-table .quarter-col){width:7%}
-:global(.jhs-grade-table .final-col){width:8%}
-:global(.jhs-grade-table .remarks-col){width:26%}
-:global(.general-row td){height:.16in!important;font-weight:700;text-align:center!important;font-style:italic}
-:global(.remedial-title-row){display:grid;grid-template-columns:1.2fr 4fr;align-items:center;height:.17in;border:.75px solid #000;border-bottom:0;font-size:6.15pt}
-:global(.remedial-title-row b){text-align:center}
-:global(.remedial-table){font-size:6.1pt}
-:global(.remedial-table th){height:.22in;padding:.015in}
-:global(.remedial-table td){height:.145in;padding:.01in}
-:global(.remedial-table th:nth-child(1)){width:20%}
-:global(.remedial-table th:nth-child(2)){width:14%}
-:global(.remedial-table th:nth-child(3)){width:24%}
-:global(.remedial-table th:nth-child(4)){width:20%}
-:global(.remedial-table th:nth-child(5)){width:22%}
-:global(.jhs-certification){border:.75px solid #000;margin-top:.045in;font-size:6.15pt}
-:global(.jhs-certification .transfer-note){border-bottom:.75px solid #000;padding:.02in;font-weight:700}
-:global(.cert-title){font-weight:700;text-align:center;font-size:8.4pt;padding:.045in;border-bottom:.75px solid #000}
-:global(.jhs-certification p){margin:.055in .03in;white-space:nowrap}
-:global(.jhs-certification p u){display:inline-block;min-width:.7in;text-align:center;text-decoration:none;border-bottom:.55px solid #000;font-weight:600}
-:global(.cert-signature-row){display:grid;grid-template-columns:1fr 2.25fr 1.6fr;gap:.18in;align-items:end;padding:.10in .06in .02in;text-align:center}
-:global(.cert-signature-row>div){min-height:.32in;display:flex;flex-direction:column;justify-content:flex-end}
-:global(.signature-line){display:block;min-height:.14in;border-bottom:.6px solid #000;font-weight:700}
-:global(.cert-signature-row small){font-size:5.7pt;margin-top:.02in}
-:global(.cert-signature-row em){font-size:5.6pt;margin-top:.01in}
-:global(.seal-box){display:flex;align-items:flex-end;justify-content:center;min-height:.25in;font-size:5.8pt}
-:global(.page-two-head){display:flex;justify-content:space-between;align-items:center;height:.15in;font-size:7pt}
-:global(.jhs-footer-note){display:flex;justify-content:space-between;font-size:5.4pt;margin-top:.01in}
+.printArea :global(.sf10-form-root){font-family:Arial,Helvetica,sans-serif;color:#000;margin:0 auto;line-height:1.05}
+.printArea :global(.sf10-paper){position:relative;background:#fff;margin:0 auto 24px;box-sizing:border-box;overflow:hidden;box-shadow:0 3px 18px rgba(0,0,0,.16);break-after:page;page-break-after:always}
+.printArea :global(.sf10-paper:last-child){break-after:auto;page-break-after:auto}
+.printArea :global(.jhs-paper){width:8.5in;min-width:8.5in;height:14in;padding:.20in .24in .18in .27in;font-size:7.35pt}
+.printArea :global(.shs-paper){width:8.5in;min-width:8.5in;height:13in;padding:.18in .22in .10in;font-size:6.6pt}
+.printArea :global(.shs-annex-paper){width:8.5in;min-width:8.5in;min-height:11in;padding:.35in .55in;font-size:8pt}
+.printArea :global(.sf10-grid){width:100%;border-collapse:collapse;border-spacing:0;table-layout:fixed}
+.printArea :global(.sf10-grid th),.printArea :global(.sf10-grid td){border:.75px solid #000;color:#000;vertical-align:middle}
+.printArea :global(.section-band){height:.19in;display:flex;align-items:center;justify-content:center;margin:.03in 0;background:#d7d3bf;border-top:.55px solid #7b786c;border-bottom:.55px solid #7b786c;font-weight:700;font-size:8pt}
+.printArea :global(.info-table){width:100%;border-collapse:collapse;table-layout:auto;margin:0}
+.printArea :global(.info-table td){padding:.016in .025in;border:0;border-bottom:.5px solid #777;height:.16in}
+.printArea :global(.info-table .label){font-size:5.9pt;white-space:nowrap}
+.printArea :global(.info-table .value){font-weight:700;text-align:center;font-size:6.6pt}
+.printArea :global(.form-code){position:absolute;left:.28in;top:.12in;font-size:7pt}
+.printArea :global(.jhs-heading){text-align:center;margin:.02in 0 .04in}
+.printArea :global(.jhs-heading div){font-size:6.7pt;line-height:1.25}
+.printArea :global(.jhs-heading strong){display:block;font-size:9.2pt;margin:.035in 0 .015in}
+.printArea :global(.jhs-heading em){display:block;font-size:6.6pt}
+.printArea :global(.eligibility-box){font-size:6.15pt}
+.printArea :global(.eligibility-line){display:grid;grid-template-columns:auto auto 1fr 1.25fr;gap:.05in;align-items:center;min-height:.18in;border-bottom:.5px solid #777;padding:0 .03in}
+.printArea :global(.eligibility-line:nth-of-type(2)){grid-template-columns:1.4fr .55fr 1.2fr}
+.printArea :global(.credential-line){grid-template-columns:.16in .65fr .52fr .16in .7fr .52fr 1.2fr}
+.printArea :global(.checkbox-box){display:inline-flex;align-items:center;justify-content:center;width:.13in;height:.13in;border:.7px solid #777;font-size:6pt}
+.printArea :global(.other-credential){padding:.02in 0;font-size:6pt}
+.printArea :global(.eligibility-line u){display:inline-block;min-width:.55in;text-align:center;text-decoration:none;border-bottom:.6px solid #222;font-weight:700}
+.printArea :global(.jhs-grade-block){margin:.025in 0 .04in}
+.printArea :global(.jhs-meta-row){display:flex;align-items:flex-end;gap:.04in;min-height:.17in;padding:.01in .02in;font-size:6.15pt;border-left:.75px solid #000;border-right:.75px solid #000;border-top:.75px solid #000}
+.printArea :global(.jhs-meta-row-2){border-top:0}
+.printArea :global(.jhs-meta-row span){white-space:nowrap}
+.printArea :global(.jhs-meta-row .grow){flex:1}
+.printArea :global(.jhs-meta-row u){display:inline-block;min-width:.42in;text-align:center;text-decoration:none;font-weight:700}
+.printArea :global(.jhs-grade-table){font-size:6.35pt}
+.printArea :global(.jhs-grade-table th){height:.20in;padding:.01in;font-weight:700;text-align:center}
+.printArea :global(.jhs-grade-table td){height:.145in;padding:0 .025in;text-align:center}
+.printArea :global(.jhs-grade-table .subject-cell){text-align:left;font-weight:500}
+.printArea :global(.jhs-grade-table .area-col){width:33%}
+.printArea :global(.jhs-grade-table .quarter-col){width:7%}
+.printArea :global(.jhs-grade-table .final-col){width:8%}
+.printArea :global(.jhs-grade-table .remarks-col){width:26%}
+.printArea :global(.general-row td){height:.16in!important;font-weight:700;text-align:center!important;font-style:italic}
+.printArea :global(.remedial-title-row){display:grid;grid-template-columns:1.2fr 4fr;align-items:center;height:.17in;border:.75px solid #000;border-bottom:0;font-size:6.15pt}
+.printArea :global(.remedial-title-row b){text-align:center}
+.printArea :global(.remedial-table){font-size:6.1pt}
+.printArea :global(.remedial-table th){height:.22in;padding:.015in}
+.printArea :global(.remedial-table td){height:.145in;padding:.01in}
+.printArea :global(.remedial-table th:nth-child(1)){width:20%}
+.printArea :global(.remedial-table th:nth-child(2)){width:14%}
+.printArea :global(.remedial-table th:nth-child(3)){width:24%}
+.printArea :global(.remedial-table th:nth-child(4)){width:20%}
+.printArea :global(.remedial-table th:nth-child(5)){width:22%}
+.printArea :global(.jhs-certification){border:.75px solid #000;margin-top:.045in;font-size:6.15pt}
+.printArea :global(.jhs-certification .transfer-note){border-bottom:.75px solid #000;padding:.02in;font-weight:700}
+.printArea :global(.cert-title){font-weight:700;text-align:center;font-size:8.4pt;padding:.045in;border-bottom:.75px solid #000}
+.printArea :global(.jhs-certification p){margin:.055in .03in;white-space:nowrap}
+.printArea :global(.jhs-certification p u){display:inline-block;min-width:.7in;text-align:center;text-decoration:none;border-bottom:.55px solid #000;font-weight:600}
+.printArea :global(.cert-signature-row){display:grid;grid-template-columns:1fr 2.25fr 1.6fr;gap:.18in;align-items:end;padding:.10in .06in .02in;text-align:center}
+.printArea :global(.cert-signature-row>div){min-height:.32in;display:flex;flex-direction:column;justify-content:flex-end}
+.printArea :global(.signature-line){display:block;min-height:.14in;border-bottom:.6px solid #000;font-weight:700}
+.printArea :global(.cert-signature-row small){font-size:5.7pt;margin-top:.02in}
+.printArea :global(.cert-signature-row em){font-size:5.6pt;margin-top:.01in}
+.printArea :global(.seal-box){display:flex;align-items:flex-end;justify-content:center;min-height:.25in;font-size:5.8pt}
+.printArea :global(.page-two-head){display:flex;justify-content:space-between;align-items:center;height:.15in;font-size:7pt}
+.printArea :global(.jhs-footer-note){display:flex;justify-content:space-between;font-size:5.4pt;margin-top:.01in}
 
-:global(.shs-form-code){position:absolute;right:.25in;top:.12in;font-size:7pt;font-weight:700}
-:global(.shs-heading){text-align:center;margin:.02in 0 .10in}
-:global(.shs-heading span){display:block;font-size:7.1pt;font-weight:700;line-height:1.25}
-:global(.shs-heading strong){display:block;font-size:9.7pt;margin-top:.035in}
-:global(.shs-band){background:#d8d3bd;height:.18in;font-size:7.1pt;margin:.025in 0}
-:global(.shs-info td){height:.18in;font-size:6.1pt}
-:global(.shs-eligibility){border-left:.75px solid #000;border-right:.75px solid #000;border-bottom:.75px solid #000;font-size:5.8pt}
-:global(.shs-eligibility>div){display:flex;gap:.10in;align-items:center;min-height:.18in;padding:.015in .03in;border-bottom:.45px solid #777}
-:global(.shs-eligibility>div:nth-child(2)){justify-content:space-between}
-:global(.shs-eligibility small){display:block;padding:.015in .03in;font-size:4.95pt}
-:global(.shs-eligibility u){display:inline-block;min-width:.55in;text-decoration:none;border-bottom:.5px solid #000;text-align:center;font-weight:700}
-:global(.shs-semester){margin:.025in 0 .05in}
-:global(.shs-meta-table){font-size:5.55pt}
-:global(.shs-meta-table td){height:.17in;padding:.012in .018in}
-:global(.shs-grade-table){font-size:5.55pt}
-:global(.shs-grade-table th){height:.21in;padding:.015in .012in;font-weight:700;text-align:center}
-:global(.shs-grade-table td){height:.17in;padding:.01in .018in;text-align:center}
-:global(.shs-grade-table .subject-cell){text-align:left}
-:global(.shs-type-col){width:12%}
-:global(.shs-subject-col){width:48%}
-:global(.shs-quarter){width:7.5%}
-:global(.shs-final-col){width:10%}
-:global(.shs-action-col){width:15%}
-:global(.shs-remarks){display:grid;grid-template-columns:.65in 1fr;border:.75px solid #000;border-top:0;height:.20in;align-items:center;padding:0 .025in;font-size:5.7pt}
-:global(.shs-sign-row){display:grid;grid-template-columns:1fr 1.3fr .8fr;gap:.10in;padding:.055in .02in;font-size:5.4pt}
-:global(.shs-sign-row>div){display:grid;grid-template-rows:auto .16in auto}
-:global(.shs-sign-row strong){text-align:center;border-bottom:.55px solid #000;font-size:5.8pt}
-:global(.shs-sign-row small){text-align:center;font-size:4.8pt}
-:global(.shs-remedial-head){display:grid;grid-template-columns:.8fr 1.25fr 1fr 1fr .65fr;align-items:center;height:.19in;border:.75px solid #000;border-bottom:0;padding:0 .02in;font-size:5.2pt}
-:global(.shs-remedial-table){font-size:5.15pt}
-:global(.shs-remedial-table th){height:.23in;padding:.012in}
-:global(.shs-remedial-table td){height:.15in}
-:global(.shs-remedial-table th:nth-child(1)){width:12%}
-:global(.shs-remedial-table th:nth-child(2)){width:42%}
-:global(.shs-remedial-table th:nth-child(n+3)){width:11.5%}
-:global(.shs-teacher-sign){display:flex;justify-content:space-between;padding:.035in .01in;font-size:5.35pt}
-:global(.shs-page-two){font-weight:700;margin-bottom:.04in}
-:global(.shs-completion){border-top:.75px solid #000;margin-top:.03in;font-size:5.9pt}
-:global(.shs-completion>div){display:flex;justify-content:space-between;gap:.12in;align-items:center;min-height:.21in;border-bottom:.55px solid #000;padding:.02in .03in}
-:global(.shs-completion u){display:inline-block;min-width:1.4in;text-decoration:none;border-bottom:.5px solid #000}
-:global(.certified-by .seal-title){margin-left:auto;margin-right:.5in}
-:global(.school-head-cert){display:grid!important;grid-template-columns:1.6fr 1fr;grid-template-rows:.18in auto auto;column-gap:.5in;text-align:center;padding-top:.06in!important;min-height:.50in!important}
-:global(.school-head-cert strong),:global(.school-head-cert>span){border-bottom:.55px solid #000}
-:global(.school-head-cert small){font-size:4.9pt}
-:global(.school-head-cert em){grid-column:1;grid-row:3;font-size:5pt}
-:global(.shs-note){font-size:5.3pt;margin-top:.06in}
-:global(.shs-note b){display:block;margin-bottom:.02in}
-:global(.shs-note p){margin:.02in 0;text-align:justify}
-:global(.annex-code){text-align:right;font-size:7pt}
-:global(.shs-annex-paper h2){font-size:9pt;margin:.08in 0 .02in}
-:global(.shs-annex-paper>p){margin:.02in 0 .10in;font-size:7pt}
-:global(.annex-section){margin:.08in 0 .12in}
-:global(.annex-section h3){font-size:7.2pt;margin:0 0 .03in;font-weight:700}
-:global(.annex-row){display:grid;grid-template-columns:.20in 1fr;align-items:center;min-height:.18in;border-bottom:.4px solid #aaa;font-size:7pt}
-:global(.annex-check){display:flex;align-items:center;justify-content:center;width:.13in;height:.13in;border:.6px solid #222;font-size:6pt}
-:global(.annex-note){font-size:6.6pt;font-style:italic;margin:.02in 0}
+.printArea :global(.shs-form-code){position:absolute;right:.25in;top:.12in;font-size:7pt;font-weight:700}
+.printArea :global(.shs-heading){text-align:center;margin:.02in 0 .10in}
+.printArea :global(.shs-heading span){display:block;font-size:7.1pt;font-weight:700;line-height:1.25}
+.printArea :global(.shs-heading strong){display:block;font-size:9.7pt;margin-top:.035in}
+.printArea :global(.shs-band){background:#d8d3bd;height:.18in;font-size:7.1pt;margin:.025in 0}
+.printArea :global(.shs-info td){height:.18in;font-size:6.1pt}
+.printArea :global(.shs-eligibility){border-left:.75px solid #000;border-right:.75px solid #000;border-bottom:.75px solid #000;font-size:5.8pt}
+.printArea :global(.shs-eligibility>div){display:flex;gap:.10in;align-items:center;min-height:.18in;padding:.015in .03in;border-bottom:.45px solid #777}
+.printArea :global(.shs-eligibility>div:nth-child(2)){justify-content:space-between}
+.printArea :global(.shs-eligibility small){display:block;padding:.015in .03in;font-size:4.95pt}
+.printArea :global(.shs-eligibility u){display:inline-block;min-width:.55in;text-decoration:none;border-bottom:.5px solid #000;text-align:center;font-weight:700}
+.printArea :global(.shs-semester){margin:.025in 0 .05in}
+.printArea :global(.shs-meta-table){font-size:5.55pt}
+.printArea :global(.shs-meta-table td){height:.17in;padding:.012in .018in}
+.printArea :global(.shs-grade-table){font-size:5.55pt}
+.printArea :global(.shs-grade-table th){height:.21in;padding:.015in .012in;font-weight:700;text-align:center}
+.printArea :global(.shs-grade-table td){height:.17in;padding:.01in .018in;text-align:center}
+.printArea :global(.shs-grade-table .subject-cell){text-align:left}
+.printArea :global(.shs-type-col){width:12%}
+.printArea :global(.shs-subject-col){width:48%}
+.printArea :global(.shs-quarter){width:7.5%}
+.printArea :global(.shs-final-col){width:10%}
+.printArea :global(.shs-action-col){width:15%}
+.printArea :global(.shs-remarks){display:grid;grid-template-columns:.65in 1fr;border:.75px solid #000;border-top:0;height:.20in;align-items:center;padding:0 .025in;font-size:5.7pt}
+.printArea :global(.shs-sign-row){display:grid;grid-template-columns:1fr 1.3fr .8fr;gap:.10in;padding:.055in .02in;font-size:5.4pt}
+.printArea :global(.shs-sign-row>div){display:grid;grid-template-rows:auto .16in auto}
+.printArea :global(.shs-sign-row strong){text-align:center;border-bottom:.55px solid #000;font-size:5.8pt}
+.printArea :global(.shs-sign-row small){text-align:center;font-size:4.8pt}
+.printArea :global(.shs-remedial-head){display:grid;grid-template-columns:.8fr 1.25fr 1fr 1fr .65fr;align-items:center;height:.19in;border:.75px solid #000;border-bottom:0;padding:0 .02in;font-size:5.2pt}
+.printArea :global(.shs-remedial-table){font-size:5.15pt}
+.printArea :global(.shs-remedial-table th){height:.23in;padding:.012in}
+.printArea :global(.shs-remedial-table td){height:.15in}
+.printArea :global(.shs-remedial-table th:nth-child(1)){width:12%}
+.printArea :global(.shs-remedial-table th:nth-child(2)){width:42%}
+.printArea :global(.shs-remedial-table th:nth-child(n+3)){width:11.5%}
+.printArea :global(.shs-teacher-sign){display:flex;justify-content:space-between;padding:.035in .01in;font-size:5.35pt}
+.printArea :global(.shs-page-two){font-weight:700;margin-bottom:.04in}
+.printArea :global(.shs-completion){border-top:.75px solid #000;margin-top:.03in;font-size:5.9pt}
+.printArea :global(.shs-completion>div){display:flex;justify-content:space-between;gap:.12in;align-items:center;min-height:.21in;border-bottom:.55px solid #000;padding:.02in .03in}
+.printArea :global(.shs-completion u){display:inline-block;min-width:1.4in;text-decoration:none;border-bottom:.5px solid #000}
+.printArea :global(.certified-by .seal-title){margin-left:auto;margin-right:.5in}
+.printArea :global(.school-head-cert){display:grid!important;grid-template-columns:1.6fr 1fr;grid-template-rows:.18in auto auto;column-gap:.5in;text-align:center;padding-top:.06in!important;min-height:.50in!important}
+.printArea :global(.school-head-cert strong),.printArea :global(.school-head-cert>span){border-bottom:.55px solid #000}
+.printArea :global(.school-head-cert small){font-size:4.9pt}
+.printArea :global(.school-head-cert em){grid-column:1;grid-row:3;font-size:5pt}
+.printArea :global(.shs-note){font-size:5.3pt;margin-top:.06in}
+.printArea :global(.shs-note b){display:block;margin-bottom:.02in}
+.printArea :global(.shs-note p){margin:.02in 0;text-align:justify}
+.printArea :global(.annex-code){text-align:right;font-size:7pt}
+.printArea :global(.shs-annex-paper h2){font-size:9pt;margin:.08in 0 .02in}
+.printArea :global(.shs-annex-paper>p){margin:.02in 0 .10in;font-size:7pt}
+.printArea :global(.annex-section){margin:.08in 0 .12in}
+.printArea :global(.annex-section h3){font-size:7.2pt;margin:0 0 .03in;font-weight:700}
+.printArea :global(.annex-row){display:grid;grid-template-columns:.20in 1fr;align-items:center;min-height:.18in;border-bottom:.4px solid #aaa;font-size:7pt}
+.printArea :global(.annex-check){display:flex;align-items:center;justify-content:center;width:.13in;height:.13in;border:.6px solid #222;font-size:6pt}
+.printArea :global(.annex-note){font-size:6.6pt;font-style:italic;margin:.02in 0}
 
 @media print{
   .page{padding:0;background:#fff}
@@ -132,5 +132,5 @@
   .printArea{padding:0;background:#fff;overflow:visible}
   .shell{width:100%;max-width:none}
   .strengthenedNotice{display:none!important}
-  :global(.sf10-paper){margin:0;box-shadow:none}
+  .printArea :global(.sf10-paper){margin:0;box-shadow:none}
 }
