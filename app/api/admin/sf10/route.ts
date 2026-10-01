@@ -9,13 +9,14 @@ function headers(token: string) {
   };
 }
 
-async function getRows(path: string, token: string) {
+async function getRows(path: string, token: string): Promise<any[]> {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     headers: headers(token),
     cache: "no-store",
   });
   if (!response.ok) throw new Error("Query failed.");
-  return response.json();
+  const result = await response.json().catch(() => []);
+  return Array.isArray(result) ? result : [];
 }
 
 async function authorize(request: NextRequest) {
@@ -39,11 +40,11 @@ async function authorize(request: NextRequest) {
     token
   ).catch(() => []);
 
-  const profile = profiles?.[0];
+  const profile = profiles[0];
   if (!profile || profile.account_status !== "active") return null;
 
   if (profile.role === "administrator" && profile.admin_role === "super_administrator") {
-    return { token, userId, profile };
+    return { token, userId };
   }
 
   if (profile.role !== "staff_administrator") return null;
@@ -55,13 +56,25 @@ async function authorize(request: NextRequest) {
     token
   ).catch(() => []);
 
-  return permissions?.[0] ? { token, userId, profile } : null;
+  return permissions[0] ? { token, userId } : null;
+}
+
+function completeSf10Profile(record: any) {
+  return Boolean(
+    record?.last_name &&
+    record?.first_name &&
+    record?.birth_date &&
+    record?.sex
+  );
 }
 
 export async function GET(request: NextRequest) {
   const identity = await authorize(request);
   if (!identity) {
-    return NextResponse.json({ error: "Registrar or Super Administrator access required." }, { status: 403 });
+    return NextResponse.json(
+      { error: "Registrar or Super Administrator access required." },
+      { status: 403 }
+    );
   }
 
   const { token } = identity;
@@ -80,21 +93,14 @@ export async function GET(request: NextRequest) {
         ),
       ]);
 
-      const permanentMap = new Map(
-        (permanentRows ?? []).map((item: { student_id: string }) => [item.student_id, item])
-      );
-
       return NextResponse.json({
-        students: (students ?? []).map((student: Record<string, unknown>) => {
-          const record = permanentMap.get(String(student.id)) as Record<string, unknown> | undefined;
+        students: students.map((student: any) => {
+          const record = permanentRows.find(
+            (item: any) => item.student_id === student.id
+          );
           return {
             ...student,
-            sf10_profile_complete: Boolean(
-              record?.last_name &&
-              record?.first_name &&
-              record?.birth_date &&
-              record?.sex
-            ),
+            sf10_profile_complete: completeSf10Profile(record),
           };
         }),
       });
@@ -106,7 +112,7 @@ export async function GET(request: NextRequest) {
       )}&role=eq.student&select=id,full_name,lrn,grade_level,section&limit=1`,
       token
     );
-    const student = students?.[0];
+    const student = students[0];
     if (!student) {
       return NextResponse.json({ error: "Learner not found." }, { status: 404 });
     }
@@ -124,7 +130,9 @@ export async function GET(request: NextRequest) {
       teacherProfiles,
     ] = await Promise.all([
       getRows(
-        `learner_permanent_records?student_id=eq.${encodeURIComponent(studentId)}&select=*&limit=1`,
+        `learner_permanent_records?student_id=eq.${encodeURIComponent(
+          studentId
+        )}&select=*&limit=1`,
         token
       ),
       getRows("school_information?select=*&limit=1", token),
@@ -134,13 +142,22 @@ export async function GET(request: NextRequest) {
         )}&select=id,school_year_id,grade_level,section_id,enrollment_status&order=grade_level.asc`,
         token
       ),
-      getRows("school_years?select=id,name,start_year,end_year&order=start_year.asc", token),
-      getRows("sections?select=id,grade_level,name&order=grade_level.asc,name.asc", token),
+      getRows(
+        "school_years?select=id,name,start_year,end_year&order=start_year.asc",
+        token
+      ),
+      getRows(
+        "sections?select=id,grade_level,name&order=grade_level.asc,name.asc",
+        token
+      ),
       getRows(
         "teacher_assignments?select=id,teacher_id,school_year_id,grade_level,section_id,subject_id,is_active",
         token
       ),
-      getRows("subjects?select=id,grade_level,name,code&order=grade_level.asc,name.asc", token),
+      getRows(
+        "subjects?select=id,grade_level,name,code&order=grade_level.asc,name.asc",
+        token
+      ),
       getRows(
         `student_term_grades?student_id=eq.${encodeURIComponent(
           studentId
@@ -157,22 +174,37 @@ export async function GET(request: NextRequest) {
       ),
     ]);
 
-    const years = new Map((schoolYears ?? []).map((item: any) => [item.id, item]));
-    const sectionMap = new Map((sections ?? []).map((item: any) => [item.id, item]));
-    const subjectMap = new Map((subjects ?? []).map((item: any) => [item.id, item]));
-    const teacherMap = new Map((teacherProfiles ?? []).map((item: any) => [item.id, item.full_name]));
+    const scholasticRecords = enrollments.map((enrollment: any) => {
+      const schoolYear = schoolYears.find(
+        (item: any) => item.id === enrollment.school_year_id
+      );
+      const section = sections.find(
+        (item: any) => item.id === enrollment.section_id
+      );
+      const adviserAssignment = adviserAssignments.find(
+        (item: any) =>
+          item.school_year_id === enrollment.school_year_id &&
+          item.section_id === enrollment.section_id
+      );
+      const adviser = adviserAssignment
+        ? teacherProfiles.find(
+            (item: any) => item.id === adviserAssignment.teacher_id
+          )
+        : null;
 
-    const scholasticRecords = (enrollments ?? []).map((enrollment: any) => {
-      const classAssignments = (assignments ?? []).filter(
+      const classAssignments = assignments.filter(
         (assignment: any) =>
           assignment.school_year_id === enrollment.school_year_id &&
           assignment.section_id === enrollment.section_id &&
-          assignment.is_active
+          assignment.is_active === true
       );
 
       const subjectRecords = classAssignments.map((assignment: any) => {
-        const termGrades = [1, 2, 3].map((termNo) => {
-          const grade = (grades ?? []).find(
+        const subject = subjects.find(
+          (item: any) => item.id === assignment.subject_id
+        );
+        const terms = [1, 2, 3].map((termNo) => {
+          const grade = grades.find(
             (item: any) =>
               item.teacher_assignment_id === assignment.id &&
               Number(item.term_no) === termNo
@@ -180,65 +212,80 @@ export async function GET(request: NextRequest) {
           return grade ? Number(grade.term_grade) : null;
         });
 
-        const complete = termGrades.every((value) => value !== null);
+        const complete = terms.every((value) => value !== null);
         const finalRating = complete
           ? Math.round(
-              termGrades.reduce((sum: number, value: number | null) => sum + Number(value ?? 0), 0) / 3
+              terms.reduce(
+                (sum: number, value: number | null) =>
+                  sum + Number(value ?? 0),
+                0
+              ) / 3
             )
           : null;
 
         return {
           assignment_id: assignment.id,
-          subject: subjectMap.get(assignment.subject_id)?.name ?? "Subject",
-          subject_code: subjectMap.get(assignment.subject_id)?.code ?? null,
-          terms: termGrades,
+          subject: subject?.name ?? "Subject",
+          subject_code: subject?.code ?? null,
+          terms,
           final_rating: finalRating,
-          remarks: finalRating === null ? "Incomplete" : finalRating >= 75 ? "Passed" : "Failed",
+          remarks:
+            finalRating === null
+              ? "Incomplete"
+              : finalRating >= 75
+                ? "Passed"
+                : "Failed",
         };
       });
 
-      const adviser = (adviserAssignments ?? []).find(
-        (item: any) =>
-          item.school_year_id === enrollment.school_year_id &&
-          item.section_id === enrollment.section_id
-      );
-
       const completedRatings = subjectRecords
         .map((item: any) => item.final_rating)
-        .filter((value: number | null) => value !== null);
+        .filter((value: any) => value !== null)
+        .map((value: any) => Number(value));
+
+      const generalAverage =
+        subjectRecords.length > 0 &&
+        completedRatings.length === subjectRecords.length
+          ? Math.round(
+              completedRatings.reduce(
+                (sum: number, value: number) => sum + value,
+                0
+              ) / completedRatings.length
+            )
+          : null;
 
       return {
-        school_year: years.get(enrollment.school_year_id)?.name ?? "",
+        school_year: schoolYear?.name ?? "",
         grade_level: enrollment.grade_level,
-        section: sectionMap.get(enrollment.section_id)?.name ?? "",
-        adviser_name: adviser ? teacherMap.get(adviser.teacher_id) ?? "" : "",
+        section: section?.name ?? "",
+        adviser_name: adviser?.full_name ?? "",
         subjects: subjectRecords,
-        general_average:
-          completedRatings.length === subjectRecords.length && completedRatings.length > 0
-            ? Math.round(
-                completedRatings.reduce((sum: number, value: number) => sum + value, 0) /
-                  completedRatings.length
-              )
-            : null,
+        general_average: generalAverage,
       };
     });
 
     return NextResponse.json({
       student,
-      permanentRecord: permanentRows?.[0] ?? null,
-      schoolInformation: schoolInfoRows?.[0] ?? null,
+      permanentRecord: permanentRows[0] ?? null,
+      schoolInformation: schoolInfoRows[0] ?? null,
       scholasticRecords,
       formType: Number(student.grade_level ?? 0) <= 10 ? "JHS" : "SHS",
     });
   } catch {
-    return NextResponse.json({ error: "Unable to load SF10 records." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Unable to load SF10 records." },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(request: NextRequest) {
   const identity = await authorize(request);
   if (!identity) {
-    return NextResponse.json({ error: "Registrar or Super Administrator access required." }, { status: 403 });
+    return NextResponse.json(
+      { error: "Registrar or Super Administrator access required." },
+      { status: 403 }
+    );
   }
 
   const { token, userId } = identity;
@@ -251,6 +298,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "save_profile") {
+    const averageText = String(body.elementary_general_average ?? "").trim();
     const payload = {
       student_id: studentId,
       last_name: String(body.last_name ?? "").trim() || null,
@@ -258,24 +306,24 @@ export async function POST(request: NextRequest) {
       middle_name: String(body.middle_name ?? "").trim() || null,
       name_extension: String(body.name_extension ?? "").trim() || null,
       birth_date: String(body.birth_date ?? "").trim() || null,
-      sex: ["Male", "Female"].includes(String(body.sex ?? "")) ? String(body.sex) : null,
-      elementary_school_name: String(body.elementary_school_name ?? "").trim() || null,
-      elementary_school_id: String(body.elementary_school_id ?? "").trim() || null,
-      elementary_school_address: String(body.elementary_school_address ?? "").trim() || null,
+      sex: ["Male", "Female"].includes(String(body.sex ?? ""))
+        ? String(body.sex)
+        : null,
+      elementary_school_name:
+        String(body.elementary_school_name ?? "").trim() || null,
+      elementary_school_id:
+        String(body.elementary_school_id ?? "").trim() || null,
+      elementary_school_address:
+        String(body.elementary_school_address ?? "").trim() || null,
       elementary_general_average:
-        String(body.elementary_general_average ?? "").trim() === ""
-          ? null
-          : Number(body.elementary_general_average),
-      elementary_citation: String(body.elementary_citation ?? "").trim() || null,
-      eligibility_type: ["elementary_completer", "pept", "a_and_e", "other"].includes(
-        String(body.eligibility_type ?? "")
-      )
-        ? String(body.eligibility_type)
-        : "elementary_completer",
-      eligibility_rating: String(body.eligibility_rating ?? "").trim() || null,
-      eligibility_other: String(body.eligibility_other ?? "").trim() || null,
-      assessment_date: String(body.assessment_date ?? "").trim() || null,
-      testing_center: String(body.testing_center ?? "").trim() || null,
+        averageText === "" ? null : Number(averageText),
+      elementary_citation:
+        String(body.elementary_citation ?? "").trim() || null,
+      eligibility_type: "elementary_completer",
+      eligibility_rating: null,
+      eligibility_other: null,
+      assessment_date: null,
+      testing_center: null,
       updated_by: userId,
       updated_at: new Date().toISOString(),
     };
@@ -292,28 +340,43 @@ export async function POST(request: NextRequest) {
         cache: "no-store",
       }
     );
-    const result = await response.json().catch(() => ({}));
+    const result = await response.json().catch(() => []);
     if (!response.ok) {
-      return NextResponse.json({ error: "Unable to save learner permanent-record information." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Unable to save learner permanent-record information." },
+        { status: 400 }
+      );
     }
-    return NextResponse.json({ ok: true, record: result?.[0] ?? null });
+
+    return NextResponse.json({
+      ok: true,
+      record: Array.isArray(result) ? result[0] ?? null : null,
+    });
   }
 
   if (action === "log_print") {
     const formType = body.formType === "SHS" ? "SHS" : "JHS";
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/sf10_print_log`, {
-      method: "POST",
-      headers: { ...headers(token), Prefer: "return=minimal" },
-      body: JSON.stringify({
-        student_id: studentId,
-        form_type: formType,
-        printed_by: userId,
-      }),
-      cache: "no-store",
-    });
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/sf10_print_log`,
+      {
+        method: "POST",
+        headers: { ...headers(token), Prefer: "return=minimal" },
+        body: JSON.stringify({
+          student_id: studentId,
+          form_type: formType,
+          printed_by: userId,
+        }),
+        cache: "no-store",
+      }
+    );
+
     if (!response.ok) {
-      return NextResponse.json({ error: "Unable to record the SF10 print action." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Unable to record the SF10 print action." },
+        { status: 400 }
+      );
     }
+
     return NextResponse.json({ ok: true });
   }
 
