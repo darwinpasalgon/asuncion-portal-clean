@@ -58,6 +58,7 @@ function descriptor(grade: number) {
 
 export default function GradesPage() {
   const [role, setRole] = useState<Role | null>(null);
+  const [isSectionAdviser, setIsSectionAdviser] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeYear, setActiveYear] = useState<ActiveYear | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -87,6 +88,7 @@ export default function GradesPage() {
       }
 
       setRole(result.role ?? null);
+      setIsSectionAdviser(Boolean(result.isSectionAdviser));
       setProfile(result.profile ?? null);
       setActiveYear(result.activeYear ?? null);
       setAssignments(result.assignments ?? []);
@@ -292,10 +294,10 @@ export default function GradesPage() {
         <header className={styles.header}>
           <div>
             <span className={styles.eyebrow}>ACADEMIC RECORDS</span>
-            <h1>{role === "teacher" ? "Term gradebook" : "My grades"}</h1>
+            <h1>{role === "teacher" ? "Section adviser gradebook" : "My grades"}</h1>
             <p>
               {role === "teacher"
-                ? "Enter the official Term Grade for each learner, then publish the term when the class is complete."
+                ? "Only the active Section Adviser can encode and publish official grades for learners in the section."
                 : "Published Term Grades and Final Grades for the active school year."}
             </p>
           </div>
@@ -312,7 +314,16 @@ export default function GradesPage() {
         {error && <div className={styles.error}>{error}</div>}
         {success && <div className={styles.success}>{success}</div>}
 
-        {role === "teacher" && (
+        {role === "teacher" && !isSectionAdviser && (
+          <section className={styles.gradePanel}>
+            <div className={styles.empty}>
+              Grade encoding is reserved for the active Section Adviser. Your subject-teacher
+              assignments remain available in the other teaching modules.
+            </div>
+          </section>
+        )}
+
+        {role === "teacher" && isSectionAdviser && (
           <>
             <section className={styles.controls}>
               <label>
@@ -495,7 +506,7 @@ export default function GradesPage() {
             <div className={styles.panelHeading}>
               <div>
                 <h2>{profile?.full_name}</h2>
-                <p>Only grades published by your subject teachers are shown here.</p>
+                <p>Only grades published by your Section Adviser are shown here.</p>
               </div>
             </div>
 
