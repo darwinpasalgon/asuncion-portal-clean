@@ -564,7 +564,11 @@ export default function UsersAccountsPage() {
 
       {editing && (
         <div className={styles.modalBackdrop} role="presentation">
-          <section className={styles.modal} role="dialog" aria-modal="true">
+          <section
+            className={`${styles.modal} ${editing.personType === "student" ? styles.learnerModal : ""}`}
+            role="dialog"
+            aria-modal="true"
+          >
             <div className={styles.modalHead}>
               <div>
                 <span>EDIT {editing.personType.toUpperCase()}</span>
