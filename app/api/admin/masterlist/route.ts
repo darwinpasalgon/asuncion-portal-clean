@@ -3,23 +3,17 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
 type PersonType = "student" | "teacher";
 
-type ParsedRow = {
+type ImportRow = {
   rowNumber: number;
   fullName: string;
   lrn: string;
   gradeLevel: number | null;
   section: string;
-  sectionId: string | null;
   email: string;
   position: string;
+  recoveryPhone: string;
   valid: boolean;
   error: string;
-};
-
-type ValidationResult = {
-  rows: ParsedRow[];
-  fatal: string;
-  year?: { id: string; name: string } | null;
 };
 
 function authHeaders(token: string) {
@@ -40,6 +34,7 @@ async function getUserId(token: string) {
     cache: "no-store",
   });
   if (!response.ok) return "";
+
   const user = await response.json().catch(() => null);
   return String(user?.id ?? "");
 }
@@ -47,12 +42,14 @@ async function getUserId(token: string) {
 async function isAdmin(token: string) {
   const userId = await getUserId(token);
   if (!userId) return false;
+
   const response = await fetch(
     `${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(
       userId
     )}&select=role,account_status&limit=1`,
     { headers: authHeaders(token), cache: "no-store" }
   );
+
   if (!response.ok) return false;
   const rows = await response.json().catch(() => []);
   return rows?.[0]?.role === "administrator" && rows?.[0]?.account_status === "active";
@@ -67,12 +64,33 @@ async function getRows(path: string, token: string) {
   return response.json();
 }
 
-async function activeYear(token: string) {
-  const rows = await getRows(
-    "school_years?is_active=eq.true&select=id,name&limit=1",
-    token
-  );
-  return rows?.[0] ?? null;
+async function getAllProfiles(token: string) {
+  const pageSize = 1000;
+  const collected: Array<{ lrn: string | null; email: string }> = [];
+
+  for (let start = 0; start < 10000; start += pageSize) {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/profiles?select=lrn,email&order=created_at.asc`,
+      {
+        headers: {
+          ...authHeaders(token),
+          Range: `${start}-${start + pageSize - 1}`,
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) throw new Error("Unable to load existing accounts.");
+    const rows = (await response.json().catch(() => [])) as Array<{
+      lrn: string | null;
+      email: string;
+    }>;
+
+    collected.push(...rows);
+    if (rows.length < pageSize) break;
+  }
+
+  return collected;
 }
 
 function normalizeHeader(value: string) {
@@ -82,6 +100,7 @@ function normalizeHeader(value: string) {
     fullname: "fullName",
     name: "fullName",
     learnername: "fullName",
+    studentname: "fullName",
     teachername: "fullName",
     grade: "gradeLevel",
     gradelevel: "gradeLevel",
@@ -90,6 +109,12 @@ function normalizeHeader(value: string) {
     emailaddress: "email",
     position: "position",
     designation: "position",
+    mobile: "recoveryPhone",
+    mobilenumber: "recoveryPhone",
+    phone: "recoveryPhone",
+    phonenumber: "recoveryPhone",
+    contact: "recoveryPhone",
+    contactnumber: "recoveryPhone",
   };
   return aliases[key] ?? key;
 }
@@ -140,56 +165,42 @@ function parseCsv(text: string) {
   return rows.filter((item) => item.some((value) => value.trim() !== ""));
 }
 
-function normalizeCode(code: string) {
-  return code.toUpperCase().replace(/[^A-Z0-9]/g, "");
-}
-
-function randomCode() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const bytes = new Uint8Array(8);
-  crypto.getRandomValues(bytes);
-  const chars = Array.from(bytes, (value) => alphabet[value % alphabet.length]).join("");
-  return `ANHS-${chars.slice(0, 4)}-${chars.slice(4)}`;
-}
-
-async function hashCode(code: string) {
-  const bytes = new TextEncoder().encode(normalizeCode(code));
-  const hash = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(hash))
-    .map((value) => value.toString(16).padStart(2, "0"))
-    .join("");
+function normalizePhone(input: string) {
+  const raw = input.replace(/[\s()-]/g, "");
+  if (!raw) return "";
+  if (/^09\d{9}$/.test(raw)) return `+63${raw.slice(1)}`;
+  if (/^639\d{9}$/.test(raw)) return `+${raw}`;
+  if (/^\+\d{8,15}$/.test(raw)) return raw;
+  return null;
 }
 
 function validEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-async function validateFile(
-  file: File,
-  personType: PersonType,
-  token: string
-): Promise<ValidationResult> {
+async function validateFile(file: File, personType: PersonType, token: string) {
   if (!file.name.toLowerCase().endsWith(".csv")) {
     return {
-      rows: [] as ParsedRow[],
       fatal:
-        "Upload a CSV file. If you are using Excel, choose Save As → CSV UTF-8 (Comma delimited).",
+        "Upload a CSV file. In Excel, choose Save As → CSV UTF-8 (Comma delimited).",
+      rows: [] as ImportRow[],
     };
   }
 
   if (file.size > 2 * 1024 * 1024) {
-    return { rows: [] as ParsedRow[], fatal: "CSV file must be 2 MB or smaller." };
+    return { fatal: "CSV file must be 2 MB or smaller.", rows: [] as ImportRow[] };
   }
 
   const table = parseCsv(await file.text());
   if (table.length < 2) {
-    return { rows: [] as ParsedRow[], fatal: "The CSV does not contain any data rows." };
+    return { fatal: "The CSV does not contain any account rows.", rows: [] as ImportRow[] };
   }
 
-  if (table.length - 1 > 2000) {
+  if (table.length - 1 > 200) {
     return {
-      rows: [] as ParsedRow[],
-      fatal: "Import up to 2,000 people per CSV file.",
+      fatal:
+        "Import up to 200 accounts per file. Split larger masterlists into smaller CSV files.",
+      rows: [] as ImportRow[],
     };
   }
 
@@ -202,62 +213,47 @@ async function validateFile(
   const missing = required.filter((key) => !headers.includes(key));
   if (missing.length) {
     return {
-      rows: [] as ParsedRow[],
       fatal:
         personType === "student"
-          ? "Student CSV needs these columns: LRN, Full Name, Grade Level, Section."
-          : "Teacher CSV needs these columns: Full Name, Email. Position is optional.",
+          ? "Student CSV needs: LRN, Full Name, Grade Level, Section. Mobile is optional."
+          : "Teacher CSV needs: Full Name, Email. Position and Mobile are optional.",
+      rows: [] as ImportRow[],
     };
   }
 
-  const year = await activeYear(token);
-  if (!year) return { rows: [] as ParsedRow[], fatal: "No active school year is configured." };
-
-  const [sections, profiles, roster] = await Promise.all([
+  const [sections, profiles, years] = await Promise.all([
     getRows(
       "sections?is_active=eq.true&select=id,grade_level,name&order=grade_level.asc,name.asc",
       token
     ),
-    getRows("profiles?select=lrn,email", token),
-    getRows(
-      `account_activation_roster?school_year_id=eq.${encodeURIComponent(
-        year.id
-      )}&status=neq.disabled&select=person_type,lrn,email,status`,
-      token
-    ),
+    getAllProfiles(token),
+    getRows("school_years?is_active=eq.true&select=id,name&limit=1", token),
   ]);
 
-  const sectionMap = new Map<string, { id: string; name: string }>();
+  const activeYear = years?.[0] ?? null;
+  if (!activeYear) {
+    return { fatal: "No active school year is configured.", rows: [] as ImportRow[] };
+  }
+
+  const sectionMap = new Map<string, string>();
   for (const item of sections ?? []) {
     sectionMap.set(
       `${Number(item.grade_level)}|${String(item.name).trim().toLowerCase()}`,
-      { id: String(item.id), name: String(item.name) }
+      String(item.name)
     );
   }
 
-  const profileLrns = new Set(
-    (profiles ?? []).map((item: { lrn?: string | null }) => String(item.lrn ?? "")).filter(Boolean)
+  const existingLrns = new Set(
+    profiles.map((item) => String(item.lrn ?? "")).filter(Boolean)
   );
-  const profileEmails = new Set(
-    (profiles ?? [])
-      .map((item: { email?: string | null }) => String(item.email ?? "").trim().toLowerCase())
-      .filter(Boolean)
-  );
-  const rosterLrns = new Set(
-    (roster ?? [])
-      .filter((item: { person_type?: string }) => item.person_type === "student")
-      .map((item: { lrn?: string | null }) => String(item.lrn ?? ""))
-      .filter(Boolean)
-  );
-  const rosterEmails = new Set(
-    (roster ?? [])
-      .filter((item: { person_type?: string }) => item.person_type === "teacher")
-      .map((item: { email?: string | null }) => String(item.email ?? "").trim().toLowerCase())
+  const existingEmails = new Set(
+    profiles
+      .map((item) => String(item.email ?? "").trim().toLowerCase())
       .filter(Boolean)
   );
 
   const seen = new Set<string>();
-  const parsed: ParsedRow[] = [];
+  const parsed: ImportRow[] = [];
 
   for (let rowIndex = 1; rowIndex < table.length; rowIndex += 1) {
     const values = table[rowIndex];
@@ -270,15 +266,16 @@ async function validateFile(
     const fullName = data.fullName ?? "";
     const lrn = (data.lrn ?? "").replace(/\s/g, "");
     const email = (data.email ?? "").trim().toLowerCase();
-    const position = (data.position ?? "").trim();
-    const gradeLevel = data.gradeLevel ? Number(data.gradeLevel) : null;
     const requestedSection = (data.section ?? "").trim();
-
+    const gradeLevel = data.gradeLevel ? Number(data.gradeLevel) : null;
+    const position = (data.position ?? "").trim() || "Teacher";
+    const rawPhone = data.recoveryPhone ?? "";
+    const normalizedPhone = normalizePhone(rawPhone);
     const errors: string[] = [];
-    let sectionId: string | null = null;
     let section = requestedSection;
 
     if (!fullName) errors.push("Full Name is required.");
+    if (normalizedPhone === null) errors.push("Mobile number is invalid.");
 
     if (personType === "student") {
       if (!/^\d{12}$/.test(lrn)) errors.push("LRN must contain exactly 12 digits.");
@@ -287,27 +284,24 @@ async function validateFile(
       }
 
       if (Number.isInteger(gradeLevel) && requestedSection) {
-        const matched = sectionMap.get(
+        const canonical = sectionMap.get(
           `${Number(gradeLevel)}|${requestedSection.toLowerCase()}`
         );
-        if (!matched) {
-          errors.push("Section does not match an active section for the grade.");
+        if (!canonical) {
+          errors.push("Section does not match an active section for the Grade Level.");
         } else {
-          sectionId = matched.id;
-          section = matched.name;
+          section = canonical;
         }
       } else if (!requestedSection) {
         errors.push("Section is required.");
       }
 
-      if (profileLrns.has(lrn)) errors.push("This LRN already has a portal account.");
-      if (rosterLrns.has(lrn)) errors.push("This LRN is already in the activation masterlist.");
+      if (existingLrns.has(lrn)) errors.push("This LRN already has a portal account.");
       if (seen.has(lrn)) errors.push("Duplicate LRN in this CSV.");
       if (lrn) seen.add(lrn);
     } else {
-      if (!validEmail(email)) errors.push("Enter a valid email address.");
-      if (profileEmails.has(email)) errors.push("This email already has a portal account.");
-      if (rosterEmails.has(email)) errors.push("This email is already in the activation masterlist.");
+      if (!validEmail(email)) errors.push("Enter a valid Teacher email address.");
+      if (existingEmails.has(email)) errors.push("This email already has a portal account.");
       if (seen.has(email)) errors.push("Duplicate email in this CSV.");
       if (email) seen.add(email);
     }
@@ -318,15 +312,15 @@ async function validateFile(
       lrn,
       gradeLevel: Number.isInteger(gradeLevel) ? Number(gradeLevel) : null,
       section,
-      sectionId,
       email,
       position,
+      recoveryPhone: normalizedPhone ?? rawPhone,
       valid: errors.length === 0,
       error: errors.join(" "),
     });
   }
 
-  return { rows: parsed, fatal: "", year };
+  return { fatal: "", rows: parsed, activeYear };
 }
 
 export async function GET(request: NextRequest) {
@@ -336,34 +330,26 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const year = await activeYear(token);
-    if (!year) {
-      return NextResponse.json({ activeYear: null, roster: [], batches: [] });
-    }
-
-    const [roster, batches, sections] = await Promise.all([
+    const [years, sections, batches] = await Promise.all([
+      getRows("school_years?is_active=eq.true&select=id,name&limit=1", token),
       getRows(
-        `account_activation_roster?school_year_id=eq.${encodeURIComponent(
-          year.id
-        )}&select=id,person_type,full_name,lrn,email,position,grade_level,section_id,activation_code_last4,status,claimed_at,created_at&order=created_at.desc&limit=1000`,
+        "sections?is_active=eq.true&select=id,grade_level,name&order=grade_level.asc,name.asc",
         token
       ),
       getRows(
-        `masterlist_import_batches?school_year_id=eq.${encodeURIComponent(
-          year.id
-        )}&select=id,person_type,file_name,total_rows,imported_rows,skipped_rows,created_at&order=created_at.desc&limit=50`,
-        token
-      ),
-      getRows(
-        "sections?select=id,grade_level,name&order=grade_level.asc,name.asc",
+        "masterlist_import_batches?select=id,person_type,file_name,total_rows,imported_rows,skipped_rows,created_at&order=created_at.desc&limit=30",
         token
       ),
     ]);
 
-    return NextResponse.json({ activeYear: year, roster, batches, sections });
+    return NextResponse.json({
+      activeYear: years?.[0] ?? null,
+      sections,
+      batches,
+    });
   } catch {
     return NextResponse.json(
-      { error: "Unable to load the account masterlist." },
+      { error: "Unable to load the bulk account import workspace." },
       { status: 500 }
     );
   }
@@ -375,213 +361,77 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Administrator access required." }, { status: 403 });
   }
 
-  const contentType = request.headers.get("content-type") ?? "";
-
-  if (contentType.includes("application/json")) {
-    const body = await request.json().catch(() => null);
-    const action = String(body?.action ?? "");
-    const id = String(body?.id ?? "");
-
-    if (!id || !["regenerate", "disable"].includes(action)) {
-      return NextResponse.json({ error: "Invalid masterlist action." }, { status: 400 });
-    }
-
-    const rows = await getRows(
-      `account_activation_roster?id=eq.${encodeURIComponent(
-        id
-      )}&select=id,status,person_type,full_name,lrn,email&limit=1`,
-      token
-    ).catch(() => []);
-
-    const row = rows?.[0];
-    if (!row) return NextResponse.json({ error: "Masterlist record not found." }, { status: 404 });
-    if (row.status !== "unclaimed") {
-      return NextResponse.json(
-        { error: "Only unclaimed activation records can be changed." },
-        { status: 409 }
-      );
-    }
-
-    if (action === "disable") {
-      const response = await fetch(
-        `${SUPABASE_URL}/rest/v1/account_activation_roster?id=eq.${encodeURIComponent(id)}`,
-        {
-          method: "PATCH",
-          headers: { ...authHeaders(token), Prefer: "return=representation" },
-          body: JSON.stringify({ status: "disabled", updated_at: new Date().toISOString() }),
-          cache: "no-store",
-        }
-      );
-      if (!response.ok) {
-        return NextResponse.json({ error: "Unable to disable this record." }, { status: 400 });
-      }
-      return NextResponse.json({ ok: true });
-    }
-
-    const code = randomCode();
-    const hash = await hashCode(code);
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/account_activation_roster?id=eq.${encodeURIComponent(id)}`,
-      {
-        method: "PATCH",
-        headers: { ...authHeaders(token), Prefer: "return=representation" },
-        body: JSON.stringify({
-          activation_code_hash: hash,
-          activation_code_last4: normalizeCode(code).slice(-4),
-          updated_at: new Date().toISOString(),
-        }),
-        cache: "no-store",
-      }
-    );
-
-    if (!response.ok) {
-      return NextResponse.json({ error: "Unable to regenerate the activation code." }, { status: 400 });
-    }
-
-    return NextResponse.json({
-      ok: true,
-      activation: {
-        id,
-        fullName: row.full_name,
-        identifier: row.person_type === "student" ? row.lrn : row.email,
-        code,
-      },
-    });
+  const form = await request.formData().catch(() => null);
+  if (!form) {
+    return NextResponse.json({ error: "Invalid upload request." }, { status: 400 });
   }
 
-  if (!contentType.includes("multipart/form-data")) {
-    return NextResponse.json({ error: "Invalid request format." }, { status: 400 });
-  }
-
-  const form = await request.formData();
   const action = String(form.get("action") ?? "");
   const personType: PersonType =
     String(form.get("personType") ?? "") === "teacher" ? "teacher" : "student";
   const file = form.get("file");
 
   if (!(file instanceof File) || !["preview", "import"].includes(action)) {
-    return NextResponse.json({ error: "Select a CSV masterlist file." }, { status: 400 });
+    return NextResponse.json({ error: "Choose a CSV masterlist file." }, { status: 400 });
   }
 
-  const validation = await validateFile(file, personType, token);
-  if (validation.fatal) {
-    return NextResponse.json({ error: validation.fatal }, { status: 400 });
-  }
+  try {
+    const validation = await validateFile(file, personType, token);
+    if (validation.fatal) {
+      return NextResponse.json({ error: validation.fatal }, { status: 400 });
+    }
 
-  const rows = validation.rows;
-  const validRows = rows.filter((row) => row.valid);
+    const rows = validation.rows;
+    const valid = rows.filter((row) => row.valid).length;
 
-  if (action === "preview") {
-    return NextResponse.json({
-      ok: true,
-      personType,
-      rows,
-      summary: {
-        total: rows.length,
-        valid: validRows.length,
-        invalid: rows.length - validRows.length,
-      },
-    });
-  }
+    if (action === "preview") {
+      return NextResponse.json({
+        ok: true,
+        rows,
+        summary: {
+          total: rows.length,
+          valid,
+          invalid: rows.length - valid,
+        },
+      });
+    }
 
-  if (!validRows.length) {
+    if (!valid) {
+      return NextResponse.json(
+        { error: "There are no valid new accounts to import." },
+        { status: 400 }
+      );
+    }
+
+    const response = await fetch(
+      `${SUPABASE_URL}/functions/v1/admin-bulk-account-import`,
+      {
+        method: "POST",
+        headers: authHeaders(token),
+        body: JSON.stringify({
+          person_type: personType,
+          file_name: file.name,
+          rows: rows.map((row) => ({
+            row_number: row.rowNumber,
+            full_name: row.fullName,
+            lrn: row.lrn || null,
+            grade_level: row.gradeLevel,
+            section: row.section || null,
+            email: row.email || null,
+            position: row.position || null,
+            recovery_phone: row.recoveryPhone || "",
+          })),
+        }),
+        cache: "no-store",
+      }
+    );
+
+    const result = await response.json().catch(() => ({}));
+    return NextResponse.json(result, { status: response.status });
+  } catch {
     return NextResponse.json(
-      { error: "There are no valid new records to import." },
-      { status: 400 }
+      { error: "Unable to process the account import." },
+      { status: 500 }
     );
   }
-
-  const year = validation.year;
-  if (!year) {
-    return NextResponse.json({ error: "No active school year is configured." }, { status: 409 });
-  }
-
-  const adminId = await getUserId(token);
-  const batchResponse = await fetch(
-    `${SUPABASE_URL}/rest/v1/masterlist_import_batches`,
-    {
-      method: "POST",
-      headers: { ...authHeaders(token), Prefer: "return=representation" },
-      body: JSON.stringify({
-        school_year_id: year.id,
-        person_type: personType,
-        file_name: file.name,
-        total_rows: rows.length,
-        imported_rows: validRows.length,
-        skipped_rows: rows.length - validRows.length,
-        created_by: adminId || null,
-      }),
-      cache: "no-store",
-    }
-  );
-
-  const batchRows = await batchResponse.json().catch(() => []);
-  const batch = batchRows?.[0];
-  if (!batchResponse.ok || !batch?.id) {
-    return NextResponse.json({ error: "Unable to create the import batch." }, { status: 400 });
-  }
-
-  const activations = [];
-  const payload = [];
-
-  for (const row of validRows) {
-    const code = randomCode();
-    payload.push({
-      school_year_id: year.id,
-      person_type: personType,
-      full_name: row.fullName,
-      lrn: personType === "student" ? row.lrn : null,
-      email: personType === "teacher" ? row.email : null,
-      position: personType === "teacher" ? row.position || "Teacher" : null,
-      grade_level: personType === "student" ? row.gradeLevel : null,
-      section_id: personType === "student" ? row.sectionId : null,
-      activation_code_hash: await hashCode(code),
-      activation_code_last4: normalizeCode(code).slice(-4),
-      status: "unclaimed",
-      import_batch_id: batch.id,
-      created_by: adminId || null,
-    });
-
-    activations.push({
-      fullName: row.fullName,
-      identifier: personType === "student" ? row.lrn : row.email,
-      gradeLevel: row.gradeLevel,
-      section: row.section,
-      position: row.position || "Teacher",
-      code,
-    });
-  }
-
-  const importResponse = await fetch(
-    `${SUPABASE_URL}/rest/v1/account_activation_roster`,
-    {
-      method: "POST",
-      headers: { ...authHeaders(token), Prefer: "return=representation" },
-      body: JSON.stringify(payload),
-      cache: "no-store",
-    }
-  );
-
-  if (!importResponse.ok) {
-    await fetch(
-      `${SUPABASE_URL}/rest/v1/masterlist_import_batches?id=eq.${encodeURIComponent(batch.id)}`,
-      { method: "DELETE", headers: authHeaders(token), cache: "no-store" }
-    ).catch(() => null);
-
-    return NextResponse.json(
-      { error: "The masterlist could not be imported. No activation codes were issued." },
-      { status: 400 }
-    );
-  }
-
-  return NextResponse.json({
-    ok: true,
-    batchId: batch.id,
-    activations,
-    summary: {
-      total: rows.length,
-      imported: validRows.length,
-      skipped: rows.length - validRows.length,
-    },
-  });
 }
