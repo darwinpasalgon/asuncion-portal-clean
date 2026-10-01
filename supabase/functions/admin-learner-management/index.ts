@@ -389,9 +389,16 @@ Deno.serve(async (req) => {
 
     const { data: previousActive } = await admin
       .from("school_years")
-      .select("id")
+      .select("id,start_year")
       .eq("is_active", true)
       .maybeSingle();
+
+    if (
+      previousActive?.id &&
+      Number(targetYear.start_year) < Number(previousActive.start_year)
+    ) {
+      return json({ error: "A historical school year cannot replace the current active school year." }, 400);
+    }
 
     if (previousActive?.id) {
       const { error: closeError } = await admin
