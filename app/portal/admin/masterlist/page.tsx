@@ -131,6 +131,8 @@ export default function BulkAccountImportPage() {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
   const [year, setYear] = useState("");
+  const [selectedGrade, setSelectedGrade] = useState("");
+  const [selectedSection, setSelectedSection] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<PreviewRow[]>([]);
   const [credentials, setCredentials] = useState<Credential[]>([]);
@@ -155,12 +157,41 @@ export default function BulkAccountImportPage() {
     return { total: rows.length, valid, invalid: rows.length - valid };
   }, [rows]);
 
+  const gradeOptions = useMemo(
+    () => Array.from(new Set(sections.map((section) => section.grade_level))).sort((a, b) => a - b),
+    [sections]
+  );
+
+  const sectionOptions = useMemo(
+    () =>
+      selectedGrade
+        ? sections.filter((section) => section.grade_level === Number(selectedGrade))
+        : [],
+    [sections, selectedGrade]
+  );
+
+  const studentClassReady =
+    personType !== "student" || Boolean(selectedGrade && selectedSection);
+
+  function resetImport() {
+    setRows([]);
+    setFile(null);
+    setCredentials([]);
+    setError("");
+    setMessage("");
+  }
+
   function template() {
     if (personType === "student") {
+      if (!selectedGrade || !selectedSection) {
+        setError("Select the Grade Level and Section before downloading the learner template.");
+        return;
+      }
+      setError("");
       downloadCsv(
-        "ANHS_Student_Account_Import.csv",
-        ["LRN", "Full Name", "Grade Level", "Section", "Mobile"],
-        [["123456789012", "Juan Dela Cruz", 8, "Narra", ""]]
+        `ANHS_Grade_${selectedGrade}_${selectedSection.replace(/\s+/g, "_")}_Learner_Import.csv`,
+        ["LRN", "Full Name", "Mobile"],
+        [["123456789012", "Juan Dela Cruz", ""]]
       );
     } else {
       downloadCsv(
@@ -180,6 +211,13 @@ export default function BulkAccountImportPage() {
     setMessage("");
     if (!selected) return;
 
+    if (personType === "student" && (!selectedGrade || !selectedSection)) {
+      setFile(null);
+      setError("Select the Grade Level and Section before choosing a learner CSV file.");
+      event.target.value = "";
+      return;
+    }
+
     if (!selected.name.toLowerCase().endsWith(".csv")) {
       setError("Use a CSV file. In Excel, choose Save As → CSV UTF-8 (Comma delimited).");
       return;
@@ -194,26 +232,32 @@ export default function BulkAccountImportPage() {
     const headers = table[0].map(keyOf);
     const required =
       personType === "student"
-        ? ["lrn", "full_name", "grade_level", "section"]
+        ? ["lrn", "full_name"]
         : ["full_name", "email"];
 
     if (required.some((item) => !headers.includes(item))) {
       setError(
         personType === "student"
-          ? "Student CSV needs LRN, Full Name, Grade Level, and Section."
+          ? "Learner CSV needs LRN and Full Name. Mobile is optional."
           : "Teacher CSV needs Full Name and Email."
       );
       return;
     }
 
+    if (
+      personType === "student" &&
+      !sections.some(
+        (section) =>
+          section.grade_level === Number(selectedGrade) &&
+          section.name === selectedSection
+      )
+    ) {
+      setError("The selected Grade Level and Section are no longer active. Choose the class again.");
+      return;
+    }
+
     const existingLrns = new Set(users.map((user) => user.lrn ?? "").filter(Boolean));
     const existingEmails = new Set(users.map((user) => user.email.toLowerCase()));
-    const sectionMap = new Map(
-      sections.map((section) => [
-        `${section.grade_level}|${section.name.toLowerCase()}`,
-        section.name,
-      ])
-    );
     const seen = new Set<string>();
     const preview: PreviewRow[] = [];
 
@@ -225,8 +269,9 @@ export default function BulkAccountImportPage() {
       const fullName = data.full_name ?? "";
       const lrn = (data.lrn ?? "").replace(/\s/g, "");
       const email = (data.email ?? "").toLowerCase();
-      const grade = data.grade_level ? Number(data.grade_level) : null;
-      const section = data.section ?? "";
+      const grade =
+        personType === "student" && selectedGrade ? Number(selectedGrade) : null;
+      const section = personType === "student" ? selectedSection : "";
       const mobile = data.mobile ?? "";
       const problems: string[] = [];
 
@@ -235,18 +280,6 @@ export default function BulkAccountImportPage() {
 
       if (personType === "student") {
         if (!/^\d{12}$/.test(lrn)) problems.push("LRN must be exactly 12 digits.");
-        if (!Number.isInteger(grade) || Number(grade) < 7 || Number(grade) > 12) {
-          problems.push("Grade Level must be 7–12.");
-        }
-        if (!section) problems.push("Section is required.");
-        if (Number.isInteger(grade) && section) {
-          const canonicalSection = sectionMap.get(`${grade}|${section.toLowerCase()}`);
-          if (!canonicalSection) {
-            problems.push("Section does not match the Grade Level.");
-          } else {
-            data.section = canonicalSection;
-          }
-        }
         if (existingLrns.has(lrn)) problems.push("LRN already has an account.");
         if (seen.has(lrn)) problems.push("Duplicate LRN in this CSV.");
         if (lrn) seen.add(lrn);
@@ -262,7 +295,7 @@ export default function BulkAccountImportPage() {
         full_name: fullName,
         lrn,
         grade_level: Number.isInteger(grade) ? Number(grade) : null,
-        section: data.section || section,
+        section,
         email,
         position: data.position || "Teacher",
         mobile,
@@ -272,7 +305,11 @@ export default function BulkAccountImportPage() {
     }
 
     setRows(preview);
-    setMessage("Validation complete. Review all rows before importing.");
+    setMessage(
+      personType === "student"
+        ? `Validation complete for Grade ${selectedGrade} - ${selectedSection}. Review all rows before importing.`
+        : "Validation complete. Review all rows before importing."
+    );
   }
 
   async function importAccounts() {
@@ -371,8 +408,9 @@ export default function BulkAccountImportPage() {
             <span>ADMINISTRATION</span>
             <h1>Bulk account import</h1>
             <p>
-              Create school-managed Student and Teacher accounts from an Excel-compatible CSV.
-              Every imported user receives a temporary password and must change it on first login.
+              Create school-managed Learner and Teacher accounts from an Excel-compatible CSV.
+              Learners are imported by selected Grade Level and Section. Every imported user receives
+              a temporary password and must change it on first login.
             </p>
           </div>
           <div className={styles.year}><CheckCircle2 size={18} /><div><small>ACTIVE SCHOOL YEAR</small><strong>{year || "Loading…"}</strong></div></div>
@@ -388,13 +426,97 @@ export default function BulkAccountImportPage() {
           </div>
 
           <div className={styles.tabs}>
-            <button className={personType === "student" ? styles.activeTab : ""} onClick={() => { setPersonType("student"); setRows([]); setFile(null); setCredentials([]); }}>Students</button>
-            <button className={personType === "teacher" ? styles.activeTab : ""} onClick={() => { setPersonType("teacher"); setRows([]); setFile(null); setCredentials([]); }}>Teachers</button>
+            <button
+              className={personType === "student" ? styles.activeTab : ""}
+              onClick={() => {
+                setPersonType("student");
+                setSelectedGrade("");
+                setSelectedSection("");
+                resetImport();
+              }}
+            >
+              Learners
+            </button>
+            <button
+              className={personType === "teacher" ? styles.activeTab : ""}
+              onClick={() => {
+                setPersonType("teacher");
+                setSelectedGrade("");
+                setSelectedSection("");
+                resetImport();
+              }}
+            >
+              Teachers
+            </button>
           </div>
 
+          {personType === "student" && (
+            <div className={styles.classChooser}>
+              <label className={styles.classField}>
+                <span>1. Grade Level</span>
+                <select
+                  value={selectedGrade}
+                  onChange={(event) => {
+                    setSelectedGrade(event.target.value);
+                    setSelectedSection("");
+                    resetImport();
+                  }}
+                >
+                  <option value="">Select grade level</option>
+                  {gradeOptions.map((grade) => (
+                    <option key={grade} value={grade}>Grade {grade}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className={styles.classField}>
+                <span>2. Section</span>
+                <select
+                  value={selectedSection}
+                  disabled={!selectedGrade}
+                  onChange={(event) => {
+                    setSelectedSection(event.target.value);
+                    resetImport();
+                  }}
+                >
+                  <option value="">
+                    {selectedGrade ? "Select section" : "Select grade level first"}
+                  </option>
+                  {sectionOptions.map((section) => (
+                    <option key={section.id} value={section.name}>{section.name}</option>
+                  ))}
+                </select>
+              </label>
+
+              <div className={styles.classNote}>
+                {selectedGrade && selectedSection
+                  ? <>All learners in this CSV will be placed in <strong>Grade {selectedGrade} - {selectedSection}</strong>.</>
+                  : "Choose a Grade Level and Section first. The CSV only needs LRN, Full Name, and optional Mobile."}
+              </div>
+            </div>
+          )}
+
           <div className={styles.importRow}>
-            <button className={styles.secondary} onClick={template}><Download size={16} />Download template</button>
-            <label className={styles.filePicker}><Upload size={18} /><div><strong>{file?.name ?? "Choose CSV file"}</strong><span>Prepare in Excel, then save as CSV UTF-8</span></div><input type="file" accept=".csv,text/csv" onChange={chooseFile} /></label>
+            <button
+              className={styles.secondary}
+              onClick={template}
+              disabled={personType === "student" && !studentClassReady}
+            >
+              <Download size={16} />Download template
+            </button>
+            <label className={styles.filePicker + (personType === "student" && !studentClassReady ? " " + styles.filePickerDisabled : "")}>
+              <Upload size={18} />
+              <div>
+                <strong>{file?.name ?? (personType === "student" && !studentClassReady ? "Select Grade and Section first" : "Choose CSV file")}</strong>
+                <span>Prepare in Excel, then save as CSV UTF-8</span>
+              </div>
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                onChange={chooseFile}
+                disabled={personType === "student" && !studentClassReady}
+              />
+            </label>
           </div>
 
           {rows.length > 0 && (
