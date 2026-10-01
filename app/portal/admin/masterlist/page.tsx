@@ -27,6 +27,25 @@ type PreviewRow = {
   email: string;
   position: string;
   mobile: string;
+  last_name: string;
+  first_name: string;
+  middle_name: string;
+  name_extension: string;
+  sex: string;
+  birth_date: string;
+  mother_tongue: string;
+  ethnic_group: string;
+  religion: string;
+  address_house_street_purok: string;
+  address_barangay: string;
+  address_municipality_city: string;
+  address_province: string;
+  father_name: string;
+  mother_maiden_name: string;
+  guardian_name: string;
+  guardian_relationship: string;
+  learning_modality: string;
+  remarks: string;
   valid: boolean;
   error: string;
 };
@@ -96,8 +115,109 @@ function keyOf(value: string) {
     mobilenumber: "mobile",
     phone: "mobile",
     contact: "mobile",
+    contactnumberofparentorguardian: "mobile",
+    namelastnamefirstnamemiddlename: "full_name",
+    lastname: "last_name",
+    firstname: "first_name",
+    middlename: "middle_name",
+    nameextension: "name_extension",
+    suffix: "name_extension",
+    sexmf: "sex",
+    sex: "sex",
+    birthdate: "birth_date",
+    birthdatemmddyyyy: "birth_date",
+    mothertongue: "mother_tongue",
+    mothertonguegrade1to3only: "mother_tongue",
+    ethnicgroup: "ethnic_group",
+    religion: "religion",
+    housestreetsitiopurok: "address_house_street_purok",
+    addresshousestreetsitiopurok: "address_house_street_purok",
+    barangay: "address_barangay",
+    municipalitycity: "address_municipality_city",
+    province: "address_province",
+    fathersname: "father_name",
+    fathersnamelastnamefirstnamemiddlename: "father_name",
+    mothersmaidenname: "mother_maiden_name",
+    mothersmaidennamelastnamefirstnamemiddlename: "mother_maiden_name",
+    guardianname: "guardian_name",
+    guardianrelationship: "guardian_relationship",
+    relationship: "guardian_relationship",
+    learningmodality: "learning_modality",
+    remarks: "remarks",
   };
   return aliases[key] ?? key;
+}
+
+function parseSf1Name(value: string) {
+  const parts = value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (!parts.length) {
+    return { last_name: "", first_name: "", middle_name: "", name_extension: "" };
+  }
+
+  const suffixPattern = /^(Jr\.?|Sr\.?|I|II|III|IV|V)$/i;
+  const last_name = parts[0] ?? "";
+  const first_name = parts[1] ?? "";
+  let middle_name = parts.slice(2).join(" ");
+  let name_extension = "";
+
+  if (parts.length >= 4 && suffixPattern.test(parts[2] ?? "")) {
+    name_extension = parts[2] ?? "";
+    middle_name = parts.slice(3).join(" ");
+  }
+
+  return { last_name, first_name, middle_name, name_extension };
+}
+
+function portalName(
+  lastName: string,
+  firstName: string,
+  middleName: string,
+  extension: string,
+  fallback: string
+) {
+  const value = [firstName, middleName, lastName, extension]
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .join(" ");
+  return value || fallback.trim();
+}
+
+function normalizeSex(value: string) {
+  const raw = value.trim().toUpperCase();
+  if (!raw) return "";
+  if (raw === "M" || raw === "MALE") return "M";
+  if (raw === "F" || raw === "FEMALE") return "F";
+  return null;
+}
+
+function normalizeBirthDate(value: string) {
+  const raw = value.trim();
+  if (!raw) return "";
+
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if (iso) {
+    const date = new Date(`${iso[1]}-${iso[2]}-${iso[3]}T00:00:00Z`);
+    return Number.isNaN(date.getTime()) ? null : raw;
+  }
+
+  const match = /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/.exec(raw);
+  if (!match) return null;
+  const month = Number(match[1]);
+  const day = Number(match[2]);
+  const year = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 function validPhone(value: string) {
@@ -190,8 +310,46 @@ export default function BulkAccountImportPage() {
       setError("");
       downloadCsv(
         `ANHS_Grade_${selectedGrade}_${selectedSection.replace(/\s+/g, "_")}_Learner_Import.csv`,
-        ["LRN", "Full Name", "Mobile"],
-        [["123456789012", "Juan Dela Cruz", ""]]
+        [
+          "LRN",
+          "NAME (Last Name, First Name, Middle Name)",
+          "Sex (M/F)",
+          "BIRTH DATE (mm/dd/yyyy)",
+          "Mother Tongue",
+          "Ethnic Group",
+          "Religion",
+          "House #/Street/Sitio/Purok",
+          "Barangay",
+          "Municipality/City",
+          "Province",
+          "Father's Name",
+          "Mother's Maiden Name",
+          "Guardian Name",
+          "Guardian Relationship",
+          "Contact Number of Parent or Guardian",
+          "Learning Modality",
+          "Remarks",
+        ],
+        [[
+          "123456789012",
+          "DELA CRUZ,JUAN, SANTOS",
+          "M",
+          "06/15/2013",
+          "Cebuano",
+          "",
+          "Christianity",
+          "Purok 12",
+          "Cambanogoy",
+          "Asuncion",
+          "Davao del Norte",
+          "DELA CRUZ, PEDRO, REYES",
+          "SANTOS, MARIA, LOPEZ",
+          "",
+          "",
+          "09123456789",
+          "Face to Face",
+          "",
+        ]]
       );
     } else {
       downloadCsv(
@@ -238,7 +396,7 @@ export default function BulkAccountImportPage() {
     if (required.some((item) => !headers.includes(item))) {
       setError(
         personType === "student"
-          ? "Learner CSV needs LRN and Full Name. Mobile is optional."
+          ? "Learner CSV needs LRN and the SF1 NAME column. Other SF1 fields may be completed now or later in the Learner Profile."
           : "Teacher CSV needs Full Name and Email."
       );
       return;
@@ -266,17 +424,34 @@ export default function BulkAccountImportPage() {
       const data: Record<string, string> = {};
       headers.forEach((header, col) => (data[header] = String(values[col] ?? "").trim()));
 
-      const fullName = data.full_name ?? "";
+      const sourceName = data.full_name ?? "";
+      const parsedName = parseSf1Name(sourceName);
+      const lastName = data.last_name || parsedName.last_name;
+      const firstName = data.first_name || parsedName.first_name;
+      const middleName = data.middle_name || parsedName.middle_name;
+      const nameExtension = data.name_extension || parsedName.name_extension;
+      const fullName =
+        personType === "student"
+          ? portalName(lastName, firstName, middleName, nameExtension, sourceName)
+          : sourceName;
       const lrn = (data.lrn ?? "").replace(/\s/g, "");
       const email = (data.email ?? "").toLowerCase();
       const grade =
         personType === "student" && selectedGrade ? Number(selectedGrade) : null;
       const section = personType === "student" ? selectedSection : "";
       const mobile = data.mobile ?? "";
+      const sex = personType === "student" ? normalizeSex(data.sex ?? "") : "";
+      const birthDate =
+        personType === "student" ? normalizeBirthDate(data.birth_date ?? "") : "";
       const problems: string[] = [];
 
-      if (!fullName) problems.push("Full Name is required.");
-      if (!validPhone(mobile)) problems.push("Invalid mobile number.");
+      if (!fullName) problems.push("Name is required.");
+      if (personType === "student" && sourceName && (!lastName || !firstName)) {
+        problems.push("SF1 NAME should contain at least Last Name and First Name separated by commas.");
+      }
+      if (sex === null) problems.push("Sex must be M or F.");
+      if (birthDate === null) problems.push("Birth Date must use mm/dd/yyyy.");
+      if (!validPhone(mobile)) problems.push("Invalid parent/guardian contact number.");
 
       if (personType === "student") {
         if (!/^\d{12}$/.test(lrn)) problems.push("LRN must be exactly 12 digits.");
@@ -299,6 +474,25 @@ export default function BulkAccountImportPage() {
         email,
         position: data.position || "Teacher",
         mobile,
+        last_name: lastName,
+        first_name: firstName,
+        middle_name: middleName,
+        name_extension: nameExtension,
+        sex: sex ?? "",
+        birth_date: birthDate ?? "",
+        mother_tongue: data.mother_tongue ?? "",
+        ethnic_group: data.ethnic_group ?? "",
+        religion: data.religion ?? "",
+        address_house_street_purok: data.address_house_street_purok ?? "",
+        address_barangay: data.address_barangay ?? "",
+        address_municipality_city: data.address_municipality_city ?? "",
+        address_province: data.address_province ?? "",
+        father_name: data.father_name ?? "",
+        mother_maiden_name: data.mother_maiden_name ?? "",
+        guardian_name: data.guardian_name ?? "",
+        guardian_relationship: data.guardian_relationship ?? "",
+        learning_modality: data.learning_modality ?? "",
+        remarks: data.remarks ?? "",
         valid: problems.length === 0,
         error: problems.join(" "),
       });
@@ -409,7 +603,7 @@ export default function BulkAccountImportPage() {
             <h1>Bulk account import</h1>
             <p>
               Create school-managed Learner and Teacher accounts from an Excel-compatible CSV.
-              Learners are imported by selected Grade Level and Section. Every imported user receives
+              Learner imports follow the SF1 learner information fields and are grouped by selected Grade Level and Section. Every imported user receives
               a temporary password and must change it on first login.
             </p>
           </div>
@@ -491,7 +685,7 @@ export default function BulkAccountImportPage() {
               <div className={styles.classNote}>
                 {selectedGrade && selectedSection
                   ? <>All learners in this CSV will be placed in <strong>Grade {selectedGrade} - {selectedSection}</strong>.</>
-                  : "Choose a Grade Level and Section first. The CSV only needs LRN, Full Name, and optional Mobile."}
+                  : "Choose a Grade Level and Section first. The learner CSV follows the SF1 information fields; age is calculated automatically from Birth Date."}
               </div>
             </div>
           )}
