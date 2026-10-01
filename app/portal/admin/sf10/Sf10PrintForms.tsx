@@ -1,5 +1,7 @@
 "use client";
 
+import { DEPED_LOGO_DATA_URI, KAGAWARAN_LOGO_DATA_URI } from "./Sf10LogoData";
+
 type Sf10Detail = any;
 
 function text(value: unknown) {
@@ -163,6 +165,16 @@ export function JhsSf10Form({ detail }: { detail: Sf10Detail }) {
   return (
     <div className="sf10-form-root jhs-root">
       <section className="sf10-paper jhs-paper">
+        <img
+          className="sf10-header-logo jhs-kagawaran-logo"
+          src={KAGAWARAN_LOGO_DATA_URI}
+          alt="Kagawaran ng Edukasyon seal"
+        />
+        <img
+          className="sf10-header-logo jhs-deped-logo"
+          src={DEPED_LOGO_DATA_URI}
+          alt="Department of Education logo"
+        />
         <div className="form-code">SF 10-JHS</div>
         <header className="jhs-heading">
           <div>Republic of the Philippines</div>
@@ -377,6 +389,16 @@ export function ShsSf10Form({ detail }: { detail: Sf10Detail }) {
   return (
     <div className="sf10-form-root shs-root">
       <section className="sf10-paper shs-paper">
+        <img
+          className="sf10-header-logo shs-kagawaran-logo"
+          src={KAGAWARAN_LOGO_DATA_URI}
+          alt="Kagawaran ng Edukasyon seal"
+        />
+        <img
+          className="sf10-header-logo shs-deped-logo"
+          src={DEPED_LOGO_DATA_URI}
+          alt="Department of Education logo"
+        />
         <div className="shs-form-code">SF10-SHS</div>
         <header className="shs-heading">
           <span>REPUBLIC OF THE PHILIPPINES</span>
