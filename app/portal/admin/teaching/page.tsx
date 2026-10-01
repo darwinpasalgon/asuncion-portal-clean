@@ -35,6 +35,14 @@ type Assignment = {
   is_active: boolean;
   assigned_at: string;
 };
+type Adviser = {
+  id: string;
+  teacher_id: string;
+  school_year_id: string;
+  section_id: string;
+  is_active: boolean;
+  assigned_at: string;
+};
 
 export default function TeachingSetupPage() {
   const [activeYear, setActiveYear] = useState<ActiveYear | null>(null);
@@ -43,7 +51,9 @@ export default function TeachingSetupPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [advisers, setAdvisers] = useState<Adviser[]>([]);
   const [assignmentGrade, setAssignmentGrade] = useState("");
+  const [adviserGrade, setAdviserGrade] = useState("");
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState("");
   const [error, setError] = useState("");
@@ -67,6 +77,7 @@ export default function TeachingSetupPage() {
       setSubjects(result.subjects ?? []);
       setTeachers(result.teachers ?? []);
       setAssignments(result.assignments ?? []);
+      setAdvisers(result.advisers ?? []);
     } catch {
       setError("Unable to reach the teaching setup service.");
     } finally {
@@ -81,6 +92,15 @@ export default function TeachingSetupPage() {
   const activeSubjects = subjects.filter((item) => item.is_active);
   const activeSections = sections.filter((item) => item.is_active);
   const activeAssignments = assignments.filter((item) => item.is_active);
+  const activeAdvisers = advisers.filter((item) => item.is_active);
+
+  const sectionsForAdviser = useMemo(
+    () =>
+      activeSections.filter(
+        (item) => String(item.grade_level) === adviserGrade
+      ),
+    [activeSections, adviserGrade]
+  );
 
   const sectionsForAssignment = useMemo(
     () =>
@@ -111,6 +131,78 @@ export default function TeachingSetupPage() {
 
   function teacherName(id: string) {
     return teachers.find((item) => item.id === id)?.full_name ?? "Unknown teacher";
+  }
+
+  function adviserForSection(sectionId: string) {
+    return activeAdvisers.find((item) => item.section_id === sectionId) ?? null;
+  }
+
+  async function saveAdviser(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = new FormData(form);
+
+    setWorking("adviser");
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch("/api/admin/teaching-setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "assign_adviser",
+          gradeLevel: Number(data.get("gradeLevel") ?? 0),
+          sectionId: String(data.get("sectionId") ?? ""),
+          teacherId: String(data.get("teacherId") ?? ""),
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setError(result.error ?? "Unable to assign the Section Adviser.");
+        return;
+      }
+
+      setSuccess("Section Adviser assigned. This teacher now has grading authority for the section.");
+      form.reset();
+      setAdviserGrade("");
+      await load();
+    } catch {
+      setError("Unable to reach the teaching setup service.");
+    } finally {
+      setWorking("");
+    }
+  }
+
+  async function removeAdviser(adviser: Adviser) {
+    setWorking(adviser.id);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch("/api/admin/teaching-setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "remove_adviser",
+          id: adviser.id,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setError(result.error ?? "Unable to remove the Section Adviser.");
+        return;
+      }
+
+      setSuccess("Section Adviser removed. Grade encoding is disabled for that section until a new adviser is assigned.");
+      await load();
+    } catch {
+      setError("Unable to reach the teaching setup service.");
+    } finally {
+      setWorking("");
+    }
   }
 
   async function addSubject(event: FormEvent<HTMLFormElement>) {
@@ -266,10 +358,11 @@ export default function TeachingSetupPage() {
         <header className={styles.header}>
           <div>
             <span className={styles.eyebrow}>ADMINISTRATION</span>
-            <h1>Subjects & teacher assignments</h1>
+            <h1>Advisers, subjects & teacher assignments</h1>
             <p>
-              Create the subjects offered by each grade level and connect each
-              class subject to the Teacher responsible for it.
+              Assign one Section Adviser to each class, then connect subject teachers
+              to their subjects. Only the Section Adviser can encode and publish grades
+              for learners in that section. An Adviser may also be a subject teacher.
             </p>
           </div>
           {activeYear && (
@@ -304,10 +397,106 @@ export default function TeachingSetupPage() {
           </article>
           <article>
             <UserCheck size={22} />
-            <span>Active assignments</span>
-            <strong>{activeAssignments.length}</strong>
+            <span>Section advisers</span>
+            <strong>{activeAdvisers.length}</strong>
           </article>
         </div>
+
+        <section className={styles.panel}>
+          <div className={styles.panelHeading}>
+            <div>
+              <h2>Assign Section Adviser</h2>
+              <p>
+                Each section can have one active Adviser for the school year. The Adviser is the only
+                teacher allowed to encode and publish grades for learners in that section.
+              </p>
+            </div>
+          </div>
+
+          <form className={styles.adviserForm} onSubmit={saveAdviser}>
+            <label>
+              <span>Grade level</span>
+              <select
+                name="gradeLevel"
+                required
+                value={adviserGrade}
+                onChange={(event) => setAdviserGrade(event.target.value)}
+              >
+                <option value="">Select grade level</option>
+                {grades.map((grade) => (
+                  <option key={grade.grade_level} value={grade.grade_level}>
+                    {grade.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Section</span>
+              <select
+                name="sectionId"
+                required
+                defaultValue=""
+                key={`adviser-section-${adviserGrade}`}
+                disabled={!adviserGrade}
+              >
+                <option value="" disabled>
+                  {adviserGrade ? "Select section" : "Select grade first"}
+                </option>
+                {sectionsForAdviser.map((section) => {
+                  const current = adviserForSection(section.id);
+                  return (
+                    <option key={section.id} value={section.id}>
+                      {section.name}{current ? ` · Current: ${teacherName(current.teacher_id)}` : ""}
+                    </option>
+                  );
+                })}
+              </select>
+            </label>
+            <label>
+              <span>Adviser</span>
+              <select name="teacherId" required defaultValue="" disabled={teachers.length === 0}>
+                <option value="" disabled>
+                  {teachers.length ? "Select teacher" : "No active teachers"}
+                </option>
+                {teachers.map((teacher) => (
+                  <option key={teacher.id} value={teacher.id}>{teacher.full_name}</option>
+                ))}
+              </select>
+            </label>
+            <button type="submit" disabled={working === "adviser" || !adviserGrade || teachers.length === 0}>
+              <UserCheck size={17} /> {working === "adviser" ? "Assigning…" : "Assign adviser"}
+            </button>
+          </form>
+
+          <div className={styles.adviserList}>
+            {activeSections.map((section) => {
+              const current = adviserForSection(section.id);
+              return (
+                <div className={styles.adviserRow} key={section.id}>
+                  <div>
+                    <span>Grade {section.grade_level}</span>
+                    <strong>{section.name}</strong>
+                  </div>
+                  <div>
+                    <span>SECTION ADVISER</span>
+                    <strong>{current ? teacherName(current.teacher_id) : "Not assigned"}</strong>
+                  </div>
+                  {current ? (
+                    <button
+                      className={styles.removeAdviser}
+                      disabled={working === current.id}
+                      onClick={() => void removeAdviser(current)}
+                    >
+                      {working === current.id ? "Removing…" : "Remove"}
+                    </button>
+                  ) : (
+                    <span className={styles.noAdviser}>Grades locked</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
 
         <div className={styles.twoColumns}>
           <section className={styles.panel}>
@@ -346,8 +535,11 @@ export default function TeachingSetupPage() {
           <section className={styles.panel}>
             <div className={styles.panelHeading}>
               <div>
-                <h2>Assign a teacher</h2>
-                <p>One Teacher is assigned to each section-subject combination for the active school year.</p>
+                <h2>Assign a subject teacher</h2>
+                <p>
+                  One Teacher is assigned to each section-subject combination. Subject teachers keep
+                  their teaching assignment even when the Section Adviser is a different teacher.
+                </p>
               </div>
             </div>
             <form className={styles.form} onSubmit={saveAssignment}>
@@ -471,8 +663,11 @@ export default function TeachingSetupPage() {
         <section className={styles.panel}>
           <div className={styles.panelHeading}>
             <div>
-              <h2>Teacher assignments</h2>
-              <p>{activeYear ? activeYear.name : "Active school year"} class assignments.</p>
+              <h2>Subject teacher assignments</h2>
+              <p>
+                {activeYear ? activeYear.name : "Active school year"} subject assignments.
+                These assignments identify who teaches each subject; grading authority belongs to the Section Adviser.
+              </p>
             </div>
           </div>
 
@@ -495,7 +690,7 @@ export default function TeachingSetupPage() {
                     <strong>{subjectName(assignment.subject_id)}</strong>
                   </div>
                   <div>
-                    <span>TEACHER</span>
+                    <span>SUBJECT TEACHER</span>
                     <strong>{teacherName(assignment.teacher_id)}</strong>
                   </div>
                   <button
