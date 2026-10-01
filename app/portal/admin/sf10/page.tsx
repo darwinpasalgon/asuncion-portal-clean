@@ -11,6 +11,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import styles from "./sf10.module.css";
+import { JhsSf10Form, ShsSf10Form } from "./Sf10PrintForms";
 
 type Student = {
   id: string;
@@ -289,79 +290,21 @@ export default function Sf10Page() {
                   </form>
                 </section>
 
-                <section className={styles.printSheet}>
-                  <div className={styles.printNotice}>
-                    Portal-generated SF10 data preview for the SY 2026–2027 three-term grading structure.
-                    Verify the latest LIS-issued SF10 template before official release.
-                  </div>
-
-                  <div className={styles.printHeader}>
-                    <span>Republic of the Philippines</span>
-                    <strong>Department of Education</strong>
-                    <h2>Learner Permanent Academic Record ({detail.formType === "JHS" ? "SF10-JHS" : "SF10-SHS"})</h2>
-                  </div>
-
-                  <div className={styles.identityGrid}>
-                    <div><span>Last Name</span><strong>{record.last_name || "—"}</strong></div>
-                    <div><span>First Name</span><strong>{record.first_name || "—"}</strong></div>
-                    <div><span>Name Ext.</span><strong>{record.name_extension || "—"}</strong></div>
-                    <div><span>Middle Name</span><strong>{record.middle_name || "—"}</strong></div>
-                    <div><span>LRN</span><strong>{student?.lrn || "—"}</strong></div>
-                    <div><span>Birthdate</span><strong>{record.birth_date || "—"}</strong></div>
-                    <div><span>Sex</span><strong>{record.sex || "—"}</strong></div>
-                  </div>
-
-                  {records.map((year: any) => (
-                    <section className={styles.yearRecord} key={`${year.school_year}-${year.grade_level}`}>
-                      <div className={styles.yearMeta}>
-                        <strong>{school.school_name || "Asuncion National High School"}</strong>
-                        <span>School ID: {school.school_id || "________"} · District: {school.district || "________"} · Division: {school.division || "Davao del Norte"} · Region: {school.region || "Region XI"}</span>
-                        <span>Grade {year.grade_level} · Section {year.section || "—"} · School Year {year.school_year} · Adviser: {year.adviser_name || "—"}</span>
-                      </div>
-                      <div className={styles.tableWrap}>
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>Learning Area</th>
-                              <th>Term 1</th>
-                              <th>Term 2</th>
-                              <th>Term 3</th>
-                              <th>Final Rating</th>
-                              <th>Remarks</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {year.subjects.map((subject: any) => (
-                              <tr key={subject.assignment_id}>
-                                <td>{subject.subject}</td>
-                                <td>{subject.terms[0] ?? "—"}</td>
-                                <td>{subject.terms[1] ?? "—"}</td>
-                                <td>{subject.terms[2] ?? "—"}</td>
-                                <td>{subject.final_rating ?? "—"}</td>
-                                <td>{subject.remarks}</td>
-                              </tr>
-                            ))}
-                            <tr className={styles.average}>
-                              <td colSpan={4}>General Average</td>
-                              <td>{year.general_average ?? "—"}</td>
-                              <td>{year.general_average === null ? "Incomplete" : year.general_average >= 75 ? "Passed" : "Failed"}</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </section>
-                  ))}
-
-                  <div className={styles.certification}>
-                    <strong>CERTIFICATION</strong>
-                    <p>
-                      This portal record was generated from the learner profile, enrollment history, and published grades stored in the Asuncion NHS Academic Portal.
-                    </p>
-                    <div>
-                      <span>Date: ____________________</span>
-                      <span>School Head: {school.school_head_name || "____________________"}</span>
+                <section className={styles.printArea}>
+                  <style>{`@media print { @page { size: ${detail.formType === "JHS" ? "8.5in 14in" : "8.5in 13in"}; margin: 0; } }`}</style>
+                  {detail.formType === "JHS" ? (
+                    <JhsSf10Form detail={detail} />
+                  ) : Number(student?.grade_level ?? 0) === 11 ? (
+                    <div className={styles.strengthenedNotice}>
+                      <strong>Strengthened SHS SF10 v2026</strong>
+                      <span>
+                        Grade 11 uses the separate Strengthened SHS SF10 v2026 format.
+                        The Grade 12 DepEd SF10 template is not substituted for this learner.
+                      </span>
                     </div>
-                  </div>
+                  ) : (
+                    <ShsSf10Form detail={detail} />
+                  )}
                 </section>
               </>
             )}
