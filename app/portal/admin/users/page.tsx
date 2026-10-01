@@ -18,7 +18,7 @@ import {
 import styles from "./users.module.css";
 
 type PersonType = "student" | "teacher";
-type UserStatus = "pending" | "active" | "suspended" | "rejected";
+type UserStatus = "pending" | "active" | "suspended";
 
 type UserRecord = {
   id: string;
@@ -350,7 +350,7 @@ export default function UsersAccountsPage() {
               <option value="all">All statuses</option>
               <option value="active">Active</option>
               <option value="pending">Pending</option>
-              <option value="suspended">Suspended</option>\n              <option value="rejected">Rejected</option>
+              <option value="suspended">Suspended</option>
             </select>
 
             <button
