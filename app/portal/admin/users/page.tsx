@@ -171,6 +171,11 @@ export default function UsersAccountsPage() {
   }
 
   useEffect(() => {
+    const query = new URLSearchParams(window.location.search).get("q")?.trim();
+    if (query) {
+      setPersonType("student");
+      setSearch(query);
+    }
     void loadUsers();
   }, []);
 
