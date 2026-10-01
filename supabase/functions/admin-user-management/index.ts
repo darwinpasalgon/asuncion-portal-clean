@@ -175,16 +175,6 @@ Deno.serve(async (req) => {
       .limit(1);
     if ((duplicate ?? []).length) return json({ error: "That LRN is already used by another account." }, 409);
 
-    const { data: rosterMatches } = await admin
-      .from("account_activation_roster")
-      .select("id,claimed_user_id")
-      .eq("person_type", "student")
-      .eq("lrn", lrn)
-      .neq("status", "disabled");
-    if ((rosterMatches ?? []).some((row) => row.claimed_user_id !== userId)) {
-      return json({ error: "That LRN is already assigned to another activation record." }, 409);
-    }
-
     const { data: section } = await admin
       .from("sections")
       .select("id,grade_level,name,is_active")
@@ -245,17 +235,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    await admin
-      .from("account_activation_roster")
-      .update({
-        full_name: fullName,
-        lrn,
-        grade_level: gradeLevel,
-        section_id: section.id,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("claimed_user_id", userId);
-
     return json({ ok: true });
   }
 
@@ -273,16 +252,6 @@ Deno.serve(async (req) => {
     .limit(1);
   if ((emailDuplicate ?? []).length) {
     return json({ error: "That email is already used by another portal account." }, 409);
-  }
-
-  const { data: rosterEmailMatches } = await admin
-    .from("account_activation_roster")
-    .select("id,claimed_user_id")
-    .eq("person_type", "teacher")
-    .ilike("email", email)
-    .neq("status", "disabled");
-  if ((rosterEmailMatches ?? []).some((row) => row.claimed_user_id !== userId)) {
-    return json({ error: "That email is already assigned to another activation record." }, 409);
   }
 
   const emailChanged = email !== String(target.email ?? "").toLowerCase();
@@ -314,16 +283,6 @@ Deno.serve(async (req) => {
     }
     return json({ error: "Unable to update the Teacher profile." }, 500);
   }
-
-  await admin
-    .from("account_activation_roster")
-    .update({
-      full_name: fullName,
-      email,
-      position,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("claimed_user_id", userId);
 
   return json({ ok: true });
 });
