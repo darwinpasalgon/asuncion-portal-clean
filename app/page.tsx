@@ -178,22 +178,14 @@ export default function LoginPage() {
           </form>
 
           <div className={styles.accountPrompt}>
-            <span>New to the portal?</span>
-            <button
-              type="button"
-              className={styles.textButton}
-              onClick={() => router.push("/register")}
-              disabled={loading}
-            >
-              Create an account
-            </button>
+            <span>Need an account? Contact the school administrator.</span>
           </div>
 
           <div className={styles.demoNote}>
             <ShieldCheck size={17} />
             <p>
-              Newly created accounts require school verification before they can
-              access academic records. Forgotten passwords are handled through
+              Portal accounts are provided by the school. Sign in with the
+              credentials given to you. Forgotten passwords are handled through
               administrator-assisted identity verification.
             </p>
           </div>
