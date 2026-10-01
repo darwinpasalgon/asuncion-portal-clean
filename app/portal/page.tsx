@@ -30,7 +30,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-type Role = "student" | "teacher" | "administrator";
+type Role = "student" | "teacher" | "administrator" | "staff_administrator";
 type Page =
   | "Overview"
   | "Grades"
@@ -78,7 +78,9 @@ type Profile = {
   grade_level: number | null;
   section: string | null;
   role: Role;
-  requested_role: "student" | "teacher";
+  requested_role: "student" | "teacher" | "administrator";
+  admin_role: "super_administrator" | "registrar" | "content_administrator" | "school_administrator" | null;
+  position: string | null;
   account_status: "active";
   must_change_password: boolean;
 };
@@ -118,13 +120,23 @@ const navigation: Record<Role, { name: Page; icon: typeof LayoutDashboard }[]> =
     commonItems.announcements,
     commonItems.resources,
   ],
+  staff_administrator: [commonItems.overview],
 };
 
 const roleLabel: Record<Role, string> = {
   student: "Student",
   teacher: "Teacher",
-  administrator: "Administrator",
+  administrator: "Super Administrator",
+  staff_administrator: "Administrator",
 };
+
+function administratorLabel(profile: Profile) {
+  if (profile.role === "administrator") return "Super Administrator";
+  if (profile.role !== "staff_administrator") return roleLabel[profile.role];
+  if (profile.admin_role === "registrar") return "Registrar";
+  if (profile.admin_role === "content_administrator") return "Content Administrator";
+  return "School Administrator";
+}
 
 function initials(name: string) {
   return name
@@ -140,11 +152,13 @@ function SideNav({
   page,
   onPage,
   schoolYear,
+  adminPermissions,
 }: {
   profile: Profile;
   page: Page;
   onPage: (page: Page) => void;
   schoolYear: string;
+  adminPermissions: string[];
 }) {
   const { setOpenMobile } = useSidebar();
 
@@ -213,10 +227,38 @@ function SideNav({
           ))}
         </SidebarMenu>
 
-        {profile.role === "administrator" && (
+        {(profile.role === "administrator" || profile.role === "staff_administrator") && (
           <>
             <p className="nav-label real-admin-label">ADMINISTRATION</p>
             <SidebarMenu>
+              {(profile.role === "administrator" || adminPermissions.includes("sf10.manage")) && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    className="nav-button"
+                    onClick={() => {
+                      window.location.href = "/portal/admin/sf10";
+                    }}
+                  >
+                    <FileSpreadsheet size={19} />
+                    <span>SF10 Records</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {profile.role === "administrator" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    className="nav-button"
+                    onClick={() => {
+                      window.location.href = "/portal/admin/administrators";
+                    }}
+                  >
+                    <ShieldCheck size={19} />
+                    <span>Administrators</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {profile.role === "administrator" && (<>
+
               <SidebarMenuItem>
                 <SidebarMenuButton
                   className="nav-button"
@@ -316,6 +358,7 @@ function SideNav({
                   <span>Reports & analytics</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              </>)}
             </SidebarMenu>
           </>
         )}
@@ -342,7 +385,7 @@ function SideNav({
           <span className="avatar">{initials(profile.full_name)}</span>
           <div>
             <strong>{profile.full_name}</strong>
-            <span>{roleLabel[profile.role]}</span>
+            <span>{administratorLabel(profile)}</span>
           </div>
         </div>
       </SidebarFooter>
@@ -393,6 +436,7 @@ function EmptySection({ page, role }: { page: Page; role: Role }) {
 export default function PortalPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [academicContext, setAcademicContext] = useState<AcademicContext | null>(null);
+  const [adminPermissions, setAdminPermissions] = useState<string[]>([]);
   const [page, setPage] = useState<Page>("Overview");
   const [teacherAssignments, setTeacherAssignments] = useState<TeacherAssignment[]>([]);
   const [teacherAssignmentsLoading, setTeacherAssignmentsLoading] = useState(false);
@@ -421,6 +465,7 @@ export default function PortalPage() {
           const loadedProfile = result.profile as Profile;
           setProfile(loadedProfile);
           setAcademicContext((result.academicContext ?? null) as AcademicContext | null);
+          setAdminPermissions((result.adminPermissions ?? []) as string[]);
 
           if (loadedProfile.role === "teacher") {
             setTeacherAssignmentsLoading(true);
@@ -505,6 +550,7 @@ export default function PortalPage() {
         page={page}
         onPage={setPage}
         schoolYear={academicContext?.school_year ?? "2026–2027"}
+        adminPermissions={adminPermissions}
       />
 
       <main className="workspace">
