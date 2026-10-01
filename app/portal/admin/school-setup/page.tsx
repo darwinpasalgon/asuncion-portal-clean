@@ -51,6 +51,7 @@ export default function SchoolSetupPage() {
   const [working, setWorking] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [newSchoolYearStart, setNewSchoolYearStart] = useState("");
 
   async function load() {
     setLoading(true);
@@ -87,6 +88,76 @@ export default function SchoolSetupPage() {
       ),
     [enrollments, activeYear]
   );
+
+  async function addSchoolYear(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setSuccess("");
+
+    const startYear = Number(newSchoolYearStart);
+    if (!Number.isInteger(startYear)) {
+      setError("Enter a valid school-year start year.");
+      return;
+    }
+
+    setWorking("add-school-year");
+    try {
+      const response = await fetch("/api/admin/academic-structure", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "add_school_year", startYear }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(result.error ?? "Unable to create the school year.");
+        return;
+      }
+
+      setNewSchoolYearStart("");
+      setSuccess(`School Year ${startYear}–${startYear + 1} created. It remains inactive until you activate it.`);
+      await load();
+    } catch {
+      setError("Unable to reach the school setup service.");
+    } finally {
+      setWorking("");
+    }
+  }
+
+  async function activateSchoolYear(year: SchoolYear) {
+    if (year.is_active) return;
+    const confirmed = window.confirm(
+      `Activate School Year ${year.name}? This will make it the official active school year and synchronize learner profile Grade/Section values from its enrollments.`
+    );
+    if (!confirmed) return;
+
+    setWorking(`year-${year.id}`);
+    setError("");
+    setSuccess("");
+    try {
+      const response = await fetch("/api/admin/academic-structure", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "activate_school_year",
+          schoolYearId: year.id,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(result.error ?? "Unable to activate the school year.");
+        return;
+      }
+
+      setSuccess(
+        `School Year ${year.name} is now active. ${Number(result.synced_profiles ?? 0)} learner profile(s) synchronized.`
+      );
+      await load();
+    } catch {
+      setError("Unable to reach the school setup service.");
+    } finally {
+      setWorking("");
+    }
+  }
 
   async function addSection(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -220,6 +291,79 @@ export default function SchoolSetupPage() {
             <strong>{activeEnrollments.length}</strong>
           </article>
         </div>
+
+        <section className={styles.panel}>
+          <div className={styles.panelHeading}>
+            <div>
+              <h2>School years</h2>
+              <p>
+                Create the next school year before bulk promotion or retention.
+                A future school year can receive learner enrollments while remaining inactive.
+              </p>
+            </div>
+          </div>
+
+          <div className={styles.schoolYearList}>
+            {schoolYears.map((year) => {
+              const isPast = Boolean(
+                activeYear && year.start_year < activeYear.start_year
+              );
+              return (
+                <div className={styles.schoolYearRow} key={year.id}>
+                  <div>
+                    <strong>{year.name}</strong>
+                    <span>
+                      {year.is_active
+                        ? "Official active school year"
+                        : isPast
+                          ? "Historical school year"
+                          : "Future / inactive school year"}
+                    </span>
+                  </div>
+                  {year.is_active ? (
+                    <span className={styles.yearActiveBadge}>Active</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.yearActivateButton}
+                      disabled={isPast || working === `year-${year.id}`}
+                      onClick={() => void activateSchoolYear(year)}
+                    >
+                      {working === `year-${year.id}` ? "Activating…" : "Activate"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <form className={styles.addYearForm} onSubmit={addSchoolYear}>
+            <label>
+              <span>New school-year start</span>
+              <input
+                type="number"
+                min={2000}
+                max={2100}
+                value={newSchoolYearStart}
+                onChange={(event) => setNewSchoolYearStart(event.target.value)}
+                placeholder="2027"
+                required
+              />
+            </label>
+            <div className={styles.yearPreview}>
+              <span>School Year</span>
+              <strong>
+                {newSchoolYearStart
+                  ? `${newSchoolYearStart}–${Number(newSchoolYearStart) + 1}`
+                  : "YYYY–YYYY"}
+              </strong>
+            </div>
+            <button type="submit" disabled={working === "add-school-year"}>
+              <Plus size={17} />
+              {working === "add-school-year" ? "Creating…" : "Create school year"}
+            </button>
+          </form>
+        </section>
 
         <section className={styles.panel}>
           <div className={styles.panelHeading}>

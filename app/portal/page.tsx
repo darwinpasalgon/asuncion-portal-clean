@@ -184,7 +184,7 @@ function SideNav({
     }
 
     if (pageName === "Students" && profile.role === "administrator") {
-      window.location.href = "/portal/admin/reports?tab=classlist";
+      window.location.href = "/portal/admin/learners";
       return;
     }
 
@@ -279,6 +279,17 @@ function SideNav({
                 >
                   <Users size={19} />
                   <span>Users & accounts</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="nav-button"
+                  onClick={() => {
+                    window.location.href = "/portal/admin/learners";
+                  }}
+                >
+                  <GraduationCap size={19} />
+                  <span>Learner management</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>

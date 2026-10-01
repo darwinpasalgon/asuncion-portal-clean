@@ -94,6 +94,68 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   const action = String(body?.action ?? "");
 
+  if (action === "add_school_year") {
+    const startYear = Number(body?.startYear ?? 0);
+    const endYear = startYear + 1;
+    if (!Number.isInteger(startYear) || startYear < 2000 || startYear > 2100) {
+      return NextResponse.json({ error: "Enter a valid school-year start year." }, { status: 400 });
+    }
+
+    const name = `${startYear}–${endYear}`;
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/school_years`, {
+      method: "POST",
+      headers: {
+        ...headers(token),
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify({
+        name,
+        start_year: startYear,
+        end_year: endYear,
+        is_active: false,
+      }),
+      cache: "no-store",
+    });
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const detail = String(result?.message ?? result?.details ?? "").toLowerCase();
+      return NextResponse.json(
+        {
+          error: detail.includes("duplicate")
+            ? `School Year ${name} already exists.`
+            : "Unable to create the school year.",
+        },
+        { status: response.status || 400 }
+      );
+    }
+
+    return NextResponse.json({ ok: true, schoolYear: result?.[0] ?? null });
+  }
+
+  if (action === "activate_school_year") {
+    const schoolYearId = String(body?.schoolYearId ?? "");
+    if (!schoolYearId) {
+      return NextResponse.json({ error: "Choose a school year." }, { status: 400 });
+    }
+
+    const response = await fetch(
+      `${SUPABASE_URL}/functions/v1/admin-learner-management`,
+      {
+        method: "POST",
+        headers: headers(token),
+        body: JSON.stringify({
+          action: "activate_school_year",
+          school_year_id: schoolYearId,
+        }),
+        cache: "no-store",
+      }
+    );
+
+    const result = await response.json().catch(() => ({}));
+    return NextResponse.json(result, { status: response.status });
+  }
+
   if (action === "add_section") {
     const gradeLevel = Number(body?.gradeLevel ?? 0);
     const name = String(body?.name ?? "").trim().replace(/\s+/g, " ");
