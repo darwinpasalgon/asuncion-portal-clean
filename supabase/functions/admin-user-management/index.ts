@@ -42,12 +42,17 @@ Deno.serve(async (req) => {
 
   const { data: caller } = await admin
     .from("profiles")
-    .select("id,role,account_status")
+    .select("id,role,account_status,admin_role")
     .eq("id", callerId)
     .maybeSingle();
 
-  if (!caller || caller.role !== "administrator" || caller.account_status !== "active") {
-    return json({ error: "Administrator access required." }, 403);
+  if (
+    !caller ||
+    caller.role !== "administrator" ||
+    caller.account_status !== "active" ||
+    caller.admin_role !== "super_administrator"
+  ) {
+    return json({ error: "Super Administrator access required." }, 403);
   }
 
   const body = await req.json().catch(() => ({}));
