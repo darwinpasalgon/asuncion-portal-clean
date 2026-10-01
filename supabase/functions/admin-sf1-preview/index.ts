@@ -50,6 +50,170 @@ function findMetadata(rows: unknown[][], label: string) {
   return "";
 }
 
+type Sf1ColumnMap = {
+  lrn: number;
+  full_name: number;
+  sex: number;
+  birth_date: number;
+  mother_tongue: number;
+  ethnic_group: number;
+  religion: number;
+  address_house_street_purok: number;
+  address_barangay: number;
+  address_municipality_city: number;
+  address_province: number;
+  father_name: number;
+  mother_maiden_name: number;
+  guardian_name: number;
+  guardian_relationship: number;
+  mobile: number;
+  learning_modality: number;
+  remarks: number;
+};
+
+function isLrnCell(value: unknown) {
+  return /^\d{12}$/.test(normalizeLrn(value));
+}
+
+function findFirstLearnerRow(rows: unknown[][]) {
+  return rows.findIndex((row) => row.some((cell) => isLrnCell(cell)));
+}
+
+function detectSf1Columns(rows: unknown[][]): Sf1ColumnMap {
+  const firstLearnerRow = findFirstLearnerRow(rows);
+  const headerEnd = firstLearnerRow >= 0 ? firstLearnerRow : Math.min(rows.length, 20);
+  const headerStart = Math.max(0, headerEnd - 10);
+  const headerRows = rows.slice(headerStart, headerEnd);
+  const maxColumns = headerRows.reduce((max, row) => Math.max(max, row.length), 0);
+
+  const columnHeaders = Array.from({ length: maxColumns }, (_, column) =>
+    compact(
+      headerRows
+        .map((row) => text(row[column]))
+        .filter(Boolean)
+        .join(" ")
+    )
+  );
+
+  const findColumn = (
+    matcher: (header: string) => boolean,
+    fallback: number
+  ) => {
+    const index = columnHeaders.findIndex((header) => matcher(header));
+    return index >= 0 ? index : fallback;
+  };
+
+  const lrn = findColumn((header) => header === "lrn" || header.startsWith("lrn"), 0);
+  const fullName = findColumn(
+    (header) =>
+      header.startsWith("name") &&
+      header.includes("lastname") &&
+      header.includes("firstname") &&
+      !header.includes("father") &&
+      !header.includes("mother") &&
+      !header.includes("guardian"),
+    1
+  );
+
+  return {
+    lrn,
+    full_name: fullName,
+    sex: findColumn((header) => header.startsWith("sex") || header.includes("sexmf"), 2),
+    birth_date: findColumn((header) => header.includes("birthdate"), 3),
+    mother_tongue: findColumn((header) => header.includes("mothertongue"), 5),
+    ethnic_group: findColumn(
+      (header) => header.includes("ethnicgroup") || header === "ip",
+      6
+    ),
+    religion: findColumn((header) => header.includes("religion"), 7),
+    address_house_street_purok: findColumn(
+      (header) =>
+        header.includes("house") &&
+        header.includes("street") &&
+        (header.includes("sitio") || header.includes("purok")),
+      8
+    ),
+    address_barangay: findColumn((header) => header.includes("barangay"), 9),
+    address_municipality_city: findColumn(
+      (header) => header.includes("municipality") || header.includes("city"),
+      10
+    ),
+    address_province: findColumn((header) => header.includes("province"), 11),
+    father_name: findColumn((header) => header.includes("fathersname"), 12),
+    mother_maiden_name: findColumn(
+      (header) => header.includes("mothersmaidenname"),
+      13
+    ),
+    guardian_name: findColumn(
+      (header) =>
+        header.includes("guardian") &&
+        header.includes("name") &&
+        !header.includes("contact") &&
+        !header.includes("relationship"),
+      14
+    ),
+    guardian_relationship: findColumn(
+      (header) => header.includes("relationship"),
+      15
+    ),
+    mobile: findColumn(
+      (header) =>
+        header.includes("contactnumber") &&
+        (header.includes("parent") || header.includes("guardian")),
+      16
+    ),
+    learning_modality: findColumn(
+      (header) => header.includes("learningmodality"),
+      17
+    ),
+    remarks: findColumn((header) => header.includes("remarks"), 18),
+  };
+}
+
+function rowValue(row: unknown[], column: number) {
+  return column >= 0 ? text(row[column]) : "";
+}
+
+function looksLikeLearnerName(value: unknown) {
+  const candidate = text(value);
+  return (
+    candidate.includes(",") &&
+    /[a-z]/i.test(candidate) &&
+    !/^\d/.test(candidate)
+  );
+}
+
+function findLearnerNameInRow(row: unknown[], lrnColumn: number, preferredColumn: number) {
+  const preferred = rowValue(row, preferredColumn);
+  if (looksLikeLearnerName(preferred)) return preferred;
+
+  for (let column = Math.max(0, lrnColumn + 1); column < row.length; column += 1) {
+    const candidate = rowValue(row, column);
+    if (looksLikeLearnerName(candidate)) return candidate;
+  }
+
+  return preferred;
+}
+
+function findSexInRow(row: unknown[], preferredColumn: number) {
+  const normalize = (value: unknown) => {
+    const candidate = text(value).toUpperCase();
+    if (candidate === "M" || candidate === "MALE") return "M";
+    if (candidate === "F" || candidate === "FEMALE") return "F";
+    return "";
+  };
+
+  const preferred = normalize(row[preferredColumn]);
+  if (preferred) return preferred;
+
+  for (const cell of row) {
+    const candidate = normalize(cell);
+    if (candidate) return candidate;
+  }
+
+  return text(row[preferredColumn]);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "Method not allowed." }, 405);
@@ -140,31 +304,39 @@ Deno.serve(async (req) => {
       section: findMetadata(rows, "Section"),
     };
 
+    const columns = detectSf1Columns(rows);
+
     const learners = rows
       .map((row, index) => {
-        const lrn = normalizeLrn(row[0]);
+        const lrn = normalizeLrn(row[columns.lrn]);
         if (!/^\d{12}$/.test(lrn)) return null;
 
         return {
           source_row: index + 1,
           lrn,
-          full_name: text(row[1]),
-          sex: text(row[2]),
-          birth_date: text(row[3]),
-          mother_tongue: text(row[5]),
-          ethnic_group: text(row[6]),
-          religion: text(row[7]),
-          address_house_street_purok: text(row[8]),
-          address_barangay: text(row[9]),
-          address_municipality_city: text(row[10]),
-          address_province: text(row[11]),
-          father_name: text(row[12]),
-          mother_maiden_name: text(row[13]),
-          guardian_name: text(row[14]),
-          guardian_relationship: text(row[15]),
-          mobile: normalizeContact(row[16]),
-          learning_modality: text(row[17]),
-          remarks: text(row[18]),
+          full_name: findLearnerNameInRow(row, columns.lrn, columns.full_name),
+          sex: findSexInRow(row, columns.sex),
+          birth_date: rowValue(row, columns.birth_date),
+          mother_tongue: rowValue(row, columns.mother_tongue),
+          ethnic_group: rowValue(row, columns.ethnic_group),
+          religion: rowValue(row, columns.religion),
+          address_house_street_purok: rowValue(
+            row,
+            columns.address_house_street_purok
+          ),
+          address_barangay: rowValue(row, columns.address_barangay),
+          address_municipality_city: rowValue(
+            row,
+            columns.address_municipality_city
+          ),
+          address_province: rowValue(row, columns.address_province),
+          father_name: rowValue(row, columns.father_name),
+          mother_maiden_name: rowValue(row, columns.mother_maiden_name),
+          guardian_name: rowValue(row, columns.guardian_name),
+          guardian_relationship: rowValue(row, columns.guardian_relationship),
+          mobile: normalizeContact(row[columns.mobile]),
+          learning_modality: rowValue(row, columns.learning_modality),
+          remarks: rowValue(row, columns.remarks),
         };
       })
       .filter(Boolean);
@@ -185,6 +357,7 @@ Deno.serve(async (req) => {
       metadata,
       rows: learners,
       learner_count: learners.length,
+      detected_columns: columns,
     });
   } catch (error) {
     return json(
