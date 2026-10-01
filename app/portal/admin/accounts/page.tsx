@@ -123,7 +123,7 @@ export default function AccountApprovalsPage() {
             <div className={styles.empty}>
               <Check size={30} />
               <strong>No pending accounts</strong>
-              <span>New registrations will appear here for review.</span>
+              <span>Any pending accounts will appear here for review.</span>
             </div>
           ) : (
             <div className={styles.list}>
