@@ -11,6 +11,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import styles from "./sf10.module.css";
+import { JhsSf10Form, ShsSf10Form } from "./Sf10PrintForms";
 
 type Student = {
   id: string;
@@ -161,6 +162,7 @@ export default function Sf10Page() {
   const schoolComplete = Boolean(
     school.school_name && school.school_id && school.district && school.division && school.region
   );
+  const isShs = Number(student?.grade_level ?? 0) >= 11;
 
   return (
     <main className={styles.page}>
@@ -262,7 +264,11 @@ export default function Sf10Page() {
                 <section className={styles.editor}>
                   <div className={styles.sectionHeading}>
                     <h2>Learner permanent-record information</h2>
-                    <p>Complete the official identity and JHS eligibility fields once; grades are pulled automatically from the portal.</p>
+                    <p>
+                      {isShs
+                        ? "Complete the SHS eligibility and program fields once; published grades are pulled automatically."
+                        : "Complete the official identity and JHS eligibility fields once; published grades are pulled automatically."}
+                    </p>
                   </div>
                   <form onSubmit={saveProfile} className={styles.form}>
                     <label><span>Last name</span><input name="last_name" defaultValue={record.last_name ?? ""} required /></label>
@@ -278,90 +284,63 @@ export default function Sf10Page() {
                         <option value="Female">Female</option>
                       </select>
                     </label>
-                    <label><span>Elementary school</span><input name="elementary_school_name" defaultValue={record.elementary_school_name ?? ""} /></label>
-                    <label><span>Elementary school ID</span><input name="elementary_school_id" defaultValue={record.elementary_school_id ?? ""} /></label>
-                    <label className={styles.wide}><span>Elementary school address</span><input name="elementary_school_address" defaultValue={record.elementary_school_address ?? ""} /></label>
-                    <label><span>Elementary general average</span><input name="elementary_general_average" type="number" min="0" max="100" step="0.01" defaultValue={record.elementary_general_average ?? ""} /></label>
-                    <label><span>Citation, if any</span><input name="elementary_citation" defaultValue={record.elementary_citation ?? ""} /></label>
+                    {!isShs ? (
+                      <>
+                        <label>
+                          <span>JHS eligibility</span>
+                          <select name="eligibility_type" defaultValue={record.eligibility_type ?? "elementary_completer"}>
+                            <option value="elementary_completer">Elementary School Completer</option>
+                            <option value="pept">PEPT Passer</option>
+                            <option value="a_and_e">ALS A&amp;E Passer</option>
+                            <option value="other">Other credential</option>
+                          </select>
+                        </label>
+                        <label><span>Elementary school</span><input name="elementary_school_name" defaultValue={record.elementary_school_name ?? ""} /></label>
+                        <label><span>Elementary school ID</span><input name="elementary_school_id" defaultValue={record.elementary_school_id ?? ""} /></label>
+                        <label className={styles.wide}><span>Elementary school address</span><input name="elementary_school_address" defaultValue={record.elementary_school_address ?? ""} /></label>
+                        <label><span>Elementary general average</span><input name="elementary_general_average" type="number" min="0" max="100" step="0.01" defaultValue={record.elementary_general_average ?? ""} /></label>
+                        <label><span>Citation, if any</span><input name="elementary_citation" defaultValue={record.elementary_citation ?? ""} /></label>
+                        <label><span>Eligibility rating</span><input name="eligibility_rating" defaultValue={record.eligibility_rating ?? ""} /></label>
+                        <label><span>Other credential</span><input name="eligibility_other" defaultValue={record.eligibility_other ?? ""} /></label>
+                        <label><span>Assessment date</span><input name="assessment_date" type="date" defaultValue={record.assessment_date ?? ""} /></label>
+                        <label className={styles.wide}><span>Testing center</span><input name="testing_center" defaultValue={record.testing_center ?? ""} /></label>
+                      </>
+                    ) : (
+                      <>
+                        <label><span>Date of SHS admission</span><input name="shs_admission_date" type="date" defaultValue={record.shs_admission_date ?? ""} /></label>
+                        <label><span>JHS completion date</span><input name="jhs_completion_date" type="date" defaultValue={record.jhs_completion_date ?? ""} /></label>
+                        <label><span>JHS school</span><input name="jhs_school_name" defaultValue={record.jhs_school_name ?? ""} /></label>
+                        <label><span>JHS school ID</span><input name="jhs_school_id" defaultValue={record.jhs_school_id ?? ""} /></label>
+                        <label className={styles.wide}><span>JHS school address</span><input name="jhs_school_address" defaultValue={record.jhs_school_address ?? ""} /></label>
+                        <label><span>JHS general average</span><input name="jhs_general_average" type="number" min="0" max="100" step="0.01" defaultValue={record.jhs_general_average ?? ""} /></label>
+                        <label><span>SHS track</span><input name="shs_track" defaultValue={record.shs_track ?? ""} placeholder="Academic / TVL / ALS" /></label>
+                        <label className={styles.wide}><span>SHS strand / cluster / specialization</span><input name="shs_strand" defaultValue={record.shs_strand ?? ""} placeholder="STEM, HUMSS, ABM, BE, ASSH, Food Processing, OAP..." /></label>
+                        <label className={styles.wide}><span>Awards / honors received</span><input name="awards_honors" defaultValue={record.awards_honors ?? ""} /></label>
+                        <label><span>SHS graduation date</span><input name="shs_graduation_date" type="date" defaultValue={record.shs_graduation_date ?? ""} /></label>
+                        <label><span>SF10 date issued</span><input name="sf10_date_issued" type="date" defaultValue={record.sf10_date_issued ?? ""} /></label>
+                      </>
+                    )}
                     <button className={styles.saveButton} type="submit" disabled={working === "save"}>
                       <Save size={16} />{working === "save" ? "Saving…" : "Save permanent record"}
                     </button>
                   </form>
                 </section>
 
-                <section className={styles.printSheet}>
-                  <div className={styles.printNotice}>
-                    Portal-generated SF10 data preview for the SY 2026–2027 three-term grading structure.
-                    Verify the latest LIS-issued SF10 template before official release.
-                  </div>
-
-                  <div className={styles.printHeader}>
-                    <span>Republic of the Philippines</span>
-                    <strong>Department of Education</strong>
-                    <h2>Learner Permanent Academic Record ({detail.formType === "JHS" ? "SF10-JHS" : "SF10-SHS"})</h2>
-                  </div>
-
-                  <div className={styles.identityGrid}>
-                    <div><span>Last Name</span><strong>{record.last_name || "—"}</strong></div>
-                    <div><span>First Name</span><strong>{record.first_name || "—"}</strong></div>
-                    <div><span>Name Ext.</span><strong>{record.name_extension || "—"}</strong></div>
-                    <div><span>Middle Name</span><strong>{record.middle_name || "—"}</strong></div>
-                    <div><span>LRN</span><strong>{student?.lrn || "—"}</strong></div>
-                    <div><span>Birthdate</span><strong>{record.birth_date || "—"}</strong></div>
-                    <div><span>Sex</span><strong>{record.sex || "—"}</strong></div>
-                  </div>
-
-                  {records.map((year: any) => (
-                    <section className={styles.yearRecord} key={`${year.school_year}-${year.grade_level}`}>
-                      <div className={styles.yearMeta}>
-                        <strong>{school.school_name || "Asuncion National High School"}</strong>
-                        <span>School ID: {school.school_id || "________"} · District: {school.district || "________"} · Division: {school.division || "Davao del Norte"} · Region: {school.region || "Region XI"}</span>
-                        <span>Grade {year.grade_level} · Section {year.section || "—"} · School Year {year.school_year} · Adviser: {year.adviser_name || "—"}</span>
-                      </div>
-                      <div className={styles.tableWrap}>
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>Learning Area</th>
-                              <th>Term 1</th>
-                              <th>Term 2</th>
-                              <th>Term 3</th>
-                              <th>Final Rating</th>
-                              <th>Remarks</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {year.subjects.map((subject: any) => (
-                              <tr key={subject.assignment_id}>
-                                <td>{subject.subject}</td>
-                                <td>{subject.terms[0] ?? "—"}</td>
-                                <td>{subject.terms[1] ?? "—"}</td>
-                                <td>{subject.terms[2] ?? "—"}</td>
-                                <td>{subject.final_rating ?? "—"}</td>
-                                <td>{subject.remarks}</td>
-                              </tr>
-                            ))}
-                            <tr className={styles.average}>
-                              <td colSpan={4}>General Average</td>
-                              <td>{year.general_average ?? "—"}</td>
-                              <td>{year.general_average === null ? "Incomplete" : year.general_average >= 75 ? "Passed" : "Failed"}</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </section>
-                  ))}
-
-                  <div className={styles.certification}>
-                    <strong>CERTIFICATION</strong>
-                    <p>
-                      This portal record was generated from the learner profile, enrollment history, and published grades stored in the Asuncion NHS Academic Portal.
-                    </p>
-                    <div>
-                      <span>Date: ____________________</span>
-                      <span>School Head: {school.school_head_name || "____________________"}</span>
+                <section className={styles.printArea}>
+                  <style>{`@media print { @page { size: ${detail.formType === "JHS" ? "8.5in 14in" : "8.5in 13in"}; margin: 0; } }`}</style>
+                  {detail.formType === "JHS" ? (
+                    <JhsSf10Form detail={detail} />
+                  ) : Number(student?.grade_level ?? 0) === 11 ? (
+                    <div className={styles.strengthenedNotice}>
+                      <strong>Strengthened SHS SF10 v2026</strong>
+                      <span>
+                        Grade 11 uses the separate Strengthened SHS SF10 v2026 format.
+                        The Grade 12 DepEd SF10 template is not substituted for this learner.
+                      </span>
                     </div>
-                  </div>
+                  ) : (
+                    <ShsSf10Form detail={detail} />
+                  )}
                 </section>
               </>
             )}

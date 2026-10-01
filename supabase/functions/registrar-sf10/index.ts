@@ -286,7 +286,9 @@ Deno.serve(async (req) => {
   }
 
   if (action === "save_profile") {
-    const averageText = String(body.elementary_general_average ?? "").trim();
+    const elementaryAverageText = String(body.elementary_general_average ?? "").trim();
+    const jhsAverageText = String(body.jhs_general_average ?? "").trim();
+    const eligibilityType = String(body.eligibility_type ?? "elementary_completer");
     const payload = {
       student_id: studentId,
       last_name: String(body.last_name ?? "").trim() || null,
@@ -304,14 +306,42 @@ Deno.serve(async (req) => {
       elementary_school_address:
         String(body.elementary_school_address ?? "").trim() || null,
       elementary_general_average:
-        averageText === "" ? null : Number(averageText),
+        elementaryAverageText === "" ? null : Number(elementaryAverageText),
       elementary_citation:
         String(body.elementary_citation ?? "").trim() || null,
-      eligibility_type: "elementary_completer",
-      eligibility_rating: null,
-      eligibility_other: null,
-      assessment_date: null,
-      testing_center: null,
+      eligibility_type: ["elementary_completer", "pept", "a_and_e", "other"].includes(eligibilityType)
+        ? eligibilityType
+        : "elementary_completer",
+      eligibility_rating:
+        String(body.eligibility_rating ?? "").trim() || null,
+      eligibility_other:
+        String(body.eligibility_other ?? "").trim() || null,
+      assessment_date:
+        String(body.assessment_date ?? "").trim() || null,
+      testing_center:
+        String(body.testing_center ?? "").trim() || null,
+      jhs_completion_date:
+        String(body.jhs_completion_date ?? "").trim() || null,
+      jhs_school_name:
+        String(body.jhs_school_name ?? "").trim() || null,
+      jhs_school_id:
+        String(body.jhs_school_id ?? "").trim() || null,
+      jhs_school_address:
+        String(body.jhs_school_address ?? "").trim() || null,
+      jhs_general_average:
+        jhsAverageText === "" ? null : Number(jhsAverageText),
+      shs_admission_date:
+        String(body.shs_admission_date ?? "").trim() || null,
+      shs_track:
+        String(body.shs_track ?? "").trim() || null,
+      shs_strand:
+        String(body.shs_strand ?? "").trim() || null,
+      awards_honors:
+        String(body.awards_honors ?? "").trim() || null,
+      shs_graduation_date:
+        String(body.shs_graduation_date ?? "").trim() || null,
+      sf10_date_issued:
+        String(body.sf10_date_issued ?? "").trim() || null,
       updated_by: caller.userId,
       updated_at: new Date().toISOString(),
     };
