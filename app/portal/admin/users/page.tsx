@@ -107,12 +107,12 @@ function learnerInfoOf(user: UserRecord): LearnerInfo {
   return { ...emptyLearnerInfo(), ...(user.learner_info ?? {}) };
 }
 
-function ageAsOfFirstFridayJune(birthDate: string) {
+function ageAsOfFirstFridayJune(birthDate: string, schoolYear?: string) {
   if (!birthDate) return "";
   const birth = new Date(`${birthDate}T00:00:00`);
   if (Number.isNaN(birth.getTime())) return "";
-  const now = new Date();
-  const year = now.getFullYear();
+  const yearMatch = String(schoolYear ?? "").match(/(\d{4})/);
+  const year = yearMatch ? Number(yearMatch[1]) : new Date().getFullYear();
   const juneFirst = new Date(year, 5, 1);
   const offset = (5 - juneFirst.getDay() + 7) % 7;
   const firstFriday = new Date(year, 5, 1 + offset);
@@ -237,13 +237,26 @@ export default function UsersAccountsPage() {
     setSuccess("");
 
     try {
+      const learnerDisplayName =
+        editing.personType === "student"
+          ? [
+              editing.learnerInfo.first_name,
+              editing.learnerInfo.middle_name,
+              editing.learnerInfo.last_name,
+              editing.learnerInfo.name_extension,
+            ]
+              .map((item) => item.trim())
+              .filter(Boolean)
+              .join(" ") || editing.fullName
+          : editing.fullName;
+
       const response = await fetch("/api/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "update",
           user_id: editing.id,
-          full_name: editing.fullName,
+          full_name: learnerDisplayName,
           recovery_phone: editing.recoveryPhone,
           ...(editing.personType === "student"
             ? {
@@ -568,7 +581,7 @@ export default function UsersAccountsPage() {
 
             <form onSubmit={saveEdit}>
               <label>
-                <span>Full name</span>
+                <span>{editing.personType === "student" ? "Portal display name" : "Full name"}</span>
                 <input
                   value={editing.fullName}
                   onChange={(event) =>
@@ -751,7 +764,10 @@ export default function UsersAccountsPage() {
                       <label>
                         <span>Age as of 1st Friday of June</span>
                         <input
-                          value={ageAsOfFirstFridayJune(editing.learnerInfo.birth_date)}
+                          value={ageAsOfFirstFridayJune(
+                            editing.learnerInfo.birth_date,
+                            activeYear?.name
+                          )}
                           readOnly
                           placeholder="Auto-calculated"
                         />
