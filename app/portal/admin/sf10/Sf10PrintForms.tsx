@@ -1,36 +1,6 @@
 "use client";
 
-type SubjectRecord = {
-  assignment_id: string;
-  subject: string;
-  subject_code?: string | null;
-  terms: Array<number | null>;
-  final_rating: number | null;
-  remarks: string;
-};
-
-type ScholasticRecord = {
-  school_year: string;
-  grade_level: number;
-  section: string;
-  adviser_name: string;
-  subjects: SubjectRecord[];
-  general_average: number | null;
-};
-
-type Sf10Detail = {
-  student?: {
-    id?: string;
-    full_name?: string;
-    lrn?: string | null;
-    grade_level?: number | null;
-    section?: string | null;
-  } | null;
-  permanentRecord?: Record<string, unknown> | null;
-  schoolInformation?: Record<string, unknown> | null;
-  scholasticRecords?: ScholasticRecord[];
-  formType?: "JHS" | "SHS";
-};
+type Sf10Detail = any;
 
 function text(value: unknown) {
   return value === null || value === undefined ? "" : String(value);
@@ -44,7 +14,7 @@ function displayDate(value: unknown) {
   return raw;
 }
 
-function paddedSubjects(subjects: SubjectRecord[] = [], count = 12) {
+function paddedSubjects(subjects: any[] = [], count = 12) {
   return Array.from({ length: count }, (_, index) => subjects[index] ?? null);
 }
 
@@ -59,8 +29,8 @@ function JhsGradeBlock({
   school,
   emptyRows = 12,
 }: {
-  record?: ScholasticRecord;
-  school: Record<string, unknown>;
+  record?: any;
+  school: any;
   emptyRows?: number;
 }) {
   const subjects = paddedSubjects(record?.subjects ?? [], emptyRows);
@@ -286,7 +256,7 @@ function ShsSemesterBlock({
 }: {
   record?: ScholasticRecord;
   semester: "1ST" | "2ND";
-  school: Record<string, unknown>;
+  school: any;
   track: string;
   strand: string;
   schoolHead: string;
@@ -395,7 +365,9 @@ export function ShsSf10Form({ detail }: { detail: Sf10Detail }) {
   const track = text(record.shs_track) || "ACADEMIC";
   const strand = text(record.shs_strand);
   const allSubjects = records.flatMap((item) => item.subjects ?? []);
-  const finalRatings = allSubjects.map((item) => item.final_rating).filter((value): value is number => typeof value === "number");
+  const finalRatings = allSubjects
+    .map((item: any) => item.final_rating)
+    .filter((value: any) => typeof value === "number") as number[];
   const shsAverage = finalRatings.length
     ? Math.round((finalRatings.reduce((sum, value) => sum + value, 0) / finalRatings.length) * 100) / 100
     : "";
@@ -506,7 +478,7 @@ export function ShsSf10Form({ detail }: { detail: Sf10Detail }) {
   );
 }
 
-function AnnexSection({ title, subjects }: { title: string; subjects: SubjectRecord[] }) {
+function AnnexSection({ title, subjects }: { title: string; subjects: any[] }) {
   const rows = paddedSubjects(subjects, title.startsWith("CORE") ? 15 : title.startsWith("APPLIED") ? 7 : 10);
   return (
     <section className="annex-section">
