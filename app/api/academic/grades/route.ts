@@ -59,6 +59,25 @@ async function getActiveYear(token: string) {
   return rows?.[0] ?? null;
 }
 
+async function teacherAdvisesSection(
+  token: string,
+  userId: string,
+  schoolYearId: string,
+  sectionId: string
+) {
+  const rows = await getRows(
+    `section_advisers?teacher_id=eq.${encodeURIComponent(
+      userId
+    )}&school_year_id=eq.${encodeURIComponent(
+      schoolYearId
+    )}&section_id=eq.${encodeURIComponent(
+      sectionId
+    )}&is_active=eq.true&select=id&limit=1`,
+    token
+  ).catch(() => []);
+  return Boolean(rows?.[0]);
+}
+
 export async function GET(request: NextRequest) {
   const identity = await getIdentity(request);
   if (!identity) {
@@ -86,7 +105,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const [assignments, sections, subjects, enrollments, students, grades] =
+    const [assignments, sections, subjects, enrollments, students, grades, advisers] =
       await Promise.all([
         getRows(
           `teacher_assignments?school_year_id=eq.${encodeURIComponent(
@@ -118,13 +137,34 @@ export async function GET(request: NextRequest) {
           )}&select=id,student_id,teacher_assignment_id,school_year_id,term_no,term_grade,status,published_at,updated_at&order=term_no.asc`,
           token
         ),
+        profile.role === "teacher"
+          ? getRows(
+              `section_advisers?teacher_id=eq.${encodeURIComponent(
+                identity.userId
+              )}&school_year_id=eq.${encodeURIComponent(
+                activeYear.id
+              )}&is_active=eq.true&select=id,section_id`,
+              token
+            )
+          : Promise.resolve([]),
       ]);
+
+    const advisedSections = new Set(
+      (advisers ?? []).map((item: { section_id: string }) => item.section_id)
+    );
+    const gradeAssignments =
+      profile.role === "teacher"
+        ? (assignments ?? []).filter(
+            (item: { section_id: string }) => advisedSections.has(item.section_id)
+          )
+        : assignments;
 
     return NextResponse.json({
       role: profile.role,
       profile,
       activeYear,
-      assignments,
+      isSectionAdviser: profile.role === "teacher" && advisedSections.size > 0,
+      assignments: gradeAssignments,
       sections,
       subjects,
       enrollments,
@@ -191,7 +231,20 @@ export async function POST(request: NextRequest) {
 
     if (!assignments?.[0]) {
       return NextResponse.json(
-        { error: "This class is not assigned to your Teacher account." },
+        { error: "This class is not available to your Teacher account." },
+        { status: 403 }
+      );
+    }
+
+    const canGrade = await teacherAdvisesSection(
+      token,
+      userId,
+      activeYear.id,
+      assignments[0].section_id
+    );
+    if (!canGrade) {
+      return NextResponse.json(
+        { error: "Only the active Section Adviser can encode grades for this section." },
         { status: 403 }
       );
     }
@@ -297,7 +350,20 @@ export async function POST(request: NextRequest) {
 
     if (!assignments?.[0]) {
       return NextResponse.json(
-        { error: "This class is not assigned to your Teacher account." },
+        { error: "This class is not available to your Teacher account." },
+        { status: 403 }
+      );
+    }
+
+    const canGrade = await teacherAdvisesSection(
+      token,
+      userId,
+      activeYear.id,
+      assignments[0].section_id
+    );
+    if (!canGrade) {
+      return NextResponse.json(
+        { error: "Only the active Section Adviser can publish grades for this section." },
         { status: 403 }
       );
     }
