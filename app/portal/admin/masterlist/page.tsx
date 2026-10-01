@@ -563,7 +563,7 @@ export default function BulkAccountImportPage() {
       if (personType === "student") {
         if (!/^\d{12}$/.test(lrn)) problems.push("LRN must be exactly 12 digits.");
         if (existingLrns.has(lrn)) problems.push("LRN already has an account.");
-        if (seen.has(lrn)) problems.push("Duplicate LRN in this CSV.");
+        if (seen.has(lrn)) problems.push("Duplicate LRN in this file.");
         if (lrn) seen.add(lrn);
       } else {
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) problems.push("Invalid email.");
@@ -791,7 +791,7 @@ export default function BulkAccountImportPage() {
 
               <div className={styles.classNote}>
                 {selectedGrade && selectedSection
-                  ? <>All learners in this CSV will be placed in <strong>Grade {selectedGrade} - {selectedSection}</strong>.</>
+                  ? <>All learners in this file will be placed in <strong>Grade {selectedGrade} - {selectedSection}</strong>.</>
                   : "Choose a Grade Level and Section first, then upload the original SF1 .xls/.xlsx file. Age is calculated automatically from Birth Date."}
               </div>
             </div>
