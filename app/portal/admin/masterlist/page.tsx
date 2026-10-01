@@ -848,10 +848,9 @@ export default function BulkAccountImportPage() {
 
               <div className={styles.tableWrap}>
                 <table>
-                  <thead><tr><th>Row</th><th>Name</th><th>{personType === "student" ? "LRN" : "Email"}</th>{personType === "student" && <><th>Grade</th><th>Section</th></>}<th>Status</th></tr></thead>
+                  <thead><tr><th>Name</th><th>{personType === "student" ? "LRN" : "Email"}</th>{personType === "student" && <><th>Grade</th><th>Section</th></>}<th>Status</th></tr></thead>
                   <tbody>{rows.map((row) => (
                     <tr key={row.row_number} className={!row.valid ? styles.invalidRow : ""}>
-                      <td>{row.row_number}</td>
                       <td><strong>{row.full_name || "—"}</strong></td>
                       <td>{personType === "student" ? row.lrn : row.email}</td>
                       {personType === "student" && <><td>{row.grade_level ?? "—"}</td><td>{row.section || "—"}</td></>}
