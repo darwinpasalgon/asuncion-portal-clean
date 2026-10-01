@@ -31,6 +31,21 @@
 .form select:disabled{background:#f4f6f7;color:#9aa8b0}
 .form button{min-height:42px;border:0;border-radius:8px;background:linear-gradient(100deg,#155f9d,#147b56);color:#fff;padding:0 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:700}
 .form button:disabled{opacity:.55}
+.adviserForm{display:grid;grid-template-columns:170px minmax(190px,1fr) minmax(220px,1fr) auto;gap:14px;align-items:end;padding:22px 24px;border-bottom:1px solid #e7edf1;background:#fbfdfe}
+.adviserForm label{display:flex;flex-direction:column;gap:7px}
+.adviserForm label span{font-size:.75rem;font-weight:700;color:#526c7b}
+.adviserForm select{min-height:42px;border:1px solid #d6e1e7;border-radius:8px;background:#fff;padding:0 11px;color:#294d64}
+.adviserForm select:disabled{background:#f4f6f7;color:#9aa8b0}
+.adviserForm button{min-height:42px;border:0;border-radius:8px;background:linear-gradient(100deg,#155f9d,#147b56);color:#fff;padding:0 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:700}
+.adviserForm button:disabled{opacity:.55}
+.adviserList{display:grid}
+.adviserRow{display:grid;grid-template-columns:180px 1fr auto;align-items:center;gap:18px;padding:14px 22px;border-bottom:1px solid #e7edf1}
+.adviserRow:last-child{border-bottom:0}
+.adviserRow>div span,.adviserRow>div strong{display:block}
+.adviserRow>div span{font-size:.66rem;letter-spacing:.08em;color:#8798a3}
+.adviserRow>div strong{font-size:.86rem;color:#34586d;margin-top:5px}
+.removeAdviser{border:1px solid #e3caca;border-radius:8px;background:#fff7f7;color:#9a4b4b;padding:8px 11px;font-weight:700}
+.noAdviser{display:inline-flex;border-radius:999px;padding:6px 10px;background:#fff3db;color:#8a641a;font-size:.68rem;font-weight:750}
 .subjectGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding:22px}
 .subjectCard{border:1px solid #e0e8ed;border-radius:12px;overflow:hidden;background:#fbfdfe}
 .subjectCardHeader{display:flex;justify-content:space-between;gap:12px;padding:15px 17px;background:#f1f6fa;border-bottom:1px solid #e2e9ed}
@@ -57,5 +72,5 @@
 .error,.success{padding:12px 14px;border-radius:9px;margin-bottom:16px;font-size:.84rem}
 .error{border:1px solid #efcccc;background:#fff4f4;color:#9a3f3f}
 .success{border:1px solid #cce7d5;background:#f0faf3;color:#287052}
-@media(max-width:900px){.header{align-items:flex-start;flex-direction:column}.summary{grid-template-columns:1fr 1fr}.twoColumns{grid-template-columns:1fr}.subjectGrid{grid-template-columns:1fr}.assignmentRow{grid-template-columns:1fr 1fr}.assignmentRow button{justify-self:start}}
-@media(max-width:520px){.page{padding-inline:14px}.summary{grid-template-columns:1fr}.topActions{align-items:flex-start;flex-direction:column;gap:10px}.topLink+.topLink{padding-left:0;border-left:0}.panelHeading{align-items:flex-start;flex-direction:column}.subjectGrid{padding:14px}.assignmentRow{grid-template-columns:1fr}.form{padding:20px}}
+@media(max-width:900px){.header{align-items:flex-start;flex-direction:column}.summary{grid-template-columns:1fr 1fr}.twoColumns{grid-template-columns:1fr}.adviserForm{grid-template-columns:1fr 1fr}.adviserRow{grid-template-columns:1fr 1fr}.adviserRow button,.adviserRow>.noAdviser{justify-self:start}.subjectGrid{grid-template-columns:1fr}.assignmentRow{grid-template-columns:1fr 1fr}.assignmentRow button{justify-self:start}}
+@media(max-width:520px){.page{padding-inline:14px}.summary{grid-template-columns:1fr}.topActions{align-items:flex-start;flex-direction:column;gap:10px}.topLink+.topLink{padding-left:0;border-left:0}.panelHeading{align-items:flex-start;flex-direction:column}.adviserForm{grid-template-columns:1fr;padding:20px}.adviserRow{grid-template-columns:1fr}.subjectGrid{padding:14px}.assignmentRow{grid-template-columns:1fr}.form{padding:20px}}
