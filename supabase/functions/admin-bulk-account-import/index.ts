@@ -206,8 +206,30 @@ Deno.serve(async (req) => {
     }
 
     const password = temporaryPassword();
+    const provisioningToken = crypto.randomUUID();
+    const { error: provisioningError } = await admin
+      .from("account_provisioning_tokens")
+      .insert({
+        token: provisioningToken,
+        email: authEmail,
+        requested_role: personType,
+        expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+        created_by: callerId,
+      });
+
+    if (provisioningError) {
+      failures.push({
+        row_number: rowNumber,
+        name: fullName,
+        identifier,
+        error: "Unable to authorize secure account provisioning.",
+      });
+      continue;
+    }
+
     const metadata: Record<string, unknown> = {
       requested_role: personType,
+      provisioning_token: provisioningToken,
       full_name: fullName,
       recovery_phone: phone ?? "",
     };
@@ -229,6 +251,10 @@ Deno.serve(async (req) => {
     });
 
     if (createError || !created.user?.id) {
+      await admin
+        .from("account_provisioning_tokens")
+        .delete()
+        .eq("token", provisioningToken);
       failures.push({
         row_number: rowNumber,
         name: fullName,
