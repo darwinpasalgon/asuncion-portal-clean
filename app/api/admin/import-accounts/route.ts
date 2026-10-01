@@ -39,20 +39,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid import request." }, { status: 400 });
   }
 
-  if (body.rows.length < 1 || body.rows.length > 50) {
+  if (body.rows.length < 1 || body.rows.length > 200) {
     return NextResponse.json(
-      { error: "Each import batch must contain between 1 and 50 records." },
+      { error: "Each import batch must contain between 1 and 200 records." },
       { status: 400 }
     );
   }
 
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-account-import`, {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-bulk-account-import`, {
     method: "POST",
     headers: headers(token),
     body: JSON.stringify({
       person_type: body.personType === "teacher" ? "teacher" : "student",
       file_name: String(body.fileName ?? "account-import.csv"),
-      rows: body.rows,
+      rows: body.rows.map((row: Record<string, unknown>) => ({
+        ...row,
+        recovery_phone: String(row.mobile ?? row.recovery_phone ?? ""),
+      })),
     }),
     cache: "no-store",
   });
