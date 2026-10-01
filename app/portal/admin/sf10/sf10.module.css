@@ -16,7 +16,7 @@
 .printArea :global(.info-table td){padding:.016in .025in;border:0;border-bottom:.5px solid #777;height:.16in}
 .printArea :global(.info-table .label){font-size:5.9pt;white-space:nowrap}
 .printArea :global(.info-table .value){font-weight:700;text-align:center;font-size:6.6pt}
-.printArea :global(.sf10-header-logo){position:absolute;display:block;object-fit:contain;z-index:2}
+.printArea :global(.sf10-header-logo){position:absolute;display:block;object-fit:contain;z-index:2;background:transparent;mix-blend-mode:multiply}
 .printArea :global(.jhs-kagawaran-logo){left:.30in;top:.20in;width:.46in;height:.46in}
 .printArea :global(.jhs-deped-logo){right:.26in;top:.22in;width:.82in;height:.40in}
 .printArea :global(.shs-kagawaran-logo){left:.32in;top:.20in;width:.44in;height:.44in}
