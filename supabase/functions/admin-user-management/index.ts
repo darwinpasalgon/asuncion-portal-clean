@@ -14,6 +14,7 @@ const json = (body: Record<string, unknown>, status = 200) =>
 
 const normalizePhone = (input: string) => {
   const raw = input.replace(/[\s()-]/g, "");
+  if (!raw) return "";
   if (/^09\d{9}$/.test(raw)) return `+63${raw.slice(1)}`;
   if (/^639\d{9}$/.test(raw)) return `+${raw}`;
   if (/^\+\d{8,15}$/.test(raw)) return raw;
@@ -238,6 +239,48 @@ Deno.serve(async (req) => {
         await admin.from("profiles").update(oldProfile).eq("id", userId);
         return json({ error: "Student profile was not changed because the current enrollment could not be updated." }, 500);
       }
+    }
+
+    const learnerInfo = {
+      student_id: userId,
+      last_name: String(body.last_name ?? "").trim() || null,
+      first_name: String(body.first_name ?? "").trim() || null,
+      middle_name: String(body.middle_name ?? "").trim() || null,
+      name_extension: String(body.name_extension ?? "").trim() || null,
+      sex: ["M", "F"].includes(String(body.sex ?? "").trim().toUpperCase())
+        ? String(body.sex).trim().toUpperCase()
+        : null,
+      birth_date: String(body.birth_date ?? "").trim() || null,
+      mother_tongue: String(body.mother_tongue ?? "").trim() || null,
+      ethnic_group: String(body.ethnic_group ?? "").trim() || null,
+      religion: String(body.religion ?? "").trim() || null,
+      address_house_street_purok:
+        String(body.address_house_street_purok ?? "").trim() || null,
+      address_barangay: String(body.address_barangay ?? "").trim() || null,
+      address_municipality_city:
+        String(body.address_municipality_city ?? "").trim() || null,
+      address_province: String(body.address_province ?? "").trim() || null,
+      father_name: String(body.father_name ?? "").trim() || null,
+      mother_maiden_name:
+        String(body.mother_maiden_name ?? "").trim() || null,
+      guardian_name: String(body.guardian_name ?? "").trim() || null,
+      guardian_relationship:
+        String(body.guardian_relationship ?? "").trim() || null,
+      guardian_contact_number: recoveryPhone || null,
+      learning_modality: String(body.learning_modality ?? "").trim() || null,
+      remarks: String(body.remarks ?? "").trim() || null,
+      updated_by: callerId,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error: learnerInfoError } = await admin
+      .from("learner_information")
+      .upsert(learnerInfo, { onConflict: "student_id" });
+
+    if (learnerInfoError) {
+      return json({
+        error: "The account was updated, but the SF1 learner profile information could not be saved.",
+      }, 500);
     }
 
     return json({ ok: true });
