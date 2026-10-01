@@ -23,6 +23,26 @@ type ImportRow = {
   email?: string;
   position?: string;
   recovery_phone?: string;
+  last_name?: string;
+  first_name?: string;
+  middle_name?: string;
+  name_extension?: string;
+  sex?: string;
+  birth_date?: string;
+  mother_tongue?: string;
+  ethnic_group?: string;
+  religion?: string;
+  address_house_street_purok?: string;
+  address_barangay?: string;
+  address_municipality_city?: string;
+  address_province?: string;
+  father_name?: string;
+  mother_maiden_name?: string;
+  guardian_name?: string;
+  guardian_relationship?: string;
+  guardian_contact_number?: string;
+  learning_modality?: string;
+  remarks?: string;
 };
 
 function temporaryPassword() {
@@ -238,6 +258,56 @@ Deno.serve(async (req) => {
         error: "Account validation failed and the partial account was removed.",
       });
       continue;
+    }
+
+    if (personType === "student") {
+      const learnerInformation = {
+        student_id: created.user.id,
+        last_name: String(source.last_name ?? "").trim() || null,
+        first_name: String(source.first_name ?? "").trim() || null,
+        middle_name: String(source.middle_name ?? "").trim() || null,
+        name_extension: String(source.name_extension ?? "").trim() || null,
+        sex: ["M", "F"].includes(String(source.sex ?? "").trim().toUpperCase())
+          ? String(source.sex).trim().toUpperCase()
+          : null,
+        birth_date: String(source.birth_date ?? "").trim() || null,
+        mother_tongue: String(source.mother_tongue ?? "").trim() || null,
+        ethnic_group: String(source.ethnic_group ?? "").trim() || null,
+        religion: String(source.religion ?? "").trim() || null,
+        address_house_street_purok:
+          String(source.address_house_street_purok ?? "").trim() || null,
+        address_barangay: String(source.address_barangay ?? "").trim() || null,
+        address_municipality_city:
+          String(source.address_municipality_city ?? "").trim() || null,
+        address_province: String(source.address_province ?? "").trim() || null,
+        father_name: String(source.father_name ?? "").trim() || null,
+        mother_maiden_name:
+          String(source.mother_maiden_name ?? "").trim() || null,
+        guardian_name: String(source.guardian_name ?? "").trim() || null,
+        guardian_relationship:
+          String(source.guardian_relationship ?? "").trim() || null,
+        guardian_contact_number: phone || null,
+        learning_modality:
+          String(source.learning_modality ?? "").trim() || null,
+        remarks: String(source.remarks ?? "").trim() || null,
+        updated_by: callerId,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error: learnerInfoError } = await admin
+        .from("learner_information")
+        .upsert(learnerInformation, { onConflict: "student_id" });
+
+      if (learnerInfoError) {
+        await admin.auth.admin.deleteUser(created.user.id);
+        failures.push({
+          row_number: rowNumber,
+          name: fullName,
+          identifier,
+          error: "Learner information could not be saved, so the partial account was removed.",
+        });
+        continue;
+      }
     }
 
     successes.push({
