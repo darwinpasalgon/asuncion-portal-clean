@@ -247,6 +247,10 @@ Deno.serve(async (req) => {
       return json({ error: "Enrollment record not found." }, 404);
     }
 
+    if (requestedStatus === "graduated" && Number(enrollment.grade_level) !== 12) {
+      return json({ error: "Only Grade 12 learners can be marked Graduated." }, 400);
+    }
+
     const nextEnrollmentStatus = enrollmentStatusFor(requestedStatus);
     const changedAt = new Date().toISOString();
 
@@ -368,6 +372,89 @@ Deno.serve(async (req) => {
     return json({ ok: true });
   }
 
+  if (action === "activate_school_year") {
+    const schoolYearId = clean(body.school_year_id);
+    if (!schoolYearId) {
+      return json({ error: "Choose a school year to activate." }, 400);
+    }
+
+    const { data: targetYear } = await admin
+      .from("school_years")
+      .select("id,name,start_year,end_year,is_active")
+      .eq("id", schoolYearId)
+      .maybeSingle();
+
+    if (!targetYear) return json({ error: "School year not found." }, 404);
+    if (targetYear.is_active) return json({ ok: true, synced_profiles: 0 });
+
+    const { data: previousActive } = await admin
+      .from("school_years")
+      .select("id")
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (previousActive?.id) {
+      const { error: closeError } = await admin
+        .from("school_years")
+        .update({ is_active: false })
+        .eq("id", previousActive.id);
+
+      if (closeError) {
+        return json({ error: "Unable to close the current active school year." }, 500);
+      }
+    }
+
+    const { error: activateError } = await admin
+      .from("school_years")
+      .update({ is_active: true })
+      .eq("id", schoolYearId);
+
+    if (activateError) {
+      if (previousActive?.id) {
+        await admin.from("school_years").update({ is_active: true }).eq("id", previousActive.id);
+      }
+      return json({ error: "Unable to activate the selected school year." }, 500);
+    }
+
+    const [{ data: activeEnrollments, error: enrollmentError }, { data: activeSections }] =
+      await Promise.all([
+        admin
+          .from("student_enrollments")
+          .select("student_id,grade_level,section_id")
+          .eq("school_year_id", schoolYearId)
+          .eq("enrollment_status", "active"),
+        admin.from("sections").select("id,name"),
+      ]);
+
+    if (enrollmentError) {
+      return json({
+        error: "The school year was activated, but learner profiles could not be synchronized.",
+      }, 500);
+    }
+
+    const sectionMap = new Map(
+      (activeSections ?? []).map((section) => [String(section.id), String(section.name ?? "")])
+    );
+
+    let syncedProfiles = 0;
+    for (const enrollment of activeEnrollments ?? []) {
+      const { error: profileError } = await admin
+        .from("profiles")
+        .update({
+          grade_level: enrollment.grade_level,
+          section: enrollment.section_id
+            ? sectionMap.get(String(enrollment.section_id)) ?? null
+            : null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", enrollment.student_id);
+
+      if (!profileError) syncedProfiles += 1;
+    }
+
+    return json({ ok: true, synced_profiles: syncedProfiles, school_year: targetYear.name });
+  }
+
   if (action === "transition") {
     const transitionType = clean(body.transition_type);
     const sourceYearId = clean(body.source_school_year_id);
@@ -442,6 +529,14 @@ Deno.serve(async (req) => {
 
       if (!sourceEnrollment) {
         failures.push({ student_id: studentId, error: "No source enrollment was found." });
+        continue;
+      }
+
+      if (!["active", "completed"].includes(String(sourceEnrollment.enrollment_status))) {
+        failures.push({
+          student_id: studentId,
+          error: "Transferred or withdrawn learners cannot be promoted, retained, or graduated.",
+        });
         continue;
       }
 
