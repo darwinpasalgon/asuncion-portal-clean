@@ -257,7 +257,6 @@ export default function UsersAccountsPage() {
           action: "update",
           user_id: editing.id,
           full_name: learnerDisplayName,
-          recovery_phone: editing.recoveryPhone,
           ...(editing.personType === "student"
             ? {
                 lrn: editing.lrn,
@@ -271,6 +270,7 @@ export default function UsersAccountsPage() {
             : {
                 email: editing.email,
                 position: editing.position,
+                recovery_phone: editing.recoveryPhone,
               }),
         }),
       });
