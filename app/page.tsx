@@ -178,23 +178,15 @@ export default function LoginPage() {
           </form>
 
           <div className={styles.accountPrompt}>
-            <span>New to the portal?</span>
-            <button
-              type="button"
-              className={styles.textButton}
-              onClick={() => router.push("/register")}
-              disabled={loading}
-            >
-              Activate account
-            </button>
+            <span>Need an account? Contact the school administrator.</span>
           </div>
 
           <div className={styles.demoNote}>
             <ShieldCheck size={17} />
             <p>
-              New accounts are activated only from the official school masterlist
-              using a one-time school-issued activation code. Forgotten passwords
-              are handled through administrator-assisted identity verification.
+              Portal accounts are provided by the school. Sign in with the
+              credentials given to you. Forgotten passwords are handled through
+              administrator-assisted identity verification.
             </p>
           </div>
 
