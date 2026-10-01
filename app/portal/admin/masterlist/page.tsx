@@ -371,19 +371,119 @@ export default function BulkAccountImportPage() {
 
     if (personType === "student" && (!selectedGrade || !selectedSection)) {
       setFile(null);
-      setError("Select the Grade Level and Section before choosing a learner CSV file.");
+      setError("Select the Grade Level and Section before choosing a learner SF1 file.");
       event.target.value = "";
       return;
     }
 
-    if (!selected.name.toLowerCase().endsWith(".csv")) {
-      setError("Use a CSV file. In Excel, choose Save As → CSV UTF-8 (Comma delimited).");
+    const lowerName = selected.name.toLowerCase();
+    let table: string[][] = [];
+    let sf1Label = "";
+
+    if (personType === "student" && /\.(xls|xlsx)$/.test(lowerName)) {
+      const formData = new FormData();
+      formData.append("file", selected);
+
+      const response = await fetch("/api/admin/sf1-preview", {
+        method: "POST",
+        body: formData,
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setError(
+          (result.error ?? "Unable to read the SF1 Excel file.") +
+            (result.detail ? " " + result.detail : "")
+        );
+        return;
+      }
+
+      const metadata = result.metadata ?? {};
+      const schoolId = String(metadata.school_id ?? "").replace(/\D/g, "");
+      const detectedGradeMatch = String(metadata.grade_level ?? "").match(/\d{1,2}/);
+      const detectedGrade = detectedGradeMatch ? Number(detectedGradeMatch[0]) : 0;
+      const detectedSection = String(metadata.section ?? "").trim();
+
+      if (schoolId && schoolId !== "304217") {
+        setError(
+          `This SF1 belongs to School ID ${schoolId}, not Asuncion National High School (304217).`
+        );
+        return;
+      }
+
+      if (detectedGrade && detectedGrade !== Number(selectedGrade)) {
+        setError(
+          `The uploaded SF1 appears to be for Grade ${detectedGrade}, but Grade ${selectedGrade} is selected in the portal.`
+        );
+        return;
+      }
+
+      if (
+        detectedSection &&
+        detectedSection.localeCompare(selectedSection, undefined, {
+          sensitivity: "accent",
+        }) !== 0
+      ) {
+        setError(
+          `The uploaded SF1 appears to be for section ${detectedSection}, but ${selectedSection} is selected in the portal.`
+        );
+        return;
+      }
+
+      const sf1Rows = Array.isArray(result.rows) ? result.rows : [];
+      if (!sf1Rows.length) {
+        setError("No learner rows were detected in the SF1 Excel file.");
+        return;
+      }
+
+      const canonicalHeaders = [
+        "source_row",
+        "lrn",
+        "full_name",
+        "sex",
+        "birth_date",
+        "mother_tongue",
+        "ethnic_group",
+        "religion",
+        "address_house_street_purok",
+        "address_barangay",
+        "address_municipality_city",
+        "address_province",
+        "father_name",
+        "mother_maiden_name",
+        "guardian_name",
+        "guardian_relationship",
+        "mobile",
+        "learning_modality",
+        "remarks",
+      ];
+
+      table = [
+        canonicalHeaders,
+        ...sf1Rows.map((row: Record<string, unknown>) =>
+          canonicalHeaders.map((header) => String(row?.[header] ?? ""))
+        ),
+      ];
+
+      sf1Label = [
+        detectedGrade ? `Grade ${detectedGrade}` : "",
+        detectedSection,
+      ]
+        .filter(Boolean)
+        .join(" - ");
+    } else if (lowerName.endsWith(".csv")) {
+      table = parseCsv(await selected.text());
+    } else {
+      setError(
+        personType === "student"
+          ? "Upload the original SF1 Excel file (.xls or .xlsx), or a CSV UTF-8 learner file."
+          : "Teacher bulk import uses a CSV UTF-8 file."
+      );
       return;
     }
 
-    const table = parseCsv(await selected.text());
     if (table.length < 2) {
-      setError("The CSV does not contain account rows.");
+      setError("The selected file does not contain account rows.");
       return;
     }
 
@@ -396,7 +496,7 @@ export default function BulkAccountImportPage() {
     if (required.some((item) => !headers.includes(item))) {
       setError(
         personType === "student"
-          ? "Learner CSV needs LRN and the SF1 NAME column. Other SF1 fields may be completed now or later in the Learner Profile."
+          ? "The learner file needs LRN and the SF1 NAME column. Other SF1 fields may be completed now or later in the Learner Profile."
           : "Teacher CSV needs Full Name and Email."
       );
       return;
@@ -466,7 +566,7 @@ export default function BulkAccountImportPage() {
       }
 
       preview.push({
-        row_number: index + 1,
+        row_number: Number(data.source_row) || index + 1,
         full_name: fullName,
         lrn,
         grade_level: Number.isInteger(grade) ? Number(grade) : null,
@@ -501,7 +601,7 @@ export default function BulkAccountImportPage() {
     setRows(preview);
     setMessage(
       personType === "student"
-        ? `Validation complete for Grade ${selectedGrade} - ${selectedSection}. Review all rows before importing.`
+        ? `${sf1Label ? `SF1 detected: ${sf1Label}. ` : ""}Validation complete for Grade ${selectedGrade} - ${selectedSection}. Review all rows before importing.`
         : "Validation complete. Review all rows before importing."
     );
   }
@@ -602,8 +702,8 @@ export default function BulkAccountImportPage() {
             <span>ADMINISTRATION</span>
             <h1>Bulk account import</h1>
             <p>
-              Create school-managed Learner and Teacher accounts from an Excel-compatible CSV.
-              Learner imports follow the SF1 learner information fields and are grouped by selected Grade Level and Section. Every imported user receives
+              Create school-managed Learner and Teacher accounts in bulk.
+              Learners can use the original SF1 Excel file (.xls or .xlsx) and are grouped by selected Grade Level and Section. CSV remains available as an alternative. Every imported user receives
               a temporary password and must change it on first login.
             </p>
           </div>
@@ -685,7 +785,7 @@ export default function BulkAccountImportPage() {
               <div className={styles.classNote}>
                 {selectedGrade && selectedSection
                   ? <>All learners in this CSV will be placed in <strong>Grade {selectedGrade} - {selectedSection}</strong>.</>
-                  : "Choose a Grade Level and Section first. The learner CSV follows the SF1 information fields; age is calculated automatically from Birth Date."}
+                  : "Choose a Grade Level and Section first, then upload the original SF1 .xls/.xlsx file. Age is calculated automatically from Birth Date."}
               </div>
             </div>
           )}
@@ -701,12 +801,27 @@ export default function BulkAccountImportPage() {
             <label className={styles.filePicker + (personType === "student" && !studentClassReady ? " " + styles.filePickerDisabled : "")}>
               <Upload size={18} />
               <div>
-                <strong>{file?.name ?? (personType === "student" && !studentClassReady ? "Select Grade and Section first" : "Choose CSV file")}</strong>
-                <span>Prepare in Excel, then save as CSV UTF-8</span>
+                <strong>
+                  {file?.name ??
+                    (personType === "student" && !studentClassReady
+                      ? "Select Grade and Section first"
+                      : personType === "student"
+                        ? "Choose SF1 Excel file"
+                        : "Choose Teacher CSV file")}
+                </strong>
+                <span>
+                  {personType === "student"
+                    ? "Upload the original SF1 .xls/.xlsx file. CSV is also supported."
+                    : "Teacher import uses CSV UTF-8."}
+                </span>
               </div>
               <input
                 type="file"
-                accept=".csv,text/csv"
+                accept={
+                  personType === "student"
+                    ? ".xls,.xlsx,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+                    : ".csv,text/csv"
+                }
                 onChange={chooseFile}
                 disabled={personType === "student" && !studentClassReady}
               />
