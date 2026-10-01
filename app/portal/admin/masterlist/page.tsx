@@ -144,6 +144,13 @@ function keyOf(value: string) {
     relationship: "guardian_relationship",
     learningmodality: "learning_modality",
     remarks: "remarks",
+    sourcerow: "source_row",
+    addresshousestreetpurok: "address_house_street_purok",
+    addressbarangay: "address_barangay",
+    addressmunicipalitycity: "address_municipality_city",
+    addressprovince: "address_province",
+    fathername: "father_name",
+    mothermaidenname: "mother_maiden_name",
   };
   return aliases[key] ?? key;
 }
