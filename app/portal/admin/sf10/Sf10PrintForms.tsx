@@ -119,7 +119,7 @@ function JhsCertification({
 }) {
   const school = detail.schoolInformation ?? {};
   const student = detail.student ?? {};
-  const records = detail.scholasticRecords ?? [];
+  const records: any[] = Array.isArray(detail.scholasticRecords) ? detail.scholasticRecords : [];
   const last = records[records.length - 1];
   const nextGrade = last?.grade_level ? Math.min(12, Number(last.grade_level) + 1) : "";
   const schoolHead = text(school.school_head_name);
@@ -156,7 +156,7 @@ export function JhsSf10Form({ detail }: { detail: Sf10Detail }) {
   const record = detail.permanentRecord ?? {};
   const school = detail.schoolInformation ?? {};
   const student = detail.student ?? {};
-  const records = detail.scholasticRecords ?? [];
+  const records: any[] = Array.isArray(detail.scholasticRecords) ? detail.scholasticRecords : [];
   const frontRecords = records.slice(0, 2);
   const backRecords = records.slice(2, 5);
 
@@ -357,7 +357,7 @@ export function ShsSf10Form({ detail }: { detail: Sf10Detail }) {
   const record = detail.permanentRecord ?? {};
   const school = detail.schoolInformation ?? {};
   const student = detail.student ?? {};
-  const records = detail.scholasticRecords ?? [];
+  const records: any[] = Array.isArray(detail.scholasticRecords) ? detail.scholasticRecords : [];
   const grade11 = records.filter((item) => Number(item.grade_level) === 11);
   const grade12 = records.filter((item) => Number(item.grade_level) === 12);
   const schoolHead = text(school.school_head_name);
