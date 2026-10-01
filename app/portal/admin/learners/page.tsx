@@ -274,20 +274,20 @@ export default function LearnerManagementPage() {
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    return learners
-      .map((learner) => ({ learner, enrollment: enrollmentForYear(learner) }))
-      .filter(({ learner, enrollment }) => {
-        if (!enrollment) return false;
-        if (gradeFilter && enrollment.grade_level !== Number(gradeFilter)) return false;
-        if (sectionFilter && enrollment.section_id !== sectionFilter) return false;
-        if (
-          statusFilter !== "all" &&
-          (enrollment.learner_status ?? "active") !== statusFilter
-        ) {
-          return false;
-        }
-        if (!query) return true;
-        return [
+    return learners.flatMap((learner) => {
+      const enrollment = enrollmentForYear(learner);
+      if (!enrollment) return [];
+      if (gradeFilter && enrollment.grade_level !== Number(gradeFilter)) return [];
+      if (sectionFilter && enrollment.section_id !== sectionFilter) return [];
+      if (
+        statusFilter !== "all" &&
+        (enrollment.learner_status ?? "active") !== statusFilter
+      ) {
+        return [];
+      }
+
+      if (query) {
+        const matches = [
           learner.full_name,
           learner.lrn,
           enrollment.section,
@@ -295,7 +295,12 @@ export default function LearnerManagementPage() {
         ]
           .map((item) => String(item ?? "").toLowerCase())
           .some((item) => item.includes(query));
-      });
+
+        if (!matches) return [];
+      }
+
+      return [{ learner, enrollment }];
+    });
   }, [learners, selectedYearId, gradeFilter, sectionFilter, statusFilter, search]);
 
   const summary = useMemo(() => {
