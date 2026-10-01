@@ -247,7 +247,7 @@ function SideNav({
                   }}
                 >
                   <UserRoundCheck size={19} />
-                  <span>Masterlist & activation</span>
+                  <span>Bulk account import</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
