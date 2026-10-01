@@ -14,6 +14,7 @@ const json = (body: Record<string, unknown>, status = 200) =>
 
 const normalizePhone = (input: string) => {
   const raw = input.replace(/[\s()-]/g, "");
+  if (!raw) return "";
   if (/^09\d{9}$/.test(raw)) return `+63${raw.slice(1)}`;
   if (/^639\d{9}$/.test(raw)) return `+${raw}`;
   if (/^\+\d{8,15}$/.test(raw)) return raw;
