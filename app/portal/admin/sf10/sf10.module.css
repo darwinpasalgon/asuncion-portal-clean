@@ -16,12 +16,12 @@
 .printArea :global(.info-table td){padding:.016in .025in;border:0;border-bottom:.5px solid #777;height:.16in}
 .printArea :global(.info-table .label){font-size:5.9pt;white-space:nowrap}
 .printArea :global(.info-table .value){font-weight:700;text-align:center;font-size:6.6pt}
-.printArea :global(.sf10-header-logo){position:absolute;display:block;object-fit:contain;z-index:2}
-.printArea :global(.jhs-kagawaran-logo){left:.18in;top:.11in;width:.72in;height:.72in}
-.printArea :global(.jhs-deped-logo){right:.18in;top:.17in;width:1.28in;height:.65in}
-.printArea :global(.shs-kagawaran-logo){left:.24in;top:.10in;width:.70in;height:.70in}
-.printArea :global(.shs-deped-logo){right:.24in;top:.14in;width:1.30in;height:.66in}
-.printArea :global(.form-code){position:absolute;left:.28in;top:.12in;font-size:7pt}
+.printArea :global(.sf10-header-logo){position:absolute;display:block;object-fit:contain;z-index:2;background:transparent;mix-blend-mode:multiply}
+.printArea :global(.jhs-kagawaran-logo){left:.30in;top:.20in;width:.46in;height:.46in}
+.printArea :global(.jhs-deped-logo){right:.26in;top:.22in;width:.82in;height:.40in}
+.printArea :global(.shs-kagawaran-logo){left:.32in;top:.20in;width:.44in;height:.44in}
+.printArea :global(.shs-deped-logo){right:.28in;top:.22in;width:.84in;height:.40in}
+.printArea :global(.form-code){position:absolute;left:.28in;top:.06in;font-size:7pt}
 .printArea :global(.jhs-heading){text-align:center;margin:.02in 0 .04in}
 .printArea :global(.jhs-heading div){font-size:6.7pt;line-height:1.25}
 .printArea :global(.jhs-heading strong){display:block;font-size:9.2pt;margin:.035in 0 .015in}
@@ -72,7 +72,7 @@
 .printArea :global(.page-two-head){display:flex;justify-content:space-between;align-items:center;height:.15in;font-size:7pt}
 .printArea :global(.jhs-footer-note){display:flex;justify-content:space-between;font-size:5.4pt;margin-top:.01in}
 
-.printArea :global(.shs-form-code){position:absolute;right:.25in;top:.12in;font-size:7pt;font-weight:700}
+.printArea :global(.shs-form-code){position:absolute;right:.25in;top:.06in;font-size:7pt;font-weight:700}
 .printArea :global(.shs-heading){text-align:center;margin:.02in 0 .10in}
 .printArea :global(.shs-heading span){display:block;font-size:7.1pt;font-weight:700;line-height:1.25}
 .printArea :global(.shs-heading strong){display:block;font-size:9.7pt;margin-top:.035in}
