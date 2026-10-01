@@ -208,8 +208,11 @@ export default function BulkAccountImportPage() {
 
     const existingLrns = new Set(users.map((user) => user.lrn ?? "").filter(Boolean));
     const existingEmails = new Set(users.map((user) => user.email.toLowerCase()));
-    const sectionSet = new Set(
-      sections.map((section) => `${section.grade_level}|${section.name.toLowerCase()}`)
+    const sectionMap = new Map(
+      sections.map((section) => [
+        `${section.grade_level}|${section.name.toLowerCase()}`,
+        section.name,
+      ])
     );
     const seen = new Set<string>();
     const preview: PreviewRow[] = [];
@@ -236,8 +239,13 @@ export default function BulkAccountImportPage() {
           problems.push("Grade Level must be 7–12.");
         }
         if (!section) problems.push("Section is required.");
-        if (Number.isInteger(grade) && section && !sectionSet.has(`${grade}|${section.toLowerCase()}`)) {
-          problems.push("Section does not match the Grade Level.");
+        if (Number.isInteger(grade) && section) {
+          const canonicalSection = sectionMap.get(`${grade}|${section.toLowerCase()}`);
+          if (!canonicalSection) {
+            problems.push("Section does not match the Grade Level.");
+          } else {
+            data.section = canonicalSection;
+          }
         }
         if (existingLrns.has(lrn)) problems.push("LRN already has an account.");
         if (seen.has(lrn)) problems.push("Duplicate LRN in this CSV.");
@@ -254,7 +262,7 @@ export default function BulkAccountImportPage() {
         full_name: fullName,
         lrn,
         grade_level: Number.isInteger(grade) ? Number(grade) : null,
-        section,
+        section: data.section || section,
         email,
         position: data.position || "Teacher",
         mobile,
@@ -279,7 +287,7 @@ export default function BulkAccountImportPage() {
     const issued: Credential[] = [];
 
     try {
-      for (let start = 0; start < valid.length; start += 50) {
+      for (let start = 0; start < valid.length; start += 200) {
         const response = await fetch("/api/admin/import-accounts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -287,7 +295,7 @@ export default function BulkAccountImportPage() {
             action: "import",
             personType,
             fileName: file.name,
-            rows: valid.slice(start, start + 50),
+            rows: valid.slice(start, start + 200),
           }),
         });
         const result = await response.json().catch(() => ({}));
@@ -297,8 +305,14 @@ export default function BulkAccountImportPage() {
               (result.detail ? " " + result.detail : "")
           );
         }
-        issued.push(...(result.credentials ?? []));
+        issued.push(...(result.accounts ?? []));
         setCredentials([...issued]);
+        if (Array.isArray(result.errors) && result.errors.length) {
+          const first = result.errors[0];
+          throw new Error(
+            `${result.errors.length} row(s) were skipped. ${first?.error ?? "Review the import file."}`
+          );
+        }
       }
 
       setMessage(
