@@ -591,7 +591,6 @@ export default function UsersAccountsPage() {
                   onChange={(event) =>
                     setEditing({ ...editing, recoveryPhone: event.target.value })
                   }
-                  required
                 />
               </label>
 
