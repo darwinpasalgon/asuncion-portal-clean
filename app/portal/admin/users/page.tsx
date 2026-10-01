@@ -555,7 +555,7 @@ export default function UsersAccountsPage() {
             <div className={styles.modalHead}>
               <div>
                 <span>EDIT {editing.personType.toUpperCase()}</span>
-                <h2>Update account information</h2>
+                <h2>{editing.personType === "student" ? "Learner profile" : "Update account information"}</h2>
               </div>
               <button
                 className={styles.iconButton}
@@ -580,59 +580,427 @@ export default function UsersAccountsPage() {
 
               {editing.personType === "student" ? (
                 <>
-                  <label>
-                    <span>LRN</span>
-                    <input
-                      value={editing.lrn}
-                      onChange={(event) =>
-                        setEditing({ ...editing, lrn: event.target.value })
-                      }
-                      inputMode="numeric"
-                      maxLength={12}
-                      required
-                    />
-                  </label>
+                  <div className={styles.profileSection}>
+                    <div className={styles.profileSectionTitle}>
+                      <strong>Enrollment Information</strong>
+                      <span>Current school-year placement and learner account identifier.</span>
+                    </div>
 
-                  <div className={styles.twoCol}>
-                    <label>
-                      <span>Grade level</span>
-                      <select
-                        value={editing.gradeLevel}
-                        onChange={(event) =>
-                          setEditing({
-                            ...editing,
-                            gradeLevel: event.target.value,
-                            sectionId: "",
-                          })
-                        }
-                        required
-                      >
-                        <option value="">Select grade</option>
-                        {[7, 8, 9, 10, 11, 12].map((grade) => (
-                          <option key={grade} value={grade}>
-                            Grade {grade}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <div className={styles.threeCol}>
+                      <label>
+                        <span>LRN</span>
+                        <input
+                          value={editing.lrn}
+                          onChange={(event) =>
+                            setEditing({ ...editing, lrn: event.target.value })
+                          }
+                          inputMode="numeric"
+                          maxLength={12}
+                          required
+                        />
+                      </label>
 
-                    <label>
-                      <span>Section</span>
-                      <select
-                        value={editing.sectionId}
-                        onChange={(event) =>
-                          setEditing({ ...editing, sectionId: event.target.value })
-                        }
-                        required
-                      >
-                        <option value="">Select section</option>
-                        {editSections.map((section) => (
-                          <option key={section.id} value={section.id}>
-                            {section.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                      <label>
+                        <span>Grade level</span>
+                        <select
+                          value={editing.gradeLevel}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              gradeLevel: event.target.value,
+                              sectionId: "",
+                            })
+                          }
+                          required
+                        >
+                          <option value="">Select grade</option>
+                          {[7, 8, 9, 10, 11, 12].map((grade) => (
+                            <option key={grade} value={grade}>
+                              Grade {grade}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label>
+                        <span>Section</span>
+                        <select
+                          value={editing.sectionId}
+                          onChange={(event) =>
+                            setEditing({ ...editing, sectionId: event.target.value })
+                          }
+                          required
+                        >
+                          <option value="">Select section</option>
+                          {editSections.map((section) => (
+                            <option key={section.id} value={section.id}>
+                              {section.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className={styles.profileSection}>
+                    <div className={styles.profileSectionTitle}>
+                      <strong>Personal Information</strong>
+                      <span>Based on the learner information fields in School Form 1 (SF1).</span>
+                    </div>
+
+                    <div className={styles.fourCol}>
+                      <label>
+                        <span>Last name</span>
+                        <input
+                          value={editing.learnerInfo.last_name}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                last_name: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>First name</span>
+                        <input
+                          value={editing.learnerInfo.first_name}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                first_name: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>Middle name</span>
+                        <input
+                          value={editing.learnerInfo.middle_name}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                middle_name: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>Name extension</span>
+                        <input
+                          value={editing.learnerInfo.name_extension}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                name_extension: event.target.value,
+                              },
+                            })
+                          }
+                          placeholder="Jr., II, III"
+                        />
+                      </label>
+                    </div>
+
+                    <div className={styles.threeCol}>
+                      <label>
+                        <span>Sex</span>
+                        <select
+                          value={editing.learnerInfo.sex}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                sex: event.target.value,
+                              },
+                            })
+                          }
+                        >
+                          <option value="">Not specified</option>
+                          <option value="M">Male (M)</option>
+                          <option value="F">Female (F)</option>
+                        </select>
+                      </label>
+                      <label>
+                        <span>Birth date</span>
+                        <input
+                          type="date"
+                          value={editing.learnerInfo.birth_date}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                birth_date: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>Age as of 1st Friday of June</span>
+                        <input
+                          value={ageAsOfFirstFridayJune(editing.learnerInfo.birth_date)}
+                          readOnly
+                          placeholder="Auto-calculated"
+                        />
+                      </label>
+                    </div>
+
+                    <div className={styles.threeCol}>
+                      <label>
+                        <span>Mother tongue</span>
+                        <input
+                          value={editing.learnerInfo.mother_tongue}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                mother_tongue: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>Ethnic group</span>
+                        <input
+                          value={editing.learnerInfo.ethnic_group}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                ethnic_group: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>Religion</span>
+                        <input
+                          value={editing.learnerInfo.religion}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                religion: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className={styles.profileSection}>
+                    <div className={styles.profileSectionTitle}>
+                      <strong>Address</strong>
+                    </div>
+                    <div className={styles.twoCol}>
+                      <label>
+                        <span>House # / Street / Sitio / Purok</span>
+                        <input
+                          value={editing.learnerInfo.address_house_street_purok}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                address_house_street_purok: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>Barangay</span>
+                        <input
+                          value={editing.learnerInfo.address_barangay}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                address_barangay: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                    <div className={styles.twoCol}>
+                      <label>
+                        <span>Municipality / City</span>
+                        <input
+                          value={editing.learnerInfo.address_municipality_city}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                address_municipality_city: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>Province</span>
+                        <input
+                          value={editing.learnerInfo.address_province}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                address_province: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className={styles.profileSection}>
+                    <div className={styles.profileSectionTitle}>
+                      <strong>Parents / Guardian</strong>
+                    </div>
+                    <div className={styles.twoCol}>
+                      <label>
+                        <span>Father&apos;s name</span>
+                        <input
+                          value={editing.learnerInfo.father_name}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                father_name: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>Mother&apos;s maiden name</span>
+                        <input
+                          value={editing.learnerInfo.mother_maiden_name}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                mother_maiden_name: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                    <div className={styles.threeCol}>
+                      <label>
+                        <span>Guardian name</span>
+                        <input
+                          value={editing.learnerInfo.guardian_name}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                guardian_name: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>Relationship</span>
+                        <input
+                          value={editing.learnerInfo.guardian_relationship}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                guardian_relationship: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        <span>Parent / guardian contact number</span>
+                        <input
+                          value={editing.learnerInfo.guardian_contact_number}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              recoveryPhone: event.target.value,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                guardian_contact_number: event.target.value,
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className={styles.profileSection}>
+                    <div className={styles.profileSectionTitle}>
+                      <strong>School Information</strong>
+                    </div>
+                    <div className={styles.twoCol}>
+                      <label>
+                        <span>Learning modality</span>
+                        <input
+                          value={editing.learnerInfo.learning_modality}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                learning_modality: event.target.value,
+                              },
+                            })
+                          }
+                          placeholder="Face to Face, Blended, etc."
+                        />
+                      </label>
+                      <label>
+                        <span>Remarks</span>
+                        <input
+                          value={editing.learnerInfo.remarks}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                remarks: event.target.value,
+                              },
+                            })
+                          }
+                          placeholder="Transfer in/out, dropped, late enrollment, etc."
+                        />
+                      </label>
+                    </div>
                   </div>
                 </>
               ) : (
@@ -648,7 +1016,7 @@ export default function UsersAccountsPage() {
                       required
                     />
                     <small>
-                      Changing this also changes the Teacher's actual portal login email.
+                      Changing this also changes the Teacher&apos;s actual portal login email.
                     </small>
                   </label>
 
@@ -662,18 +1030,18 @@ export default function UsersAccountsPage() {
                       placeholder="Teacher III, Master Teacher I, etc."
                     />
                   </label>
+
+                  <label>
+                    <span>Mobile / contact number</span>
+                    <input
+                      value={editing.recoveryPhone}
+                      onChange={(event) =>
+                        setEditing({ ...editing, recoveryPhone: event.target.value })
+                      }
+                    />
+                  </label>
                 </>
               )}
-
-              <label>
-                <span>Mobile / contact number</span>
-                <input
-                  value={editing.recoveryPhone}
-                  onChange={(event) =>
-                    setEditing({ ...editing, recoveryPhone: event.target.value })
-                  }
-                />
-              </label>
 
               <div className={styles.modalActions}>
                 <button type="button" onClick={() => setEditing(null)}>
