@@ -51,7 +51,7 @@ function paddedSubjects(subjects: SubjectRecord[] = [], count = 12) {
 function shortRegion(value: unknown) {
   const raw = text(value);
   const match = raw.match(/Region\s+([IVX]+)/i);
-  return match?.[1] ?? raw.replace(/^Region\s+/i, "") || "XI";
+  return match?.[1] ?? (raw.replace(/^Region\s+/i, "") || "XI");
 }
 
 function JhsGradeBlock({
