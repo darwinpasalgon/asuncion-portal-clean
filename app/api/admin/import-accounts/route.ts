@@ -20,18 +20,22 @@ async function isActiveAdmin(token: string) {
   if (!id) return false;
 
   const profileResponse = await fetch(
-    `${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(id)}&select=role,account_status&limit=1`,
+    `${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(id)}&select=role,account_status,admin_role&limit=1`,
     { headers: headers(token), cache: "no-store" }
   );
   if (!profileResponse.ok) return false;
   const profiles = await profileResponse.json().catch(() => []);
-  return profiles?.[0]?.role === "administrator" && profiles?.[0]?.account_status === "active";
+  return (
+    profiles?.[0]?.role === "administrator" &&
+    profiles?.[0]?.account_status === "active" &&
+    profiles?.[0]?.admin_role === "super_administrator"
+  );
 }
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get("anhs-access-token")?.value ?? "";
   if (!token || !(await isActiveAdmin(token))) {
-    return NextResponse.json({ error: "Administrator access required." }, { status: 403 });
+    return NextResponse.json({ error: "Super Administrator access required." }, { status: 403 });
   }
 
   const body = await request.json().catch(() => null);
