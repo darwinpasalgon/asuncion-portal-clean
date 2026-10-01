@@ -48,3 +48,21 @@
 .success{border:1px solid #cce7d5;background:#f0faf3;color:#287052}
 @media(max-width:850px){.header{align-items:flex-start;flex-direction:column}.summary{grid-template-columns:1fr 1fr}.gradeGrid{grid-template-columns:1fr}.addForm{grid-template-columns:1fr}}
 @media(max-width:520px){.page{padding-inline:14px}.summary{grid-template-columns:1fr}.topActions{align-items:flex-start;flex-direction:column;gap:10px}.topLink+.topLink{padding-left:0;border-left:0}.panelHeading{align-items:flex-start;flex-direction:column}.gradeGrid{padding:14px}.addForm{padding:20px}}
+
+.schoolYearList{display:grid;gap:9px;padding:20px 24px 8px}
+.schoolYearRow{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 14px;border:1px solid #e1e9ed;border-radius:10px;background:#fbfdfe}
+.schoolYearRow>div strong,.schoolYearRow>div span{display:block}
+.schoolYearRow>div strong{color:#34586d;font-size:.86rem}
+.schoolYearRow>div span{margin-top:3px;color:#8596a0;font-size:.7rem}
+.yearActiveBadge{display:inline-block;padding:6px 10px;border-radius:999px;background:#e9f6ee;color:#26734e;font-size:.67rem;font-weight:800}
+.yearActivateButton{min-height:34px;border:1px solid #cfdde5;border-radius:8px;background:#fff;color:#2e6786;padding:0 11px;font-size:.68rem;font-weight:750}
+.yearActivateButton:disabled{opacity:.45;cursor:not-allowed}
+.addYearForm{display:grid;grid-template-columns:220px 1fr auto;gap:14px;align-items:end;padding:16px 24px 24px}
+.addYearForm label{display:flex;flex-direction:column;gap:7px}
+.addYearForm label span,.yearPreview span{font-size:.72rem;font-weight:700;color:#526c7b}
+.addYearForm input{min-height:42px;border:1px solid #d6e1e7;border-radius:8px;background:#fff;padding:0 11px;color:#294d64}
+.addYearForm button{min-height:42px;border:0;border-radius:8px;background:linear-gradient(100deg,#155f9d,#147b56);color:#fff;padding:0 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:700}
+.yearPreview{min-height:42px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 12px;border:1px solid #e0e8ed;border-radius:8px;background:#f7fafb}
+.yearPreview strong{color:#315e76}
+@media(max-width:850px){.addYearForm{grid-template-columns:1fr}}
+@media(max-width:520px){.schoolYearRow{align-items:flex-start;flex-direction:column}.yearActivateButton{width:100%}.schoolYearList{padding-inline:14px}.addYearForm{padding-inline:14px}}
