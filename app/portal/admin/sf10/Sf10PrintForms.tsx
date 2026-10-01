@@ -364,7 +364,9 @@ export function ShsSf10Form({ detail }: { detail: Sf10Detail }) {
   const designation = text(school.school_head_designation) || "Principal IV";
   const track = text(record.shs_track) || "ACADEMIC";
   const strand = text(record.shs_strand);
-  const allSubjects = records.flatMap((item) => item.subjects ?? []);
+  const allSubjects: any[] = records.flatMap((item: any) =>
+    Array.isArray(item.subjects) ? item.subjects : []
+  );
   const finalRatings = allSubjects
     .map((item: any) => item.final_rating)
     .filter((value: any) => typeof value === "number") as number[];
@@ -468,7 +470,7 @@ export function ShsSf10Form({ detail }: { detail: Sf10Detail }) {
         <div className="annex-code">Form 137-SHS</div>
         <h2>ANNEX: LIST OF SUBJECTS TAKEN</h2>
         <p>Please check the subjects passed by the student</p>
-        <AnnexSection title="CORE SUBJECTS" subjects={allSubjects.filter((_, index) => index < 15)} />
+        <AnnexSection title="CORE SUBJECTS" subjects={allSubjects.filter((_: any, index: number) => index < 15)} />
         <div className="annex-note">*STEM students will take these instead:</div>
         <AnnexSection title="APPLIED SUBJECTS" subjects={allSubjects.slice(15, 22)} />
         <AnnexSection title="SPECIALIZED SUBJECTS (Please write the list of subjects below)" subjects={allSubjects.slice(22, 32)} />
