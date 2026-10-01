@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
   const fullName = String(body.full_name ?? "").trim();
   const recoveryPhone = normalizePhone(String(body.recovery_phone ?? "").trim());
   if (!fullName) return json({ error: "Full name is required." }, 400);
-  if (!recoveryPhone) return json({ error: "Enter a valid mobile number." }, 400);
+  if (recoveryPhone === null) return json({ error: "Enter a valid mobile number or leave it blank." }, 400);
 
   if (personType === "student") {
     const lrn = String(body.lrn ?? "").trim();
