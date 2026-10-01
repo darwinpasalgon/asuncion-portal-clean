@@ -106,5 +106,18 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ profile, academicContext });
+  let adminPermissions: string[] = [];
+  if (profile.role === "staff_administrator") {
+    const permissionRows = await getRows(
+      `${SUPABASE_URL}/rest/v1/administrator_permissions?administrator_id=eq.${encodeURIComponent(
+        userId
+      )}&select=permission&order=permission.asc`,
+      token
+    );
+    adminPermissions = (permissionRows ?? []).map(
+      (item: { permission?: string }) => String(item.permission ?? "")
+    ).filter(Boolean);
+  }
+
+  return NextResponse.json({ profile, academicContext, adminPermissions });
 }
