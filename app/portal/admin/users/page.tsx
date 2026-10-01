@@ -20,6 +20,29 @@ import styles from "./users.module.css";
 type PersonType = "student" | "teacher";
 type UserStatus = "pending" | "active" | "suspended";
 
+type LearnerInfo = {
+  last_name: string;
+  first_name: string;
+  middle_name: string;
+  name_extension: string;
+  sex: string;
+  birth_date: string;
+  mother_tongue: string;
+  ethnic_group: string;
+  religion: string;
+  address_house_street_purok: string;
+  address_barangay: string;
+  address_municipality_city: string;
+  address_province: string;
+  father_name: string;
+  mother_maiden_name: string;
+  guardian_name: string;
+  guardian_relationship: string;
+  guardian_contact_number: string;
+  learning_modality: string;
+  remarks: string;
+};
+
 type UserRecord = {
   id: string;
   full_name: string;
@@ -33,6 +56,7 @@ type UserRecord = {
   section: string | null;
   position: string | null;
   created_at: string;
+  learner_info: Partial<LearnerInfo> | null;
 };
 
 type Section = {
@@ -51,7 +75,55 @@ type EditState = {
   gradeLevel: string;
   sectionId: string;
   position: string;
+  learnerInfo: LearnerInfo;
 };
+
+function emptyLearnerInfo(): LearnerInfo {
+  return {
+    last_name: "",
+    first_name: "",
+    middle_name: "",
+    name_extension: "",
+    sex: "",
+    birth_date: "",
+    mother_tongue: "",
+    ethnic_group: "",
+    religion: "",
+    address_house_street_purok: "",
+    address_barangay: "",
+    address_municipality_city: "",
+    address_province: "",
+    father_name: "",
+    mother_maiden_name: "",
+    guardian_name: "",
+    guardian_relationship: "",
+    guardian_contact_number: "",
+    learning_modality: "",
+    remarks: "",
+  };
+}
+
+function learnerInfoOf(user: UserRecord): LearnerInfo {
+  return { ...emptyLearnerInfo(), ...(user.learner_info ?? {}) };
+}
+
+function ageAsOfFirstFridayJune(birthDate: string) {
+  if (!birthDate) return "";
+  const birth = new Date(`${birthDate}T00:00:00`);
+  if (Number.isNaN(birth.getTime())) return "";
+  const now = new Date();
+  const year = now.getFullYear();
+  const juneFirst = new Date(year, 5, 1);
+  const offset = (5 - juneFirst.getDay() + 7) % 7;
+  const firstFriday = new Date(year, 5, 1 + offset);
+  let age = firstFriday.getFullYear() - birth.getFullYear();
+  const beforeBirthday =
+    firstFriday.getMonth() < birth.getMonth() ||
+    (firstFriday.getMonth() === birth.getMonth() &&
+      firstFriday.getDate() < birth.getDate());
+  if (beforeBirthday) age -= 1;
+  return age >= 0 ? String(age) : "";
+}
 
 function personTypeOf(user: UserRecord): PersonType {
   return user.role === "teacher" || user.requested_role === "teacher"
@@ -129,16 +201,21 @@ export default function UsersAccountsPage() {
           )?.id ?? ""
         : "";
 
+    const learnerInfo = learnerInfoOf(user);
     setEditing({
       id: user.id,
       personType: type,
       fullName: user.full_name,
       lrn: user.lrn ?? "",
       email: user.email,
-      recoveryPhone: user.recovery_phone,
+      recoveryPhone:
+        type === "student"
+          ? learnerInfo.guardian_contact_number || user.recovery_phone
+          : user.recovery_phone,
       gradeLevel: user.grade_level ? String(user.grade_level) : "",
       sectionId,
       position: user.position ?? "Teacher",
+      learnerInfo,
     });
     setError("");
     setSuccess("");
@@ -173,6 +250,10 @@ export default function UsersAccountsPage() {
                 lrn: editing.lrn,
                 grade_level: Number(editing.gradeLevel),
                 section_id: editing.sectionId,
+                ...editing.learnerInfo,
+                recovery_phone:
+                  editing.learnerInfo.guardian_contact_number ||
+                  editing.recoveryPhone,
               }
             : {
                 email: editing.email,
