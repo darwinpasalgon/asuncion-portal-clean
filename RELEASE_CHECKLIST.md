@@ -1,56 +1,70 @@
 # Asuncion NHS Academic Portal — Release Checklist
 
-This checklist applies to the `login-page` branch before it is merged into `main`.
+This checklist applies to PR #2 before it is merged into `main`.
 
-## Completed
+## Production already completed
 
-- Student, Teacher, and Administrator authentication workflows were previously verified with real accounts.
-- Final Student/Teacher/Administrator database/RLS smoke tests passed.
+- Production `main` is deployed successfully on Vercel.
+- Public registration has been removed from the website.
+- `/register` redirects to sign-in and the registration API rejects public account creation.
+- Student, Teacher, and Administrator sign-in flows use verified school accounts.
+- Students sign in with LRN; Teachers and staff sign in with registered email.
+- Temporary-password users are forced to create a new private password before portal access.
+- The live database has Row Level Security on the application tables.
 - Student/Teacher role tests cannot enumerate Administrator profiles.
-- The authenticated role has no `UPDATE` table privilege on `public.profiles`, blocking direct role self-promotion.
-- Database authorization comes from `public.profiles`, not user-editable Auth metadata.
-- Administrator routes are protected in `proxy.ts` and again inside Administrator APIs.
-- Only the Supabase publishable key is used by the Next.js application.
-- All public application tables have Row Level Security enabled.
-- Password-reset service tables intentionally have RLS with no client policies and no `anon`/`authenticated` table grants.
-- SECURITY DEFINER helper functions are kept in the private schema with restricted execution grants.
-- Announcement and Learning Resource Storage buckets are private.
-- Enrollment, subjects, Teacher assignments, class schedules, direct Term Grades,
-  attendance, announcements/memorandums, learning resources, and reports are connected.
-- Foreign-key covering indexes recommended by the database advisor were added.
-- The live database is captured in:
-  - `supabase/migrations/20260923085407_asuncion_portal_baseline.sql`
-  - Supabase migration history version `20260923085407`, name `asuncion_portal_baseline`
-- School structure seed data is captured in `supabase/seed.sql`.
-- The seed contains school years, grade levels, and sections only; it does not include users,
-  grades, attendance, or other private student records.
-- Password creation/change flows enforce a minimum of 8 characters on both client and server.
-- Latest application changes are deployed through the Vercel preview branch before production merge.
+- Administrator account approval can update profiles while normal users remain blocked by RLS.
+- Announcement and Learning Resource storage buckets are private.
+- Grades, attendance, schedules, assignments, announcements, resources, and reports are connected.
 
-## Plan-limited security enhancement
+## PR #2 — school-managed account administration
 
-Supabase Security Advisor reports **Leaked Password Protection Disabled**.
+- Administrator → Users & accounts:
+  - Search and filter Students and Teachers.
+  - Edit Student name, LRN, Grade, Section, and contact information.
+  - Student Grade/Section changes synchronize the active school-year enrollment.
+  - Edit Teacher name, email/login, position/designation, and contact information.
+  - Teacher email changes update the actual Supabase Auth login email.
+  - Suspend and reactivate accounts.
+  - Protected permanent deletion refuses to erase accounts with official academic/activity records.
+- Administrator → Bulk account import:
+  - Excel-compatible CSV templates for Students and Teachers.
+  - Client-side preview and validation before any account is created.
+  - Students: LRN, Full Name, Grade Level, Section, optional Mobile.
+  - Teachers: Full Name, Email, optional Position and Mobile.
+  - Accounts are created only by an active Administrator through a privileged Supabase function.
+  - Imported users receive randomly generated temporary passwords.
+  - Temporary passwords are returned for one-time download and are not stored in plaintext by the portal.
+  - Every imported user must change the temporary password on first sign-in.
+  - Large files are imported in batches of up to 200 accounts.
+- Database account-creation trigger accepts only school-provisioned Auth users with
+  `app_metadata.anhs_provisioned=true`. Public/direct signups are rejected by the database trigger.
+- Applied Supabase migration history is represented in the repository.
+- Supabase Edge Functions are excluded from the Next.js TypeScript build because they use the Deno runtime.
 
-The Asuncion National High School Supabase organization is currently on the **Free plan**.
-Supabase documents leaked-password protection as a **Pro Plan and above** feature, so this
-cannot be enabled without upgrading the Supabase organization. Do not treat this as an
-unresolved application-code defect on the current Free plan.
-
-If the school later upgrades to Pro or above, enable leaked-password protection in
-Authentication password-security settings and re-run the Security Advisor.
-
-## Expected advisor notices
+## Expected Supabase advisor notices
 
 - `password_recovery_challenges` and `password_reset_requests` report
-  **RLS Enabled No Policy**. This is intentional: these are service-only tables and client
-  roles have no table grants.
-- Unused-index notices are expected while the portal has very little production data.
-- Multiple-permissive-policy notices are performance optimization opportunities; the
-  final role-matrix tests confirm the intended access boundaries.
+  **RLS Enabled No Policy**. This is intentional because they are service-only tables.
+- **Leaked Password Protection Disabled** remains a plan-limited warning on the current Supabase Free plan.
+- Unused-index notices are expected while production data volume is still small.
+- Multiple-permissive-policy notices are performance optimization opportunities, not current access failures.
 
-## Remaining release step
+## Before merging PR #2
 
-1. Confirm the latest `login-page` Vercel deployment is successful.
-2. Perform a quick visual check of the preview login/dashboard if desired.
-3. Merge PR #1 into `main` only after explicit approval.
-4. Confirm the production Vercel deployment and the final production domain.
+1. Confirm the latest Vercel preview build is successful.
+2. Test one Student import:
+   - Import one unused LRN.
+   - Sign in using the issued temporary password.
+   - Confirm forced password change.
+   - Confirm Grade and Section enrollment.
+3. Test one Teacher import:
+   - Import one unused email.
+   - Sign in using the issued temporary password.
+   - Confirm forced password change.
+4. Test Users & accounts:
+   - Edit Student Grade/Section.
+   - Edit Teacher position/email.
+   - Suspend and reactivate a test account.
+   - Confirm protected deletion blocks accounts with official records.
+5. Merge PR #2 only after explicit approval.
+6. Confirm the production Vercel deployment after merge.

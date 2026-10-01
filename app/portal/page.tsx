@@ -6,6 +6,7 @@ import {
   BookOpen,
   CalendarDays,
   ClipboardCheck,
+  FileSpreadsheet,
   FolderOpen,
   GraduationCap,
   LayoutDashboard,
@@ -225,6 +226,28 @@ function SideNav({
                 >
                   <Users size={19} />
                   <span>Account approvals</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="nav-button"
+                  onClick={() => {
+                    window.location.href = "/portal/admin/users";
+                  }}
+                >
+                  <Users size={19} />
+                  <span>Users & accounts</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="nav-button"
+                  onClick={() => {
+                    window.location.href = "/portal/admin/masterlist";
+                  }}
+                >
+                  <FileSpreadsheet size={19} />
+                  <span>Bulk account import</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
