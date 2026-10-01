@@ -143,6 +143,21 @@ Deno.serve(async (req) => {
 
     const permissions = cleanPermissions(body.permissions, adminRole);
     const password = temporaryPassword();
+    const provisioningToken = crypto.randomUUID();
+
+    const { error: provisioningError } = await admin
+      .from("account_provisioning_tokens")
+      .insert({
+        token: provisioningToken,
+        email,
+        requested_role: "administrator",
+        expires_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+        created_by: callerId,
+      });
+
+    if (provisioningError) {
+      return json({ error: "Unable to authorize secure administrator provisioning." }, 500);
+    }
 
     const { data: created, error: createError } = await admin.auth.admin.createUser({
       email,
@@ -150,6 +165,7 @@ Deno.serve(async (req) => {
       email_confirm: true,
       user_metadata: {
         requested_role: "administrator",
+        provisioning_token: provisioningToken,
         full_name: fullName,
         recovery_phone: "",
         position,
@@ -162,6 +178,10 @@ Deno.serve(async (req) => {
     });
 
     if (createError || !created.user?.id) {
+      await admin
+        .from("account_provisioning_tokens")
+        .delete()
+        .eq("token", provisioningToken);
       return json({ error: createError?.message || "Unable to create the administrator account." }, 400);
     }
 
