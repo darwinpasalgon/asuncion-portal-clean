@@ -1,9 +1,9 @@
 name: SF10 branch typecheck
 
 on:
-  push:
+  pull_request:
     branches:
-      - sf10-exact-deped-layout
+      - main
 
 jobs:
   typecheck:
