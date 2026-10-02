@@ -25,13 +25,26 @@ const allowedPermissions = new Set([
   "resources.manage",
   "password_resets.manage",
   "sf10.manage",
+  "hr.manage",
 ]);
 
 const presetPermissions: Record<string, string[]> = {
   registrar: ["sf10.manage"],
+  human_resources: ["hr.manage"],
   content_administrator: ["announcements.manage", "resources.manage"],
   school_administrator: [],
 };
+
+const allowedAdminRoles = new Set([
+  "registrar",
+  "human_resources",
+  "content_administrator",
+  "school_administrator",
+]);
+
+function storedAdminRole(adminRole: string) {
+  return adminRole === "human_resources" ? "school_administrator" : adminRole;
+}
 
 function temporaryPassword() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -117,6 +130,14 @@ Deno.serve(async (req) => {
       permissions.set(row.administrator_id, current);
     }
 
+    const { data: personnel, error: personnelError } = await admin
+      .from("non_teaching_personnel")
+      .select("id,full_name,email,position,portal_user_id,is_active")
+      .eq("is_active", true)
+      .order("full_name");
+
+    if (personnelError) return json({ error: "Unable to load Non-Teaching Personnel." }, 500);
+
     return json({
       ok: true,
       administrators: (admins ?? []).map((item) => ({
@@ -124,24 +145,45 @@ Deno.serve(async (req) => {
         permissions: permissions.get(item.id) ?? [],
         is_current_user: item.id === callerId,
       })),
+      non_teaching_personnel: personnel ?? [],
     });
   }
 
   if (action === "create") {
-    const fullName = String(body.full_name ?? "").trim();
-    const email = String(body.email ?? "").trim().toLowerCase();
-    const position = String(body.position ?? "").trim() || "Administrator";
-    const adminRole = String(body.admin_role ?? "registrar");
+    const personnelId = String(body.personnel_id ?? "").trim();
+    let fullName = String(body.full_name ?? "").trim().toUpperCase();
+    let email = String(body.email ?? "").trim().toLowerCase();
+    let position = (String(body.position ?? "").trim() || "Administrator").toUpperCase();
+    const requestedAdminRole = String(body.admin_role ?? "registrar");
+    const adminRole = storedAdminRole(requestedAdminRole);
+
+    if (!allowedAdminRoles.has(requestedAdminRole)) {
+      return json({ error: "Select a valid delegated administrator role." }, 400);
+    }
+
+    if (personnelId) {
+      const { data: personnel } = await admin
+        .from("non_teaching_personnel")
+        .select("id,full_name,email,position,portal_user_id")
+        .eq("id", personnelId)
+        .maybeSingle();
+
+      if (!personnel) return json({ error: "Non-Teaching Personnel record not found." }, 404);
+      if (personnel.portal_user_id) {
+        return json({ error: "This personnel record already has portal access." }, 409);
+      }
+
+      fullName = String(personnel.full_name ?? "").trim().toUpperCase();
+      email = String(personnel.email ?? "").trim().toLowerCase();
+      position = (String(personnel.position ?? "").trim() || "Administrator").toUpperCase();
+    }
 
     if (!fullName) return json({ error: "Full name is required." }, 400);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return json({ error: "Enter a valid email address." }, 400);
     }
-    if (!["registrar", "content_administrator", "school_administrator"].includes(adminRole)) {
-      return json({ error: "Select a valid delegated administrator role." }, 400);
-    }
 
-    const permissions = cleanPermissions(body.permissions, adminRole);
+    const permissions = cleanPermissions(body.permissions, requestedAdminRole);
     const password = temporaryPassword();
     const provisioningToken = crypto.randomUUID();
 
@@ -201,11 +243,25 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (personnelId) {
+      const { error: linkError } = await admin
+        .from("non_teaching_personnel")
+        .update({ portal_user_id: created.user.id, updated_at: new Date().toISOString() })
+        .eq("id", personnelId)
+        .is("portal_user_id", null);
+
+      if (linkError) {
+        await admin.auth.admin.deleteUser(created.user.id);
+        return json({ error: "Account creation was rolled back because the personnel record could not be linked." }, 500);
+      }
+    }
+
     return json({
       ok: true,
       administrator_id: created.user.id,
       temporary_password: password,
       permissions,
+      assigned_role: requestedAdminRole,
     });
   }
 
@@ -241,15 +297,16 @@ Deno.serve(async (req) => {
   }
 
   if (action === "update") {
-    const fullName = String(body.full_name ?? "").trim();
+    const fullName = String(body.full_name ?? "").trim().toUpperCase();
     const email = String(body.email ?? "").trim().toLowerCase();
-    const position = String(body.position ?? "").trim() || "Administrator";
-    const adminRole = String(body.admin_role ?? target.admin_role ?? "school_administrator");
+    const position = (String(body.position ?? "").trim() || "Administrator").toUpperCase();
+    const requestedAdminRole = String(body.admin_role ?? target.admin_role ?? "school_administrator");
+    const adminRole = storedAdminRole(requestedAdminRole);
 
     if (!fullName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return json({ error: "Enter a valid name and email address." }, 400);
     }
-    if (!["registrar", "content_administrator", "school_administrator"].includes(adminRole)) {
+    if (!allowedAdminRoles.has(requestedAdminRole)) {
       return json({ error: "Select a valid delegated administrator role." }, 400);
     }
 
@@ -273,7 +330,7 @@ Deno.serve(async (req) => {
       .eq("id", administratorId);
     if (profileError) return json({ error: "Unable to update the administrator profile." }, 500);
 
-    const permissions = cleanPermissions(body.permissions, adminRole);
+    const permissions = cleanPermissions(body.permissions, requestedAdminRole);
     await admin
       .from("administrator_permissions")
       .delete()
