@@ -128,15 +128,27 @@ Deno.serve(async (req) => {
 
   async function saveTeacherInformation(teacherId: string, source: ImportRow) {
     const personal = cleanDetails(source.teacher_personal ?? {}, personalFields);
-    // Imports preserve the original source cells. Verified HR fields are never overwritten.
-    const sourceFields = officialFields.filter(([key]) => key.endsWith("_source"));
-    const official = cleanDetails(source.teacher_official ?? {}, sourceFields);
+    // Preserve original source cells and populate the uniform appointment date only when HR has not already verified one.
+    const parsedOfficial = cleanDetails(source.teacher_official ?? {}, officialFields);
+    const sourceOfficial = Object.fromEntries(
+      Object.entries(parsedOfficial).filter(([key]) => key.endsWith("_source"))
+    );
     const { data: current, error: readError } = await admin.from("teacher_information").select("personal,official,version").eq("teacher_id", teacherId).maybeSingle();
     if (readError) throw new Error("Unable to read teacher information.");
     const nonempty = (data: Record<string, string>) => Object.fromEntries(Object.entries(data).filter(([, value]) => value !== ""));
+    const currentOfficial = (current?.official ?? {}) as Record<string, string>;
+    const importedAppointmentDate =
+      !String(currentOfficial.appointment_date ?? "").trim() &&
+      String(parsedOfficial.appointment_date ?? "").trim()
+        ? { appointment_date: parsedOfficial.appointment_date }
+        : {};
     const update = {
       personal: { ...(current?.personal ?? {}), ...nonempty(personal) },
-      official: { ...(current?.official ?? {}), ...nonempty(official) },
+      official: {
+        ...currentOfficial,
+        ...nonempty(sourceOfficial as Record<string, string>),
+        ...importedAppointmentDate,
+      },
       source_data: { file_name: fileName, sheet: String(source.source_data?.sheet ?? "").slice(0, 100), row: Number(source.row_number) || null, personnel_number: String(source.source_data?.personnel_number ?? "").slice(0, 100), position: String(source.position ?? "").slice(0, 200), email: String(source.email ?? "").slice(0, 254) },
       version: (current?.version ?? 0) + 1, updated_by: callerId, updated_at: new Date().toISOString(),
     };
@@ -226,6 +238,12 @@ Deno.serve(async (req) => {
         if ((existingProfile?.[0]?.role === "teacher" || existingProfile?.[0]?.requested_role === "teacher") && source.teacher_personal) {
           try {
             await saveTeacherInformation(existingProfile[0].id, source);
+            if (!existingProfile[0].position && position) {
+              await admin
+                .from("profiles")
+                .update({ position, updated_at: new Date().toISOString() })
+                .eq("id", existingProfile[0].id);
+            }
             updatedProfiles += 1;
           } catch (error) {
             failures.push({ row_number: rowNumber, name: fullName, identifier: email, error: error instanceof Error ? error.message : "Unable to update the teacher profile." });
