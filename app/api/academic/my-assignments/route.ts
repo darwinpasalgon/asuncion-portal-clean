@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
 
   const [sections, subjects, enrollments] = await Promise.all([
     getRows("sections?select=id,name,grade_level", token),
-    getRows("subjects?select=id,name,code,grade_level", token),
+    getRows("subjects?select=id,name,grade_level", token),
     getRows(
       `student_enrollments?school_year_id=eq.${encodeURIComponent(
         activeYear.id
@@ -88,13 +88,10 @@ export async function GET(request: NextRequest) {
       (item: { id: string; name: string }) => [item.id, item.name] as [string, string]
     )
   );
-  const subjectMap = new Map<string, { name: string; code: string | null }>(
+  const subjectMap = new Map<string, { name: string }>(
     (subjects ?? []).map(
-      (item: { id: string; name: string; code: string | null }) =>
-        [item.id, { name: item.name, code: item.code }] as [
-          string,
-          { name: string; code: string | null }
-        ]
+      (item: { id: string; name: string }) =>
+        [item.id, { name: item.name }] as [string, { name: string }]
     )
   );
 
@@ -104,6 +101,7 @@ export async function GET(request: NextRequest) {
       grade_level: number;
       section_id: string;
       subject_id: string;
+      major: string | null;
     }) => {
       const subject = subjectMap.get(assignment.subject_id);
       const studentCount = (enrollments ?? []).filter(
@@ -116,7 +114,7 @@ export async function GET(request: NextRequest) {
         grade_level: assignment.grade_level,
         section: sectionMap.get(assignment.section_id) ?? "Unknown section",
         subject: subject?.name ?? "Unknown subject",
-        subject_code: subject?.code ?? null,
+        major: assignment.major ?? null,
         student_count: studentCount,
       };
     }
