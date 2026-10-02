@@ -263,6 +263,19 @@ function SideNav({
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
+              {(profile.role === "administrator" || adminPermissions.includes("hr.manage")) && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    className="nav-button"
+                    onClick={() => {
+                      window.location.href = "/portal/admin/teacher-profiles";
+                    }}
+                  >
+                    <UserRound size={19} />
+                    <span>Teacher HR profiles</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               {profile.role === "administrator" && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
