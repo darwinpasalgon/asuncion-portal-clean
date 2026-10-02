@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
+  BookOpen,
   Eye,
   EyeOff,
   GraduationCap,
@@ -86,6 +87,30 @@ export default function LoginPage() {
             One secure place for students, teachers, and school administrators
             to access academic information and school resources.
           </p>
+
+          <div className={styles.portalHighlights} aria-label="Portal features">
+            <div>
+              <span><ShieldCheck size={17} /></span>
+              <div>
+                <strong>Secure access</strong>
+                <small>School-managed accounts</small>
+              </div>
+            </div>
+            <div>
+              <span><GraduationCap size={17} /></span>
+              <div>
+                <strong>Academic records</strong>
+                <small>Connected learner information</small>
+              </div>
+            </div>
+            <div>
+              <span><BookOpen size={17} /></span>
+              <div>
+                <strong>School resources</strong>
+                <small>One organized workspace</small>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className={styles.brandFooter}>
