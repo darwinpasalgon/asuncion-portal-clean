@@ -39,13 +39,13 @@ Deno.serve(async req => {
   }
   if (action === "list") {
     if (!canManage) return json({ error: "Human Resources access required." }, 403);
-    const { data, error } = await admin.from("profiles").select("id,full_name,email,position,account_status").eq("role", "teacher").order("full_name").limit(1000);
+    const { data, error } = await admin.from("profiles").select("id,full_name,email,position,account_status,role,requested_role").or("role.eq.teacher,requested_role.eq.teacher").order("full_name").limit(1000);
     if (error) return json({ error: "Unable to load teachers." }, 500);
     return json({ teachers: data, can_manage: true, can_import: superAdmin });
   }
   const teacherId = String(body.teacher_id ?? caller.id);
   if (!canManage && teacherId !== caller.id) return json({ error: "You can only access your own teacher profile." }, 403);
-  const { data: teacher } = await admin.from("profiles").select("id,full_name,email,position,account_status").eq("id", teacherId).eq("role", "teacher").maybeSingle();
+  const { data: teacher } = await admin.from("profiles").select("id,full_name,email,position,account_status,role,requested_role").eq("id", teacherId).or("role.eq.teacher,requested_role.eq.teacher").maybeSingle();
   if (!teacher) return json({ error: "Teacher not found." }, 404);
   const { data: existing, error: readError } = await admin.from("teacher_information").select("*").eq("teacher_id", teacherId).maybeSingle();
   if (readError) return json({ error: "Unable to read teacher information." }, 500);
