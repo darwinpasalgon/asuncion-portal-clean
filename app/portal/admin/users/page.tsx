@@ -220,7 +220,7 @@ export default function UsersAccountsPage() {
           : user.recovery_phone,
       gradeLevel: user.grade_level ? String(user.grade_level) : "",
       sectionId,
-      position: user.position ?? "Teacher",
+      position: user.position ?? "",
       learnerInfo,
     });
     setError("");
