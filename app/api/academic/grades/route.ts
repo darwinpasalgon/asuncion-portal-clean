@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
         getRows(
           `teacher_assignments?school_year_id=eq.${encodeURIComponent(
             activeYear.id
-          )}&is_active=eq.true&select=id,teacher_id,grade_level,section_id,subject_id&order=grade_level.asc`,
+          )}&is_active=eq.true&select=id,teacher_id,grade_level,section_id,subject_id,major&order=grade_level.asc`,
           token
         ),
         getRows(
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
           token
         ),
         getRows(
-          "subjects?select=id,grade_level,name,code,is_active&order=grade_level.asc,name.asc",
+          "subjects?select=id,grade_level,name,is_active&order=grade_level.asc,name.asc",
           token
         ),
         getRows(

@@ -6,13 +6,20 @@ import {
   BookOpen,
   CheckCircle2,
   GraduationCap,
+  Pencil,
   Plus,
   RefreshCw,
   School,
+  Trash2,
   UserCheck,
   Users,
 } from "lucide-react";
 import styles from "./teaching.module.css";
+import {
+  TECHNICAL_VOCATIONAL_MAJORS,
+  isTechnicalVocationalEducation,
+  requiresTechnicalVocationalMajor,
+} from "@/lib/subject-config";
 
 type ActiveYear = { id: string; name: string };
 type Grade = { grade_level: number; label: string; sort_order: number };
@@ -21,7 +28,6 @@ type Subject = {
   id: string;
   grade_level: number;
   name: string;
-  code: string | null;
   is_active: boolean;
 };
 type Teacher = { id: string; full_name: string; email: string };
@@ -32,6 +38,7 @@ type Assignment = {
   grade_level: number;
   section_id: string;
   subject_id: string;
+  major: string | null;
   is_active: boolean;
   assigned_at: string;
 };
@@ -53,6 +60,8 @@ export default function TeachingSetupPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [advisers, setAdvisers] = useState<Adviser[]>([]);
   const [assignmentGrade, setAssignmentGrade] = useState("");
+  const [assignmentSubject, setAssignmentSubject] = useState("");
+  const [assignmentMajor, setAssignmentMajor] = useState("");
   const [adviserGrade, setAdviserGrade] = useState("");
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState("");
@@ -124,9 +133,7 @@ export default function TeachingSetupPage() {
 
   function subjectName(id: string) {
     const subject = subjects.find((item) => item.id === id);
-    return subject
-      ? `${subject.name}${subject.code ? ` (${subject.code})` : ""}`
-      : "Unknown subject";
+    return subject?.name ?? "Unknown subject";
   }
 
   function teacherName(id: string) {
@@ -222,7 +229,6 @@ export default function TeachingSetupPage() {
           action: "add_subject",
           gradeLevel: Number(data.get("gradeLevel") ?? 0),
           name: String(data.get("subjectName") ?? ""),
-          code: String(data.get("subjectCode") ?? ""),
         }),
       });
       const result = await response.json().catch(() => ({}));
@@ -234,6 +240,83 @@ export default function TeachingSetupPage() {
 
       setSuccess("Subject added successfully.");
       form.reset();
+      await load();
+    } catch {
+      setError("Unable to reach the teaching setup service.");
+    } finally {
+      setWorking("");
+    }
+  }
+
+  async function editSubject(subject: Subject) {
+    const nextName = window.prompt("Edit subject name", subject.name)?.trim();
+    if (!nextName || nextName === subject.name) return;
+
+    setWorking(subject.id);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch("/api/admin/teaching-setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update_subject",
+          id: subject.id,
+          name: nextName,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setError(result.error ?? "Unable to update subject.");
+        return;
+      }
+
+      setSuccess("Subject updated successfully.");
+      await load();
+    } catch {
+      setError("Unable to reach the teaching setup service.");
+    } finally {
+      setWorking("");
+    }
+  }
+
+  async function removeSubject(subject: Subject) {
+    if (
+      !window.confirm(
+        `Remove ${subject.name} from Grade ${subject.grade_level}? Subjects already used in school records will be made inactive instead of permanently deleted.`
+      )
+    ) {
+      return;
+    }
+
+    setWorking(subject.id);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch("/api/admin/teaching-setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "remove_subject",
+          id: subject.id,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setError(result.error ?? "Unable to remove subject.");
+        return;
+      }
+
+      setSuccess(
+        result.message ??
+          (result.deleted
+            ? "Subject removed permanently."
+            : "Subject removed from active use.")
+      );
       await load();
     } catch {
       setError("Unable to reach the teaching setup service.");
@@ -260,6 +343,7 @@ export default function TeachingSetupPage() {
           gradeLevel: Number(data.get("gradeLevel") ?? 0),
           sectionId: String(data.get("sectionId") ?? ""),
           subjectId: String(data.get("subjectId") ?? ""),
+          major: assignmentMajor,
           teacherId: String(data.get("teacherId") ?? ""),
         }),
       });
@@ -273,6 +357,8 @@ export default function TeachingSetupPage() {
       setSuccess("Teacher assignment saved.");
       form.reset();
       setAssignmentGrade("");
+      setAssignmentSubject("");
+      setAssignmentMajor("");
       await load();
     } catch {
       setError("Unable to reach the teaching setup service.");
@@ -522,10 +608,6 @@ export default function TeachingSetupPage() {
                 <span>Subject name</span>
                 <input name="subjectName" required minLength={2} maxLength={100} placeholder="e.g. Mathematics" />
               </label>
-              <label>
-                <span>Subject code <small>optional</small></span>
-                <input name="subjectCode" maxLength={30} placeholder="e.g. MATH8" />
-              </label>
               <button type="submit" disabled={working === "subject"}>
                 <Plus size={17} /> {working === "subject" ? "Adding…" : "Add subject"}
               </button>
@@ -549,7 +631,11 @@ export default function TeachingSetupPage() {
                   name="gradeLevel"
                   required
                   value={assignmentGrade}
-                  onChange={(event) => setAssignmentGrade(event.target.value)}
+                  onChange={(event) => {
+                    setAssignmentGrade(event.target.value);
+                    setAssignmentSubject("");
+                    setAssignmentMajor("");
+                  }}
                 >
                   <option value="">Select grade level</option>
                   {grades.map((grade) => (
@@ -572,8 +658,28 @@ export default function TeachingSetupPage() {
               </label>
               <label>
                 <span>Subject</span>
-                <select name="subjectId" required defaultValue="" key={`subject-${assignmentGrade}`} disabled={!assignmentGrade || subjectsForAssignment.length === 0}>
-                  <option value="" disabled>
+                <select
+                  name="subjectId"
+                  required
+                  value={assignmentSubject}
+                  onChange={(event) => {
+                    setAssignmentSubject(event.target.value);
+                    const selected = subjectsForAssignment.find(
+                      (subject) => subject.id === event.target.value
+                    );
+                    if (
+                      !selected ||
+                      !requiresTechnicalVocationalMajor(
+                        Number(assignmentGrade),
+                        selected.name
+                      )
+                    ) {
+                      setAssignmentMajor("");
+                    }
+                  }}
+                  disabled={!assignmentGrade || subjectsForAssignment.length === 0}
+                >
+                  <option value="">
                     {!assignmentGrade
                       ? "Select grade first"
                       : subjectsForAssignment.length
@@ -582,11 +688,44 @@ export default function TeachingSetupPage() {
                   </option>
                   {subjectsForAssignment.map((subject) => (
                     <option key={subject.id} value={subject.id}>
-                      {subject.name}{subject.code ? ` (${subject.code})` : ""}
+                      {subject.name}
                     </option>
                   ))}
                 </select>
               </label>
+
+              {requiresTechnicalVocationalMajor(
+                Number(assignmentGrade),
+                subjectsForAssignment.find(
+                  (subject) => subject.id === assignmentSubject
+                )?.name
+              ) && (
+                <label>
+                  <span>TVE Major</span>
+                  <select
+                    name="major"
+                    required
+                    value={assignmentMajor}
+                    onChange={(event) => setAssignmentMajor(event.target.value)}
+                  >
+                    <option value="">Select major</option>
+                    {TECHNICAL_VOCATIONAL_MAJORS.map((major) => (
+                      <option key={major} value={major}>{major}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              {Number(assignmentGrade) === 7 &&
+                isTechnicalVocationalEducation(
+                  subjectsForAssignment.find(
+                    (subject) => subject.id === assignmentSubject
+                  )?.name
+                ) && (
+                  <div className={styles.exploratoryNote}>
+                    Grade 7 Technical Vocational Education is exploratory. No major is required.
+                  </div>
+                )}
               <label>
                 <span>Teacher</span>
                 <select name="teacherId" required defaultValue="" disabled={teachers.length === 0}>
@@ -598,7 +737,22 @@ export default function TeachingSetupPage() {
                   ))}
                 </select>
               </label>
-              <button type="submit" disabled={working === "assignment" || !assignmentGrade || subjectsForAssignment.length === 0 || teachers.length === 0}>
+              <button
+                type="submit"
+                disabled={
+                  working === "assignment" ||
+                  !assignmentGrade ||
+                  !assignmentSubject ||
+                  subjectsForAssignment.length === 0 ||
+                  teachers.length === 0 ||
+                  (requiresTechnicalVocationalMajor(
+                    Number(assignmentGrade),
+                    subjectsForAssignment.find(
+                      (subject) => subject.id === assignmentSubject
+                    )?.name
+                  ) && !assignmentMajor)
+                }
+              >
                 <UserCheck size={17} /> {working === "assignment" ? "Saving…" : "Save assignment"}
               </button>
             </form>
@@ -642,15 +796,41 @@ export default function TeachingSetupPage() {
                       <div className={styles.row} key={subject.id}>
                         <div>
                           <strong>{subject.name}</strong>
-                          <span>{subject.code || "No subject code"}</span>
+                          <span>
+                            {isTechnicalVocationalEducation(subject.name)
+                              ? subject.grade_level === 7
+                                ? "Exploratory"
+                                : [8, 9, 10].includes(subject.grade_level)
+                                  ? "Major selected during teacher assignment"
+                                  : "Subject"
+                              : subject.is_active
+                                ? "Active subject"
+                                : "Inactive subject"}
+                          </span>
                         </div>
-                        <button
-                          className={subject.is_active ? styles.active : styles.inactive}
-                          disabled={working === subject.id}
-                          onClick={() => void setSubjectActive(subject, !subject.is_active)}
-                        >
-                          {subject.is_active ? "Active" : "Inactive"}
-                        </button>
+                        <div className={styles.subjectActions}>
+                          <button
+                            className={styles.editSubject}
+                            disabled={working === subject.id}
+                            onClick={() => void editSubject(subject)}
+                          >
+                            <Pencil size={14} /> Edit
+                          </button>
+                          <button
+                            className={subject.is_active ? styles.active : styles.inactive}
+                            disabled={working === subject.id}
+                            onClick={() => void setSubjectActive(subject, !subject.is_active)}
+                          >
+                            {subject.is_active ? "Active" : "Inactive"}
+                          </button>
+                          <button
+                            className={styles.removeSubject}
+                            disabled={working === subject.id}
+                            onClick={() => void removeSubject(subject)}
+                          >
+                            <Trash2 size={14} /> Remove
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </article>
@@ -687,7 +867,10 @@ export default function TeachingSetupPage() {
                   </div>
                   <div>
                     <span>SUBJECT</span>
-                    <strong>{subjectName(assignment.subject_id)}</strong>
+                    <strong>
+                      {subjectName(assignment.subject_id)}
+                      {assignment.major ? ` · ${assignment.major}` : ""}
+                    </strong>
                   </div>
                   <div>
                     <span>SUBJECT TEACHER</span>

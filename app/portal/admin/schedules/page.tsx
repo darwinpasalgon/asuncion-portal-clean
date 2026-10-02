@@ -21,9 +21,10 @@ type Assignment = {
   grade_level: number;
   section_id: string;
   subject_id: string;
+  major: string | null;
 };
 type Section = { id: string; name: string; grade_level: number };
-type Subject = { id: string; name: string; code: string | null; grade_level: number };
+type Subject = { id: string; name: string; grade_level: number };
 type Teacher = { id: string; full_name: string };
 type Schedule = {
   id: string;
@@ -109,7 +110,7 @@ export default function ClassSchedulesPage() {
   const lookup = useMemo(() => {
     const sectionsById = new Map(sections.map((item) => [item.id, item.name]));
     const subjectsById = new Map(
-      subjects.map((item) => [item.id, { name: item.name, code: item.code }])
+      subjects.map((item) => [item.id, { name: item.name }])
     );
     const teachersById = new Map(teachers.map((item) => [item.id, item.full_name]));
     const assignmentsById = new Map(assignments.map((item) => [item.id, item]));
@@ -122,8 +123,9 @@ export default function ClassSchedulesPage() {
       `Grade ${assignment.grade_level}`,
       lookup.sectionsById.get(assignment.section_id) ?? "Unknown section",
       subject?.name ?? "Unknown subject",
+      assignment.major ?? "",
       lookup.teachersById.get(assignment.teacher_id) ?? "Unknown teacher",
-    ].join(" · ");
+    ].filter(Boolean).join(" · ");
   }
 
   function resetForm() {
@@ -554,7 +556,7 @@ export default function ClassSchedulesPage() {
                       </strong>
                       <small>
                         {subject?.name ?? "Unknown subject"}
-                        {subject?.code ? ` (${subject.code})` : ""}
+                        {assignment?.major ? ` · ${assignment.major}` : ""}
                       </small>
                     </div>
 

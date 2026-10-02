@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
   const assignments = await getRows(
     `teacher_assignments?school_year_id=eq.${encodeURIComponent(
       activeYear.id
-    )}&is_active=eq.true&select=id,grade_level,section_id,subject_id,teacher_id`,
+    )}&is_active=eq.true&select=id,grade_level,section_id,subject_id,teacher_id,major`,
     token
   );
 
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       token
     ),
     getRows("sections?select=id,name,grade_level", token),
-    getRows("subjects?select=id,name,code,grade_level", token),
+    getRows("subjects?select=id,name,grade_level", token),
   ]);
 
   const assignmentMap = new Map<
@@ -96,6 +96,7 @@ export async function GET(request: NextRequest) {
       section_id: string;
       subject_id: string;
       teacher_id: string;
+      major: string | null;
     }
   >(
     assignments.map(
@@ -105,6 +106,7 @@ export async function GET(request: NextRequest) {
         section_id: string;
         subject_id: string;
         teacher_id: string;
+        major: string | null;
       }) =>
         [
           item.id,
@@ -113,6 +115,7 @@ export async function GET(request: NextRequest) {
             section_id: item.section_id,
             subject_id: item.subject_id,
             teacher_id: item.teacher_id,
+            major: item.major ?? null,
           },
         ] as [
           string,
@@ -121,6 +124,7 @@ export async function GET(request: NextRequest) {
             section_id: string;
             subject_id: string;
             teacher_id: string;
+            major: string | null;
           }
         ]
     )
@@ -132,13 +136,10 @@ export async function GET(request: NextRequest) {
     )
   );
 
-  const subjectMap = new Map<string, { name: string; code: string | null }>(
+  const subjectMap = new Map<string, { name: string }>(
     (subjects ?? []).map(
-      (item: { id: string; name: string; code: string | null }) =>
-        [item.id, { name: item.name, code: item.code }] as [
-          string,
-          { name: string; code: string | null }
-        ]
+      (item: { id: string; name: string }) =>
+        [item.id, { name: item.name }] as [string, { name: string }]
     )
   );
 
@@ -171,7 +172,7 @@ export async function GET(request: NextRequest) {
             ? sectionMap.get(assignment.section_id) ?? "Unknown section"
             : "Unknown section",
           subject: subject?.name ?? "Unknown subject",
-          subject_code: subject?.code ?? null,
+          major: assignment?.major ?? null,
         };
       }
     );

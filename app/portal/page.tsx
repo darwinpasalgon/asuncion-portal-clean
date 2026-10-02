@@ -54,7 +54,7 @@ type TeacherAssignment = {
   grade_level: number;
   section: string;
   subject: string;
-  subject_code: string | null;
+  major: string | null;
   student_count: number;
 };
 
@@ -67,7 +67,7 @@ type ClassScheduleEntry = {
   grade_level: number | null;
   section: string;
   subject: string;
-  subject_code: string | null;
+  major: string | null;
 };
 
 type Profile = {
@@ -769,7 +769,7 @@ export default function PortalPage() {
                             <span>Grade {assignment.grade_level} · {assignment.section}</span>
                             <strong>
                               {assignment.subject}
-                              {assignment.subject_code ? ` (${assignment.subject_code})` : ""}
+                              {assignment.major ? ` · ${assignment.major}` : ""}
                             </strong>
                           </div>
                           <span>
@@ -860,7 +860,7 @@ export default function PortalPage() {
                         <span>Grade {assignment.grade_level} · {assignment.section}</span>
                         <strong>
                           {assignment.subject}
-                          {assignment.subject_code ? ` (${assignment.subject_code})` : ""}
+                          {assignment.major ? ` · ${assignment.major}` : ""}
                         </strong>
                       </div>
                       <span>
@@ -941,7 +941,7 @@ export default function PortalPage() {
                                   </span>
                                   <strong>
                                     {entry.subject}
-                                    {entry.subject_code ? ` (${entry.subject_code})` : ""}
+                                    {entry.major ? ` · ${entry.major}` : ""}
                                   </strong>
                                   <small>{entry.room || "Room not specified"}</small>
                                 </div>
