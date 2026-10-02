@@ -125,7 +125,7 @@ export default function ClassSchedulesPage() {
       subject?.name ?? "Unknown subject",
       assignment.major ?? "",
       lookup.teachersById.get(assignment.teacher_id) ?? "Unknown teacher",
-    ].join(" · ");
+    ].filter(Boolean).join(" · ");
   }
 
   function resetForm() {
