@@ -56,6 +56,32 @@ function clean(value: unknown) {
   return String(value ?? "").trim();
 }
 
+async function allRows(
+  pageQuery: (
+    from: number,
+    to: number
+  ) => PromiseLike<{ data: Array<Record<string, unknown>> | null; error: { message: string } | null }>
+) {
+  const pageSize = 1000;
+  const rows: Array<Record<string, unknown>> = [];
+
+  for (let from = 0; ; from += pageSize) {
+    const result = await pageQuery(from, from + pageSize - 1);
+    if (result.error) {
+      return { data: null, error: result.error };
+    }
+
+    const page = result.data ?? [];
+    rows.push(...page);
+
+    if (page.length < pageSize) {
+      break;
+    }
+  }
+
+  return { data: rows, error: null };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "Method not allowed." }, 405);
@@ -107,18 +133,30 @@ Deno.serve(async (req) => {
       teacherResult,
       eventResult,
     ] = await Promise.all([
-      admin
-        .from("profiles")
-        .select("id,full_name,lrn,recovery_phone,account_status,grade_level,section,created_at")
-        .eq("role", "student")
-        .order("full_name"),
-      admin.from("learner_information").select("*"),
-      admin
-        .from("student_enrollments")
-        .select(
-          "id,student_id,school_year_id,grade_level,section_id,tve_major,enrollment_status,learner_status,status_note,status_changed_at,enrolled_at,source_enrollment_id"
-        )
-        .order("enrolled_at", { ascending: false }),
+      allRows((from, to) =>
+        admin
+          .from("profiles")
+          .select("id,full_name,lrn,recovery_phone,account_status,grade_level,section,created_at")
+          .eq("role", "student")
+          .order("full_name")
+          .range(from, to)
+      ),
+      allRows((from, to) =>
+        admin
+          .from("learner_information")
+          .select("*")
+          .order("student_id")
+          .range(from, to)
+      ),
+      allRows((from, to) =>
+        admin
+          .from("student_enrollments")
+          .select(
+            "id,student_id,school_year_id,grade_level,section_id,tve_major,enrollment_status,learner_status,status_note,status_changed_at,enrolled_at,source_enrollment_id"
+          )
+          .order("enrolled_at", { ascending: false })
+          .range(from, to)
+      ),
       admin
         .from("school_years")
         .select("id,name,start_year,end_year,is_active")
@@ -136,12 +174,15 @@ Deno.serve(async (req) => {
         .from("profiles")
         .select("id,full_name")
         .eq("role", "teacher"),
-      admin
-        .from("learner_enrollment_events")
-        .select(
-          "id,student_id,school_year_id,enrollment_id,event_type,from_grade_level,from_section_id,to_grade_level,to_section_id,from_status,to_status,note,created_at"
-        )
-        .order("created_at", { ascending: false }),
+      allRows((from, to) =>
+        admin
+          .from("learner_enrollment_events")
+          .select(
+            "id,student_id,school_year_id,enrollment_id,event_type,from_grade_level,from_section_id,to_grade_level,to_section_id,from_status,to_status,note,created_at"
+          )
+          .order("created_at", { ascending: false })
+          .range(from, to)
+      ),
     ]);
 
     const firstError =
