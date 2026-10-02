@@ -1,0 +1,40 @@
+import * as XLSX from "npm:xlsx@0.18.5";
+
+const text = (value: unknown) => String(value ?? "").replace(/\u00a0/g, " ").trim();
+const compact = (value: unknown) => text(value).toLowerCase().replace(/[^a-z0-9]/g, "");
+
+export function parseTeacherWorkbook(bytes: Uint8Array) {
+  const workbook = XLSX.read(bytes, { type: "array", cellDates: false });
+  for (const sheetName of workbook.SheetNames) {
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, raw: false, defval: "" });
+    const header = rows.findIndex(row => compact(row[1]) === "lastname" && compact(row[2]) === "firstname" && compact(row[3]) === "middlename");
+    if (header < 0) continue;
+    const top = rows.slice(Math.max(0, header - 3), header + 1);
+    if (!top.some(row => compact(row[19]) === "depedemail") || !top.some(row => compact(row[16]).includes("philsys"))) {
+      throw new Error("The teacher workbook columns have changed. Use the supplied 20-column Teacher's Profile layout.");
+    }
+    const records = [];
+    for (let index = header + 1; index < rows.length; index++) {
+      const row = rows[index];
+      if (!text(row[1]) && !text(row[2])) continue;
+      // Ignore repeated print headers, not incomplete personnel rows.
+      if (compact(row[1]) === "lastname" && compact(row[2]) === "firstname") continue;
+      const personal: Record<string, string> = {};
+      const map: Record<number, string> = { 1: "last_name", 2: "first_name", 3: "middle_name", 7: "additional_units", 8: "graduate_course", 9: "graduate_units", 10: "bachelors_degree", 11: "major", 12: "minor", 13: "education_units_major", 14: "education_units_minor", 15: "skills", 16: "philsys_number", 17: "religion", 18: "ethnic_group" };
+      for (const [col, key] of Object.entries(map)) personal[key] = text(row[Number(col)]);
+      const official = { appointment_day_month_source: text(row[5]), appointment_year_source: text(row[6]) };
+      records.push({
+        source_row: index + 1,
+        full_name: [text(row[2]), text(row[3]), text(row[1])].filter(Boolean).join(" "),
+        email: text(row[19]).toLowerCase(), position: text(row[4]) || "Teacher",
+        teacher_personal: personal, teacher_official: official,
+        source_data: { sheet: sheetName, row: index + 1, personnel_number: text(row[0]) },
+      });
+    }
+    if (!records.length) throw new Error("No teacher records were found.");
+    if (records.length > 1000) throw new Error("Upload up to 1,000 teacher records per workbook.");
+    return records;
+  }
+  throw new Error("Teacher's Profile header not found. Upload the original Excel workbook with LASTNAME, FIRSTNAME, MIDDLENAME and DepEd Email columns.");
+}

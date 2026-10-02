@@ -227,6 +227,25 @@ function SideNav({
           ))}
         </SidebarMenu>
 
+        {profile.role === "teacher" && (
+          <>
+            <p className="nav-label real-admin-label">PROFILE</p>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="nav-button"
+                  onClick={() => {
+                    window.location.href = "/portal/teacher-profile";
+                  }}
+                >
+                  <UserRound size={19} />
+                  <span>My Teacher Profile</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </>
+        )}
+
         {(profile.role === "administrator" || profile.role === "staff_administrator") && (
           <>
             <p className="nav-label real-admin-label">ADMINISTRATION</p>
@@ -241,6 +260,19 @@ function SideNav({
                   >
                     <FileSpreadsheet size={19} />
                     <span>SF10 Records</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {(profile.role === "administrator" || adminPermissions.includes("hr.manage")) && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    className="nav-button"
+                    onClick={() => {
+                      window.location.href = "/portal/admin/teacher-profiles";
+                    }}
+                  >
+                    <UserRound size={19} />
+                    <span>Teacher HR profiles</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
@@ -301,6 +333,17 @@ function SideNav({
                 >
                   <FileSpreadsheet size={19} />
                   <span>Bulk account import</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="nav-button"
+                  onClick={() => {
+                    window.location.href = "/portal/admin/teacher-import";
+                  }}
+                >
+                  <UserRound size={19} />
+                  <span>Teacher profile import</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -754,6 +797,9 @@ export default function PortalPage() {
                     </button>
                     <button onClick={() => (window.location.href = "/portal/admin/attendance")}>
                       <ClipboardCheck size={18} /> Attendance
+                    </button>
+                    <button onClick={() => (window.location.href = "/portal/admin/teacher-import")}>
+                      <UserRound size={18} /> Teacher profile import
                     </button>
                     <button onClick={() => (window.location.href = "/portal/admin/reports")}>
                       <BarChart3 size={18} /> Reports & analytics

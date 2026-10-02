@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.116.0";
+import { cleanDetails, personalFields, officialFields } from "../_shared/teacher-profile.ts";
 
 const headers = {
   "Access-Control-Allow-Origin": "*",
@@ -15,6 +16,9 @@ const json = (body: Record<string, unknown>, status = 200) =>
 
 type PersonType = "student" | "teacher";
 type ImportRow = {
+  teacher_personal?: Record<string, string>;
+  teacher_official?: Record<string, string>;
+  source_data?: Record<string, unknown>;
   row_number?: number;
   full_name?: string;
   lrn?: string;
@@ -120,6 +124,28 @@ Deno.serve(async (req) => {
 
   const successes: Array<Record<string, unknown>> = [];
   const failures: Array<Record<string, unknown>> = [];
+  let updatedProfiles = 0;
+
+  async function saveTeacherInformation(teacherId: string, source: ImportRow) {
+    const personal = cleanDetails(source.teacher_personal ?? {}, personalFields);
+    // Imports preserve the original source cells. Verified HR fields are never overwritten.
+    const sourceFields = officialFields.filter(([key]) => key.endsWith("_source"));
+    const official = cleanDetails(source.teacher_official ?? {}, sourceFields);
+    const { data: current, error: readError } = await admin.from("teacher_information").select("personal,official,version").eq("teacher_id", teacherId).maybeSingle();
+    if (readError) throw new Error("Unable to read teacher information.");
+    const nonempty = (data: Record<string, string>) => Object.fromEntries(Object.entries(data).filter(([, value]) => value !== ""));
+    const update = {
+      personal: { ...(current?.personal ?? {}), ...nonempty(personal) },
+      official: { ...(current?.official ?? {}), ...nonempty(official) },
+      source_data: { file_name: fileName, sheet: String(source.source_data?.sheet ?? "").slice(0, 100), row: Number(source.row_number) || null, personnel_number: String(source.source_data?.personnel_number ?? "").slice(0, 100), position: String(source.position ?? "").slice(0, 200), email: String(source.email ?? "").slice(0, 254) },
+      version: (current?.version ?? 0) + 1, updated_by: callerId, updated_at: new Date().toISOString(),
+    };
+    const query = current
+      ? admin.from("teacher_information").update(update).eq("teacher_id", teacherId).eq("version", current.version)
+      : admin.from("teacher_information").insert({ teacher_id: teacherId, ...update });
+    const { data: saved, error } = await query.select("teacher_id").maybeSingle();
+    if (error || !saved) throw new Error("Teacher details could not be saved. Reload the file and retry.");
+  }
 
   for (const source of rows) {
     const rowNumber = Number(source.row_number ?? 0) || null;
@@ -192,11 +218,20 @@ Deno.serve(async (req) => {
 
       const { data: existingProfile } = await admin
         .from("profiles")
-        .select("id")
+        .select("id,role,requested_role,position")
         .ilike("email", email)
         .limit(1);
 
       if ((existingProfile ?? []).length) {
+        if ((existingProfile?.[0]?.role === "teacher" || existingProfile?.[0]?.requested_role === "teacher") && source.teacher_personal) {
+          try {
+            await saveTeacherInformation(existingProfile[0].id, source);
+            updatedProfiles += 1;
+          } catch (error) {
+            failures.push({ row_number: rowNumber, name: fullName, identifier: email, error: error instanceof Error ? error.message : "Unable to update the teacher profile." });
+          }
+          continue;
+        }
         failures.push({ row_number: rowNumber, name: fullName, identifier: email, error: "This email already has a portal account." });
         continue;
       }
@@ -336,6 +371,16 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (personType === "teacher") {
+      try {
+        await saveTeacherInformation(created.user.id, source);
+      } catch (error) {
+        await admin.auth.admin.deleteUser(created.user.id);
+        failures.push({ row_number: rowNumber, name: fullName, identifier, error: error instanceof Error ? error.message : "Teacher information could not be saved; the partial account was removed." });
+        continue;
+      }
+    }
+
     successes.push({
       row_number: rowNumber,
       full_name: fullName,
@@ -352,7 +397,7 @@ Deno.serve(async (req) => {
     person_type: personType,
     file_name: fileName,
     total_rows: rows.length,
-    imported_rows: successes.length,
+    imported_rows: successes.length + updatedProfiles,
     skipped_rows: failures.length,
     created_by: callerId,
   });
@@ -361,6 +406,7 @@ Deno.serve(async (req) => {
     ok: true,
     active_school_year: activeYear.name,
     imported: successes.length,
+    updated_profiles: updatedProfiles,
     skipped: failures.length,
     accounts: successes,
     errors: failures,

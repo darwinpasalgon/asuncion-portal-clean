@@ -1,0 +1,265 @@
+.page {
+  min-height: 100vh;
+  background: #f4f7f5;
+  color: #18352a;
+  padding: 28px;
+}
+.shell {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+}
+.loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  background: #f4f7f5;
+  color: #2f5f48;
+}
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 22px;
+  color: #587064;
+  font-size: .88rem;
+}
+.topbar a,
+.topbar > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.topbar a {
+  color: #2d6048;
+  text-decoration: none;
+  font-weight: 800;
+}
+.header {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: #e2eee7;
+  color: #37654d;
+  border: 1px solid #cadfd2;
+}
+.header span {
+  color: #678075;
+  font-size: .74rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+.header h1 {
+  margin: 3px 0 3px;
+  font-size: clamp(1.9rem, 4vw, 2.7rem);
+  letter-spacing: -.03em;
+}
+.header p {
+  margin: 0;
+  color: #61736a;
+}
+.error,
+.success {
+  border-radius: 14px;
+  padding: 13px 16px;
+  margin-bottom: 16px;
+  font-weight: 700;
+}
+.error {
+  color: #8b2d2d;
+  background: #fff0f0;
+  border: 1px solid #f1c6c6;
+}
+.success {
+  color: #2a6547;
+  background: #eef8f1;
+  border: 1px solid #cfe8d7;
+}
+.notice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 16px;
+  border: 1px solid #d1e2d7;
+  background: #edf6f0;
+  border-radius: 16px;
+  margin-bottom: 18px;
+  color: #315f48;
+}
+.notice strong,
+.notice span {
+  display: block;
+}
+.notice span {
+  margin-top: 4px;
+  color: #60756a;
+  line-height: 1.5;
+  font-size: .88rem;
+}
+.panel {
+  background: #fff;
+  border: 1px solid #dce6df;
+  border-radius: 20px;
+  padding: 22px;
+  margin-bottom: 18px;
+  box-shadow: 0 8px 24px rgba(29, 67, 49, .05);
+}
+.panelHead {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+  color: #315f48;
+}
+.panelHead h2 {
+  margin: 0;
+  font-size: 1.08rem;
+}
+.panelHead p {
+  margin: 4px 0 0;
+  color: #6d7e75;
+  font-size: .87rem;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.grid label {
+  display: grid;
+  gap: 6px;
+}
+.grid label > span {
+  color: #5c6f65;
+  font-size: .8rem;
+  font-weight: 700;
+}
+.grid input,
+.grid textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cedbd3;
+  border-radius: 11px;
+  background: #fbfdfc;
+  padding: 10px 11px;
+  color: #29463a;
+  font: inherit;
+}
+.grid textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+.grid input:focus,
+.grid textarea:focus {
+  outline: 2px solid rgba(58, 118, 84, .16);
+  border-color: #5f8f73;
+}
+.wide {
+  grid-column: 1 / -1;
+}
+.official {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+.official > div {
+  background: #f7f9f8;
+  border: 1px solid #e4eae6;
+  border-radius: 12px;
+  padding: 12px;
+}
+.official dt {
+  color: #708077;
+  font-size: .76rem;
+  margin-bottom: 5px;
+}
+.official dd {
+  margin: 0;
+  font-weight: 700;
+  color: #2b4b3b;
+}
+.empty {
+  margin: 0;
+  color: #75837c;
+  background: #f8faf9;
+  border: 1px dashed #d6dfda;
+  border-radius: 12px;
+  padding: 14px;
+}
+.cards {
+  display: grid;
+  gap: 10px;
+}
+.cards article {
+  border: 1px solid #e0e7e3;
+  border-radius: 13px;
+  padding: 12px;
+  display: grid;
+  gap: 4px;
+}
+.cards article span {
+  color: #587064;
+}
+.cards article small {
+  color: #7a8881;
+}
+.saveBar {
+  position: sticky;
+  bottom: 16px;
+  z-index: 5;
+  background: #173f2d;
+  color: #fff;
+  border-radius: 18px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  box-shadow: 0 14px 34px rgba(16, 52, 35, .22);
+}
+.saveBar strong,
+.saveBar span {
+  display: block;
+}
+.saveBar span {
+  color: #cbded3;
+  font-size: .82rem;
+  margin-top: 3px;
+}
+.saveBar button {
+  border: 0;
+  min-height: 42px;
+  border-radius: 11px;
+  padding: 0 15px;
+  background: #fff;
+  color: #24573d;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.saveBar button:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+@media (max-width: 720px) {
+  .page { padding: 18px; }
+  .topbar { align-items: flex-start; flex-direction: column; }
+  .grid,
+  .official { grid-template-columns: 1fr; }
+  .wide { grid-column: auto; }
+  .saveBar { position: static; align-items: stretch; flex-direction: column; }
+}
