@@ -32,6 +32,14 @@ const learnerStatuses = new Set<LearnerStatus>([
   "archived",
 ]);
 
+const tveMajors = new Set([
+  "Computer Systems Servicing",
+  "Electrical Installation and Maintenance",
+  "Food Processing",
+  "Animal Production",
+  "Agriculture Crop Production",
+]);
+
 function enrollmentStatusFor(status: LearnerStatus) {
   if (status === "active" || status === "transferred_in") return "active";
   if (status === "transferred_out") return "transferred";
@@ -224,6 +232,56 @@ Deno.serve(async (req) => {
       school_years: years,
       active_year: years.find((item) => item.is_active) ?? null,
     });
+  }
+
+  if (action === "set_tve_major") {
+    const enrollmentId = clean(body.enrollment_id);
+    const requestedMajor = clean(body.tve_major);
+    const major = requestedMajor || null;
+
+    if (!enrollmentId) {
+      return json({ error: "Choose a learner enrollment." }, 400);
+    }
+
+    if (major && !tveMajors.has(major)) {
+      return json({ error: "Choose a valid TVE Major." }, 400);
+    }
+
+    const { data: enrollment, error: enrollmentError } = await admin
+      .from("student_enrollments")
+      .select("id,student_id,grade_level,tve_major")
+      .eq("id", enrollmentId)
+      .maybeSingle();
+
+    if (enrollmentError || !enrollment) {
+      return json({ error: "Enrollment record not found." }, 404);
+    }
+
+    if (![8, 9, 10].includes(Number(enrollment.grade_level))) {
+      return json({ error: "TVE Major applies only to Grades 8, 9, and 10." }, 400);
+    }
+
+    const { data: updated, error: updateError } = await admin
+      .from("student_enrollments")
+      .update({
+        tve_major: major,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", enrollmentId)
+      .select("id,student_id,grade_level,section_id,tve_major")
+      .single();
+
+    if (updateError || !updated) {
+      return json(
+        {
+          error: "Unable to update the learner TVE Major.",
+          detail: updateError?.message ?? "",
+        },
+        500
+      );
+    }
+
+    return json({ ok: true, enrollment: updated });
   }
 
   if (action === "update_status") {
