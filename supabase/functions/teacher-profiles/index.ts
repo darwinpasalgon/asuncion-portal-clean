@@ -1,6 +1,15 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.116.0";
-import { cleanDetails, cleanEntries, personalFields, officialFields, serviceFields, ratingFields } from "../_shared/teacher-profile.ts";
+import {
+  cleanDetails,
+  cleanEntries,
+  personalFields,
+  officialFields,
+  serviceFields,
+  ratingFields,
+  normalizeTeacherNameFields,
+  teacherDisplayName,
+} from "../_shared/teacher-profile.ts";
 import { parseTeacherWorkbook } from "../_shared/teacher-workbook.ts";
 
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
@@ -128,9 +137,18 @@ Deno.serve(async req => {
       }
       selectedPosition = requestedPosition;
     }
+    const mergedPersonal = {
+      ...record.personal,
+      ...cleanDetails(body.personal ?? {}, personalFields),
+    };
+    const normalizedPersonal = normalizeTeacherNameFields(
+      mergedPersonal as Record<string, string>
+    );
     update = {
-      personal: { ...record.personal, ...cleanDetails(body.personal ?? {}, personalFields) },
-      version: record.version + 1, updated_at: new Date().toISOString(), updated_by: caller.id,
+      personal: normalizedPersonal,
+      version: record.version + 1,
+      updated_at: new Date().toISOString(),
+      updated_by: caller.id,
     };
     if (canManage) {
       update.official = { ...record.official, ...cleanDetails(body.official ?? {}, officialFields) };
@@ -145,7 +163,29 @@ Deno.serve(async req => {
   if (error) return json({ error: error.code === "23505" ? "This profile changed. Reload it before saving." : "Unable to save teacher information." }, error.code === "23505" ? 409 : 500);
   if (!saved) return json({ error: "This profile changed. Reload it before saving." }, 409);
 
+  const displayName = teacherDisplayName(
+    saved.personal as Record<string, string>,
+    teacher.full_name
+  );
   let responseTeacher = teacher;
+
+  if (displayName && displayName !== teacher.full_name) {
+    const { data: renamedTeacher, error: renameError } = await admin
+      .from("profiles")
+      .update({ full_name: displayName, updated_at: new Date().toISOString() })
+      .eq("id", teacherId)
+      .select("id,full_name,email,position,account_status,role,requested_role")
+      .single();
+
+    if (renameError || !renamedTeacher) {
+      return json({
+        error: "Teacher information was saved, but the display name could not be updated.",
+      }, 500);
+    }
+
+    responseTeacher = renamedTeacher;
+  }
+
   if (canManage && "position" in body && selectedPosition !== String(teacher.position ?? "").trim().toUpperCase()) {
     const { data: updatedTeacher, error: positionError } = await admin
       .from("profiles")
