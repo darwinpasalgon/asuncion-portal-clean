@@ -6,6 +6,12 @@ import { parseTeacherWorkbook } from "../_shared/teacher-workbook.ts";
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" } });
 
+const teachingPositions = new Set([
+  "TEACHER I", "TEACHER II", "TEACHER III", "TEACHER IV", "TEACHER V", "TEACHER VI", "TEACHER VII",
+  "HEAD TEACHER I", "HEAD TEACHER II", "HEAD TEACHER III", "HEAD TEACHER IV",
+  "MASTER TEACHER I", "MASTER TEACHER II", "MASTER TEACHER III", "MASTER TEACHER IV", "MASTER TEACHER V",
+]);
+
 Deno.serve(async req => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "Method not allowed." }, 405);
@@ -112,7 +118,17 @@ Deno.serve(async req => {
   if (Number(body.version) !== record.version) return json({ error: "This profile was changed by another user. Reload it before saving." }, 409);
   if (!canManage && ["official", "service_records", "ratings", "source_data", "position"].some(key => key in body)) return json({ error: "Only Human Resources can edit official employment records and ratings." }, 403);
   let update: Record<string, unknown>;
+  let selectedPosition = String(teacher.position ?? "").trim().toUpperCase();
   try {
+    if (canManage && "position" in body) {
+      const requestedPosition = String(body.position ?? "").trim().toUpperCase();
+      if (!requestedPosition) throw new Error("Select a teaching position.");
+      const currentPosition = String(teacher.position ?? "").trim().toUpperCase();
+      if (!teachingPositions.has(requestedPosition) && requestedPosition !== currentPosition) {
+        throw new Error("Select a valid DepEd teaching position.");
+      }
+      selectedPosition = requestedPosition;
+    }
     update = {
       personal: { ...record.personal, ...cleanDetails(body.personal ?? {}, personalFields) },
       version: record.version + 1, updated_at: new Date().toISOString(), updated_by: caller.id,
@@ -129,5 +145,21 @@ Deno.serve(async req => {
   const { data: saved, error } = await query.select().maybeSingle();
   if (error) return json({ error: error.code === "23505" ? "This profile changed. Reload it before saving." : "Unable to save teacher information." }, error.code === "23505" ? 409 : 500);
   if (!saved) return json({ error: "This profile changed. Reload it before saving." }, 409);
-  return json({ teacher, record: saved, can_manage: canManage });
+
+  let responseTeacher = teacher;
+  if (canManage && "position" in body && selectedPosition !== String(teacher.position ?? "").trim().toUpperCase()) {
+    const { data: updatedTeacher, error: positionError } = await admin
+      .from("profiles")
+      .update({ position: selectedPosition, updated_at: new Date().toISOString() })
+      .eq("id", teacherId)
+      .select("id,full_name,email,position,account_status,role,requested_role")
+      .single();
+
+    if (positionError || !updatedTeacher) {
+      return json({ error: "Teacher information was saved, but the Position could not be updated." }, 500);
+    }
+    responseTeacher = updatedTeacher;
+  }
+
+  return json({ teacher: responseTeacher, record: saved, can_manage: canManage });
 });
