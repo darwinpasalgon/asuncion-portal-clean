@@ -21,6 +21,14 @@ const normalizePhone = (input: string) => {
   return null;
 };
 
+function temporaryPassword() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const values = new Uint32Array(10);
+  crypto.getRandomValues(values);
+  const chars = Array.from(values, (value) => alphabet[value % alphabet.length]).join("");
+  return `ANHS-${chars.slice(0, 5)}-${chars.slice(5)}`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "Method not allowed." }, 405);
@@ -59,6 +67,94 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({}));
   const action = String(body.action ?? "");
   const userId = String(body.user_id ?? "");
+
+  if (action === "reset_section_temp_passwords") {
+    const gradeLevel = Number(body.grade_level ?? 0);
+    const section = String(body.section ?? "").trim();
+
+    if (!Number.isInteger(gradeLevel) || gradeLevel < 7 || gradeLevel > 12 || !section) {
+      return json({ error: "Select a valid Grade Level and Section." }, 400);
+    }
+
+    const { data: validSection } = await admin
+      .from("sections")
+      .select("id")
+      .eq("grade_level", gradeLevel)
+      .eq("name", section)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (!validSection) {
+      return json({ error: "The selected section is not active for that Grade Level." }, 409);
+    }
+
+    const { data: learners, error: learnersError } = await admin
+      .from("profiles")
+      .select("id,full_name,lrn,must_change_password,account_status")
+      .eq("role", "student")
+      .eq("grade_level", gradeLevel)
+      .eq("section", section)
+      .eq("must_change_password", true)
+      .order("full_name");
+
+    if (learnersError) {
+      return json({ error: "Unable to load learners for the selected section." }, 500);
+    }
+
+    if (!(learners ?? []).length) {
+      return json({
+        error: "No learners in this section are still using temporary passwords.",
+      }, 409);
+    }
+
+    const accounts: Array<Record<string, unknown>> = [];
+    const errors: Array<Record<string, unknown>> = [];
+
+    for (const learner of learners ?? []) {
+      const password = temporaryPassword();
+      const { error: passwordError } = await admin.auth.admin.updateUserById(
+        learner.id,
+        { password }
+      );
+
+      if (passwordError) {
+        errors.push({
+          id: learner.id,
+          full_name: learner.full_name,
+          lrn: learner.lrn,
+          error: passwordError.message,
+        });
+        continue;
+      }
+
+      accounts.push({
+        id: learner.id,
+        full_name: learner.full_name,
+        lrn: learner.lrn,
+        temporary_password: password,
+      });
+    }
+
+    if (accounts.length) {
+      await admin
+        .from("profiles")
+        .update({
+          must_change_password: true,
+          updated_at: new Date().toISOString(),
+        })
+        .in("id", accounts.map((item) => String(item.id)));
+    }
+
+    return json({
+      ok: errors.length === 0,
+      grade_level: gradeLevel,
+      section,
+      reset: accounts.length,
+      failed: errors.length,
+      accounts,
+      errors,
+    }, errors.length && !accounts.length ? 500 : 200);
+  }
 
   if (!["update", "suspend", "reactivate", "delete"].includes(action) || !userId) {
     return json({ error: "Invalid user-management request." }, 400);
