@@ -584,3 +584,174 @@
 .inputWrap select option {
   color: #17354f;
 }
+
+
+/* 2026 visual polish: login */
+.page{
+  grid-template-columns:minmax(500px,1.08fr) minmax(480px,.92fr);
+  background:#f3f7fa;
+}
+.brandPanel{
+  isolation:isolate;
+  padding:48px clamp(42px,5.4vw,78px);
+  background-position:center;
+}
+.brandPanel::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:0;
+  background:
+    linear-gradient(115deg,rgba(10,55,95,.82) 0%,rgba(16,87,116,.67) 52%,rgba(12,116,78,.58) 100%),
+    linear-gradient(180deg,rgba(6,34,59,.12),rgba(6,34,59,.38));
+}
+.brandPanel::after{
+  content:"";
+  display:block;
+  position:absolute;
+  width:440px;
+  height:440px;
+  right:-180px;
+  bottom:-180px;
+  z-index:0;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:50%;
+  box-shadow:
+    0 0 0 52px rgba(255,255,255,.035),
+    0 0 0 106px rgba(255,255,255,.025);
+  pointer-events:none;
+}
+.brandTop{gap:15px}
+.logo{
+  width:64px;
+  height:64px;
+  filter:drop-shadow(0 8px 18px rgba(0,0,0,.22));
+}
+.schoolLabel{font-size:.78rem;letter-spacing:.12em}
+.portalLabel{font-size:.82rem}
+.brandMessage{max-width:660px}
+.brandMessage h1{
+  max-width:620px;
+  margin:22px 0 16px;
+  font-size:clamp(2.7rem,4.7vw,4.45rem);
+  line-height:1.02;
+}
+.brandMessage>p{max-width:590px;font-size:.96rem;line-height:1.72}
+.portalHighlights{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  margin-top:30px;
+  max-width:650px;
+}
+.portalHighlights>div{
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px 13px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:12px;
+  background:rgba(255,255,255,.09);
+  backdrop-filter:blur(8px);
+}
+.portalHighlights>div>span{
+  width:34px;
+  height:34px;
+  flex:none;
+  display:grid;
+  place-items:center;
+  border-radius:9px;
+  background:rgba(255,255,255,.13);
+  color:#fff;
+}
+.portalHighlights strong,.portalHighlights small{display:block}
+.portalHighlights strong{font-size:.75rem;color:#fff;line-height:1.25}
+.portalHighlights small{margin-top:3px;font-size:.65rem;color:rgba(236,247,252,.72);line-height:1.3}
+.brandFooter{padding-top:20px;border-top:1px solid rgba(255,255,255,.14)}
+
+.formPanel{
+  padding:38px clamp(30px,5vw,72px);
+  background:
+    radial-gradient(circle at 82% 12%,rgba(31,112,174,.09),transparent 31%),
+    radial-gradient(circle at 18% 88%,rgba(24,139,92,.08),transparent 30%),
+    #f5f8fa;
+}
+.formWrap{
+  width:min(100%,500px);
+  padding:clamp(30px,4vw,44px);
+  border:1px solid #dce6eb;
+  border-radius:22px;
+  background:rgba(255,255,255,.96);
+  box-shadow:0 24px 70px rgba(24,72,103,.10);
+}
+.intro{margin-bottom:27px}
+.demoPill{
+  margin-bottom:14px;
+  padding:6px 9px;
+  border:1px solid #cfe6d8;
+  border-radius:999px;
+  background:#eff8f2;
+  color:#176c4b;
+  font-size:.66rem;
+  letter-spacing:.12em;
+}
+.intro h2{margin-bottom:9px;font-size:clamp(2rem,3vw,2.4rem)}
+.intro p{font-size:.91rem;line-height:1.62}
+.form{gap:18px}
+.field{gap:8px;font-size:.8rem}
+.inputWrap{
+  min-height:54px;
+  border-color:#d7e2e8;
+  border-radius:12px;
+  padding:0 14px;
+  box-shadow:0 1px 0 rgba(26,72,101,.02);
+}
+.inputWrap:focus-within{
+  border-color:#2b78ad;
+  box-shadow:0 0 0 4px rgba(43,120,173,.10);
+}
+.signInButton{
+  min-height:54px;
+  border-radius:12px;
+  background:linear-gradient(105deg,#1769a8 0%,#176f91 48%,#178056 100%);
+  box-shadow:0 12px 28px rgba(25,95,130,.18);
+}
+.signInButton:disabled{opacity:.72;transform:none;box-shadow:none}
+.accountPrompt{margin-top:16px;font-size:.76rem}
+.demoNote{
+  margin-top:20px;
+  padding:13px 14px;
+  border-radius:11px;
+  background:#f4f9f6;
+}
+.demoNote p{font-size:.72rem;line-height:1.62}
+.footer{margin-top:25px;padding-top:17px;font-size:.67rem}
+
+@media(max-width:1100px){
+  .page{grid-template-columns:minmax(430px,1fr) minmax(430px,1fr)}
+  .portalHighlights{grid-template-columns:1fr}
+  .portalHighlights>div{max-width:330px}
+}
+@media(max-width:900px){
+  .formPanel{
+    min-height:100vh;
+    padding:24px 20px 34px;
+    align-items:center;
+  }
+  .formWrap{
+    padding:28px;
+    border-radius:18px;
+  }
+  .mobileBrand{margin-bottom:34px}
+}
+@media(max-width:520px){
+  .formPanel{padding:16px 12px 24px}
+  .formWrap{
+    padding:24px 18px;
+    border-radius:16px;
+    box-shadow:0 14px 38px rgba(24,72,103,.08);
+  }
+  .mobileBrand{margin-bottom:30px}
+  .intro{margin-bottom:24px}
+}
