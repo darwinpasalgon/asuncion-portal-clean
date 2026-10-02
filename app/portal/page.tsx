@@ -781,27 +781,41 @@ export default function PortalPage() {
           {page === "Overview" && (
             <div className="real-overview-grid">
               <section className="welcome-card real-welcome">
-                <div>
+                <div className="real-welcome-copy">
                   <span className="tag">VERIFIED PORTAL ACCESS</span>
-                  <h2>Your verified school account<br />is connected.</h2>
+                  <h2>Your school workspace,<br />ready when you are.</h2>
                   <p>
-                    Your account role determines the school records, classes, and
-                    administrative tools you are authorized to access in the portal.
+                    Access the records, classes, schedules, and tools available to your
+                    verified {displayRole.toLowerCase()} account.
                   </p>
+
+                  <div className="real-welcome-highlights">
+                    <span><ShieldCheck size={16} /> Secure access</span>
+                    <span><CalendarDays size={16} /> {academicContext?.school_year ?? "2026–2027"}</span>
+                    <span><UserRound size={16} /> {displayRole}</span>
+                  </div>
                 </div>
-                <div className="academic-motif">
-                  <img
-                    className="hero-logo"
-                    src="/school-logo.png"
-                    alt="Asuncion National High School seal"
-                  />
+                <div className="academic-motif real-academic-motif">
+                  <div className="real-seal-frame">
+                    <img
+                      className="hero-logo"
+                      src="/school-logo.png"
+                      alt="Asuncion National High School seal"
+                    />
+                  </div>
                   <span>ASUNCION NHS</span>
                   <small>Academic Portal</small>
                 </div>
               </section>
 
               <section className="panel real-profile-card">
-                <h2>Account information</h2>
+                <div className="real-card-title">
+                  <span><UserRound size={18} /></span>
+                  <div>
+                    <h2>Account information</h2>
+                    <p>Your verified portal identity</p>
+                  </div>
+                </div>
                 <dl>
                   <div><dt>Full name</dt><dd>{profile.full_name}</dd></div>
                   <div><dt>Role</dt><dd>{displayRole}</dd></div>
@@ -885,8 +899,13 @@ export default function PortalPage() {
 
               {profile.role === "administrator" && (
                 <section className="panel real-admin-card">
-                  <h2>Administrator tools</h2>
-                  <p>These tools are connected to the live authentication database.</p>
+                  <div className="real-card-title">
+                    <span><Settings2 size={18} /></span>
+                    <div>
+                      <h2>Administrator tools</h2>
+                      <p>Quick access to frequently used school management modules.</p>
+                    </div>
+                  </div>
                   <div>
                     <button onClick={() => (window.location.href = "/portal/admin/accounts")}>
                       <Users size={18} /> Account approvals
@@ -917,8 +936,13 @@ export default function PortalPage() {
               )}
 
               <section className="panel real-next-card">
-                <BookOpen size={28} />
-                <h2>System status</h2>
+                <div className="real-card-title">
+                  <span><ShieldCheck size={18} /></span>
+                  <div>
+                    <h2>System status</h2>
+                    <p>Academic workspace connection</p>
+                  </div>
+                </div>
                 <p>
                   Core academic modules are connected: enrollment, subjects, Teacher
                   assignments, schedules, grades, attendance, announcements,
