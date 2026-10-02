@@ -37,6 +37,63 @@ Deno.serve(async req => {
       return json({ rows: parseTeacherWorkbook(bytes) });
     } catch (error) { return json({ error: error instanceof Error ? error.message : "Unable to read the workbook." }, 400); }
   }
+  if (action === "save_non_teaching") {
+    if (!superAdmin) return json({ error: "Super Administrator access required." }, 403);
+    const rows = Array.isArray(body.rows) ? body.rows : [];
+    if (!rows.length) return json({ saved: 0, errors: [] });
+    if (rows.length > 200) return json({ error: "Save up to 200 non-teaching personnel at a time." }, 400);
+
+    let saved = 0;
+    const errors: Array<Record<string, unknown>> = [];
+
+    for (const source of rows) {
+      try {
+        const fullName = String(source?.full_name ?? "").trim().toUpperCase();
+        const email = String(source?.email ?? source?.import_email ?? "").trim().toLowerCase();
+        const position = String(source?.position ?? "").trim().toUpperCase();
+
+        if (!fullName) throw new Error("Full name is required.");
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          throw new Error("A valid personnel email is required.");
+        }
+
+        const personal = cleanDetails(source?.teacher_personal ?? {}, personalFields);
+        const official = cleanDetails(source?.teacher_official ?? {}, officialFields);
+        const sourceData = {
+          ...(source?.source_data ?? {}),
+          personnel_type: "Non-Teaching Personnel",
+        };
+
+        const { error } = await admin
+          .from("non_teaching_personnel")
+          .upsert(
+            {
+              full_name: fullName,
+              email,
+              position,
+              personal,
+              official,
+              source_data: sourceData,
+              is_active: true,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "email" }
+          );
+
+        if (error) throw new Error("Unable to save this personnel record.");
+        saved += 1;
+      } catch (error) {
+        errors.push({
+          full_name: String(source?.full_name ?? ""),
+          email: String(source?.email ?? source?.import_email ?? ""),
+          error: error instanceof Error ? error.message : "Unable to save personnel record.",
+        });
+      }
+    }
+
+    return json({ ok: errors.length === 0, saved, errors }, errors.length && !saved ? 400 : 200);
+  }
+
   if (action === "list") {
     if (!canManage) return json({ error: "Human Resources access required." }, 403);
     const { data, error } = await admin.from("profiles").select("id,full_name,email,position,account_status,role,requested_role").or("role.eq.teacher,requested_role.eq.teacher").order("full_name").limit(1000);
