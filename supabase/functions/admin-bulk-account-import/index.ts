@@ -1,12 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.116.0";
-import {
-  cleanDetails,
-  personalFields,
-  officialFields,
-  normalizeTeacherNameFields,
-  teacherDisplayName,
-} from "../_shared/teacher-profile.ts";
+import { cleanDetails, personalFields, officialFields } from "../_shared/teacher-profile.ts";
 
 const headers = {
   "Access-Control-Allow-Origin": "*",
@@ -134,9 +128,7 @@ Deno.serve(async (req) => {
   let updatedProfiles = 0;
 
   async function saveTeacherInformation(teacherId: string, source: ImportRow) {
-    const personal = normalizeTeacherNameFields(
-      cleanDetails(source.teacher_personal ?? {}, personalFields)
-    );
+    const personal = cleanDetails(source.teacher_personal ?? {}, personalFields);
     // Preserve original source cells and populate the uniform appointment date only when HR has not already verified one.
     const parsedOfficial = cleanDetails(source.teacher_official ?? {}, officialFields);
     const sourceOfficial = Object.fromEntries(
@@ -170,14 +162,7 @@ Deno.serve(async (req) => {
 
   for (const source of rows) {
     const rowNumber = Number(source.row_number ?? 0) || null;
-    const suppliedFullName = String(source.full_name ?? "").trim();
-    const fullName =
-      personType === "teacher" && source.teacher_personal
-        ? teacherDisplayName(
-            source.teacher_personal as Record<string, string>,
-            suppliedFullName
-          )
-        : suppliedFullName;
+    const fullName = String(source.full_name ?? "").trim();
     const phone = normalizePhone(String(source.recovery_phone ?? "").trim());
 
     if (!fullName) {
@@ -254,12 +239,6 @@ Deno.serve(async (req) => {
         if ((existingProfile?.[0]?.role === "teacher" || existingProfile?.[0]?.requested_role === "teacher") && source.teacher_personal) {
           try {
             await saveTeacherInformation(existingProfile[0].id, source);
-            if (fullName) {
-              await admin
-                .from("profiles")
-                .update({ full_name: fullName, updated_at: new Date().toISOString() })
-                .eq("id", existingProfile[0].id);
-            }
             if (!existingProfile[0].position && position) {
               await admin
                 .from("profiles")
