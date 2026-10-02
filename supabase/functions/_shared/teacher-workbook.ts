@@ -65,7 +65,7 @@ export function parseTeacherWorkbook(bytes: Uint8Array) {
       if (compact(row[1]) === "lastname" && compact(row[2]) === "firstname") continue;
       const personal: Record<string, string> = {};
       const map: Record<number, string> = { 1: "last_name", 2: "first_name", 3: "middle_name", 7: "additional_units", 8: "graduate_course", 9: "graduate_units", 10: "bachelors_degree", 11: "major", 12: "minor", 13: "education_units_major", 14: "education_units_minor", 15: "skills", 16: "philsys_number", 17: "religion", 18: "ethnic_group" };
-      for (const [col, key] of Object.entries(map)) personal[key] = text(row[Number(col)]);
+      for (const [col, key] of Object.entries(map)) personal[key] = text(row[Number(col)]).toUpperCase();
       const official = {
         appointment_day_month_source: text(row[5]),
         appointment_year_source: text(row[6]),
@@ -73,8 +73,8 @@ export function parseTeacherWorkbook(bytes: Uint8Array) {
       };
       records.push({
         source_row: index + 1,
-        full_name: [text(row[2]), text(row[3]), text(row[1])].filter(Boolean).join(" "),
-        email: text(row[19]).toLowerCase(), position: text(row[4]) || "Teacher",
+        full_name: [text(row[2]), text(row[3]), text(row[1])].filter(Boolean).join(" ").toUpperCase(),
+        email: text(row[19]).toLowerCase(), position: (text(row[4]) || "Teacher").toUpperCase(),
         teacher_personal: personal, teacher_official: official,
         source_data: { sheet: sheetName, row: index + 1, personnel_number: text(row[0]), personnel_type: personnelType },
       });
