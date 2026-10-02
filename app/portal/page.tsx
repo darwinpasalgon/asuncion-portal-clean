@@ -227,6 +227,25 @@ function SideNav({
           ))}
         </SidebarMenu>
 
+        {profile.role === "teacher" && (
+          <>
+            <p className="nav-label real-admin-label">PROFILE</p>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="nav-button"
+                  onClick={() => {
+                    window.location.href = "/portal/teacher-profile";
+                  }}
+                >
+                  <UserRound size={19} />
+                  <span>My Teacher Profile</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </>
+        )}
+
         {(profile.role === "administrator" || profile.role === "staff_administrator") && (
           <>
             <p className="nav-label real-admin-label">ADMINISTRATION</p>
