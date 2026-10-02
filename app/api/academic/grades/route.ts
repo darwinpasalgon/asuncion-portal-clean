@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
           token
         ),
         getRows(
-          "subjects?select=id,grade_level,name,code,is_active&order=grade_level.asc,name.asc",
+          "subjects?select=id,grade_level,name,is_active&order=grade_level.asc,name.asc",
           token
         ),
         getRows(
