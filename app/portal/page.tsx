@@ -130,11 +130,14 @@ const roleLabel: Record<Role, string> = {
   staff_administrator: "Administrator",
 };
 
-function administratorLabel(profile: Profile) {
+function administratorLabel(profile: Profile, adminPermissions: string[] = []) {
   if (profile.role === "administrator") return "Super Administrator";
   if (profile.role !== "staff_administrator") return roleLabel[profile.role];
   if (profile.admin_role === "registrar") return "Registrar";
   if (profile.admin_role === "content_administrator") return "Content Administrator";
+  if (adminPermissions.length === 1 && adminPermissions.includes("hr.manage")) {
+    return "Human Resources";
+  }
   return "School Administrator";
 }
 
@@ -439,7 +442,7 @@ function SideNav({
           <span className="avatar">{initials(profile.full_name)}</span>
           <div>
             <strong>{profile.full_name}</strong>
-            <span>{administratorLabel(profile)}</span>
+            <span>{administratorLabel(profile, adminPermissions)}</span>
           </div>
         </div>
       </SidebarFooter>
@@ -577,6 +580,11 @@ export default function PortalPage() {
       : profile.email;
   }, [profile]);
 
+  const displayRole = useMemo(
+    () => (profile ? administratorLabel(profile, adminPermissions) : ""),
+    [profile, adminPermissions]
+  );
+
   if (loading) {
     return (
       <main className="real-portal-loading">
@@ -654,7 +662,7 @@ export default function PortalPage() {
             </div>
             <div>
               <strong>{profile.full_name}</strong>
-              <span>{roleLabel[profile.role]}</span>
+              <span>{displayRole}</span>
             </div>
           </div>
         </header>
@@ -662,7 +670,7 @@ export default function PortalPage() {
         <div className="real-status-bar">
           <ShieldCheck size={16} />
           <span>
-            Signed in as <strong>{roleLabel[profile.role]}</strong> · {accountId}
+            Signed in as <strong>{displayRole}</strong> · {accountId}
           </span>
         </div>
 
@@ -677,7 +685,7 @@ export default function PortalPage() {
               </h1>
               <p>
                 {page === "Overview"
-                  ? `Your verified ${roleLabel[profile.role].toLowerCase()} account is now connected to the portal.`
+                  ? `Your verified ${displayRole.toLowerCase()} account is now connected to the portal.`
                   : "This module uses official records from the live academic database."}
               </p>
             </div>
@@ -685,7 +693,7 @@ export default function PortalPage() {
               <UserRound size={18} />
               <div>
                 <span>ACCOUNT ROLE</span>
-                <strong>{roleLabel[profile.role]}</strong>
+                <strong>{displayRole}</strong>
               </div>
             </div>
           </div>
@@ -716,7 +724,7 @@ export default function PortalPage() {
                 <h2>Account information</h2>
                 <dl>
                   <div><dt>Full name</dt><dd>{profile.full_name}</dd></div>
-                  <div><dt>Role</dt><dd>{roleLabel[profile.role]}</dd></div>
+                  <div><dt>Role</dt><dd>{displayRole}</dd></div>
                   {profile.lrn && <div><dt>LRN</dt><dd>{profile.lrn}</dd></div>}
                   {profile.role === "student" && (
                     <div>

@@ -313,6 +313,7 @@ export default function TeacherProfileImportPage() {
 
   async function importTeachers() {
     const importRows = rows.filter((row) => row.account_mode !== "not_applicable");
+    const nonTeachingRows = rows.filter((row) => row.account_mode === "not_applicable");
     if (!importRows.length || summary.invalid > 0) return;
 
     const seen = new Set<string>();
@@ -335,9 +336,33 @@ export default function TeacherProfileImportPage() {
 
     const issued: Credential[] = [];
     let updated = 0;
+    let savedNonTeaching = 0;
     const batchSize = 20;
 
     try {
+      if (nonTeachingRows.length) {
+        const personnelResponse = await fetch("/api/teacher-profiles", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "save_non_teaching",
+            rows: nonTeachingRows.map((row) => ({
+              full_name: row.full_name,
+              email: row.import_email,
+              position: row.position,
+              teacher_personal: row.teacher_personal,
+              teacher_official: row.teacher_official,
+              source_data: row.source_data,
+            })),
+          }),
+        });
+        const personnelResult = await personnelResponse.json().catch(() => ({}));
+        if (!personnelResponse.ok) {
+          throw new Error(personnelResult.error ?? "Non-Teaching Personnel could not be saved.");
+        }
+        savedNonTeaching = Number(personnelResult.saved ?? 0);
+      }
+
       for (let start = 0; start < importRows.length; start += batchSize) {
         const batch = importRows.slice(start, start + batchSize).map((row) => ({
           row_number: row.row_number,
@@ -385,7 +410,7 @@ export default function TeacherProfileImportPage() {
       const newCount = issued.filter((item) => item.credential_status !== "reissued").length;
       const reissuedCount = issued.filter((item) => item.credential_status === "reissued").length;
       setMessage(
-        `Import complete: ${newCount} new Teacher account${newCount === 1 ? "" : "s"} created, ${reissuedCount} interrupted-import credential${reissuedCount === 1 ? "" : "s"} recovered, and ${updated} existing profile${updated === 1 ? "" : "s"} updated.`
+        `Import complete: ${newCount} new Teacher account${newCount === 1 ? "" : "s"} created, ${reissuedCount} interrupted-import credential${reissuedCount === 1 ? "" : "s"} recovered, ${updated} existing profile${updated === 1 ? "" : "s"} updated, and ${savedNonTeaching} Non-Teaching Personnel record${savedNonTeaching === 1 ? "" : "s"} saved.`
       );
     } catch (err) {
       setCredentials(issued);
@@ -498,7 +523,7 @@ export default function TeacherProfileImportPage() {
                 <thead>
                   <tr>
                     <th aria-label="Number"></th>
-                    <th>Teacher</th>
+                    <th>Personnel</th>
                     <th>Position</th>
                     <th>Personnel Type</th>
                     <th>Portal login email</th>
@@ -552,8 +577,9 @@ export default function TeacherProfileImportPage() {
               <div>
                 <strong>Ready to import</strong>
                 <span>
-                  Existing Teacher accounts keep their passwords. New accounts receive a one-time
-                  temporary password and must change it on first login.
+                  Existing Teacher accounts keep their passwords. New Teacher accounts receive a one-time
+                  temporary password and must change it on first login. Non-Teaching Personnel are saved to
+                  the personnel directory without receiving portal access automatically.
                 </span>
               </div>
               <button
