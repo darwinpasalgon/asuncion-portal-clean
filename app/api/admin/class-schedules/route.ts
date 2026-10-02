@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
           )
         : Promise.resolve([]),
       getRows("sections?select=id,grade_level,name,is_active", token),
-      getRows("subjects?select=id,grade_level,name,code,is_active", token),
+      getRows("subjects?select=id,grade_level,name,is_active", token),
       getRows(
         "profiles?role=eq.teacher&account_status=eq.active&select=id,full_name",
         token
