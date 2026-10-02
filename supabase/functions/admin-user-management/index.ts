@@ -12,6 +12,12 @@ const json = (body: Record<string, unknown>, status = 200) =>
     headers: { ...cors, "Content-Type": "application/json" },
   });
 
+const teachingPositions = new Set([
+  "TEACHER I", "TEACHER II", "TEACHER III", "TEACHER IV", "TEACHER V", "TEACHER VI", "TEACHER VII",
+  "HEAD TEACHER I", "HEAD TEACHER II", "HEAD TEACHER III", "HEAD TEACHER IV",
+  "MASTER TEACHER I", "MASTER TEACHER II", "MASTER TEACHER III", "MASTER TEACHER IV", "MASTER TEACHER V",
+]);
+
 const normalizePhone = (input: string) => {
   const raw = input.replace(/[\s()-]/g, "");
   if (!raw) return "";
@@ -384,7 +390,14 @@ Deno.serve(async (req) => {
 
   const email = String(body.email ?? "").trim().toLowerCase();
   const teacherFullName = fullName.toUpperCase();
-  const position = (String(body.position ?? "").trim() || "Teacher").toUpperCase();
+  const position = String(body.position ?? "").trim().toUpperCase();
+  if (!position) {
+    return json({ error: "Select a Teacher position." }, 400);
+  }
+  const currentPosition = String(target.position ?? "").trim().toUpperCase();
+  if (!teachingPositions.has(position) && position !== currentPosition) {
+    return json({ error: "Select a valid DepEd teaching position." }, 400);
+  }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return json({ error: "Enter a valid Teacher email address." }, 400);
   }
