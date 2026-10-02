@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import styles from "./learners.module.css";
+import { TECHNICAL_VOCATIONAL_MAJORS } from "@/lib/subject-config";
 
 type LearnerStatus =
   | "active"
@@ -219,6 +220,7 @@ export default function LearnerManagementPage() {
   const [transitionNote, setTransitionNote] = useState("");
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
+  const [majorSaving, setMajorSaving] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -294,6 +296,7 @@ export default function LearnerManagementPage() {
           learner.lrn,
           enrollment.section,
           enrollment.adviser_name,
+          enrollment.tve_major,
         ]
           .map((item) => String(item ?? "").toLowerCase())
           .some((item) => item.includes(query));
@@ -390,6 +393,75 @@ export default function LearnerManagementPage() {
       return result;
     } finally {
       setWorking(false);
+    }
+  }
+
+  async function saveTveMajor(
+    learnerId: string,
+    enrollmentId: string,
+    major: string
+  ) {
+    setMajorSaving(enrollmentId);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch("/api/admin/learners", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "set_tve_major",
+          enrollment_id: enrollmentId,
+          tve_major: major,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          (result.error ?? "Unable to update the learner TVE Major.") +
+            (result.detail ? " " + result.detail : "")
+        );
+      }
+
+      const nextMajor = major || null;
+      setLearners((current) =>
+        current.map((learner) =>
+          learner.id === learnerId
+            ? {
+                ...learner,
+                enrollments: learner.enrollments.map((enrollment) =>
+                  enrollment.id === enrollmentId
+                    ? { ...enrollment, tve_major: nextMajor }
+                    : enrollment
+                ),
+              }
+            : learner
+        )
+      );
+
+      setDetailLearner((current) =>
+        current?.id === learnerId
+          ? {
+              ...current,
+              enrollments: current.enrollments.map((enrollment) =>
+                enrollment.id === enrollmentId
+                  ? { ...enrollment, tve_major: nextMajor }
+                  : enrollment
+              ),
+            }
+          : current
+      );
+
+      setSuccess("Learner TVE Major updated.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to update the learner TVE Major."
+      );
+    } finally {
+      setMajorSaving("");
     }
   }
 
@@ -731,6 +803,7 @@ export default function LearnerManagementPage() {
                     <th>LRN</th>
                     <th>Sex</th>
                     <th>Class</th>
+                    <th>TVE Major</th>
                     <th>Status</th>
                     <th>Adviser</th>
                     <th>Actions</th>
@@ -761,6 +834,34 @@ export default function LearnerManagementPage() {
                       <td>
                         <strong>Grade {enrollment.grade_level}</strong>
                         <small className={styles.blockText}>{enrollment.section || "No section"}</small>
+                      </td>
+                      <td>
+                        {[8, 9, 10].includes(enrollment.grade_level) ? (
+                          <select
+                            className={styles.majorSelect}
+                            value={enrollment.tve_major ?? ""}
+                            disabled={majorSaving === enrollment.id}
+                            aria-label={`TVE Major for ${learner.full_name}`}
+                            onChange={(event) =>
+                              void saveTveMajor(
+                                learner.id,
+                                enrollment.id,
+                                event.target.value
+                              )
+                            }
+                          >
+                            <option value="">Not assigned</option>
+                            {TECHNICAL_VOCATIONAL_MAJORS.map((major) => (
+                              <option key={major} value={major}>
+                                {major}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className={styles.notApplicable}>
+                            {enrollment.grade_level === 7 ? "Exploratory" : "—"}
+                          </span>
+                        )}
                       </td>
                       <td>
                         <span className={`${styles.status} ${styles[enrollment.learner_status ?? "active"]}`}>
