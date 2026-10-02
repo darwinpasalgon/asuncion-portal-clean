@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
         getRows(
           `student_enrollments?school_year_id=eq.${encodeURIComponent(
             activeYear.id
-          )}&enrollment_status=eq.active&select=id,student_id,grade_level,section_id`,
+          )}&enrollment_status=eq.active&select=id,student_id,grade_level,section_id,tve_major`,
           token
         ),
         getRows(
@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
         assignmentId
       )}&school_year_id=eq.${encodeURIComponent(
         activeYear.id
-      )}&is_active=eq.true&select=id,section_id&limit=1`,
+      )}&is_active=eq.true&select=id,section_id,major&limit=1`,
       token
     ).catch(() => []);
 
@@ -269,7 +269,7 @@ export async function POST(request: NextRequest) {
         activeYear.id
       )}&section_id=eq.${encodeURIComponent(
         assignments[0].section_id
-      )}&enrollment_status=eq.active&select=id&limit=1`,
+      )}&enrollment_status=eq.active&select=id,tve_major&limit=1`,
       token
     ).catch(() => []);
 
@@ -367,7 +367,7 @@ export async function POST(request: NextRequest) {
         assignmentId
       )}&school_year_id=eq.${encodeURIComponent(
         activeYear.id
-      )}&is_active=eq.true&select=id,section_id&limit=1`,
+      )}&is_active=eq.true&select=id,section_id,major&limit=1`,
       token
     ).catch(() => []);
 
