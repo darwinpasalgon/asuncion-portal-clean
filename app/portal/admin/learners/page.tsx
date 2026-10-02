@@ -18,6 +18,7 @@ import {
   X,
 } from "lucide-react";
 import styles from "./learners.module.css";
+import ActionWaitOverlay from "@/app/components/action-wait-overlay";
 import { TECHNICAL_VOCATIONAL_MAJORS } from "@/lib/subject-config";
 
 type LearnerStatus =
@@ -663,6 +664,10 @@ export default function LearnerManagementPage() {
 
   return (
     <main className={styles.page}>
+      <ActionWaitOverlay
+        visible={working || Boolean(majorSaving)}
+        message="Please wait…"
+      />
       <div className={styles.shell}>
         <nav className={styles.topbar}>
           <a href="/portal"><ArrowLeft size={16} />Back to portal</a>
