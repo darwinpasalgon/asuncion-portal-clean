@@ -48,7 +48,7 @@ const graduateFields = [
     "graduate_units",
     "Indicate if graduated or units earned if not graduated or CAR for completed Academic Requirements",
   ],
-  ["graduate_course", "What Master?"],
+  ["graduate_course", "Degree"],
 ] as const;
 
 const tertiaryFields = [
@@ -397,7 +397,7 @@ export default function TeacherProfilesHrPage() {
                 </section>
 
                 <section className={styles.panel}>
-                  <div className={styles.panelHead}><GraduationCap size={20} /><h3>Graduate Course</h3></div>
+                  <div className={styles.panelHead}><GraduationCap size={20} /><h3>Graduate Studies</h3></div>
                   <div className={styles.grid}>
                     {graduateFields.map(([key, label]) =>
                       personalField(key, label, key === "graduate_units")
@@ -413,7 +413,7 @@ export default function TeacherProfilesHrPage() {
                 </section>
 
                 <section className={styles.panel}>
-                  <div className={styles.panelHead}><GraduationCap size={20} /><h3>Earning Units</h3></div>
+                  <div className={styles.panelHead}><GraduationCap size={20} /><h3>BSED-Earning Units</h3></div>
                   <div className={styles.grid}>
                     {earningUnitsFields.map(([key, label]) => personalField(key, label))}
                   </div>
