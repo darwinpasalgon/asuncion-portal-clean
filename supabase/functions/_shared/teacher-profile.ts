@@ -4,10 +4,10 @@ export const personalFields = [
   ["name_extension", "Name Extension"], ["birth_date", "Birth date"], ["birth_place", "Place of birth"],
   ["mobile", "Mobile number"], ["address", "Home address"],
   ["additional_units", "Legacy/source units entry"],
-  ["graduate_course", "What Master?"],
+  ["graduate_course", "Degree"],
   ["graduate_units", "Indicate if graduated or units earned if not graduated or CAR for completed Academic Requirements"],
   ["bachelors_degree", "Course"], ["major", "Major"], ["minor", "Minor"],
-  ["education_units_major", "Earning Units - Major"], ["education_units_minor", "Earning Units - Minor"],
+  ["education_units_major", "BSED-Earning Units - Major"], ["education_units_minor", "BSED-Earning Units - Minor"],
   ["skills", "SKILLS / SPECIALIZATION (NC I, NC II, NC III / TRAINERS METHODOLOGY)"],
   ["philsys_number", "Philsys (National ID) Number"], ["religion", "Religion"], ["ethnic_group", "Ethnic Group"],
 ] as const;
