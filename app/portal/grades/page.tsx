@@ -34,6 +34,7 @@ type Enrollment = {
   student_id: string;
   grade_level: number;
   section_id: string | null;
+  tve_major: string | null;
 };
 type Student = { id: string; full_name: string; lrn: string | null };
 type Grade = {
@@ -135,7 +136,8 @@ export default function GradesPage() {
       .filter(
         (item) =>
           item.section_id === selectedAssignment.section_id &&
-          item.grade_level === selectedAssignment.grade_level
+          item.grade_level === selectedAssignment.grade_level &&
+          (!selectedAssignment.major || item.tve_major === selectedAssignment.major)
       )
       .map((item) => studentMap.get(item.student_id))
       .filter((item): item is Student => Boolean(item))
