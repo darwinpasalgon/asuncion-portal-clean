@@ -37,7 +37,7 @@ type PreparedTeacher = ParsedTeacher & {
   row_number: number;
   import_email: string;
   original_email: string;
-  account_mode: "new" | "update";
+  account_mode: "new" | "update" | "not_applicable";
   temporary_email: boolean;
 };
 
@@ -158,12 +158,15 @@ export default function TeacherProfileImportPage() {
   }, []);
 
   const summary = useMemo(() => {
-    const updates = rows.filter((row) => row.account_mode === "update").length;
-    const temporary = rows.filter((row) => row.temporary_email).length;
-    const invalid = rows.filter((row) => !validEmail(row.import_email)).length;
+    const teachingRows = rows.filter((row) => row.account_mode !== "not_applicable");
+    const updates = teachingRows.filter((row) => row.account_mode === "update").length;
+    const temporary = teachingRows.filter((row) => row.temporary_email).length;
+    const invalid = teachingRows.filter((row) => !validEmail(row.import_email)).length;
     return {
       total: rows.length,
-      newAccounts: rows.length - updates,
+      teaching: teachingRows.length,
+      nonTeaching: rows.length - teachingRows.length,
+      newAccounts: teachingRows.filter((row) => row.account_mode === "new").length,
       updates,
       temporary,
       invalid,
@@ -199,8 +202,11 @@ export default function TeacherProfileImportPage() {
       if (!response.ok) throw new Error(result.error ?? "Unable to read the Teacher Profile workbook.");
 
       const parsed = (result.rows ?? []) as ParsedTeacher[];
-      const teaching = parsed.filter((row) => /teacher/i.test(String(row.position ?? "")));
-      const nonTeaching = parsed.filter((row) => !/teacher/i.test(String(row.position ?? "")));
+      const personnelTypeOf = (row: ParsedTeacher) =>
+        String(row.source_data?.personnel_type ?? "").trim() ||
+        (/teacher/i.test(String(row.position ?? "")) ? "Teaching Personnel" : "Non-Teaching Personnel");
+      const teaching = parsed.filter((row) => personnelTypeOf(row) === "Teaching Personnel");
+      const nonTeaching = parsed.filter((row) => personnelTypeOf(row) === "Non-Teaching Personnel");
       setExcluded(nonTeaching);
 
       const existingByEmail = new Map(
@@ -217,7 +223,7 @@ export default function TeacherProfileImportPage() {
         duplicateLastRow.set(email, row.source_row);
       }
 
-      const prepared = teaching.map((row): PreparedTeacher => {
+      const preparedTeaching = teaching.map((row): PreparedTeacher => {
         const sourceEmail = String(row.email ?? "").trim().toLowerCase();
         let importEmail = sourceEmail;
         let temporary = false;
@@ -262,9 +268,22 @@ export default function TeacherProfileImportPage() {
         };
       });
 
-      setRows(prepared);
+      const preparedNonTeaching = nonTeaching.map((row): PreparedTeacher => ({
+        ...row,
+        row_number: row.source_row,
+        import_email: String(row.email ?? "").trim().toLowerCase(),
+        original_email: String(row.email ?? "").trim().toLowerCase(),
+        account_mode: "not_applicable",
+        temporary_email: false,
+        source_data: {
+          ...(row.source_data ?? {}),
+          personnel_type: "Non-Teaching Personnel",
+        },
+      }));
+
+      setRows([...preparedTeaching, ...preparedNonTeaching].sort((a, b) => a.source_row - b.source_row));
       setMessage(
-        `${prepared.length} teaching personnel ready for review. ${nonTeaching.length} non-teaching personnel were excluded from Teacher account creation.`
+        `${preparedTeaching.length} Teaching Personnel and ${preparedNonTeaching.length} Non-Teaching Personnel loaded. Only Teaching Personnel will be created or updated as Teacher accounts.`
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to read the Teacher Profile workbook.");
@@ -292,10 +311,11 @@ export default function TeacherProfileImportPage() {
   }
 
   async function importTeachers() {
-    if (!rows.length || summary.invalid > 0) return;
+    const importRows = rows.filter((row) => row.account_mode !== "not_applicable");
+    if (!importRows.length || summary.invalid > 0) return;
 
     const seen = new Set<string>();
-    const duplicate = rows.find((row) => {
+    const duplicate = importRows.find((row) => {
       const email = row.import_email.toLowerCase();
       if (seen.has(email)) return true;
       seen.add(email);
@@ -316,8 +336,8 @@ export default function TeacherProfileImportPage() {
     let updated = 0;
 
     try {
-      for (let start = 0; start < rows.length; start += 200) {
-        const batch = rows.slice(start, start + 200).map((row) => ({
+      for (let start = 0; start < importRows.length; start += 200) {
+        const batch = importRows.slice(start, start + 200).map((row) => ({
           row_number: row.row_number,
           full_name: row.full_name,
           email: row.import_email,
@@ -446,19 +466,22 @@ export default function TeacherProfileImportPage() {
               <div>
                 <h2>2. Review account matching</h2>
                 <p>
-                  Teaching positions are included. Non-teaching personnel are kept out of the
-                  Teacher role so they do not receive teaching permissions by mistake.
+                  All personnel are shown with a Personnel Type label. Only Teaching Personnel
+                  are included in Teacher account creation; Non-Teaching Personnel can be assigned
+                  a separate portal role later.
                 </p>
               </div>
               <UserRoundCheck size={26} />
             </div>
 
             <div className={styles.summary}>
-              <span>Teaching records <strong>{summary.total}</strong></span>
+              <span>Total personnel <strong>{summary.total}</strong></span>
+              <span>Teaching Personnel <strong>{summary.teaching}</strong></span>
+              <span>Non-Teaching Personnel <strong>{summary.nonTeaching}</strong></span>
               <span>New accounts <strong>{summary.newAccounts}</strong></span>
               <span>Existing profiles <strong>{summary.updates}</strong></span>
               <span>Temporary emails <strong>{summary.temporary}</strong></span>
-              <span>Staff excluded <strong>{summary.excluded}</strong></span>
+
             </div>
 
             <div className={styles.tableWrap}>
@@ -468,6 +491,7 @@ export default function TeacherProfileImportPage() {
                     <th>Row</th>
                     <th>Teacher</th>
                     <th>Position</th>
+                    <th>Personnel Type</th>
                     <th>Portal login email</th>
                     <th>Action</th>
                   </tr>
@@ -484,18 +508,28 @@ export default function TeacherProfileImportPage() {
                       </td>
                       <td>{row.position || "Teacher"}</td>
                       <td>
+                        {String(row.source_data?.personnel_type ?? "") ||
+                          (row.account_mode === "not_applicable" ? "Non-Teaching Personnel" : "Teaching Personnel")}
+                      </td>
+                      <td>
                         <input
                           className={!validEmail(row.import_email) ? styles.invalidInput : ""}
                           value={row.import_email}
                           onChange={(event) => changeEmail(row.source_row, event.target.value)}
                           aria-label={`Login email for ${row.full_name}`}
+                          readOnly={row.account_mode === "not_applicable"}
                         />
                         {row.temporary_email && <small className={styles.temp}>Temporary email</small>}
+                        {row.account_mode === "not_applicable" && <small>Role can be assigned later</small>}
                       </td>
                       <td>
-                        <span className={row.account_mode === "update" ? styles.update : styles.create}>
-                          {row.account_mode === "update" ? "Update profile" : "Create account"}
-                        </span>
+                        {row.account_mode === "not_applicable" ? (
+                          <span>Not a Teacher account</span>
+                        ) : (
+                          <span className={row.account_mode === "update" ? styles.update : styles.create}>
+                            {row.account_mode === "update" ? "Update profile" : "Create account"}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -503,18 +537,7 @@ export default function TeacherProfileImportPage() {
               </table>
             </div>
 
-            {excluded.length > 0 && (
-              <details className={styles.excluded}>
-                <summary>{excluded.length} non-teaching personnel excluded from this Teacher import</summary>
-                <div>
-                  {excluded.map((row) => (
-                    <span key={row.source_row}>
-                      {row.full_name} · {row.position}
-                    </span>
-                  ))}
-                </div>
-              </details>
-            )}
+
 
             <div className={styles.importBar}>
               <div>
