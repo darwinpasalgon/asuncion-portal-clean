@@ -47,6 +47,7 @@ type AcademicContext = {
   grade_level: number | null;
   section: string | null;
   enrollment_status: string | null;
+  tve_major: string | null;
 };
 
 type TeacherAssignment = {
@@ -56,6 +57,23 @@ type TeacherAssignment = {
   subject: string;
   major: string | null;
   student_count: number;
+};
+
+type AdviserSection = {
+  id: string;
+  grade_level: number;
+  name: string;
+};
+
+type AdviserLearner = {
+  enrollment_id: string;
+  student_id: string;
+  full_name: string;
+  lrn: string | null;
+  grade_level: number;
+  section_id: string;
+  section: string;
+  tve_major: string | null;
 };
 
 type ClassScheduleEntry = {
@@ -497,6 +515,11 @@ export default function PortalPage() {
   const [page, setPage] = useState<Page>("Overview");
   const [teacherAssignments, setTeacherAssignments] = useState<TeacherAssignment[]>([]);
   const [teacherAssignmentsLoading, setTeacherAssignmentsLoading] = useState(false);
+  const [adviserSections, setAdviserSections] = useState<AdviserSection[]>([]);
+  const [adviserLearners, setAdviserLearners] = useState<AdviserLearner[]>([]);
+  const [adviserMajors, setAdviserMajors] = useState<string[]>([]);
+  const [adviserLearnersLoading, setAdviserLearnersLoading] = useState(false);
+  const [majorSaving, setMajorSaving] = useState("");
   const [classSchedules, setClassSchedules] = useState<ClassScheduleEntry[]>([]);
   const [classSchedulesLoading, setClassSchedulesLoading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -526,18 +549,38 @@ export default function PortalPage() {
 
           if (loadedProfile.role === "teacher") {
             setTeacherAssignmentsLoading(true);
+            setAdviserLearnersLoading(true);
             try {
-              const assignmentResponse = await fetch("/api/academic/my-assignments", {
-                cache: "no-store",
-              });
-              const assignmentResult = await assignmentResponse.json().catch(() => ({}));
+              const [assignmentResponse, adviserResponse] = await Promise.all([
+                fetch("/api/academic/my-assignments", { cache: "no-store" }),
+                fetch("/api/academic/adviser-students", { cache: "no-store" }),
+              ]);
+              const [assignmentResult, adviserResult] = await Promise.all([
+                assignmentResponse.json().catch(() => ({})),
+                adviserResponse.json().catch(() => ({})),
+              ]);
+
               if (active && assignmentResponse.ok) {
                 setTeacherAssignments(
                   (assignmentResult.assignments ?? []) as TeacherAssignment[]
                 );
               }
+              if (active && adviserResponse.ok) {
+                setAdviserSections(
+                  (adviserResult.sections ?? []) as AdviserSection[]
+                );
+                setAdviserLearners(
+                  (adviserResult.learners ?? []) as AdviserLearner[]
+                );
+                setAdviserMajors(
+                  (adviserResult.majors ?? []) as string[]
+                );
+              }
             } finally {
-              if (active) setTeacherAssignmentsLoading(false);
+              if (active) {
+                setTeacherAssignmentsLoading(false);
+                setAdviserLearnersLoading(false);
+              }
             }
           }
 
@@ -584,6 +627,42 @@ export default function PortalPage() {
     () => (profile ? administratorLabel(profile, adminPermissions) : ""),
     [profile, adminPermissions]
   );
+
+  async function saveLearnerMajor(enrollmentId: string, major: string) {
+    setMajorSaving(enrollmentId);
+    setError("");
+    try {
+      const response = await fetch("/api/academic/adviser-students", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "set_tve_major",
+          enrollmentId,
+          major,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.error ?? "Unable to update the learner TVE Major.");
+      }
+
+      setAdviserLearners((current) =>
+        current.map((learner) =>
+          learner.enrollment_id === enrollmentId
+            ? { ...learner, tve_major: major || null }
+            : learner
+        )
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to update the learner TVE Major."
+      );
+    } finally {
+      setMajorSaving("");
+    }
+  }
 
   if (loading) {
     return (
@@ -738,6 +817,14 @@ export default function PortalPage() {
                       </dd>
                     </div>
                   )}
+                  {profile.role === "student" &&
+                    academicContext?.grade_level &&
+                    [8, 9, 10].includes(academicContext.grade_level) && (
+                      <div>
+                        <dt>TVE Major</dt>
+                        <dd>{academicContext.tve_major || "Not assigned yet"}</dd>
+                      </div>
+                    )}
                   <div><dt>Email</dt><dd>{profile.email}</dd></div>
                   <div><dt>Status</dt><dd><span className="tag">Active</span></dd></div>
                 </dl>
@@ -835,6 +922,7 @@ export default function PortalPage() {
             )}
 
           {profile.role === "teacher" && page === "Students" && (
+            <>
             <section className="panel real-teacher-class-page">
               <div className="real-assignment-heading">
                 <div>
@@ -872,6 +960,71 @@ export default function PortalPage() {
                 </div>
               )}
             </section>
+
+            {(adviserLearnersLoading || adviserSections.length > 0) && (
+              <section className="panel real-adviser-major-panel">
+                <div className="real-assignment-heading">
+                  <div>
+                    <h2>Adviser TVE Major assignment</h2>
+                    <p>
+                      Set the Technical Vocational Education major for learners in your
+                      Grade 8–10 advisory section.
+                    </p>
+                  </div>
+                  <span className="tag blue">
+                    {adviserLearners.filter((learner) => learner.tve_major).length}/
+                    {adviserLearners.length} assigned
+                  </span>
+                </div>
+
+                {adviserLearnersLoading ? (
+                  <p className="real-assignment-empty">Loading adviser class…</p>
+                ) : adviserLearners.length === 0 ? (
+                  <p className="real-assignment-empty">
+                    No active Grade 8–10 learners are enrolled in your advisory section.
+                  </p>
+                ) : (
+                  <>
+                    <div className="real-adviser-major-note">
+                      Only the active Section Adviser can change these learner majors.
+                      TVE teacher student counts update automatically from this selection.
+                    </div>
+                    <div className="real-adviser-major-list">
+                      {adviserLearners.map((learner) => (
+                        <div className="real-adviser-major-row" key={learner.enrollment_id}>
+                          <div>
+                            <span>
+                              Grade {learner.grade_level} · {learner.section}
+                            </span>
+                            <strong>{learner.full_name}</strong>
+                            <small>{learner.lrn ? `LRN ${learner.lrn}` : "LRN not recorded"}</small>
+                          </div>
+                          <label>
+                            <span>TVE Major</span>
+                            <select
+                              value={learner.tve_major ?? ""}
+                              disabled={majorSaving === learner.enrollment_id}
+                              onChange={(event) =>
+                                void saveLearnerMajor(
+                                  learner.enrollment_id,
+                                  event.target.value
+                                )
+                              }
+                            >
+                              <option value="">Not assigned</option>
+                              {adviserMajors.map((major) => (
+                                <option key={major} value={major}>{major}</option>
+                              ))}
+                            </select>
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </section>
+            )}
+            </>
           )}
 
           {(profile.role === "teacher" || profile.role === "student") &&

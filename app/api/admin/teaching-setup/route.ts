@@ -515,12 +515,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const majorFilter = major
+      ? `major=eq.${encodeURIComponent(major)}`
+      : "major=is.null";
     const existing = await getRows(
       `teacher_assignments?school_year_id=eq.${encodeURIComponent(
         activeYear.id
       )}&section_id=eq.${encodeURIComponent(
         sectionId
-      )}&subject_id=eq.${encodeURIComponent(subjectId)}&select=id&limit=1`,
+      )}&subject_id=eq.${encodeURIComponent(subjectId)}&${majorFilter}&select=id&limit=1`,
       token
     ).catch(() => []);
 

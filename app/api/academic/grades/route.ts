@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
         getRows(
           `student_enrollments?school_year_id=eq.${encodeURIComponent(
             activeYear.id
-          )}&enrollment_status=eq.active&select=id,student_id,grade_level,section_id`,
+          )}&enrollment_status=eq.active&select=id,student_id,grade_level,section_id,tve_major`,
           token
         ),
         getRows(
@@ -152,12 +152,25 @@ export async function GET(request: NextRequest) {
     const advisedSections = new Set(
       (advisers ?? []).map((item: { section_id: string }) => item.section_id)
     );
+    const ownEnrollment =
+      profile.role === "student"
+        ? (enrollments ?? []).find(
+            (item: { student_id: string }) => item.student_id === identity.userId
+          ) ?? null
+        : null;
+
     const gradeAssignments =
       profile.role === "teacher"
         ? (assignments ?? []).filter(
             (item: { section_id: string }) => advisedSections.has(item.section_id)
           )
-        : assignments;
+        : profile.role === "student" && ownEnrollment
+          ? (assignments ?? []).filter(
+              (item: { section_id: string; major?: string | null }) =>
+                item.section_id === ownEnrollment.section_id &&
+                (!item.major || item.major === ownEnrollment.tve_major)
+            )
+          : [];
 
     return NextResponse.json({
       role: profile.role,
@@ -225,7 +238,7 @@ export async function POST(request: NextRequest) {
         assignmentId
       )}&school_year_id=eq.${encodeURIComponent(
         activeYear.id
-      )}&is_active=eq.true&select=id,section_id&limit=1`,
+      )}&is_active=eq.true&select=id,section_id,major&limit=1`,
       token
     ).catch(() => []);
 
@@ -256,13 +269,23 @@ export async function POST(request: NextRequest) {
         activeYear.id
       )}&section_id=eq.${encodeURIComponent(
         assignments[0].section_id
-      )}&enrollment_status=eq.active&select=id&limit=1`,
+      )}&enrollment_status=eq.active&select=id,tve_major&limit=1`,
       token
     ).catch(() => []);
 
     if (!enrollments?.[0]) {
       return NextResponse.json(
         { error: "This student is not enrolled in the assigned section." },
+        { status: 400 }
+      );
+    }
+
+    if (
+      assignments[0].major &&
+      enrollments[0].tve_major !== assignments[0].major
+    ) {
+      return NextResponse.json(
+        { error: "This learner is assigned to a different TVE Major." },
         { status: 400 }
       );
     }
@@ -344,7 +367,7 @@ export async function POST(request: NextRequest) {
         assignmentId
       )}&school_year_id=eq.${encodeURIComponent(
         activeYear.id
-      )}&is_active=eq.true&select=id,section_id&limit=1`,
+      )}&is_active=eq.true&select=id,section_id,major&limit=1`,
       token
     ).catch(() => []);
 

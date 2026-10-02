@@ -76,8 +76,28 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unable to load class assignments." }, { status: 500 });
   }
 
+  let visibleAssignments = assignments;
+  if (profile.role === "student") {
+    const enrollmentRows = await getRows(
+      `student_enrollments?student_id=eq.${encodeURIComponent(
+        userId
+      )}&school_year_id=eq.${encodeURIComponent(
+        activeYear.id
+      )}&enrollment_status=eq.active&select=section_id,tve_major&limit=1`,
+      token
+    );
+    const enrollment = enrollmentRows?.[0] ?? null;
+    visibleAssignments = enrollment
+      ? assignments.filter(
+          (item: { section_id: string; major?: string | null }) =>
+            item.section_id === enrollment.section_id &&
+            (!item.major || item.major === enrollment.tve_major)
+        )
+      : [];
+  }
+
   const assignmentIds = new Set(
-    assignments.map((item: { id: string }) => item.id)
+    visibleAssignments.map((item: { id: string }) => item.id)
   );
 
   const [schedules, sections, subjects] = await Promise.all([
@@ -99,7 +119,7 @@ export async function GET(request: NextRequest) {
       major: string | null;
     }
   >(
-    assignments.map(
+    visibleAssignments.map(
       (item: {
         id: string;
         grade_level: number;

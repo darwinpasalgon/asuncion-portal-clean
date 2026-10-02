@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
       admin
         .from("student_enrollments")
         .select(
-          "id,student_id,school_year_id,grade_level,section_id,enrollment_status,learner_status,status_note,status_changed_at,enrolled_at,source_enrollment_id"
+          "id,student_id,school_year_id,grade_level,section_id,tve_major,enrollment_status,learner_status,status_note,status_changed_at,enrolled_at,source_enrollment_id"
         )
         .order("enrolled_at", { ascending: false }),
       admin
@@ -238,7 +238,7 @@ Deno.serve(async (req) => {
     const { data: enrollment, error: enrollmentError } = await admin
       .from("student_enrollments")
       .select(
-        "id,student_id,school_year_id,grade_level,section_id,enrollment_status,learner_status"
+        "id,student_id,school_year_id,grade_level,section_id,tve_major,enrollment_status,learner_status"
       )
       .eq("id", enrollmentId)
       .maybeSingle();
@@ -528,7 +528,7 @@ Deno.serve(async (req) => {
       const { data: sourceEnrollment } = await admin
         .from("student_enrollments")
         .select(
-          "id,student_id,school_year_id,grade_level,section_id,enrollment_status,learner_status"
+          "id,student_id,school_year_id,grade_level,section_id,tve_major,enrollment_status,learner_status"
         )
         .eq("student_id", studentId)
         .eq("school_year_id", sourceYearId)
@@ -625,6 +625,10 @@ Deno.serve(async (req) => {
           school_year_id: targetYearId,
           grade_level: targetGradeLevel,
           section_id: targetSectionId,
+          tve_major:
+            [8, 9, 10].includes(targetGradeLevel)
+              ? sourceEnrollment.tve_major ?? null
+              : null,
           enrollment_status: "active",
           learner_status: "active",
           source_enrollment_id: sourceEnrollment.id,

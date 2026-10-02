@@ -77,6 +77,7 @@ type Enrollment = {
   grade_level: number;
   section_id: string | null;
   section: string;
+  tve_major: string | null;
   enrollment_status: string;
   learner_status: LearnerStatus;
   status_note: string | null;
@@ -518,6 +519,7 @@ export default function LearnerManagementPage() {
         "Sex",
         "Grade Level",
         "Section",
+        "TVE Major",
         "Learner Status",
         "Adviser",
         "Guardian",
@@ -530,6 +532,7 @@ export default function LearnerManagementPage() {
         learner.learner_info?.sex ?? "",
         enrollment.grade_level,
         enrollment.section,
+        enrollment.tve_major ?? "",
         statusLabels[enrollment.learner_status ?? "active"],
         enrollment.adviser_name,
         learner.learner_info?.guardian_name ?? "",
@@ -826,6 +829,12 @@ export default function LearnerManagementPage() {
               <div><span>Ethnic group</span><strong>{display(detailLearner.learner_info?.ethnic_group)}</strong></div>
               <div><span>Religion</span><strong>{display(detailLearner.learner_info?.religion)}</strong></div>
               <div><span>Learning modality</span><strong>{display(detailLearner.learner_info?.learning_modality)}</strong></div>
+              {[8, 9, 10].includes(enrollmentForYear(detailLearner)?.grade_level ?? 0) && (
+                <div>
+                  <span>TVE Major</span>
+                  <strong>{display(enrollmentForYear(detailLearner)?.tve_major)}</strong>
+                </div>
+              )}
             </div>
 
             <section className={styles.detailSection}>
