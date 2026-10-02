@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const [sections, enrollments, profiles] = await Promise.all([
+    const [sections, enrollments, profiles, learnerInfos] = await Promise.all([
       getRows(
         "sections?is_active=eq.true&select=id,grade_level,name&order=grade_level.asc,name.asc",
         auth.token
@@ -112,6 +112,10 @@ export async function GET(request: NextRequest) {
       ),
       getRows(
         "profiles?role=eq.student&account_status=eq.active&select=id,full_name,lrn&order=full_name.asc",
+        auth.token
+      ),
+      getRows(
+        "learner_information?select=student_id,last_name,first_name,sex&order=last_name.asc,first_name.asc",
         auth.token
       ),
     ]);
@@ -129,6 +133,16 @@ export async function GET(request: NextRequest) {
           profile.id,
           profile,
         ]
+      )
+    );
+    const learnerInfoMap = new Map(
+      (learnerInfos ?? []).map(
+        (info: {
+          student_id: string;
+          last_name: string | null;
+          first_name: string | null;
+          sex: string | null;
+        }) => [info.student_id, info]
       )
     );
     const sectionMap = new Map(
@@ -156,11 +170,22 @@ export async function GET(request: NextRequest) {
           const profile = profileMap.get(enrollment.student_id) as
             | { id: string; full_name: string; lrn: string | null }
             | undefined;
+          const info = learnerInfoMap.get(enrollment.student_id) as
+            | {
+                student_id: string;
+                last_name: string | null;
+                first_name: string | null;
+                sex: string | null;
+              }
+            | undefined;
           return {
             enrollment_id: enrollment.id,
             student_id: enrollment.student_id,
             full_name: profile?.full_name ?? "Unknown learner",
             lrn: profile?.lrn ?? null,
+            last_name: info?.last_name ?? null,
+            first_name: info?.first_name ?? null,
+            sex: info?.sex ?? null,
             grade_level: enrollment.grade_level,
             section_id: enrollment.section_id,
             section: sectionMap.get(enrollment.section_id) ?? "Unknown section",
@@ -169,8 +194,44 @@ export async function GET(request: NextRequest) {
           };
         }
       )
-      .sort((a: { full_name: string }, b: { full_name: string }) =>
-        a.full_name.localeCompare(b.full_name)
+      .sort(
+        (
+          a: {
+            full_name: string;
+            last_name: string | null;
+            first_name: string | null;
+            sex: string | null;
+          },
+          b: {
+            full_name: string;
+            last_name: string | null;
+            first_name: string | null;
+            sex: string | null;
+          }
+        ) => {
+          const sexRank = (sex: string | null) => {
+            const normalized = String(sex ?? "").trim().toUpperCase();
+            if (normalized === "M") return 0;
+            if (normalized === "F") return 1;
+            return 2;
+          };
+
+          const bySex = sexRank(a.sex) - sexRank(b.sex);
+          if (bySex !== 0) return bySex;
+
+          const byLast = String(a.last_name ?? a.full_name).localeCompare(
+            String(b.last_name ?? b.full_name),
+            undefined,
+            { sensitivity: "base" }
+          );
+          if (byLast !== 0) return byLast;
+
+          return String(a.first_name ?? a.full_name).localeCompare(
+            String(b.first_name ?? b.full_name),
+            undefined,
+            { sensitivity: "base" }
+          );
+        }
       );
 
     return NextResponse.json({

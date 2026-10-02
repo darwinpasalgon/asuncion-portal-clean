@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
     section: string | null;
     enrollment_status: string | null;
     tve_major: string | null;
+    sex: string | null;
   } = {
     school_year: null,
     school_year_id: null,
@@ -68,6 +69,7 @@ export async function GET(request: NextRequest) {
     section: null,
     enrollment_status: null,
     tve_major: null,
+    sex: null,
   };
 
   const schoolYears = await getRows(
@@ -95,6 +97,16 @@ export async function GET(request: NextRequest) {
         academicContext.grade_level = enrollment.grade_level;
         academicContext.enrollment_status = enrollment.enrollment_status;
         academicContext.tve_major = enrollment.tve_major ?? null;
+
+        const learnerRows = await getRows(
+          `${SUPABASE_URL}/rest/v1/learner_information?student_id=eq.${encodeURIComponent(
+            userId
+          )}&select=sex&limit=1`,
+          token
+        );
+        const learnerSex = String(learnerRows?.[0]?.sex ?? "").trim().toUpperCase();
+        academicContext.sex =
+          learnerSex === "M" || learnerSex === "F" ? learnerSex : null;
 
         if (enrollment.section_id) {
           const sectionRows = await getRows(

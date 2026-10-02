@@ -278,7 +278,7 @@ export default function LearnerManagementPage() {
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    return learners.flatMap((learner) => {
+    const rows = learners.flatMap((learner) => {
       const enrollment = enrollmentForYear(learner);
       if (!enrollment) return [];
       if (gradeFilter && enrollment.grade_level !== Number(gradeFilter)) return [];
@@ -294,6 +294,9 @@ export default function LearnerManagementPage() {
         const matches = [
           learner.full_name,
           learner.lrn,
+          learner.learner_info?.last_name,
+          learner.learner_info?.first_name,
+          learner.learner_info?.sex,
           enrollment.section,
           enrollment.adviser_name,
           enrollment.tve_major,
@@ -305,6 +308,43 @@ export default function LearnerManagementPage() {
       }
 
       return [{ learner, enrollment }];
+    });
+
+    if (!sectionFilter) return rows;
+
+    const sexRank = (sex: string | null | undefined) => {
+      const normalized = String(sex ?? "").trim().toUpperCase();
+      if (normalized === "M") return 0;
+      if (normalized === "F") return 1;
+      return 2;
+    };
+
+    return rows.sort((a, b) => {
+      const bySex =
+        sexRank(a.learner.learner_info?.sex) -
+        sexRank(b.learner.learner_info?.sex);
+      if (bySex !== 0) return bySex;
+
+      const aLast =
+        String(a.learner.learner_info?.last_name ?? "").trim() ||
+        a.learner.full_name;
+      const bLast =
+        String(b.learner.learner_info?.last_name ?? "").trim() ||
+        b.learner.full_name;
+      const byLast = aLast.localeCompare(bLast, undefined, {
+        sensitivity: "base",
+      });
+      if (byLast !== 0) return byLast;
+
+      const aFirst = String(
+        a.learner.learner_info?.first_name ?? a.learner.full_name
+      ).trim();
+      const bFirst = String(
+        b.learner.learner_info?.first_name ?? b.learner.full_name
+      ).trim();
+      return aFirst.localeCompare(bFirst, undefined, {
+        sensitivity: "base",
+      });
     });
   }, [learners, selectedYearId, gradeFilter, sectionFilter, statusFilter, search]);
 
@@ -830,7 +870,13 @@ export default function LearnerManagementPage() {
                         </div>
                       </td>
                       <td>{learner.lrn || "—"}</td>
-                      <td>{learner.learner_info?.sex || "—"}</td>
+                      <td>
+                        {learner.learner_info?.sex === "M"
+                          ? "Male"
+                          : learner.learner_info?.sex === "F"
+                            ? "Female"
+                            : "—"}
+                      </td>
                       <td>
                         <strong>Grade {enrollment.grade_level}</strong>
                         <small className={styles.blockText}>{enrollment.section || "No section"}</small>
