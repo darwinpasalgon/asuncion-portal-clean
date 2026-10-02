@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import {
   ArrowLeft,
   BookOpenCheck,
@@ -161,7 +161,7 @@ export default function TeacherProfilesHrPage() {
   }, [teachers, query]);
 
   function setEntry(
-    setter: React.Dispatch<React.SetStateAction<Details[]>>,
+    setter: Dispatch<SetStateAction<Details[]>>,
     index: number,
     key: string,
     value: string
