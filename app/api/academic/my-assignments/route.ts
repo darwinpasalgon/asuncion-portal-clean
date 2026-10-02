@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       userId
     )}&school_year_id=eq.${encodeURIComponent(
       activeYear.id
-    )}&is_active=eq.true&select=id,grade_level,section_id,subject_id&order=grade_level.asc`,
+    )}&is_active=eq.true&select=id,grade_level,section_id,subject_id,major&order=grade_level.asc`,
     token
   );
 
