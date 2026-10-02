@@ -186,4 +186,99 @@ begin
 end;
 $$;
 
+
+create or replace function private.teacher_can_read_enrollment(
+  target_school_year_id uuid,
+  target_section_id uuid,
+  target_tve_major text
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path to ''
+as $
+  select
+    (select auth.uid()) is not null
+    and exists (
+      select 1
+      from public.profiles p
+      join public.teacher_assignments ta on ta.teacher_id=p.id
+      where p.id=(select auth.uid())
+        and p.role='teacher'
+        and p.account_status='active'
+        and ta.school_year_id=target_school_year_id
+        and ta.section_id=target_section_id
+        and ta.is_active=true
+        and (ta.major is null or ta.major=target_tve_major)
+    );
+$;
+
+drop policy if exists "Teachers read assigned student enrollments"
+on public.student_enrollments;
+
+create policy "Teachers read assigned student enrollments"
+on public.student_enrollments
+for select
+to authenticated
+using (
+  private.teacher_can_read_enrollment(
+    student_enrollments.school_year_id,
+    student_enrollments.section_id,
+    student_enrollments.tve_major
+  )
+);
+
+create or replace function private.teacher_can_read_student_profile(p_student_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path to ''
+as $
+  select
+    (select auth.uid()) is not null
+    and exists (
+      select 1
+      from public.profiles teacher
+      join public.teacher_assignments ta on ta.teacher_id=teacher.id
+      join public.student_enrollments e
+        on e.school_year_id=ta.school_year_id
+       and e.section_id=ta.section_id
+      where teacher.id=(select auth.uid())
+        and teacher.role='teacher'
+        and teacher.account_status='active'
+        and ta.is_active=true
+        and e.enrollment_status='active'
+        and e.student_id=p_student_id
+        and (ta.major is null or ta.major=e.tve_major)
+    );
+$;
+
+create or replace function private.student_can_read_assignment(target_assignment_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path to ''
+as $
+  select
+    (select auth.uid()) is not null
+    and exists (
+      select 1
+      from public.profiles p
+      join public.student_enrollments e on e.student_id=p.id
+      join public.teacher_assignments ta
+        on ta.school_year_id=e.school_year_id
+       and ta.section_id=e.section_id
+      where p.id=(select auth.uid())
+        and p.role='student'
+        and p.account_status='active'
+        and e.enrollment_status='active'
+        and ta.id=target_assignment_id
+        and ta.is_active=true
+        and (ta.major is null or ta.major=e.tve_major)
+    );
+$;
+
 commit;
