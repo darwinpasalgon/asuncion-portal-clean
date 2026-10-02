@@ -12,6 +12,7 @@ import {
   UserX,
 } from "lucide-react";
 import styles from "./administrators.module.css";
+import ActionWaitOverlay from "@/app/components/action-wait-overlay";
 import { nonTeachingPositions, positionOptions } from "@/lib/deped-positions";
 
 type StoredAdminRole = "super_administrator" | "registrar" | "content_administrator" | "school_administrator";
@@ -194,6 +195,7 @@ export default function AdministratorsPage() {
 
   return (
     <main className={styles.page}>
+      <ActionWaitOverlay visible={Boolean(working)} message="Please wait…" />
       <div className={styles.shell}>
         <nav className={styles.topActions}>
           <a href="/portal"><ArrowLeft size={16} />Back to portal</a>
