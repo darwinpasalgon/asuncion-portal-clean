@@ -225,10 +225,15 @@ export default function MyTeacherProfilePage() {
 
         <header className={styles.header}>
           <div className={styles.avatar}><UserRound size={30} /></div>
-          <div>
+          <div className={styles.headerCopy}>
             <span>MY TEACHER PROFILE</span>
             <h1>{teacher?.full_name || "Teacher Profile"}</h1>
             <p>Asuncion National High School personnel profile</p>
+            <div className={styles.profileMeta}>
+              <span><BriefcaseBusiness size={15} />{teacher?.position || "Position not recorded"}</span>
+              <span><ShieldCheck size={15} />Verified Teacher account</span>
+              <span>Profile version {record.version}</span>
+            </div>
           </div>
         </header>
 
