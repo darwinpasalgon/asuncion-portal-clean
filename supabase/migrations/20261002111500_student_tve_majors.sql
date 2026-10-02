@@ -281,4 +281,27 @@ as $
     );
 $;
 
+
+drop policy if exists "Students read own section schedules"
+on public.class_schedules;
+
+create policy "Students read own section schedules"
+on public.class_schedules
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.teacher_assignments ta
+    join public.student_enrollments e
+      on e.school_year_id=ta.school_year_id
+     and e.section_id=ta.section_id
+    where ta.id=class_schedules.teacher_assignment_id
+      and e.student_id=(select auth.uid())
+      and e.enrollment_status='active'
+      and ta.is_active=true
+      and (ta.major is null or ta.major=e.tve_major)
+  )
+);
+
 commit;
