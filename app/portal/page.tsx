@@ -307,6 +307,17 @@ function SideNav({
                 <SidebarMenuButton
                   className="nav-button"
                   onClick={() => {
+                    window.location.href = "/portal/admin/teacher-import";
+                  }}
+                >
+                  <UserRound size={19} />
+                  <span>Teacher profile import</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="nav-button"
+                  onClick={() => {
                     window.location.href = "/portal/admin/password-resets";
                   }}
                 >
@@ -754,6 +765,9 @@ export default function PortalPage() {
                     </button>
                     <button onClick={() => (window.location.href = "/portal/admin/attendance")}>
                       <ClipboardCheck size={18} /> Attendance
+                    </button>
+                    <button onClick={() => (window.location.href = "/portal/admin/teacher-import")}>
+                      <UserRound size={18} /> Teacher profile import
                     </button>
                     <button onClick={() => (window.location.href = "/portal/admin/reports")}>
                       <BarChart3 size={18} /> Reports & analytics
