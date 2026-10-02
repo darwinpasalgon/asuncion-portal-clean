@@ -528,7 +528,7 @@ Deno.serve(async (req) => {
       const { data: sourceEnrollment } = await admin
         .from("student_enrollments")
         .select(
-          "id,student_id,school_year_id,grade_level,section_id,enrollment_status,learner_status"
+          "id,student_id,school_year_id,grade_level,section_id,tve_major,enrollment_status,learner_status"
         )
         .eq("student_id", studentId)
         .eq("school_year_id", sourceYearId)
