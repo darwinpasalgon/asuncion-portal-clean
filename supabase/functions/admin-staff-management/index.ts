@@ -42,6 +42,24 @@ const allowedAdminRoles = new Set([
   "school_administrator",
 ]);
 
+const nonTeachingPositions = new Set([
+  "ADMINISTRATIVE OFFICER I",
+  "ADMINISTRATIVE OFFICER II",
+  "ADMINISTRATIVE OFFICER III",
+  "ADMINISTRATIVE OFFICER IV",
+  "ADMINISTRATIVE OFFICER V",
+  "PRINCIPAL I",
+  "PRINCIPAL II",
+  "PRINCIPAL III",
+  "PRINCIPAL IV",
+  "PROJECT DEVELOPMENT OFFICER I",
+  "PROJECT DEVELOPMENT OFFICER II",
+  "ADMINISTRATIVE ASSISTANT I",
+  "ADMINISTRATIVE ASSISTANT II",
+  "ADMINISTRATIVE ASSISTANT III",
+  "REGISTRAR",
+]);
+
 function storedAdminRole(adminRole: string) {
   return adminRole === "human_resources" ? "school_administrator" : adminRole;
 }
@@ -175,11 +193,26 @@ Deno.serve(async (req) => {
 
       fullName = String(personnel.full_name ?? "").trim().toUpperCase();
       const suppliedEmail = String(body.email ?? "").trim().toLowerCase();
+      const suppliedPosition = String(body.position ?? "").trim().toUpperCase();
       email = suppliedEmail || String(personnel.email ?? "").trim().toLowerCase();
-      position = (String(personnel.position ?? "").trim() || "Administrator").toUpperCase();
+      position = suppliedPosition || String(personnel.position ?? "").trim().toUpperCase();
     }
 
     if (!fullName) return json({ error: "Full name is required." }, 400);
+    if (!position) return json({ error: "Select a non-teaching position." }, 400);
+    if (personnelId) {
+      const { data: currentPersonnel } = await admin
+        .from("non_teaching_personnel")
+        .select("position")
+        .eq("id", personnelId)
+        .maybeSingle();
+      const currentPosition = String(currentPersonnel?.position ?? "").trim().toUpperCase();
+      if (!nonTeachingPositions.has(position) && position !== currentPosition) {
+        return json({ error: "Select a valid DepEd non-teaching position." }, 400);
+      }
+    } else if (!nonTeachingPositions.has(position)) {
+      return json({ error: "Select a valid DepEd non-teaching position." }, 400);
+    }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return json({ error: "Enter a valid email address." }, 400);
     }
@@ -247,7 +280,7 @@ Deno.serve(async (req) => {
     if (personnelId) {
       const { error: linkError } = await admin
         .from("non_teaching_personnel")
-        .update({ portal_user_id: created.user.id, email, updated_at: new Date().toISOString() })
+        .update({ portal_user_id: created.user.id, email, position, updated_at: new Date().toISOString() })
         .eq("id", personnelId)
         .is("portal_user_id", null);
 
@@ -273,7 +306,7 @@ Deno.serve(async (req) => {
 
   const { data: target } = await admin
     .from("profiles")
-    .select("id,role,admin_role,account_status,email")
+    .select("id,role,admin_role,account_status,email,position")
     .eq("id", administratorId)
     .maybeSingle();
 
@@ -300,12 +333,16 @@ Deno.serve(async (req) => {
   if (action === "update") {
     const fullName = String(body.full_name ?? "").trim().toUpperCase();
     const email = String(body.email ?? "").trim().toLowerCase();
-    const position = (String(body.position ?? "").trim() || "Administrator").toUpperCase();
+    const position = String(body.position ?? "").trim().toUpperCase();
     const requestedAdminRole = String(body.admin_role ?? target.admin_role ?? "school_administrator");
     const adminRole = storedAdminRole(requestedAdminRole);
 
     if (!fullName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return json({ error: "Enter a valid name and email address." }, 400);
+    }
+    if (!position) return json({ error: "Select a non-teaching position." }, 400);
+    if (!nonTeachingPositions.has(position) && position !== String(target.position ?? "").trim().toUpperCase()) {
+      return json({ error: "Select a valid DepEd non-teaching position." }, 400);
     }
     if (!allowedAdminRoles.has(requestedAdminRole)) {
       return json({ error: "Select a valid delegated administrator role." }, 400);
