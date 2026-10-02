@@ -1,4 +1,8 @@
 import * as XLSX from "npm:xlsx@0.18.5";
+import {
+  normalizeTeacherNameFields,
+  teacherDisplayName,
+} from "./teacher-profile.ts";
 
 const text = (value: unknown) => String(value ?? "").replace(/\u00a0/g, " ").trim();
 const compact = (value: unknown) => text(value).toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -66,6 +70,7 @@ export function parseTeacherWorkbook(bytes: Uint8Array) {
       const personal: Record<string, string> = {};
       const map: Record<number, string> = { 1: "last_name", 2: "first_name", 3: "middle_name", 7: "additional_units", 8: "graduate_course", 9: "graduate_units", 10: "bachelors_degree", 11: "major", 12: "minor", 13: "education_units_major", 14: "education_units_minor", 15: "skills", 16: "philsys_number", 17: "religion", 18: "ethnic_group" };
       for (const [col, key] of Object.entries(map)) personal[key] = text(row[Number(col)]).toUpperCase();
+      const normalizedPersonal = normalizeTeacherNameFields(personal);
       const official = {
         appointment_day_month_source: text(row[5]),
         appointment_year_source: text(row[6]),
@@ -73,9 +78,12 @@ export function parseTeacherWorkbook(bytes: Uint8Array) {
       };
       records.push({
         source_row: index + 1,
-        full_name: [text(row[2]), text(row[3]), text(row[1])].filter(Boolean).join(" ").toUpperCase(),
+        full_name: teacherDisplayName(
+          normalizedPersonal,
+          [text(row[2]), text(row[3]), text(row[1])].filter(Boolean).join(" ")
+        ),
         email: text(row[19]).toLowerCase(), position: (text(row[4]) || "Teacher").toUpperCase(),
-        teacher_personal: personal, teacher_official: official,
+        teacher_personal: normalizedPersonal, teacher_official: official,
         source_data: { sheet: sheetName, row: index + 1, personnel_number: text(row[0]), personnel_type: personnelType },
       });
     }
