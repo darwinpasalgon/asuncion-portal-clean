@@ -42,14 +42,14 @@ export function cleanDetails(input: unknown, fields: readonly (readonly [string,
   for (const [key] of fields) {
     if (!(key in source)) continue;
     if (typeof source[key] !== "string") throw new Error(`Invalid value for ${key}.`);
-    const value = source[key].trim();
-    if (value.length > 2000) throw new Error("A profile field exceeds 2,000 characters.");
-    if (value && (key.endsWith("_date") || key === "date_from" || key === "date_to" || key === "date")) {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(value)) || new Date(value).toISOString().slice(0, 10) !== value) {
+    const rawValue = source[key].trim();
+    if (rawValue.length > 2000) throw new Error("A profile field exceeds 2,000 characters.");
+    if (rawValue && (key.endsWith("_date") || key === "date_from" || key === "date_to" || key === "date")) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(rawValue) || !Number.isFinite(Date.parse(rawValue)) || new Date(rawValue).toISOString().slice(0, 10) !== rawValue) {
         throw new Error("Use a valid calendar date.");
       }
     }
-    result[key] = value;
+    result[key] = rawValue.toUpperCase();
   }
   return result;
 }
