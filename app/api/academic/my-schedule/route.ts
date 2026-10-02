@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
   const assignments = await getRows(
     `teacher_assignments?school_year_id=eq.${encodeURIComponent(
       activeYear.id
-    )}&is_active=eq.true&select=id,grade_level,section_id,subject_id,teacher_id`,
+    )}&is_active=eq.true&select=id,grade_level,section_id,subject_id,teacher_id,major`,
     token
   );
 
