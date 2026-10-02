@@ -174,7 +174,8 @@ Deno.serve(async (req) => {
       }
 
       fullName = String(personnel.full_name ?? "").trim().toUpperCase();
-      email = String(personnel.email ?? "").trim().toLowerCase();
+      const suppliedEmail = String(body.email ?? "").trim().toLowerCase();
+      email = suppliedEmail || String(personnel.email ?? "").trim().toLowerCase();
       position = (String(personnel.position ?? "").trim() || "Administrator").toUpperCase();
     }
 
@@ -246,7 +247,7 @@ Deno.serve(async (req) => {
     if (personnelId) {
       const { error: linkError } = await admin
         .from("non_teaching_personnel")
-        .update({ portal_user_id: created.user.id, updated_at: new Date().toISOString() })
+        .update({ portal_user_id: created.user.id, email, updated_at: new Date().toISOString() })
         .eq("id", personnelId)
         .is("portal_user_id", null);
 
