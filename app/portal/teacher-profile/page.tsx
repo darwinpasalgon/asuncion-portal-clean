@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   BookOpenCheck,
@@ -32,59 +32,6 @@ type Teacher = {
   position: string | null;
 };
 
-const personalSections = [
-  {
-    title: "Personal information",
-    icon: UserRound,
-    fields: [
-      ["last_name", "Last name"],
-      ["first_name", "First name"],
-      ["middle_name", "Middle name"],
-      ["name_extension", "Name extension"],
-      ["birth_date", "Birth date"],
-      ["birth_place", "Place of birth"],
-      ["mobile", "Mobile number"],
-      ["address", "Home address"],
-    ],
-  },
-  {
-    title: "Educational background",
-    icon: GraduationCap,
-    fields: [
-      ["bachelors_degree", "Bachelor's degree / course"],
-      ["major", "Major"],
-      ["minor", "Minor"],
-      ["education_units_major", "Education units earned / major"],
-      ["education_units_minor", "Education units earned / minor"],
-      ["graduate_course", "Graduate course / master's degree"],
-      ["graduate_units", "Graduate units earned / CAR"],
-      ["additional_units", "Additional units earned / CAR"],
-    ],
-  },
-  {
-    title: "Qualifications and other information",
-    icon: BookOpenCheck,
-    fields: [
-      ["skills", "Skills / specialization / NC / trainers methodology"],
-      ["philsys_number", "PhilSys (National ID) number"],
-      ["religion", "Religion"],
-      ["ethnic_group", "Ethnic group"],
-    ],
-  },
-] as const;
-
-const officialLabels: Record<string, string> = {
-  appointment_day_month_source: "Original appointment day / month (source)",
-  appointment_year_source: "Original appointment year (source)",
-  appointment_date: "Verified original appointment date",
-  employment_status: "Employment status",
-  employee_number: "Employee number",
-  employment_end_date: "Employment end date",
-  salary_grade: "Salary grade / step",
-  monthly_salary: "Monthly salary",
-  hr_notes: "HR notes",
-};
-
 function emptyRecord(): TeacherRecord {
   return {
     teacher_id: "",
@@ -95,6 +42,75 @@ function emptyRecord(): TeacherRecord {
     version: 0,
   };
 }
+
+function sourceAppointmentDate(official: Details) {
+  const verified = String(official.appointment_date ?? "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(verified)) return verified;
+
+  const year = Number(String(official.appointment_year_source ?? "").trim());
+  const raw = String(official.appointment_day_month_source ?? "").trim();
+  if (!Number.isInteger(year) || year < 1900 || year > 2200 || !raw) return "";
+
+  const numeric = Number(raw);
+  let month = 0;
+  let day = 0;
+
+  if (Number.isFinite(numeric) && numeric > 1000) {
+    const date = new Date(Date.UTC(1899, 11, 30));
+    date.setUTCDate(date.getUTCDate() + Math.trunc(numeric));
+    month = date.getUTCMonth() + 1;
+    day = date.getUTCDate();
+  } else {
+    const parsed = new Date(raw);
+    const fallback = Number.isNaN(parsed.getTime()) ? new Date(`${raw} ${year}`) : parsed;
+    if (!Number.isNaN(fallback.getTime())) {
+      month = fallback.getMonth() + 1;
+      day = fallback.getDate();
+    }
+  }
+
+  if (!month || !day) return "";
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function formatDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return value || "Not yet recorded";
+  return `${match[2]}/${match[3]}/${match[1]}`;
+}
+
+const nameFields = [
+  ["last_name", "Last Name"],
+  ["first_name", "First Name"],
+  ["middle_name", "Middle Name"],
+  ["name_extension", "Name Extension"],
+] as const;
+
+const graduateFields = [
+  [
+    "graduate_units",
+    "Indicate if graduated or units earned if not graduated or CAR for completed Academic Requirements",
+  ],
+  ["graduate_course", "What Master?"],
+] as const;
+
+const tertiaryFields = [
+  ["bachelors_degree", "Course"],
+  ["major", "Major"],
+  ["minor", "Minor"],
+] as const;
+
+const earningUnitsFields = [
+  ["education_units_major", "Major"],
+  ["education_units_minor", "Minor"],
+] as const;
+
+const otherFields = [
+  ["skills", "SKILLS / SPECIALIZATION (NC I, NC II, NC III / TRAINERS METHODOLOGY)"],
+  ["philsys_number", "Philsys (National ID) Number"],
+  ["religion", "Religion"],
+  ["ethnic_group", "Ethnic Group"],
+] as const;
 
 export default function MyTeacherProfilePage() {
   const [teacher, setTeacher] = useState<Teacher | null>(null);
@@ -131,14 +147,6 @@ export default function MyTeacherProfilePage() {
     void loadProfile();
   }, []);
 
-  const officialEntries = useMemo(
-    () =>
-      Object.entries(record.official ?? {}).filter(
-        ([, value]) => String(value ?? "").trim() !== ""
-      ),
-    [record.official]
-  );
-
   async function save() {
     setSaving(true);
     setError("");
@@ -165,6 +173,37 @@ export default function MyTeacherProfilePage() {
     }
   }
 
+  function field(
+    key: string,
+    label: string,
+    wide = false,
+    multiline = false
+  ) {
+    return (
+      <label className={wide ? styles.wide : ""} key={key}>
+        <span>{label}</span>
+        {multiline ? (
+          <textarea
+            value={personal[key] ?? ""}
+            onChange={(event) =>
+              setPersonal((current) => ({ ...current, [key]: event.target.value }))
+            }
+            rows={3}
+          />
+        ) : (
+          <input
+            value={personal[key] ?? ""}
+            onChange={(event) =>
+              setPersonal((current) => ({ ...current, [key]: event.target.value }))
+            }
+          />
+        )}
+      </label>
+    );
+  }
+
+  const appointmentDate = sourceAppointmentDate(record.official ?? {});
+
   if (loading) {
     return (
       <main className={styles.loading}>
@@ -187,89 +226,102 @@ export default function MyTeacherProfilePage() {
           <div>
             <span>MY TEACHER PROFILE</span>
             <h1>{teacher?.full_name || "Teacher Profile"}</h1>
-            <p>
-              {teacher?.position || "Teacher"} · {teacher?.email}
-            </p>
+            <p>Asuncion National High School personnel profile</p>
           </div>
         </header>
 
         {error && <div className={styles.error}>{error}</div>}
         {message && <div className={styles.success}>{message}</div>}
 
+        <section className={styles.panel}>
+          <div className={styles.panelHead}>
+            <BriefcaseBusiness size={22} />
+            <h2>Employment Information</h2>
+          </div>
+          <dl className={styles.official}>
+            <div>
+              <dt>Position</dt>
+              <dd>{teacher?.position || "Not yet recorded"}</dd>
+            </div>
+            <div>
+              <dt>Date of Original Appointment</dt>
+              <dd>{formatDate(appointmentDate)}</dd>
+            </div>
+            <div>
+              <dt>DepEd Email</dt>
+              <dd>{teacher?.email || "Not yet recorded"}</dd>
+            </div>
+          </dl>
+        </section>
+
         <div className={styles.notice}>
           <ShieldCheck size={20} />
           <div>
-            <strong>You may update your personal profile information.</strong>
+            <strong>You may update the editable profile information below.</strong>
             <span>
-              Appointment details, official service records, salary information, and performance
-              ratings are maintained by Human Resources.
+              Position, Date of Original Appointment, service records, salary information, and
+              performance ratings are maintained by Human Resources.
             </span>
           </div>
         </div>
 
-        {personalSections.map((section) => {
-          const Icon = section.icon;
-          return (
-            <section className={styles.panel} key={section.title}>
-              <div className={styles.panelHead}>
-                <Icon size={22} />
-                <h2>{section.title}</h2>
-              </div>
-              <div className={styles.grid}>
-                {section.fields.map(([key, label]) => (
-                  <label className={key === "address" || key === "skills" ? styles.wide : ""} key={key}>
-                    <span>{label}</span>
-                    {key === "address" || key === "skills" ? (
-                      <textarea
-                        value={personal[key] ?? ""}
-                        onChange={(event) =>
-                          setPersonal((current) => ({ ...current, [key]: event.target.value }))
-                        }
-                        rows={3}
-                      />
-                    ) : (
-                      <input
-                        type={key === "birth_date" ? "date" : "text"}
-                        value={personal[key] ?? ""}
-                        onChange={(event) =>
-                          setPersonal((current) => ({ ...current, [key]: event.target.value }))
-                        }
-                      />
-                    )}
-                  </label>
-                ))}
-              </div>
-            </section>
-          );
-        })}
+        <section className={styles.panel}>
+          <div className={styles.panelHead}>
+            <UserRound size={22} />
+            <h2>Name</h2>
+          </div>
+          <div className={styles.grid}>
+            {nameFields.map(([key, label]) => field(key, label))}
+          </div>
+        </section>
 
         <section className={styles.panel}>
           <div className={styles.panelHead}>
-            <BriefcaseBusiness size={22} />
-            <div>
-              <h2>Official employment information</h2>
-              <p>Read-only. Contact Human Resources if an official record needs correction.</p>
-            </div>
+            <GraduationCap size={22} />
+            <h2>Graduate Course</h2>
           </div>
-          {officialEntries.length === 0 ? (
-            <p className={styles.empty}>No verified official employment fields have been entered yet.</p>
-          ) : (
-            <dl className={styles.official}>
-              {officialEntries.map(([key, value]) => (
-                <div key={key}>
-                  <dt>{officialLabels[key] ?? key.replaceAll("_", " ")}</dt>
-                  <dd>{value}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
+          <div className={styles.grid}>
+            {graduateFields.map(([key, label]) => field(key, label, key === "graduate_units"))}
+          </div>
+        </section>
+
+        <section className={styles.panel}>
+          <div className={styles.panelHead}>
+            <GraduationCap size={22} />
+            <h2>Tertiary (Bachelor&apos;s Degree)</h2>
+          </div>
+          <div className={styles.grid}>
+            {tertiaryFields.map(([key, label]) => field(key, label))}
+          </div>
+        </section>
+
+        <section className={styles.panel}>
+          <div className={styles.panelHead}>
+            <GraduationCap size={22} />
+            <h2>Earning Units</h2>
+          </div>
+          <div className={styles.grid}>
+            {earningUnitsFields.map(([key, label]) => field(key, label))}
+          </div>
+        </section>
+
+        <section className={styles.panel}>
+          <div className={styles.panelHead}>
+            <BookOpenCheck size={22} />
+            <h2>Other Profile Information</h2>
+          </div>
+          <div className={styles.grid}>
+            {otherFields.map(([key, label]) =>
+              field(key, label, key === "skills", key === "skills")
+            )}
+          </div>
         </section>
 
         <section className={styles.panel}>
           <div className={styles.panelHead}>
             <BriefcaseBusiness size={22} />
             <div>
-              <h2>Service records</h2>
+              <h2>Service Records</h2>
               <p>{record.service_records?.length ?? 0} HR-maintained record(s)</p>
             </div>
           </div>
@@ -292,7 +344,7 @@ export default function MyTeacherProfilePage() {
           <div className={styles.panelHead}>
             <BookOpenCheck size={22} />
             <div>
-              <h2>Performance ratings</h2>
+              <h2>Performance Ratings</h2>
               <p>{record.ratings?.length ?? 0} HR-maintained rating(s)</p>
             </div>
           </div>
@@ -313,7 +365,7 @@ export default function MyTeacherProfilePage() {
 
         <div className={styles.saveBar}>
           <div>
-            <strong>Personal information</strong>
+            <strong>Teacher&apos;s Profile</strong>
             <span>Changes are recorded with a profile version and update history.</span>
           </div>
           <button onClick={() => void save()} disabled={saving}>
