@@ -152,12 +152,25 @@ export async function GET(request: NextRequest) {
     const advisedSections = new Set(
       (advisers ?? []).map((item: { section_id: string }) => item.section_id)
     );
+    const ownEnrollment =
+      profile.role === "student"
+        ? (enrollments ?? []).find(
+            (item: { student_id: string }) => item.student_id === identity.userId
+          ) ?? null
+        : null;
+
     const gradeAssignments =
       profile.role === "teacher"
         ? (assignments ?? []).filter(
             (item: { section_id: string }) => advisedSections.has(item.section_id)
           )
-        : assignments;
+        : profile.role === "student" && ownEnrollment
+          ? (assignments ?? []).filter(
+              (item: { section_id: string; major?: string | null }) =>
+                item.section_id === ownEnrollment.section_id &&
+                (!item.major || item.major === ownEnrollment.tve_major)
+            )
+          : [];
 
     return NextResponse.json({
       role: profile.role,
@@ -263,6 +276,16 @@ export async function POST(request: NextRequest) {
     if (!enrollments?.[0]) {
       return NextResponse.json(
         { error: "This student is not enrolled in the assigned section." },
+        { status: 400 }
+      );
+    }
+
+    if (
+      assignments[0].major &&
+      enrollments[0].tve_major !== assignments[0].major
+    ) {
+      return NextResponse.json(
+        { error: "This learner is assigned to a different TVE Major." },
         { status: 400 }
       );
     }
