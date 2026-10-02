@@ -74,3 +74,9 @@
 .success{border:1px solid #cce7d5;background:#f0faf3;color:#287052}
 @media(max-width:900px){.header{align-items:flex-start;flex-direction:column}.summary{grid-template-columns:1fr 1fr}.twoColumns{grid-template-columns:1fr}.adviserForm{grid-template-columns:1fr 1fr}.adviserRow{grid-template-columns:1fr 1fr}.adviserRow button,.adviserRow>.noAdviser{justify-self:start}.subjectGrid{grid-template-columns:1fr}.assignmentRow{grid-template-columns:1fr 1fr}.assignmentRow button{justify-self:start}}
 @media(max-width:520px){.page{padding-inline:14px}.summary{grid-template-columns:1fr}.topActions{align-items:flex-start;flex-direction:column;gap:10px}.topLink+.topLink{padding-left:0;border-left:0}.panelHeading{align-items:flex-start;flex-direction:column}.adviserForm{grid-template-columns:1fr;padding:20px}.adviserRow{grid-template-columns:1fr}.subjectGrid{padding:14px}.assignmentRow{grid-template-columns:1fr}.form{padding:20px}}
+
+.subjectActions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
+.editSubject,.removeSubject{display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:6px 9px;font-size:.68rem;font-weight:750;background:#fff}
+.editSubject{border:1px solid #cfe0ea;color:#24668f}
+.removeSubject{border:1px solid #ebcece;color:#9a4848}
+.exploratoryNote{border:1px solid #d7e5ee;border-radius:9px;background:#f5f9fc;color:#5f7888;padding:10px 11px;font-size:.74rem;line-height:1.5}
