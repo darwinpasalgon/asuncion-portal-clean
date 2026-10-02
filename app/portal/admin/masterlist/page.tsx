@@ -574,10 +574,19 @@ export default function BulkAccountImportPage() {
 
       const sourceName = data.full_name ?? "";
       const parsedName = parseSf1Name(sourceName);
-      const lastName = data.last_name || parsedName.last_name;
-      const firstName = data.first_name || parsedName.first_name;
-      const middleName = data.middle_name || parsedName.middle_name;
-      const nameExtension = data.name_extension || parsedName.name_extension;
+      const lastName = cleanNamePart(data.last_name || parsedName.last_name);
+      let firstName = cleanNamePart(data.first_name || parsedName.first_name);
+      const middleName = cleanNamePart(data.middle_name || parsedName.middle_name);
+      let nameExtension = normalizeNameExtension(
+        data.name_extension || parsedName.name_extension
+      );
+
+      if (!nameExtension) {
+        const extracted = extractExtensionFromFirstName(firstName);
+        firstName = extracted.first_name;
+        nameExtension = extracted.name_extension;
+      }
+
       const fullName =
         personType === "student"
           ? portalName(lastName, firstName, middleName, nameExtension, sourceName)
