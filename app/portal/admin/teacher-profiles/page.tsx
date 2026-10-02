@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   BookOpenCheck,
   BriefcaseBusiness,
+  GraduationCap,
   Plus,
   RefreshCw,
   Save,
@@ -35,44 +36,93 @@ type RecordData = {
   version: number;
 };
 
-const personalFields = [
-  ["last_name", "Last name"], ["first_name", "First name"], ["middle_name", "Middle name"],
-  ["name_extension", "Name extension"], ["birth_date", "Birth date"], ["birth_place", "Place of birth"],
-  ["mobile", "Mobile number"], ["address", "Home address"],
-  ["bachelors_degree", "Bachelor's degree / course"], ["major", "Major"], ["minor", "Minor"],
-  ["graduate_course", "Graduate course / master's degree"], ["graduate_units", "Graduate units / CAR"],
-  ["additional_units", "Additional units / CAR"], ["education_units_major", "Education units / major"],
-  ["education_units_minor", "Education units / minor"], ["skills", "Skills / specialization / NC"],
-  ["philsys_number", "PhilSys number"], ["religion", "Religion"], ["ethnic_group", "Ethnic group"],
+const nameFields = [
+  ["last_name", "Last Name"],
+  ["first_name", "First Name"],
+  ["middle_name", "Middle Name"],
+  ["name_extension", "Name Extension"],
 ] as const;
 
-const officialFields = [
-  ["appointment_day_month_source", "Appointment day / month from source"],
-  ["appointment_year_source", "Appointment year from source"],
-  ["appointment_date", "Verified original appointment date"],
-  ["employment_status", "Employment status"],
-  ["employee_number", "Employee number"],
-  ["employment_end_date", "Employment end date"],
-  ["salary_grade", "Salary grade / step"],
-  ["monthly_salary", "Monthly salary (PHP)"],
-  ["hr_notes", "HR notes"],
+const graduateFields = [
+  [
+    "graduate_units",
+    "Indicate if graduated or units earned if not graduated or CAR for completed Academic Requirements",
+  ],
+  ["graduate_course", "What Master?"],
+] as const;
+
+const tertiaryFields = [
+  ["bachelors_degree", "Course"],
+  ["major", "Major"],
+  ["minor", "Minor"],
+] as const;
+
+const earningUnitsFields = [
+  ["education_units_major", "Major"],
+  ["education_units_minor", "Minor"],
+] as const;
+
+const otherProfileFields = [
+  ["skills", "SKILLS / SPECIALIZATION (NC I, NC II, NC III / TRAINERS METHODOLOGY)"],
+  ["philsys_number", "Philsys (National ID) Number"],
+  ["religion", "Religion"],
+  ["ethnic_group", "Ethnic Group"],
+] as const;
+
+const otherOfficialFields = [
+  ["employment_status", "Employment Status"],
+  ["employee_number", "Employee Number"],
+  ["employment_end_date", "Employment End Date"],
+  ["salary_grade", "Salary Grade / Step"],
+  ["monthly_salary", "Monthly Salary (PHP)"],
+  ["hr_notes", "HR Notes"],
 ] as const;
 
 const serviceFields = [
   ["date_from", "From"], ["date_to", "To"], ["designation", "Designation"],
-  ["status", "Appointment status"], ["salary", "Annual salary (PHP)"], ["station", "Office / station"],
-  ["branch", "Government branch"], ["leave_without_pay", "Leave without pay"], ["remarks", "Remarks"],
+  ["status", "Appointment Status"], ["salary", "Annual Salary (PHP)"], ["station", "Office / Station"],
+  ["branch", "Government Branch"], ["leave_without_pay", "Leave Without Pay"], ["remarks", "Remarks"],
 ] as const;
 
 const ratingFields = [
-  ["period", "Rating period / school year"], ["instrument", "Rating instrument"],
-  ["rating", "Final rating"], ["description", "Adjectival rating"], ["rater", "Rater"],
+  ["period", "Rating Period / School Year"], ["instrument", "Rating Instrument"],
+  ["rating", "Final Rating"], ["description", "Adjectival Rating"], ["rater", "Rater"],
   ["date", "Date"], ["remarks", "Remarks"],
 ] as const;
 
 const emptyRecord = (): RecordData => ({
   teacher_id: "", personal: {}, official: {}, service_records: [], ratings: [], version: 0,
 });
+
+function sourceAppointmentDate(official: Details) {
+  const verified = String(official.appointment_date ?? "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(verified)) return verified;
+
+  const year = Number(String(official.appointment_year_source ?? "").trim());
+  const raw = String(official.appointment_day_month_source ?? "").trim();
+  if (!Number.isInteger(year) || year < 1900 || year > 2200 || !raw) return "";
+
+  const numeric = Number(raw);
+  let month = 0;
+  let day = 0;
+
+  if (Number.isFinite(numeric) && numeric > 1000) {
+    const date = new Date(Date.UTC(1899, 11, 30));
+    date.setUTCDate(date.getUTCDate() + Math.trunc(numeric));
+    month = date.getUTCMonth() + 1;
+    day = date.getUTCDate();
+  } else {
+    const parsed = new Date(raw);
+    const fallback = Number.isNaN(parsed.getTime()) ? new Date(`${raw} ${year}`) : parsed;
+    if (!Number.isNaN(fallback.getTime())) {
+      month = fallback.getMonth() + 1;
+      day = fallback.getDate();
+    }
+  }
+
+  if (!month || !day) return "";
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
 
 export default function TeacherProfilesHrPage() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -135,9 +185,14 @@ export default function TeacherProfilesHrPage() {
         if (!active) return;
         setTeacher(result.teacher ?? null);
         const next = (result.record ?? emptyRecord()) as RecordData;
+        const nextOfficial = {
+          ...(next.official ?? {}),
+          appointment_date:
+            next.official?.appointment_date || sourceAppointmentDate(next.official ?? {}),
+        };
         setRecord(next);
         setPersonal(next.personal ?? {});
-        setOfficial(next.official ?? {});
+        setOfficial(nextOfficial);
         setService(next.service_records ?? []);
         setRatings(next.ratings ?? []);
       } catch (err) {
@@ -170,6 +225,35 @@ export default function TeacherProfilesHrPage() {
       current.map((item, itemIndex) =>
         itemIndex === index ? { ...item, [key]: value } : item
       )
+    );
+  }
+
+  function personalField(
+    key: string,
+    label: string,
+    wide = false,
+    multiline = false
+  ) {
+    return (
+      <label className={wide ? styles.wide : ""} key={key}>
+        <span>{label}</span>
+        {multiline ? (
+          <textarea
+            rows={3}
+            value={personal[key] ?? ""}
+            onChange={(event) =>
+              setPersonal((current) => ({ ...current, [key]: event.target.value }))
+            }
+          />
+        ) : (
+          <input
+            value={personal[key] ?? ""}
+            onChange={(event) =>
+              setPersonal((current) => ({ ...current, [key]: event.target.value }))
+            }
+          />
+        )}
+      </label>
     );
   }
 
@@ -221,8 +305,8 @@ export default function TeacherProfilesHrPage() {
             <span>HUMAN RESOURCES</span>
             <h1>Teacher Profiles</h1>
             <p>
-              Maintain personal information, verified employment details, service history, and
-              performance ratings. Every saved change is versioned and recorded.
+              Maintain the Teacher&apos;s Profile using the same labels as the official school
+              personnel sheet, together with service history and performance ratings.
             </p>
           </div>
           <div className={styles.security}><ShieldCheck size={20} />HR-managed records</div>
@@ -272,41 +356,99 @@ export default function TeacherProfilesHrPage() {
                 <div className={styles.identity}>
                   <div className={styles.avatar}><UserRound size={26} /></div>
                   <div>
-                    <span>PERSONNEL RECORD</span>
+                    <span>TEACHER&apos;S PROFILE</span>
                     <h2>{teacher?.full_name}</h2>
-                    <p>{teacher?.position || "Teacher"} · {teacher?.email}</p>
+                    <p>Asuncion National High School personnel record</p>
                   </div>
                 </div>
 
                 <section className={styles.panel}>
-                  <div className={styles.panelHead}><UserRound size={20} /><h3>Personal and educational profile</h3></div>
+                  <div className={styles.panelHead}><BriefcaseBusiness size={20} /><h3>Employment Information</h3></div>
                   <div className={styles.grid}>
-                    {personalFields.map(([key, label]) => (
-                      <label className={key === "address" || key === "skills" ? styles.wide : ""} key={key}>
-                        <span>{label}</span>
-                        {key === "address" || key === "skills" ? (
-                          <textarea rows={3} value={personal[key] ?? ""} onChange={(event) => setPersonal((current) => ({ ...current, [key]: event.target.value }))} />
-                        ) : (
-                          <input type={key === "birth_date" ? "date" : "text"} value={personal[key] ?? ""} onChange={(event) => setPersonal((current) => ({ ...current, [key]: event.target.value }))} />
-                        )}
-                      </label>
-                    ))}
+                    <label>
+                      <span>Position</span>
+                      <input value={teacher?.position || ""} readOnly />
+                    </label>
+                    <label>
+                      <span>Date of Original Appointment</span>
+                      <input
+                        type="date"
+                        value={official.appointment_date ?? ""}
+                        onChange={(event) =>
+                          setOfficial((current) => ({
+                            ...current,
+                            appointment_date: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                    <label className={styles.wide}>
+                      <span>DepEd Email</span>
+                      <input value={teacher?.email || ""} readOnly />
+                    </label>
                   </div>
                 </section>
 
                 <section className={styles.panel}>
-                  <div className={styles.panelHead}><BriefcaseBusiness size={20} /><h3>Official employment information</h3></div>
+                  <div className={styles.panelHead}><UserRound size={20} /><h3>Name</h3></div>
                   <div className={styles.grid}>
-                    {officialFields.map(([key, label]) => (
+                    {nameFields.map(([key, label]) => personalField(key, label))}
+                  </div>
+                </section>
+
+                <section className={styles.panel}>
+                  <div className={styles.panelHead}><GraduationCap size={20} /><h3>Graduate Course</h3></div>
+                  <div className={styles.grid}>
+                    {graduateFields.map(([key, label]) =>
+                      personalField(key, label, key === "graduate_units")
+                    )}
+                  </div>
+                </section>
+
+                <section className={styles.panel}>
+                  <div className={styles.panelHead}><GraduationCap size={20} /><h3>Tertiary (Bachelor&apos;s Degree)</h3></div>
+                  <div className={styles.grid}>
+                    {tertiaryFields.map(([key, label]) => personalField(key, label))}
+                  </div>
+                </section>
+
+                <section className={styles.panel}>
+                  <div className={styles.panelHead}><GraduationCap size={20} /><h3>Earning Units</h3></div>
+                  <div className={styles.grid}>
+                    {earningUnitsFields.map(([key, label]) => personalField(key, label))}
+                  </div>
+                </section>
+
+                <section className={styles.panel}>
+                  <div className={styles.panelHead}><BookOpenCheck size={20} /><h3>Other Profile Information</h3></div>
+                  <div className={styles.grid}>
+                    {otherProfileFields.map(([key, label]) =>
+                      personalField(key, label, key === "skills", key === "skills")
+                    )}
+                  </div>
+                </section>
+
+                <section className={styles.panel}>
+                  <div className={styles.panelHead}><ShieldCheck size={20} /><h3>Additional HR Information</h3></div>
+                  <div className={styles.grid}>
+                    {otherOfficialFields.map(([key, label]) => (
                       <label className={key === "hr_notes" ? styles.wide : ""} key={key}>
                         <span>{label}</span>
                         {key === "hr_notes" ? (
-                          <textarea rows={3} value={official[key] ?? ""} onChange={(event) => setOfficial((current) => ({ ...current, [key]: event.target.value }))} />
+                          <textarea
+                            rows={3}
+                            value={official[key] ?? ""}
+                            onChange={(event) =>
+                              setOfficial((current) => ({ ...current, [key]: event.target.value }))
+                            }
+                          />
                         ) : (
                           <input
-                            type={key === "appointment_date" || key === "employment_end_date" ? "date" : "text"}
+                            type={key === "employment_end_date" ? "date" : "text"}
                             value={official[key] ?? ""}
-                            onChange={(event) => setOfficial((current) => ({ ...current, [key]: event.target.value }))}
+                            onChange={(event) =>
+                              setOfficial((current) => ({ ...current, [key]: event.target.value }))
+                            }
                           />
                         )}
                       </label>
@@ -316,7 +458,7 @@ export default function TeacherProfilesHrPage() {
 
                 <section className={styles.panel}>
                   <div className={styles.panelTitleRow}>
-                    <div className={styles.panelHead}><BriefcaseBusiness size={20} /><h3>Service records</h3></div>
+                    <div className={styles.panelHead}><BriefcaseBusiness size={20} /><h3>Service Records</h3></div>
                     <button className={styles.add} onClick={() => setService((current) => [...current, {}])}><Plus size={15} />Add service record</button>
                   </div>
                   {service.length === 0 ? (
@@ -345,7 +487,7 @@ export default function TeacherProfilesHrPage() {
 
                 <section className={styles.panel}>
                   <div className={styles.panelTitleRow}>
-                    <div className={styles.panelHead}><BookOpenCheck size={20} /><h3>Performance ratings</h3></div>
+                    <div className={styles.panelHead}><BookOpenCheck size={20} /><h3>Performance Ratings</h3></div>
                     <button className={styles.add} onClick={() => setRatings((current) => [...current, {}])}><Plus size={15} />Add rating</button>
                   </div>
                   {ratings.length === 0 ? (
@@ -375,7 +517,7 @@ export default function TeacherProfilesHrPage() {
                 <div className={styles.saveBar}>
                   <div>
                     <strong>HR record version {record.version}</strong>
-                    <span>Saving creates the next auditable profile version.</span>
+                    <span>Date of Original Appointment is stored as one uniform calendar date.</span>
                   </div>
                   <button onClick={() => void saveRecord()} disabled={saving}>
                     <Save size={16} />{saving ? "Saving…" : "Save HR record"}
