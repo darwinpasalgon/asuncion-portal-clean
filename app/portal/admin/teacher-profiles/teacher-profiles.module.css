@@ -215,7 +215,7 @@
   color: #63756b;
   font-weight: 700;
 }
-.grid input, .grid textarea {
+.grid input, .grid textarea, .grid select {
   width: 100%;
   box-sizing: border-box;
   border: 1px solid #d0ddd5;

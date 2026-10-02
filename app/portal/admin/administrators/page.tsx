@@ -12,6 +12,7 @@ import {
   UserX,
 } from "lucide-react";
 import styles from "./administrators.module.css";
+import { nonTeachingPositions, positionOptions } from "@/lib/deped-positions";
 
 type StoredAdminRole = "super_administrator" | "registrar" | "content_administrator" | "school_administrator";
 type AdminRole = StoredAdminRole | "human_resources";
@@ -349,14 +350,22 @@ export default function AdministratorsPage() {
               />
             </label>
             <label>
-              <span>Position / designation</span>
-              <input
+              <span>Position</span>
+              <select
                 name="position"
-                maxLength={100}
-                placeholder="e.g. Registrar"
-                defaultValue={selectedPersonnel?.position ?? ""}
-                readOnly={Boolean(selectedPersonnel)}
-              />
+                defaultValue={String(selectedPersonnel?.position ?? "").toUpperCase()}
+                required
+              >
+                <option value="">Select non-teaching position</option>
+                {positionOptions(nonTeachingPositions, selectedPersonnel?.position).map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                    {!nonTeachingPositions.includes(item as (typeof nonTeachingPositions)[number])
+                      ? " (CURRENT IMPORTED POSITION)"
+                      : ""}
+                  </option>
+                ))}
+              </select>
             </label>
             <label>
               <span>Administrator role</span>

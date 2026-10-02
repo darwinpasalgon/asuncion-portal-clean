@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import styles from "./users.module.css";
+import { positionOptions, teachingPositions } from "@/lib/deped-positions";
 
 type PersonType = "student" | "teacher";
 type UserStatus = "pending" | "active" | "suspended";
@@ -219,7 +220,7 @@ export default function UsersAccountsPage() {
           : user.recovery_phone,
       gradeLevel: user.grade_level ? String(user.grade_level) : "",
       sectionId,
-      position: user.position ?? "Teacher",
+      position: user.position ?? "",
       learnerInfo,
     });
     setError("");
@@ -1046,14 +1047,23 @@ export default function UsersAccountsPage() {
                   </label>
 
                   <label>
-                    <span>Position / designation</span>
-                    <input
-                      value={editing.position}
+                    <span>Position</span>
+                    <select
+                      value={editing.position.toUpperCase()}
                       onChange={(event) =>
                         setEditing({ ...editing, position: event.target.value })
                       }
-                      placeholder="Teacher III, Master Teacher I, etc."
-                    />
+                    >
+                      <option value="">Select teaching position</option>
+                      {positionOptions(teachingPositions, editing.position).map((item) => (
+                        <option key={item} value={item}>
+                          {item}
+                          {!teachingPositions.includes(item as (typeof teachingPositions)[number])
+                            ? " (CURRENT IMPORTED POSITION)"
+                            : ""}
+                        </option>
+                      ))}
+                    </select>
                   </label>
 
                   <label>
