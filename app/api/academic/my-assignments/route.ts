@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     getRows(
       `student_enrollments?school_year_id=eq.${encodeURIComponent(
         activeYear.id
-      )}&enrollment_status=eq.active&select=id,grade_level,section_id`,
+      )}&enrollment_status=eq.active&select=id,grade_level,section_id,tve_major`,
       token
     ),
   ]);
@@ -105,8 +105,9 @@ export async function GET(request: NextRequest) {
     }) => {
       const subject = subjectMap.get(assignment.subject_id);
       const studentCount = (enrollments ?? []).filter(
-        (enrollment: { section_id: string | null }) =>
-          enrollment.section_id === assignment.section_id
+        (enrollment: { section_id: string | null; tve_major?: string | null }) =>
+          enrollment.section_id === assignment.section_id &&
+          (!assignment.major || enrollment.tve_major === assignment.major)
       ).length;
 
       return {
