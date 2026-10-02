@@ -60,12 +60,14 @@ export async function GET(request: NextRequest) {
     grade_level: number | null;
     section: string | null;
     enrollment_status: string | null;
+    tve_major: string | null;
   } = {
     school_year: null,
     school_year_id: null,
     grade_level: null,
     section: null,
     enrollment_status: null,
+    tve_major: null,
   };
 
   const schoolYears = await getRows(
@@ -92,6 +94,7 @@ export async function GET(request: NextRequest) {
       if (enrollment) {
         academicContext.grade_level = enrollment.grade_level;
         academicContext.enrollment_status = enrollment.enrollment_status;
+        academicContext.tve_major = enrollment.tve_major ?? null;
 
         if (enrollment.section_id) {
           const sectionRows = await getRows(
