@@ -383,7 +383,8 @@ Deno.serve(async (req) => {
   }
 
   const email = String(body.email ?? "").trim().toLowerCase();
-  const position = String(body.position ?? "").trim() || "Teacher";
+  const teacherFullName = fullName.toUpperCase();
+  const position = (String(body.position ?? "").trim() || "Teacher").toUpperCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return json({ error: "Enter a valid Teacher email address." }, 400);
   }
@@ -410,7 +411,7 @@ Deno.serve(async (req) => {
   const { error: teacherProfileError } = await admin
     .from("profiles")
     .update({
-      full_name: fullName,
+      full_name: teacherFullName,
       email,
       recovery_phone: recoveryPhone,
       position,
