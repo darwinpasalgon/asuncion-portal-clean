@@ -155,25 +155,62 @@ function keyOf(value: string) {
   return aliases[key] ?? key;
 }
 
+function cleanNamePart(value: string) {
+  const cleaned = value.trim().replace(/\s+/g, " ");
+  return ["-", "–", "—"].includes(cleaned) ? "" : cleaned;
+}
+
+function normalizeNameExtension(value: string) {
+  const raw = cleanNamePart(value).replace(/\.$/, "").toUpperCase();
+  if (raw === "JR") return "JR.";
+  if (raw === "SR") return "SR.";
+  if (["I", "II", "III", "IV", "V"].includes(raw)) return raw;
+  return cleanNamePart(value);
+}
+
+function extractExtensionFromFirstName(value: string) {
+  const cleaned = cleanNamePart(value);
+  const match = cleaned.match(/\s+(Jr\.?|Sr\.?|I|II|III|IV|V)$/i);
+  if (!match || match.index === undefined) {
+    return { first_name: cleaned, name_extension: "" };
+  }
+
+  return {
+    first_name: cleaned.slice(0, match.index).trim(),
+    name_extension: normalizeNameExtension(match[1] ?? ""),
+  };
+}
+
+function middleInitial(value: string) {
+  const cleaned = cleanNamePart(value);
+  if (!cleaned) return "";
+  return `${Array.from(cleaned)[0]?.toUpperCase() ?? ""}.`;
+}
+
 function parseSf1Name(value: string) {
   const parts = value
     .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
+    .map((part) => part.trim());
 
-  if (!parts.length) {
+  if (!parts.some(Boolean)) {
     return { last_name: "", first_name: "", middle_name: "", name_extension: "" };
   }
 
   const suffixPattern = /^(Jr\.?|Sr\.?|I|II|III|IV|V)$/i;
-  const last_name = parts[0] ?? "";
-  const first_name = parts[1] ?? "";
-  let middle_name = parts.slice(2).join(" ");
+  const last_name = cleanNamePart(parts[0] ?? "");
+  let first_name = cleanNamePart(parts[1] ?? "");
+  let middle_name = cleanNamePart(parts.slice(2).join(" "));
   let name_extension = "";
 
-  if (parts.length >= 4 && suffixPattern.test(parts[2] ?? "")) {
-    name_extension = parts[2] ?? "";
-    middle_name = parts.slice(3).join(" ");
+  if (parts.length >= 4 && suffixPattern.test(cleanNamePart(parts[2] ?? ""))) {
+    name_extension = normalizeNameExtension(parts[2] ?? "");
+    middle_name = cleanNamePart(parts.slice(3).join(" "));
+  }
+
+  if (!name_extension) {
+    const extracted = extractExtensionFromFirstName(first_name);
+    first_name = extracted.first_name;
+    name_extension = extracted.name_extension;
   }
 
   return { last_name, first_name, middle_name, name_extension };
@@ -186,8 +223,12 @@ function portalName(
   extension: string,
   fallback: string
 ) {
-  const value = [firstName, middleName, lastName, extension]
-    .map((item) => item.trim())
+  const value = [
+    cleanNamePart(firstName),
+    middleInitial(middleName),
+    cleanNamePart(lastName),
+    normalizeNameExtension(extension),
+  ]
     .filter(Boolean)
     .join(" ");
   return value || fallback.trim();
