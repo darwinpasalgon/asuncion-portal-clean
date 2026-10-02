@@ -8,7 +8,6 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 
 const teachingPositions = new Set([
   "TEACHER I", "TEACHER II", "TEACHER III", "TEACHER IV", "TEACHER V", "TEACHER VI", "TEACHER VII",
-  "HEAD TEACHER I", "HEAD TEACHER II", "HEAD TEACHER III", "HEAD TEACHER IV",
   "MASTER TEACHER I", "MASTER TEACHER II", "MASTER TEACHER III", "MASTER TEACHER IV", "MASTER TEACHER V",
 ]);
 
