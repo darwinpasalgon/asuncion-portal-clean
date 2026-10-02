@@ -62,3 +62,61 @@ export function cleanEntries(input: unknown, fields: readonly (readonly [string,
     return row;
   });
 }
+
+
+export function cleanTeacherNamePart(value: unknown) {
+  const cleaned = String(value ?? "").trim().replace(/\s+/g, " ");
+  return ["-", "–", "—"].includes(cleaned) ? "" : cleaned;
+}
+
+export function normalizeTeacherNameExtension(value: unknown) {
+  const cleaned = cleanTeacherNamePart(value);
+  const raw = cleaned.replace(/\.$/, "").toUpperCase();
+  if (raw === "JR") return "JR.";
+  if (raw === "SR") return "SR.";
+  if (["I", "II", "III", "IV", "V"].includes(raw)) return raw;
+  return cleaned.toUpperCase();
+}
+
+export function normalizeTeacherNameFields(input: Record<string, string>) {
+  let firstName = cleanTeacherNamePart(input.first_name).toUpperCase();
+  const middleName = cleanTeacherNamePart(input.middle_name).toUpperCase();
+  const lastName = cleanTeacherNamePart(input.last_name).toUpperCase();
+  let extension = normalizeTeacherNameExtension(input.name_extension);
+
+  if (!extension) {
+    const match = firstName.match(/\s+(JR\.?|SR\.?|I|II|III|IV|V)$/i);
+    if (match && match.index !== undefined) {
+      firstName = firstName.slice(0, match.index).trim();
+      extension = normalizeTeacherNameExtension(match[1] ?? "");
+    }
+  }
+
+  return {
+    ...input,
+    first_name: firstName,
+    middle_name: middleName,
+    last_name: lastName,
+    name_extension: extension,
+  };
+}
+
+export function teacherDisplayName(
+  input: Record<string, string>,
+  fallback = ""
+) {
+  const normalized = normalizeTeacherNameFields(input);
+  const middleInitial = normalized.middle_name
+    ? `${Array.from(normalized.middle_name)[0]?.toUpperCase() ?? ""}.`
+    : "";
+
+  return [
+    normalized.first_name,
+    middleInitial,
+    normalized.last_name,
+    normalized.name_extension,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim() || cleanTeacherNamePart(fallback).toUpperCase();
+}
