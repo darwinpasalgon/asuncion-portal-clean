@@ -10,6 +10,7 @@ import {
   Edit3,
   GraduationCap,
   History,
+  KeyRound,
   RefreshCw,
   Search,
   UserRound,
@@ -542,6 +543,9 @@ export default function LearnerManagementPage() {
     filtered.length > 0 &&
     filtered.every(({ learner }) => selectedIds.includes(learner.id));
 
+  const selectedCredentialSection =
+    sections.find((section) => section.id === sectionFilter) ?? null;
+
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
@@ -657,6 +661,35 @@ export default function LearnerManagementPage() {
               >
                 <Download size={16} />Export masterlist
               </button>
+              <form
+                action="/api/admin/reissue-section-credentials"
+                method="post"
+                onSubmit={(event) => {
+                  if (!gradeFilter || !selectedCredentialSection) {
+                    event.preventDefault();
+                    setError("Select one Grade Level and one Section first.");
+                    return;
+                  }
+                  const confirmed = window.confirm(
+                    `Generate a fresh temporary-credentials CSV for Grade ${gradeFilter} - ${selectedCredentialSection.name}? Existing temporary credentials for learners who have not changed their password yet will be replaced.`
+                  );
+                  if (!confirmed) event.preventDefault();
+                }}
+              >
+                <input type="hidden" name="grade_level" value={gradeFilter} />
+                <input
+                  type="hidden"
+                  name="section"
+                  value={selectedCredentialSection?.name ?? ""}
+                />
+                <button
+                  type="submit"
+                  className={styles.secondary}
+                  disabled={!gradeFilter || !selectedCredentialSection}
+                >
+                  <KeyRound size={16} />Download credentials
+                </button>
+              </form>
               <button
                 className={styles.primary}
                 onClick={() => {
