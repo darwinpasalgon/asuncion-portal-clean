@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import styles from "./users.module.css";
+import ActionWaitOverlay from "@/app/components/action-wait-overlay";
 import { positionOptions, teachingPositions } from "@/lib/deped-positions";
 
 type PersonType = "student" | "teacher";
@@ -376,6 +377,7 @@ export default function UsersAccountsPage() {
 
   return (
     <main className={styles.page}>
+      <ActionWaitOverlay visible={Boolean(working)} message="Please wait…" />
       <div className={styles.shell}>
         <nav className={styles.topbar}>
           <a href="/portal">

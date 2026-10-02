@@ -11,6 +11,7 @@ import {
   UserRound,
 } from "lucide-react";
 import styles from "./teacher-profile.module.css";
+import ActionWaitOverlay from "@/app/components/action-wait-overlay";
 
 type Details = Record<string, string>;
 type ServiceRecord = Details;
@@ -215,6 +216,7 @@ export default function MyTeacherProfilePage() {
 
   return (
     <main className={styles.page}>
+      <ActionWaitOverlay visible={saving} message="Please wait…" />
       <div className={styles.shell}>
         <nav className={styles.topbar}>
           <a href="/portal"><ArrowLeft size={16} />Back to portal</a>

@@ -122,3 +122,14 @@ body{margin:0;background:var(--background);color:var(--foreground);font-family:A
 .real-adviser-major-row select{min-height:42px;border:1px solid #d6e1db;border-radius:8px;background:#fff;padding:0 11px;color:#294d3b}
 .real-adviser-major-row select:disabled{background:#f1f4f2;color:#8b9890}
 @media(max-width:720px){.real-adviser-major-row{grid-template-columns:1fr;padding:15px}.real-adviser-major-row label{width:100%}}
+
+
+/* Reusable same-page action wait overlay */
+.anhs-action-wait{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:24px;background:rgba(244,248,251,.72);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.anhs-action-wait-card{min-width:min(330px,86vw);display:grid;justify-items:center;gap:10px;padding:26px 28px 24px;border:1px solid rgba(197,215,225,.8);border-radius:18px;background:rgba(255,255,255,.94);box-shadow:0 22px 60px rgba(28,71,100,.14);text-align:center}
+.anhs-action-wait-spinner{position:relative;width:66px;height:66px;margin-bottom:3px;border-radius:50%;background:conic-gradient(from 0deg,#176eb4 0 34%,#2d8dc5 34% 52%,#178b5c 52% 77%,#dce8ef 77% 100%);animation:anhs-action-spin .9s linear infinite;box-shadow:0 8px 24px rgba(25,103,143,.14)}
+.anhs-action-wait-spinner::after{content:"";position:absolute;inset:10px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px rgba(219,230,236,.75)}
+.anhs-action-wait-card strong{font-size:1rem;color:#194e78;letter-spacing:-.01em}
+.anhs-action-wait-card span{font-size:.76rem;color:#738690}
+@keyframes anhs-action-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.anhs-action-wait-spinner{animation-duration:2.2s}}

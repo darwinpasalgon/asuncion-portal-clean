@@ -15,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 import styles from "./teaching.module.css";
+import ActionWaitOverlay from "@/app/components/action-wait-overlay";
 import {
   TECHNICAL_VOCATIONAL_MAJORS,
   isTechnicalVocationalEducation,
@@ -431,6 +432,7 @@ export default function TeachingSetupPage() {
 
   return (
     <main className={styles.page}>
+      <ActionWaitOverlay visible={Boolean(working)} message="Please wait…" />
       <div className={styles.shell}>
         <nav className={styles.topActions} aria-label="Administrator navigation">
           <a href="/portal" className={styles.topLink}>
