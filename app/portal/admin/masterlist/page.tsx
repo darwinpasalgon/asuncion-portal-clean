@@ -741,10 +741,7 @@ export default function BulkAccountImportPage() {
             <button
               className={personType === "teacher" ? styles.activeTab : ""}
               onClick={() => {
-                setPersonType("teacher");
-                setSelectedGrade("");
-                setSelectedSection("");
-                resetImport();
+                window.location.href = "/portal/admin/teacher-import";
               }}
             >
               Teachers
