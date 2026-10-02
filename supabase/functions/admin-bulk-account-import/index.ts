@@ -123,6 +123,7 @@ Deno.serve(async (req) => {
   if (!activeYear) return json({ error: "No active school year is configured." }, 409);
 
   const successes: Array<Record<string, unknown>> = [];
+  const reissuedCredentials: Array<Record<string, unknown>> = [];
   const failures: Array<Record<string, unknown>> = [];
   let updatedProfiles = 0;
 
@@ -230,7 +231,7 @@ Deno.serve(async (req) => {
 
       const { data: existingProfile } = await admin
         .from("profiles")
-        .select("id,role,requested_role,position")
+        .select("id,role,requested_role,position,must_change_password")
         .ilike("email", email)
         .limit(1);
 
@@ -244,6 +245,29 @@ Deno.serve(async (req) => {
                 .update({ position, updated_at: new Date().toISOString() })
                 .eq("id", existingProfile[0].id);
             }
+
+            // A previous large import may have created the account before the worker timed out.
+            // If the teacher still has the one-time-password flag, issue a fresh password so
+            // the administrator never loses access to the credential after an interrupted batch.
+            if (existingProfile[0].must_change_password) {
+              const recoveryPassword = temporaryPassword();
+              const { error: passwordError } = await admin.auth.admin.updateUserById(
+                existingProfile[0].id,
+                { password: recoveryPassword }
+              );
+              if (passwordError) {
+                throw new Error("Unable to reissue the temporary password for this Teacher account.");
+              }
+              reissuedCredentials.push({
+                row_number: rowNumber,
+                full_name: fullName,
+                identifier: email,
+                position,
+                temporary_password: recoveryPassword,
+                credential_status: "reissued",
+              });
+            }
+
             updatedProfiles += 1;
           } catch (error) {
             failures.push({ row_number: rowNumber, name: fullName, identifier: email, error: error instanceof Error ? error.message : "Unable to update the teacher profile." });
@@ -407,6 +431,7 @@ Deno.serve(async (req) => {
       section: personType === "student" ? section : null,
       position: personType === "teacher" ? position : null,
       temporary_password: password,
+      credential_status: "new",
     });
   }
 
@@ -427,6 +452,7 @@ Deno.serve(async (req) => {
     updated_profiles: updatedProfiles,
     skipped: failures.length,
     accounts: successes,
+    reissued_credentials: reissuedCredentials,
     errors: failures,
   });
 });
