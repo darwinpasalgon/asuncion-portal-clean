@@ -15,6 +15,7 @@ import {
   UserRound,
 } from "lucide-react";
 import styles from "./teacher-profiles.module.css";
+import { positionOptions, teachingPositions } from "@/lib/deped-positions";
 
 type Details = Record<string, string>;
 type Teacher = {
@@ -133,6 +134,7 @@ export default function TeacherProfilesHrPage() {
   const [official, setOfficial] = useState<Details>({});
   const [service, setService] = useState<Details[]>([]);
   const [ratings, setRatings] = useState<Details[]>([]);
+  const [position, setPosition] = useState("");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadingRecord, setLoadingRecord] = useState(false);
@@ -184,6 +186,7 @@ export default function TeacherProfilesHrPage() {
         if (!response.ok) throw new Error(result.error ?? "Unable to load the Teacher record.");
         if (!active) return;
         setTeacher(result.teacher ?? null);
+        setPosition(String(result.teacher?.position ?? "").toUpperCase());
         const next = (result.record ?? emptyRecord()) as RecordData;
         const nextOfficial = {
           ...(next.official ?? {}),
@@ -274,12 +277,17 @@ export default function TeacherProfilesHrPage() {
           official,
           service_records: service,
           ratings,
+          position,
         }),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error ?? "Unable to save the Teacher record.");
       const next = result.record as RecordData;
       setRecord(next);
+      if (result.teacher) {
+        setTeacher(result.teacher as Teacher);
+        setPosition(String(result.teacher.position ?? "").toUpperCase());
+      }
       setPersonal(next.personal ?? {});
       setOfficial(next.official ?? {});
       setService(next.service_records ?? []);
@@ -367,7 +375,20 @@ export default function TeacherProfilesHrPage() {
                   <div className={styles.grid}>
                     <label>
                       <span>Position</span>
-                      <input value={teacher?.position || ""} readOnly />
+                      <select
+                        value={position}
+                        onChange={(event) => setPosition(event.target.value)}
+                      >
+                        <option value="">Select teaching position</option>
+                        {positionOptions(teachingPositions, position).map((item) => (
+                          <option key={item} value={item}>
+                            {item}
+                            {!teachingPositions.includes(item as (typeof teachingPositions)[number])
+                              ? " (CURRENT IMPORTED POSITION)"
+                              : ""}
+                          </option>
+                        ))}
+                      </select>
                     </label>
                     <label>
                       <span>Date of Original Appointment</span>
