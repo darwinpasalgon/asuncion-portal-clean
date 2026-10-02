@@ -247,6 +247,9 @@ export default function AdministratorsPage() {
                   <div className={styles.identity}>
                     <strong>{person.full_name}</strong>
                     <span>{person.email}</span>
+                    {!person.email.toLowerCase().endsWith("@deped.gov.ph") && (
+                      <small className={styles.emailWarning}>Review DepEd email before creating access</small>
+                    )}
                   </div>
                   <div>
                     <span>POSITION</span>
@@ -274,7 +277,12 @@ export default function AdministratorsPage() {
                           setTemporaryPassword("");
                           setError("");
                           setSuccess("");
-                          window.scrollTo({ top: 0, behavior: "smooth" });
+                          window.setTimeout(() => {
+                            document.getElementById("administrator-access-form")?.scrollIntoView({
+                              behavior: "smooth",
+                              block: "start",
+                            });
+                          }, 0);
                         }}
                       >
                         <UserPlus size={15} />Set up access
@@ -287,7 +295,7 @@ export default function AdministratorsPage() {
           )}
         </section>
 
-        <section className={styles.panel}>
+        <section className={styles.panel} id="administrator-access-form">
           <div className={styles.panelHeading}>
             <div>
               <h2>Add delegated Administrator</h2>
@@ -338,7 +346,6 @@ export default function AdministratorsPage() {
                 type="email"
                 placeholder="name@deped.gov.ph"
                 defaultValue={selectedPersonnel?.email ?? ""}
-                readOnly={Boolean(selectedPersonnel)}
               />
             </label>
             <label>
