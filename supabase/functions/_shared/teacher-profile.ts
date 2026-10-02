@@ -1,34 +1,35 @@
 // Shared by the importer, profile service, and portal. Never infer missing HR facts.
 export const personalFields = [
-  ["last_name", "Last name"], ["first_name", "First name"], ["middle_name", "Middle name"],
-  ["name_extension", "Name extension"], ["birth_date", "Birth date"], ["birth_place", "Place of birth"],
+  ["last_name", "Last Name"], ["first_name", "First Name"], ["middle_name", "Middle Name"],
+  ["name_extension", "Name Extension"], ["birth_date", "Birth date"], ["birth_place", "Place of birth"],
   ["mobile", "Mobile number"], ["address", "Home address"],
-  ["additional_units", "Units earned / CAR (source column H)"],
-  ["graduate_course", "Graduate course / master's degree"], ["graduate_units", "Graduate units earned / CAR"],
-  ["bachelors_degree", "Bachelor's degree / course"], ["major", "Major"], ["minor", "Minor"],
-  ["education_units_major", "Education units earned / major"], ["education_units_minor", "Education units earned / minor"],
-  ["skills", "Skills / specialization / NC / trainers methodology"],
-  ["philsys_number", "PhilSys (National ID) number"], ["religion", "Religion"], ["ethnic_group", "Ethnic group"],
+  ["additional_units", "Legacy/source units entry"],
+  ["graduate_course", "What Master?"],
+  ["graduate_units", "Indicate if graduated or units earned if not graduated or CAR for completed Academic Requirements"],
+  ["bachelors_degree", "Course"], ["major", "Major"], ["minor", "Minor"],
+  ["education_units_major", "Earning Units - Major"], ["education_units_minor", "Earning Units - Minor"],
+  ["skills", "SKILLS / SPECIALIZATION (NC I, NC II, NC III / TRAINERS METHODOLOGY)"],
+  ["philsys_number", "Philsys (National ID) Number"], ["religion", "Religion"], ["ethnic_group", "Ethnic Group"],
 ] as const;
 
 export const officialFields = [
-  ["appointment_day_month_source", "Original appointment: day / month as supplied"],
-  ["appointment_year_source", "Original appointment: year as supplied"],
-  ["appointment_date", "Verified original appointment date"],
-  ["employment_status", "Employment status"], ["employee_number", "Employee number"],
-  ["employment_end_date", "Employment end date (leave blank if current)"],
-  ["salary_grade", "Salary grade / step"], ["monthly_salary", "Monthly salary (PHP)"],
-  ["hr_notes", "HR notes"],
+  ["appointment_day_month_source", "Original appointment day / month from source"],
+  ["appointment_year_source", "Original appointment year from source"],
+  ["appointment_date", "Date of Original Appointment"],
+  ["employment_status", "Employment Status"], ["employee_number", "Employee Number"],
+  ["employment_end_date", "Employment End Date (leave blank if current)"],
+  ["salary_grade", "Salary Grade / Step"], ["monthly_salary", "Monthly Salary (PHP)"],
+  ["hr_notes", "HR Notes"],
 ] as const;
 
 export const serviceFields = [
   ["date_from", "From"], ["date_to", "To (blank if present)"], ["designation", "Designation"],
-  ["status", "Appointment status"], ["salary", "Annual salary (PHP)"], ["station", "Office / station"],
-  ["branch", "Government branch"], ["leave_without_pay", "Leave without pay"], ["remarks", "Separation / remarks"],
+  ["status", "Appointment Status"], ["salary", "Annual Salary (PHP)"], ["station", "Office / Station"],
+  ["branch", "Government Branch"], ["leave_without_pay", "Leave Without Pay"], ["remarks", "Separation / Remarks"],
 ] as const;
 export const ratingFields = [
-  ["period", "Rating period / school year"], ["instrument", "Rating instrument"], ["rating", "Final rating"],
-  ["description", "Adjectival rating"], ["rater", "Rater"], ["date", "Date"], ["remarks", "Remarks"],
+  ["period", "Rating Period / School Year"], ["instrument", "Rating Instrument"], ["rating", "Final Rating"],
+  ["description", "Adjectival Rating"], ["rater", "Rater"], ["date", "Date"], ["remarks", "Remarks"],
 ] as const;
 
 export type TeacherDetails = Record<string, string>;
