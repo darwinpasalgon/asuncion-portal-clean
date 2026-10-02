@@ -46,6 +46,7 @@ type Credential = {
   identifier: string;
   position?: string | null;
   temporary_password: string;
+  credential_status?: "new" | "reissued";
 };
 
 const normalize = (value: string) =>
@@ -334,10 +335,11 @@ export default function TeacherProfileImportPage() {
 
     const issued: Credential[] = [];
     let updated = 0;
+    const batchSize = 20;
 
     try {
-      for (let start = 0; start < importRows.length; start += 200) {
-        const batch = importRows.slice(start, start + 200).map((row) => ({
+      for (let start = 0; start < importRows.length; start += batchSize) {
+        const batch = importRows.slice(start, start + batchSize).map((row) => ({
           row_number: row.row_number,
           full_name: row.full_name,
           email: row.import_email,
@@ -362,8 +364,13 @@ export default function TeacherProfileImportPage() {
         const result = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(result.error ?? "Teacher account import failed.");
 
-        issued.push(...(result.accounts ?? []));
+        issued.push(
+          ...(result.accounts ?? []),
+          ...(result.reissued_credentials ?? [])
+        );
         updated += Number(result.updated_profiles ?? 0);
+        setCredentials([...issued]);
+        setUpdatedProfiles(updated);
 
         if (Array.isArray(result.errors) && result.errors.length) {
           const first = result.errors[0];
@@ -375,8 +382,10 @@ export default function TeacherProfileImportPage() {
 
       setCredentials(issued);
       setUpdatedProfiles(updated);
+      const newCount = issued.filter((item) => item.credential_status !== "reissued").length;
+      const reissuedCount = issued.filter((item) => item.credential_status === "reissued").length;
       setMessage(
-        `Import complete: ${issued.length} new Teacher account${issued.length === 1 ? "" : "s"} created and ${updated} existing profile${updated === 1 ? "" : "s"} updated.`
+        `Import complete: ${newCount} new Teacher account${newCount === 1 ? "" : "s"} created, ${reissuedCount} interrupted-import credential${reissuedCount === 1 ? "" : "s"} recovered, and ${updated} existing profile${updated === 1 ? "" : "s"} updated.`
       );
     } catch (err) {
       setCredentials(issued);
@@ -384,7 +393,7 @@ export default function TeacherProfileImportPage() {
       setError(
         (err instanceof Error ? err.message : "Teacher account import failed.") +
           (issued.length
-            ? ` ${issued.length} new account(s) were already created. Download those credentials before retrying.`
+            ? ` ${issued.length} credential(s) are already available. Download them before retrying.`
             : "")
       );
     } finally {
@@ -564,7 +573,10 @@ export default function TeacherProfileImportPage() {
             <div>
               <h2>Teacher import completed</h2>
               <p>
-                {credentials.length} new account{credentials.length === 1 ? "" : "s"} created ·{" "}
+                {credentials.filter((item) => item.credential_status !== "reissued").length} new account
+                {credentials.filter((item) => item.credential_status !== "reissued").length === 1 ? "" : "s"} created ·{" "}
+                {credentials.filter((item) => item.credential_status === "reissued").length} interrupted-import credential
+                {credentials.filter((item) => item.credential_status === "reissued").length === 1 ? "" : "s"} recovered ·{" "}
                 {updatedProfiles} existing profile{updatedProfiles === 1 ? "" : "s"} updated.
               </p>
               {credentials.length > 0 && (
