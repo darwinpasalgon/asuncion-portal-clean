@@ -48,6 +48,7 @@ type AcademicContext = {
   section: string | null;
   enrollment_status: string | null;
   tve_major: string | null;
+  sex: string | null;
 };
 
 type TeacherAssignment = {
@@ -814,6 +815,18 @@ export default function PortalPage() {
                           : profile.grade_level
                             ? `Grade ${profile.grade_level}${profile.section ? ` · ${profile.section}` : " · Section not assigned"}`
                             : "Not assigned yet"}
+                      </dd>
+                    </div>
+                  )}
+                  {profile.role === "student" && (
+                    <div>
+                      <dt>Sex</dt>
+                      <dd>
+                        {academicContext?.sex === "M"
+                          ? "Male"
+                          : academicContext?.sex === "F"
+                            ? "Female"
+                            : "Not recorded"}
                       </dd>
                     </div>
                   )}
