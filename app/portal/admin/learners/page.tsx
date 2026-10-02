@@ -858,7 +858,9 @@ export default function LearnerManagementPage() {
                             ))}
                           </select>
                         ) : (
-                          <span className={styles.notApplicable}>Exploratory</span>
+                          <span className={styles.notApplicable}>
+                            {enrollment.grade_level === 7 ? "Exploratory" : "—"}
+                          </span>
                         )}
                       </td>
                       <td>
