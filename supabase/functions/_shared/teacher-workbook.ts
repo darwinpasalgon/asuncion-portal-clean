@@ -53,8 +53,13 @@ export function parseTeacherWorkbook(bytes: Uint8Array) {
       throw new Error("The teacher workbook columns have changed. Use the supplied 20-column Teacher's Profile layout.");
     }
     const records = [];
+    let personnelType = "Teaching Personnel";
     for (let index = header + 1; index < rows.length; index++) {
       const row = rows[index];
+      if (compact(row[0]) === "nonteachingpersonnel") {
+        personnelType = "Non-Teaching Personnel";
+        continue;
+      }
       if (!text(row[1]) && !text(row[2])) continue;
       // Ignore repeated print headers, not incomplete personnel rows.
       if (compact(row[1]) === "lastname" && compact(row[2]) === "firstname") continue;
@@ -71,7 +76,7 @@ export function parseTeacherWorkbook(bytes: Uint8Array) {
         full_name: [text(row[2]), text(row[3]), text(row[1])].filter(Boolean).join(" "),
         email: text(row[19]).toLowerCase(), position: text(row[4]) || "Teacher",
         teacher_personal: personal, teacher_official: official,
-        source_data: { sheet: sheetName, row: index + 1, personnel_number: text(row[0]) },
+        source_data: { sheet: sheetName, row: index + 1, personnel_number: text(row[0]), personnel_type: personnelType },
       });
     }
     if (!records.length) throw new Error("No teacher records were found.");
