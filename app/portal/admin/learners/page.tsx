@@ -678,13 +678,16 @@ export default function LearnerManagementPage() {
         </nav>
 
         <header className={styles.header}>
-          <div>
-            <span>ACADEMIC RECORDS</span>
-            <h1>Learner management</h1>
-            <p>
-              Manage class placement, enrollment status, learner history, and
-              school-year transitions without mixing academic records with login-account management.
-            </p>
+          <div className={styles.headerCopy}>
+            <div className={styles.headerIcon}><GraduationCap size={22} /></div>
+            <div>
+              <span>ACADEMIC RECORDS</span>
+              <h1>Learner management</h1>
+              <p>
+                Manage class placement, enrollment status, TVE majors, learner history,
+                and school-year transitions from one organized workspace.
+              </p>
+            </div>
           </div>
           <div className={styles.yearCard}>
             <CheckCircle2 size={18} />
@@ -768,10 +771,22 @@ export default function LearnerManagementPage() {
 
           <div className={styles.summaryBar}>
             <div className={styles.summaryPills}>
-              <span>Total <strong>{summary.total}</strong></span>
-              <span>Enrolled <strong>{summary.enrolled}</strong></span>
-              <span>Male <strong>{summary.male}</strong></span>
-              <span>Female <strong>{summary.female}</strong></span>
+              <div className={styles.summaryCard}>
+                <span className={styles.summaryIcon}><Users size={16} /></span>
+                <div><small>Total learners</small><strong>{summary.total}</strong></div>
+              </div>
+              <div className={styles.summaryCard}>
+                <span className={styles.summaryIcon}><CheckCircle2 size={16} /></span>
+                <div><small>Enrolled</small><strong>{summary.enrolled}</strong></div>
+              </div>
+              <div className={styles.summaryCard}>
+                <span className={styles.summaryIcon}><UserRound size={16} /></span>
+                <div><small>Male</small><strong>{summary.male}</strong></div>
+              </div>
+              <div className={styles.summaryCard}>
+                <span className={styles.summaryIcon}><UserRound size={16} /></span>
+                <div><small>Female</small><strong>{summary.female}</strong></div>
+              </div>
             </div>
             <div className={styles.bulkActions}>
               <button
