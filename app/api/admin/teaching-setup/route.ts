@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
         ? getRows(
             `teacher_assignments?school_year_id=eq.${encodeURIComponent(
               activeYear.id
-            )}&select=id,teacher_id,school_year_id,grade_level,section_id,subject_id,is_active,assigned_at&order=grade_level.asc,assigned_at.asc`,
+            )}&select=id,teacher_id,school_year_id,grade_level,section_id,subject_id,major,is_active,assigned_at&order=grade_level.asc,assigned_at.asc`,
             token
           )
         : Promise.resolve([]),
