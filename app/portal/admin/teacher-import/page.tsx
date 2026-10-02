@@ -488,7 +488,7 @@ export default function TeacherProfileImportPage() {
               <table>
                 <thead>
                   <tr>
-                    <th>Row</th>
+                    <th aria-label="Number"></th>
                     <th>Teacher</th>
                     <th>Position</th>
                     <th>Personnel Type</th>
@@ -497,9 +497,9 @@ export default function TeacherProfileImportPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row) => (
+                  {rows.map((row, index) => (
                     <tr key={row.source_row}>
-                      <td>{row.source_row}</td>
+                      <td>{index + 1}</td>
                       <td>
                         <strong>{row.full_name}</strong>
                         {row.original_email && row.original_email !== row.import_email && (
