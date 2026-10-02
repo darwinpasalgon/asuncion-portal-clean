@@ -66,6 +66,55 @@ function normalizePhone(input: string) {
   return null;
 }
 
+function cleanLearnerNamePart(value: unknown) {
+  const cleaned = String(value ?? "").trim().replace(/\s+/g, " ");
+  return ["-", "–", "—"].includes(cleaned) ? "" : cleaned;
+}
+
+function normalizeLearnerExtension(value: unknown) {
+  const cleaned = cleanLearnerNamePart(value);
+  const raw = cleaned.replace(/\.$/, "").toUpperCase();
+  if (raw === "JR") return "JR.";
+  if (raw === "SR") return "SR.";
+  if (["I", "II", "III", "IV", "V"].includes(raw)) return raw;
+  return cleaned;
+}
+
+function learnerNameParts(source: ImportRow) {
+  let firstName = cleanLearnerNamePart(source.first_name);
+  const middleName = cleanLearnerNamePart(source.middle_name);
+  const lastName = cleanLearnerNamePart(source.last_name);
+  let extension = normalizeLearnerExtension(source.name_extension);
+
+  if (!extension) {
+    const match = firstName.match(/\s+(Jr\.?|Sr\.?|I|II|III|IV|V)$/i);
+    if (match && match.index !== undefined) {
+      firstName = firstName.slice(0, match.index).trim();
+      extension = normalizeLearnerExtension(match[1] ?? "");
+    }
+  }
+
+  return {
+    first_name: firstName,
+    middle_name: middleName,
+    last_name: lastName,
+    name_extension: extension,
+  };
+}
+
+function learnerDisplayName(source: ImportRow) {
+  const parts = learnerNameParts(source);
+  const middleInitial = parts.middle_name
+    ? `${Array.from(parts.middle_name)[0]?.toUpperCase() ?? ""}.`
+    : "";
+  return [
+    parts.first_name,
+    middleInitial,
+    parts.last_name,
+    parts.name_extension,
+  ].filter(Boolean).join(" ");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers });
   if (req.method !== "POST") return json({ error: "Method not allowed." }, 405);
@@ -162,7 +211,11 @@ Deno.serve(async (req) => {
 
   for (const source of rows) {
     const rowNumber = Number(source.row_number ?? 0) || null;
-    const fullName = String(source.full_name ?? "").trim();
+    const suppliedFullName = String(source.full_name ?? "").trim();
+    const fullName =
+      personType === "student"
+        ? learnerDisplayName(source) || suppliedFullName
+        : suppliedFullName;
     const phone = normalizePhone(String(source.recovery_phone ?? "").trim());
 
     if (!fullName) {
@@ -364,12 +417,13 @@ Deno.serve(async (req) => {
     }
 
     if (personType === "student") {
+      const nameParts = learnerNameParts(source);
       const learnerInformation = {
         student_id: created.user.id,
-        last_name: String(source.last_name ?? "").trim() || null,
-        first_name: String(source.first_name ?? "").trim() || null,
-        middle_name: String(source.middle_name ?? "").trim() || null,
-        name_extension: String(source.name_extension ?? "").trim() || null,
+        last_name: nameParts.last_name || null,
+        first_name: nameParts.first_name || null,
+        middle_name: nameParts.middle_name || null,
+        name_extension: nameParts.name_extension || null,
         sex: ["M", "F"].includes(String(source.sex ?? "").trim().toUpperCase())
           ? String(source.sex).trim().toUpperCase()
           : null,
