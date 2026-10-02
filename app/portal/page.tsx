@@ -539,6 +539,15 @@ export default function PortalPage() {
       <main className="real-portal-loading">
         <img src="/school-logo.png" alt="" />
         <strong>Opening your academic portal…</strong>
+        <div
+          className="real-portal-loading-track"
+          role="progressbar"
+          aria-label="Loading academic portal"
+          aria-valuetext="Loading"
+        >
+          <span className="real-portal-loading-bar" />
+        </div>
+        <span className="real-portal-loading-caption">Preparing your workspace</span>
       </main>
     );
   }
