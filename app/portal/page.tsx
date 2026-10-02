@@ -922,6 +922,7 @@ export default function PortalPage() {
             )}
 
           {profile.role === "teacher" && page === "Students" && (
+            <>
             <section className="panel real-teacher-class-page">
               <div className="real-assignment-heading">
                 <div>
@@ -1023,6 +1024,7 @@ export default function PortalPage() {
                 )}
               </section>
             )}
+            </>
           )}
 
           {(profile.role === "teacher" || profile.role === "student") &&
