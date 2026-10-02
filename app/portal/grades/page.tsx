@@ -20,13 +20,13 @@ type Assignment = {
   grade_level: number;
   section_id: string;
   subject_id: string;
+  major: string | null;
 };
 type Section = { id: string; grade_level: number; name: string };
 type Subject = {
   id: string;
   grade_level: number;
   name: string;
-  code: string | null;
   is_active: boolean;
 };
 type Enrollment = {
@@ -160,7 +160,7 @@ export default function GradesPage() {
 
   function assignmentLabel(assignment: Assignment) {
     const subject = subjectMap.get(assignment.subject_id);
-    return `Grade ${assignment.grade_level} · ${sectionMap.get(assignment.section_id) ?? "Unknown"} · ${subject?.name ?? "Unknown subject"}${subject?.code ? ` (${subject.code})` : ""}`;
+    return `Grade ${assignment.grade_level} · ${sectionMap.get(assignment.section_id) ?? "Unknown"} · ${subject?.name ?? "Unknown subject"}${assignment.major ? ` · ${assignment.major}` : ""}`;
   }
 
   async function saveGrade(studentId: string) {
@@ -526,7 +526,7 @@ export default function GradesPage() {
                         </span>
                         <strong>
                           {subject?.name ?? "Subject"}
-                          {subject?.code ? ` (${subject.code})` : ""}
+                          {assignment.major ? ` · ${assignment.major}` : ""}
                         </strong>
                       </div>
                       {finalGrade !== null ? (
