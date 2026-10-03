@@ -232,7 +232,6 @@ export default function MyTeacherProfilePage() {
             <div className={styles.profileMeta}>
               <span><BriefcaseBusiness size={15} />{teacher?.position || "Position not recorded"}</span>
               <span><ShieldCheck size={15} />Verified Teacher account</span>
-              <span>Profile version {record.version}</span>
             </div>
           </div>
         </header>
@@ -373,7 +372,7 @@ export default function MyTeacherProfilePage() {
         <div className={styles.saveBar}>
           <div>
             <strong>Teacher&apos;s Profile</strong>
-            <span>Changes are recorded with a profile version and update history.</span>
+            <span>Review your information before saving changes.</span>
           </div>
           <button onClick={() => void save()} disabled={saving}>
             <Save size={17} />{saving ? "Saving…" : "Save Teacher Profile"}
