@@ -386,3 +386,9 @@
   .topbar,.yearCard,.panel,.summaryCard,.modal{background:rgba(255,255,255,.96)}
   .search,.controls select,.majorSelect,.actions button{background:#fff}
 }
+
+
+/* Cleanup pass */
+.controls{grid-template-columns:minmax(280px,1.6fr) repeat(4,minmax(145px,.7fr))}
+@media(max-width:1120px){.controls{grid-template-columns:1fr 1fr 1fr}}
+@media(max-width:560px){.controls{grid-template-columns:1fr}}

@@ -602,3 +602,19 @@
   .topbar,.notice,.panel,.official>div,.cards article{background:rgba(255,255,255,.96)}
   .grid input,.grid textarea{background:#fff}
 }
+
+
+/* Cleanup pass */
+.topbar{justify-content:flex-start}
+.grid label>span{
+  min-height:2.05em;
+  display:flex;
+  align-items:flex-end;
+  line-height:1.35;
+}
+.saveBar{justify-content:flex-end}
+@media(max-width:720px){
+  .grid label>span{min-height:0}
+  .saveBar{align-items:stretch}
+  .saveBar button{width:100%;justify-content:center}
+}

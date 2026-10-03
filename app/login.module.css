@@ -822,3 +822,12 @@
   .formWrap{background:rgba(255,255,255,.96)}
   .inputWrap{background:#fff}
 }
+
+
+/* Cleanup pass */
+.formOptions{justify-content:flex-end}
+.brandMessage>p{max-width:560px}
+.demoNote{margin-top:18px}
+@media(max-width:520px){
+  .formOptions{align-items:center;flex-direction:row}
+}
