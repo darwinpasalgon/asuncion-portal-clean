@@ -277,3 +277,112 @@
   .bulkActions{display:grid;grid-template-columns:1fr;width:100%}
   .bulkActions form,.bulkActions button{width:100%}
 }
+
+
+/* iOS-inspired frosted glass */
+.page{
+  background:
+    radial-gradient(circle at 88% 4%,rgba(36,124,181,.13),transparent 28%),
+    radial-gradient(circle at 8% 92%,rgba(26,145,97,.11),transparent 26%),
+    linear-gradient(145deg,#eef5fa 0%,#f7f9fb 50%,#eef7f2 100%);
+}
+.topbar,
+.yearCard,
+.panel,
+.summaryCard,
+.modal,
+.detailGrid>div,
+.detailRows>div,
+.historyTable{
+  background:rgba(255,255,255,.62);
+  border-color:rgba(255,255,255,.76);
+  box-shadow:0 16px 44px rgba(24,73,101,.08),inset 0 1px 0 rgba(255,255,255,.72);
+  backdrop-filter:blur(18px) saturate(155%);
+  -webkit-backdrop-filter:blur(18px) saturate(155%);
+}
+.topbar{
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,.72);
+  border-radius:13px;
+}
+.headerIcon,
+.summaryIcon,
+.avatar{
+  background:rgba(255,255,255,.56);
+  border:1px solid rgba(255,255,255,.72);
+  box-shadow:0 8px 22px rgba(24,72,100,.05),inset 0 1px 0 rgba(255,255,255,.72);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+}
+.controls,
+.summaryBar{
+  background:rgba(255,255,255,.34);
+  border-color:rgba(255,255,255,.55);
+}
+.search,
+.controls select,
+.refresh,
+.secondary,
+.majorSelect,
+.actions button,
+.field input,
+.field select,
+.field textarea,
+.modalActions button,
+.linkButton{
+  background:rgba(255,255,255,.74);
+  border-color:rgba(209,224,232,.80);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.78);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+.search:focus-within,
+.controls select:focus,
+.majorSelect:focus,
+.field input:focus,
+.field select:focus,
+.field textarea:focus{
+  background:rgba(255,255,255,.90);
+}
+.tableWrap{
+  background:rgba(255,255,255,.54);
+  backdrop-filter:blur(14px) saturate(145%);
+  -webkit-backdrop-filter:blur(14px) saturate(145%);
+}
+.tableWrap th{
+  background:rgba(242,247,250,.88);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+}
+.tableWrap td{
+  background:rgba(255,255,255,.40);
+}
+.tableWrap tbody tr:hover td{
+  background:rgba(248,252,253,.76);
+}
+.modalBackdrop{
+  background:rgba(20,45,62,.34);
+  backdrop-filter:blur(10px) saturate(135%);
+  -webkit-backdrop-filter:blur(10px) saturate(135%);
+}
+.modal{
+  background:rgba(252,254,254,.80);
+  border:1px solid rgba(255,255,255,.82);
+  box-shadow:0 32px 100px rgba(7,41,63,.24),inset 0 1px 0 rgba(255,255,255,.80);
+  backdrop-filter:blur(24px) saturate(160%);
+  -webkit-backdrop-filter:blur(24px) saturate(160%);
+}
+.detailGrid>div,
+.detailRows>div{
+  background:rgba(255,255,255,.54);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.68);
+}
+.primary{
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:0 10px 24px rgba(23,103,126,.14),inset 0 1px 0 rgba(255,255,255,.18);
+}
+
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .topbar,.yearCard,.panel,.summaryCard,.modal{background:rgba(255,255,255,.96)}
+  .search,.controls select,.majorSelect,.actions button{background:#fff}
+}
