@@ -523,3 +523,105 @@
   .identity{padding:17px}
   .panel{padding:16px}
 }
+
+
+/* iOS-inspired frosted glass */
+.page{
+  background:
+    radial-gradient(circle at 89% 5%,rgba(39,126,184,.13),transparent 27%),
+    radial-gradient(circle at 9% 91%,rgba(28,145,97,.10),transparent 24%),
+    linear-gradient(145deg,#eef5fa 0%,#f7f9fb 50%,#eef7f2 100%);
+}
+.topbar,
+.security,
+.directory,
+.editor,
+.identity,
+.panel{
+  background:rgba(255,255,255,.62);
+  border-color:rgba(255,255,255,.76);
+  box-shadow:0 15px 44px rgba(24,73,101,.075),inset 0 1px 0 rgba(255,255,255,.72);
+  backdrop-filter:blur(18px) saturate(155%);
+  -webkit-backdrop-filter:blur(18px) saturate(155%);
+}
+.topbar{
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,.72);
+  border-radius:13px;
+}
+.security{
+  background:rgba(240,249,244,.58);
+}
+.directoryHead{
+  background:rgba(255,255,255,.34);
+  border-color:rgba(255,255,255,.50);
+}
+.directoryHead button,
+.search,
+.grid input,
+.grid textarea,
+.grid select,
+.add{
+  background:rgba(255,255,255,.74);
+  border-color:rgba(209,224,232,.82);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.78);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+.search:focus-within,
+.grid input:focus,
+.grid textarea:focus,
+.grid select:focus{
+  background:rgba(255,255,255,.90);
+}
+.list>button{
+  background:rgba(255,255,255,.10);
+  border-color:transparent;
+}
+.list>button:hover{
+  background:rgba(255,255,255,.46);
+  border-color:rgba(255,255,255,.60);
+}
+.list>button.selected{
+  background:linear-gradient(135deg,rgba(233,245,252,.76),rgba(234,248,239,.76));
+  border-color:rgba(255,255,255,.74);
+  box-shadow:0 8px 22px rgba(24,72,100,.05),inset 0 1px 0 rgba(255,255,255,.68);
+}
+.identity{
+  background:
+    radial-gradient(circle at 88% 16%,rgba(255,255,255,.22),transparent 28%),
+    linear-gradient(110deg,rgba(238,247,252,.66),rgba(239,249,243,.66));
+}
+.avatar,
+.panelHead>svg{
+  background:rgba(255,255,255,.58);
+  border-color:rgba(255,255,255,.72);
+  box-shadow:0 8px 22px rgba(24,72,100,.05),inset 0 1px 0 rgba(255,255,255,.72);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+}
+.entry{
+  border-top-color:rgba(214,228,233,.72);
+}
+.empty{
+  background:rgba(255,255,255,.44);
+  border-color:rgba(209,224,232,.76);
+}
+.saveBar{
+  background:linear-gradient(105deg,rgba(21,79,121,.90),rgba(23,107,112,.88),rgba(23,109,77,.90));
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:0 20px 48px rgba(21,66,88,.22),inset 0 1px 0 rgba(255,255,255,.16);
+  backdrop-filter:blur(18px) saturate(150%);
+  -webkit-backdrop-filter:blur(18px) saturate(150%);
+}
+.saveBar button{
+  background:rgba(255,255,255,.88);
+  border:1px solid rgba(255,255,255,.72);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .topbar,.security,.directory,.editor,.identity,.panel{background:rgba(255,255,255,.96)}
+  .search,.grid input,.grid textarea,.grid select{background:#fff}
+}
