@@ -7,7 +7,6 @@ import {
   BriefcaseBusiness,
   GraduationCap,
   Plus,
-  RefreshCw,
   Save,
   Search,
   ShieldCheck,
@@ -48,7 +47,7 @@ const nameFields = [
 const graduateFields = [
   [
     "graduate_units",
-    "Indicate if graduated or units earned if not graduated or CAR for completed Academic Requirements",
+    "Graduate status / units earned / CAR",
   ],
   ["graduate_course", "Degree"],
 ] as const;
@@ -65,7 +64,7 @@ const earningUnitsFields = [
 ] as const;
 
 const otherProfileFields = [
-  ["skills", "SKILLS / SPECIALIZATION (NC I, NC II, NC III / TRAINERS METHODOLOGY)"],
+  ["skills", "Skills / specialization (NC I, NC II, NC III / Trainers Methodology)"],
   ["philsys_number", "Philsys (National ID) Number"],
   ["religion", "Religion"],
   ["ethnic_group", "Ethnic Group"],
@@ -319,7 +318,6 @@ export default function TeacherProfilesHrPage() {
               personnel sheet, together with service history and performance ratings.
             </p>
           </div>
-          <div className={styles.security}><ShieldCheck size={20} />HR-managed records</div>
         </header>
 
         {error && <div className={styles.error}>{error}</div>}
@@ -330,15 +328,12 @@ export default function TeacherProfilesHrPage() {
             <div className={styles.directoryHead}>
               <div>
                 <strong>Personnel</strong>
-                <span>{teachers.length} profile account(s)</span>
+                <span>{teachers.length} teacher profile{teachers.length === 1 ? "" : "s"}</span>
               </div>
-              <button onClick={() => void loadTeachers()} disabled={loading} aria-label="Refresh">
-                <RefreshCw size={16} />
-              </button>
             </div>
             <label className={styles.search}>
               <Search size={16} />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search Teacher…" />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search teachers…" />
             </label>
             <div className={styles.list}>
               {filtered.map((item) => (
@@ -352,7 +347,7 @@ export default function TeacherProfilesHrPage() {
                   <small>{item.email}</small>
                 </button>
               ))}
-              {!loading && filtered.length === 0 && <p>No matching Teacher profile.</p>}
+              {!loading && filtered.length === 0 && <p>No matching teacher profiles.</p>}
             </div>
           </aside>
 
@@ -368,7 +363,6 @@ export default function TeacherProfilesHrPage() {
                   <div>
                     <span>TEACHER&apos;S PROFILE</span>
                     <h2>{teacher?.full_name}</h2>
-                    <p>Asuncion National High School personnel record</p>
                   </div>
                 </div>
 
@@ -386,7 +380,7 @@ export default function TeacherProfilesHrPage() {
                           <option key={item} value={item}>
                             {item}
                             {!teachingPositions.includes(item as (typeof teachingPositions)[number])
-                              ? " (CURRENT IMPORTED POSITION)"
+                              ? " (current)"
                               : ""}
                           </option>
                         ))}
@@ -538,12 +532,8 @@ export default function TeacherProfilesHrPage() {
                 </section>
 
                 <div className={styles.saveBar}>
-                  <div>
-                    <strong>HR record version {record.version}</strong>
-                    <span>Date of Original Appointment is stored as one uniform calendar date.</span>
-                  </div>
                   <button onClick={() => void saveRecord()} disabled={saving}>
-                    <Save size={16} />{saving ? "Saving…" : "Save HR record"}
+                    <Save size={16} />{saving ? "Saving…" : "Save changes"}
                   </button>
                 </div>
               </>
