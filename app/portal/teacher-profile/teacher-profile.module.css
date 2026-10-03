@@ -514,3 +514,91 @@
   .panel{padding:19px 17px}
   .official{grid-template-columns:1fr}
 }
+
+
+/* iOS-inspired frosted glass */
+.page{
+  background:
+    radial-gradient(circle at 88% 6%,rgba(39,126,184,.13),transparent 27%),
+    radial-gradient(circle at 10% 92%,rgba(28,145,97,.11),transparent 25%),
+    linear-gradient(145deg,#eef5fa 0%,#f7f9fb 50%,#eef7f2 100%);
+}
+.topbar,
+.notice,
+.panel,
+.official>div,
+.cards article{
+  background:rgba(255,255,255,.62);
+  border-color:rgba(255,255,255,.76);
+  box-shadow:0 14px 40px rgba(24,73,101,.075),inset 0 1px 0 rgba(255,255,255,.72);
+  backdrop-filter:blur(18px) saturate(155%);
+  -webkit-backdrop-filter:blur(18px) saturate(155%);
+}
+.topbar{
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,.72);
+  border-radius:13px;
+}
+.topbar>span{
+  background:rgba(239,249,243,.55);
+  border-color:rgba(255,255,255,.68);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.68);
+}
+.header{
+  background:
+    radial-gradient(circle at 88% 18%,rgba(255,255,255,.22),transparent 24%),
+    linear-gradient(112deg,rgba(21,95,151,.91) 0%,rgba(23,111,142,.88) 54%,rgba(23,125,87,.90) 100%);
+  border-color:rgba(255,255,255,.30);
+  box-shadow:0 22px 58px rgba(20,77,105,.17),inset 0 1px 0 rgba(255,255,255,.18);
+  backdrop-filter:blur(10px) saturate(150%);
+  -webkit-backdrop-filter:blur(10px) saturate(150%);
+}
+.avatar,
+.profileMeta span,
+.panelHead>svg{
+  background:rgba(255,255,255,.14);
+  border-color:rgba(255,255,255,.22);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16);
+  backdrop-filter:blur(12px) saturate(145%);
+  -webkit-backdrop-filter:blur(12px) saturate(145%);
+}
+.panelHead>svg{
+  background:rgba(247,252,252,.62);
+  border-color:rgba(255,255,255,.72);
+  color:#23749d;
+  box-shadow:0 8px 22px rgba(24,72,100,.05),inset 0 1px 0 rgba(255,255,255,.72);
+}
+.grid input,
+.grid textarea{
+  background:rgba(255,255,255,.74);
+  border-color:rgba(209,224,232,.82);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.78);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+.grid input:focus,
+.grid textarea:focus{
+  background:rgba(255,255,255,.90);
+}
+.official>div,
+.cards article{
+  background:rgba(255,255,255,.54);
+}
+.saveBar{
+  background:linear-gradient(105deg,rgba(21,79,121,.90),rgba(23,107,112,.88),rgba(23,109,77,.90));
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:0 20px 48px rgba(21,66,88,.22),inset 0 1px 0 rgba(255,255,255,.16);
+  backdrop-filter:blur(18px) saturate(150%);
+  -webkit-backdrop-filter:blur(18px) saturate(150%);
+}
+.saveBar button{
+  background:rgba(255,255,255,.88);
+  border:1px solid rgba(255,255,255,.72);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .topbar,.notice,.panel,.official>div,.cards article{background:rgba(255,255,255,.96)}
+  .grid input,.grid textarea{background:#fff}
+}
