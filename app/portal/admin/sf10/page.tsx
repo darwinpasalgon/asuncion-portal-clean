@@ -263,7 +263,7 @@ export default function Sf10Page() {
 
                 <section className={styles.editor}>
                   <div className={styles.sectionHeading}>
-                    <h2>Learner permanent-record information</h2>
+                    <h2>Learner Permanent-Record Information</h2>
                     <p>
                       {isShs
                         ? "Complete the SHS eligibility and program fields once; published grades are pulled automatically."
@@ -271,10 +271,10 @@ export default function Sf10Page() {
                     </p>
                   </div>
                   <form onSubmit={saveProfile} className={styles.form}>
-                    <label><span>Last name</span><input name="last_name" defaultValue={record.last_name ?? ""} required /></label>
-                    <label><span>First name</span><input name="first_name" defaultValue={record.first_name ?? ""} required /></label>
-                    <label><span>Middle name</span><input name="middle_name" defaultValue={record.middle_name ?? ""} /></label>
-                    <label><span>Name extension</span><input name="name_extension" defaultValue={record.name_extension ?? ""} placeholder="Jr., II, III" /></label>
+                    <label><span>Last Name</span><input name="last_name" defaultValue={record.last_name ?? ""} required /></label>
+                    <label><span>First Name</span><input name="first_name" defaultValue={record.first_name ?? ""} required /></label>
+                    <label><span>Middle Name</span><input name="middle_name" defaultValue={record.middle_name ?? ""} /></label>
+                    <label><span>Name Extension</span><input name="name_extension" defaultValue={record.name_extension ?? ""} placeholder="Jr., II, III" /></label>
                     <label><span>Birthdate</span><input name="birth_date" type="date" defaultValue={record.birth_date ?? ""} required /></label>
                     <label>
                       <span>Sex</span>
@@ -287,7 +287,7 @@ export default function Sf10Page() {
                     {!isShs ? (
                       <>
                         <label>
-                          <span>JHS eligibility</span>
+                          <span>JHS Eligibility</span>
                           <select name="eligibility_type" defaultValue={record.eligibility_type ?? "elementary_completer"}>
                             <option value="elementary_completer">Elementary School Completer</option>
                             <option value="pept">PEPT Passer</option>
@@ -295,29 +295,29 @@ export default function Sf10Page() {
                             <option value="other">Other credential</option>
                           </select>
                         </label>
-                        <label><span>Elementary school</span><input name="elementary_school_name" defaultValue={record.elementary_school_name ?? ""} /></label>
-                        <label><span>Elementary school ID</span><input name="elementary_school_id" defaultValue={record.elementary_school_id ?? ""} /></label>
-                        <label className={styles.wide}><span>Elementary school address</span><input name="elementary_school_address" defaultValue={record.elementary_school_address ?? ""} /></label>
-                        <label><span>Elementary general average</span><input name="elementary_general_average" type="number" min="0" max="100" step="0.01" defaultValue={record.elementary_general_average ?? ""} /></label>
+                        <label><span>Elementary School</span><input name="elementary_school_name" defaultValue={record.elementary_school_name ?? ""} /></label>
+                        <label><span>Elementary School ID</span><input name="elementary_school_id" defaultValue={record.elementary_school_id ?? ""} /></label>
+                        <label className={styles.wide}><span>Elementary School Address</span><input name="elementary_school_address" defaultValue={record.elementary_school_address ?? ""} /></label>
+                        <label><span>Elementary General Average</span><input name="elementary_general_average" type="number" min="0" max="100" step="0.01" defaultValue={record.elementary_general_average ?? ""} /></label>
                         <label><span>Citation, if any</span><input name="elementary_citation" defaultValue={record.elementary_citation ?? ""} /></label>
                         <label><span>Eligibility rating</span><input name="eligibility_rating" defaultValue={record.eligibility_rating ?? ""} /></label>
-                        <label><span>Other credential</span><input name="eligibility_other" defaultValue={record.eligibility_other ?? ""} /></label>
-                        <label><span>Assessment date</span><input name="assessment_date" type="date" defaultValue={record.assessment_date ?? ""} /></label>
-                        <label className={styles.wide}><span>Testing center</span><input name="testing_center" defaultValue={record.testing_center ?? ""} /></label>
+                        <label><span>Other Credential</span><input name="eligibility_other" defaultValue={record.eligibility_other ?? ""} /></label>
+                        <label><span>Assessment Date</span><input name="assessment_date" type="date" defaultValue={record.assessment_date ?? ""} /></label>
+                        <label className={styles.wide}><span>Testing Center</span><input name="testing_center" defaultValue={record.testing_center ?? ""} /></label>
                       </>
                     ) : (
                       <>
-                        <label><span>Date of SHS admission</span><input name="shs_admission_date" type="date" defaultValue={record.shs_admission_date ?? ""} /></label>
-                        <label><span>JHS completion date</span><input name="jhs_completion_date" type="date" defaultValue={record.jhs_completion_date ?? ""} /></label>
-                        <label><span>JHS school</span><input name="jhs_school_name" defaultValue={record.jhs_school_name ?? ""} /></label>
-                        <label><span>JHS school ID</span><input name="jhs_school_id" defaultValue={record.jhs_school_id ?? ""} /></label>
-                        <label className={styles.wide}><span>JHS school address</span><input name="jhs_school_address" defaultValue={record.jhs_school_address ?? ""} /></label>
-                        <label><span>JHS general average</span><input name="jhs_general_average" type="number" min="0" max="100" step="0.01" defaultValue={record.jhs_general_average ?? ""} /></label>
-                        <label><span>SHS track</span><input name="shs_track" defaultValue={record.shs_track ?? ""} placeholder="Academic / TVL / ALS" /></label>
-                        <label className={styles.wide}><span>SHS strand / cluster / specialization</span><input name="shs_strand" defaultValue={record.shs_strand ?? ""} placeholder="STEM, HUMSS, ABM, BE, ASSH, Food Processing, OAP..." /></label>
-                        <label className={styles.wide}><span>Awards / honors received</span><input name="awards_honors" defaultValue={record.awards_honors ?? ""} /></label>
-                        <label><span>SHS graduation date</span><input name="shs_graduation_date" type="date" defaultValue={record.shs_graduation_date ?? ""} /></label>
-                        <label><span>SF10 date issued</span><input name="sf10_date_issued" type="date" defaultValue={record.sf10_date_issued ?? ""} /></label>
+                        <label><span>Date of SHS Admission</span><input name="shs_admission_date" type="date" defaultValue={record.shs_admission_date ?? ""} /></label>
+                        <label><span>JHS Completion Date</span><input name="jhs_completion_date" type="date" defaultValue={record.jhs_completion_date ?? ""} /></label>
+                        <label><span>JHS School</span><input name="jhs_school_name" defaultValue={record.jhs_school_name ?? ""} /></label>
+                        <label><span>JHS School ID</span><input name="jhs_school_id" defaultValue={record.jhs_school_id ?? ""} /></label>
+                        <label className={styles.wide}><span>JHS School Address</span><input name="jhs_school_address" defaultValue={record.jhs_school_address ?? ""} /></label>
+                        <label><span>JHS General Average</span><input name="jhs_general_average" type="number" min="0" max="100" step="0.01" defaultValue={record.jhs_general_average ?? ""} /></label>
+                        <label><span>SHS Track</span><input name="shs_track" defaultValue={record.shs_track ?? ""} placeholder="Academic / TVL / ALS" /></label>
+                        <label className={styles.wide}><span>SHS Strand / Cluster / Specialization</span><input name="shs_strand" defaultValue={record.shs_strand ?? ""} placeholder="STEM, HUMSS, ABM, BE, ASSH, Food Processing, OAP..." /></label>
+                        <label className={styles.wide}><span>Awards / Honors Received</span><input name="awards_honors" defaultValue={record.awards_honors ?? ""} /></label>
+                        <label><span>SHS Graduation Date</span><input name="shs_graduation_date" type="date" defaultValue={record.shs_graduation_date ?? ""} /></label>
+                        <label><span>SF10 Date Issued</span><input name="sf10_date_issued" type="date" defaultValue={record.sf10_date_issued ?? ""} /></label>
                       </>
                     )}
                     <button className={styles.saveButton} type="submit" disabled={working === "save"}>
