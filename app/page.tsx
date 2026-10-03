@@ -4,7 +4,6 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
-  BookOpen,
   Eye,
   EyeOff,
   GraduationCap,
@@ -88,35 +87,8 @@ export default function LoginPage() {
             to access academic information and school resources.
           </p>
 
-          <div className={styles.portalHighlights} aria-label="Portal features">
-            <div>
-              <span><ShieldCheck size={17} /></span>
-              <div>
-                <strong>Secure access</strong>
-                <small>School-managed accounts</small>
-              </div>
-            </div>
-            <div>
-              <span><GraduationCap size={17} /></span>
-              <div>
-                <strong>Academic records</strong>
-                <small>Connected learner information</small>
-              </div>
-            </div>
-            <div>
-              <span><BookOpen size={17} /></span>
-              <div>
-                <strong>School resources</strong>
-                <small>One organized workspace</small>
-              </div>
-            </div>
-          </div>
         </div>
 
-        <div className={styles.brandFooter}>
-          <ShieldCheck size={18} />
-          <span>Designed for the Asuncion NHS school community</span>
-        </div>
       </section>
 
       <section className={styles.formPanel}>
@@ -179,7 +151,6 @@ export default function LoginPage() {
             </label>
 
             <div className={styles.formOptions}>
-              <span />
               <button
                 type="button"
                 className={styles.textButton}
@@ -202,23 +173,15 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className={styles.accountPrompt}>
-            <span>Need an account? Contact the school administrator.</span>
-          </div>
 
           <div className={styles.demoNote}>
             <ShieldCheck size={17} />
             <p>
-              Portal accounts are provided by the school. Sign in with the
-              credentials given to you. Forgotten passwords are handled through
-              administrator-assisted identity verification.
+              Accounts are issued by the school. If you cannot sign in, use
+              Forgot password? above for account recovery.
             </p>
           </div>
 
-          <footer className={styles.footer}>
-            <span>Asuncion National High School</span>
-            <span>Academic Portal · 2026</span>
-          </footer>
         </div>
       </section>
     </main>
