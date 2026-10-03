@@ -125,7 +125,16 @@ Deno.serve(async (req) => {
     const authById = new Map((authPage.users ?? []).map((user) => [user.id, user]));
     return (profiles ?? []).filter((profile) => {
       const authUser = authById.get(profile.id);
-      return authUser && !authUser.last_sign_in_at;
+      if (!authUser || authUser.last_sign_in_at) return false;
+      if (authUser.user_metadata?.first_login_credential_recovered_at) return false;
+
+      const createdAt = Date.parse(String(authUser.created_at ?? ""));
+      const updatedAt = Date.parse(String(authUser.updated_at ?? ""));
+      return (
+        Number.isFinite(createdAt) &&
+        Number.isFinite(updatedAt) &&
+        updatedAt - createdAt > 5 * 60 * 1000
+      );
     });
   }
 
@@ -177,8 +186,14 @@ Deno.serve(async (req) => {
         }
 
         const password = temporaryPassword();
+        const { data: authUserResult } = await admin.auth.admin.getUserById(userId);
+        const recoveredAt = new Date().toISOString();
         const { error: passwordError } = await admin.auth.admin.updateUserById(userId, {
           password,
+          user_metadata: {
+            ...(authUserResult?.user?.user_metadata ?? {}),
+            first_login_credential_recovered_at: recoveredAt,
+          },
         });
 
         if (passwordError) {
