@@ -681,7 +681,7 @@ export default function LearnerManagementPage() {
             <div className={styles.headerIcon}><GraduationCap size={22} /></div>
             <div>
               <span>ACADEMIC RECORDS</span>
-              <h1>Learner management</h1>
+              <h1>Learner Management</h1>
               <p>
                 Manage class placement, enrollment status, TVE majors, learner history,
                 and school-year transitions from one organized workspace.
@@ -996,11 +996,11 @@ export default function LearnerManagementPage() {
                       : "—"}
                 </strong>
               </div>
-              <div><span>Birth date</span><strong>{dateLabel(detailLearner.learner_info?.birth_date)}</strong></div>
-              <div><span>Mother tongue</span><strong>{display(detailLearner.learner_info?.mother_tongue)}</strong></div>
-              <div><span>Ethnic group</span><strong>{display(detailLearner.learner_info?.ethnic_group)}</strong></div>
+              <div><span>Birth Date</span><strong>{dateLabel(detailLearner.learner_info?.birth_date)}</strong></div>
+              <div><span>Mother Tongue</span><strong>{display(detailLearner.learner_info?.mother_tongue)}</strong></div>
+              <div><span>Ethnic Group</span><strong>{display(detailLearner.learner_info?.ethnic_group)}</strong></div>
               <div><span>Religion</span><strong>{display(detailLearner.learner_info?.religion)}</strong></div>
-              <div><span>Learning modality</span><strong>{display(detailLearner.learner_info?.learning_modality)}</strong></div>
+              <div><span>Learning Modality</span><strong>{display(detailLearner.learner_info?.learning_modality)}</strong></div>
               {[8, 9, 10].includes(enrollmentForYear(detailLearner)?.grade_level ?? 0) && (
                 <div>
                   <span>TVE Major</span>
@@ -1010,20 +1010,20 @@ export default function LearnerManagementPage() {
             </div>
 
             <section className={styles.detailSection}>
-              <h3>Address & family information</h3>
+              <h3>Address & Family Information</h3>
               <div className={styles.detailRows}>
                 <div><span>Address</span><strong>{addressOf(detailLearner.learner_info)}</strong></div>
                 <div><span>Father</span><strong>{display(detailLearner.learner_info?.father_name)}</strong></div>
-                <div><span>Mother&apos;s maiden name</span><strong>{display(detailLearner.learner_info?.mother_maiden_name)}</strong></div>
+                <div><span>Mother&apos;s Maiden Name</span><strong>{display(detailLearner.learner_info?.mother_maiden_name)}</strong></div>
                 <div><span>Guardian</span><strong>{display(detailLearner.learner_info?.guardian_name)}</strong></div>
                 <div><span>Relationship</span><strong>{display(detailLearner.learner_info?.guardian_relationship)}</strong></div>
-                <div><span>Guardian contact</span><strong>{display(detailLearner.learner_info?.guardian_contact_number || detailLearner.recovery_phone)}</strong></div>
-                <div><span>SF1 remarks</span><strong>{display(detailLearner.learner_info?.remarks)}</strong></div>
+                <div><span>Guardian Contact</span><strong>{display(detailLearner.learner_info?.guardian_contact_number || detailLearner.recovery_phone)}</strong></div>
+                <div><span>SF1 Remarks</span><strong>{display(detailLearner.learner_info?.remarks)}</strong></div>
               </div>
             </section>
 
             <section className={styles.detailSection}>
-              <h3><History size={17} />Enrollment history</h3>
+              <h3><History size={17} />Enrollment History</h3>
               {detailLearner.enrollments.length ? (
                 <div className={styles.historyTable}>
                   <table>
@@ -1049,7 +1049,7 @@ export default function LearnerManagementPage() {
             </section>
 
             <section className={styles.detailSection}>
-              <h3>Enrollment activity</h3>
+              <h3>Enrollment Activity</h3>
               {detailLearner.events.length ? (
                 <div className={styles.timeline}>
                   {detailLearner.events.slice(0, 12).map((event) => (
@@ -1115,7 +1115,7 @@ export default function LearnerManagementPage() {
             </label>
 
             <label className={styles.field}>
-              <span>Note / reason</span>
+              <span>Note / Reason</span>
               <textarea
                 value={statusTarget.note}
                 onChange={(event) =>
@@ -1154,7 +1154,7 @@ export default function LearnerManagementPage() {
             </div>
 
             <label className={styles.field}>
-              <span>New section</span>
+              <span>New Section</span>
               <select
                 value={moveTarget.targetSectionId}
                 onChange={(event) =>
@@ -1176,7 +1176,7 @@ export default function LearnerManagementPage() {
             </label>
 
             <label className={styles.field}>
-              <span>Reason / note</span>
+              <span>Reason / Note</span>
               <textarea
                 value={moveTarget.note}
                 onChange={(event) => setMoveTarget({ ...moveTarget, note: event.target.value })}
@@ -1244,7 +1244,7 @@ export default function LearnerManagementPage() {
                   <>
                     <div className={styles.transitionGrid}>
                       <label className={styles.field}>
-                        <span>Target school year</span>
+                        <span>Target School Year</span>
                         <select
                           value={targetYearId}
                           onChange={(event) => setTargetYearId(event.target.value)}
@@ -1269,7 +1269,7 @@ export default function LearnerManagementPage() {
                     )}
 
                     <label className={styles.field}>
-                      <span>Target section</span>
+                      <span>Target Section</span>
                       <select
                         value={targetSectionId}
                         onChange={(event) => setTargetSectionId(event.target.value)}
@@ -1285,7 +1285,7 @@ export default function LearnerManagementPage() {
                 )}
 
                 <label className={styles.field}>
-                  <span>Transition note</span>
+                  <span>Transition Note</span>
                   <textarea
                     value={transitionNote}
                     onChange={(event) => setTransitionNote(event.target.value)}
