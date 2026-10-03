@@ -230,7 +230,6 @@ function SideNav({
         <div className="school-year">
           <span>SCHOOL YEAR</span>
           <strong>{schoolYear}</strong>
-          <span className="year-label">Authenticated workspace</span>
         </div>
 
         <p className="nav-label">WORKSPACE</p>
@@ -439,11 +438,6 @@ function SideNav({
           </>
         )}
 
-        <div className="side-tip">
-          <ShieldCheck size={22} />
-          <strong>Secure school access</strong>
-          <p>Your portal access is based on your verified school account and assigned role.</p>
-        </div>
       </SidebarContent>
 
       <SidebarFooter className="side-footer">
@@ -747,12 +741,6 @@ export default function PortalPage() {
           </div>
         </header>
 
-        <div className="real-status-bar">
-          <ShieldCheck size={16} />
-          <span>
-            Signed in as <strong>{displayRole}</strong> · {accountId}
-          </span>
-        </div>
 
         <div className="page-wrap">
           <div className="page-heading">
@@ -765,16 +753,9 @@ export default function PortalPage() {
               </h1>
               <p>
                 {page === "Overview"
-                  ? `Your verified ${displayRole.toLowerCase()} account is now connected to the portal.`
+                  ? "Your academic information and school tools in one place."
                   : "This module uses official records from the live academic database."}
               </p>
-            </div>
-            <div className="real-role-card">
-              <UserRound size={18} />
-              <div>
-                <span>ACCOUNT ROLE</span>
-                <strong>{displayRole}</strong>
-              </div>
             </div>
           </div>
 
@@ -782,18 +763,12 @@ export default function PortalPage() {
             <div className="real-overview-grid">
               <section className="welcome-card real-welcome">
                 <div className="real-welcome-copy">
-                  <span className="tag">VERIFIED PORTAL ACCESS</span>
                   <h2>Your school workspace,<br />ready when you are.</h2>
                   <p>
                     Access the records, classes, schedules, and tools available to your
                     verified {displayRole.toLowerCase()} account.
                   </p>
 
-                  <div className="real-welcome-highlights">
-                    <span><ShieldCheck size={16} /> Secure access</span>
-                    <span><CalendarDays size={16} /> {academicContext?.school_year ?? "2026–2027"}</span>
-                    <span><UserRound size={16} /> {displayRole}</span>
-                  </div>
                 </div>
                 <div className="academic-motif real-academic-motif">
                   <div className="real-seal-frame">
@@ -853,7 +828,6 @@ export default function PortalPage() {
                       </div>
                     )}
                   <div><dt>Email</dt><dd>{profile.email}</dd></div>
-                  <div><dt>Status</dt><dd><span className="tag">Active</span></dd></div>
                 </dl>
               </section>
 
@@ -897,58 +871,7 @@ export default function PortalPage() {
                 </section>
               )}
 
-              {profile.role === "administrator" && (
-                <section className="panel real-admin-card">
-                  <div className="real-card-title">
-                    <span><Settings2 size={18} /></span>
-                    <div>
-                      <h2>Administrator tools</h2>
-                      <p>Quick access to frequently used school management modules.</p>
-                    </div>
-                  </div>
-                  <div>
-                    <button onClick={() => (window.location.href = "/portal/admin/accounts")}>
-                      <Users size={18} /> Account approvals
-                    </button>
-                    <button onClick={() => (window.location.href = "/portal/admin/password-resets")}>
-                      <ShieldCheck size={18} /> Password reset requests
-                    </button>
-                    <button onClick={() => (window.location.href = "/portal/admin/school-setup")}>
-                      <Settings2 size={18} /> School setup
-                    </button>
-                    <button onClick={() => (window.location.href = "/portal/admin/teaching")}>
-                      <BookOpen size={18} /> Subjects & teachers
-                    </button>
-                    <button onClick={() => (window.location.href = "/portal/admin/schedules")}>
-                      <CalendarDays size={18} /> Class schedules
-                    </button>
-                    <button onClick={() => (window.location.href = "/portal/admin/attendance")}>
-                      <ClipboardCheck size={18} /> Attendance
-                    </button>
-                    <button onClick={() => (window.location.href = "/portal/admin/teacher-import")}>
-                      <UserRound size={18} /> Teacher profile import
-                    </button>
-                    <button onClick={() => (window.location.href = "/portal/admin/reports")}>
-                      <BarChart3 size={18} /> Reports & analytics
-                    </button>
-                  </div>
-                </section>
-              )}
 
-              <section className="panel real-next-card">
-                <div className="real-card-title">
-                  <span><ShieldCheck size={18} /></span>
-                  <div>
-                    <h2>System status</h2>
-                    <p>Academic workspace connection</p>
-                  </div>
-                </div>
-                <p>
-                  Core academic modules are connected: enrollment, subjects, Teacher
-                  assignments, schedules, grades, attendance, announcements,
-                  memorandums, learning resources, and Administrator reports.
-                </p>
-              </section>
             </div>
           )}
 
