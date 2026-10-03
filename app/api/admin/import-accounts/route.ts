@@ -39,7 +39,46 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json().catch(() => null);
-  if (!body || body.action !== "import" || !Array.isArray(body.rows)) {
+  if (!body) {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+  }
+
+  if (body.action === "credential_candidates") {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-bulk-account-import`, {
+      method: "POST",
+      headers: headers(token),
+      body: JSON.stringify({ action: "credential_candidates" }),
+      cache: "no-store",
+    });
+    const result = await response.json().catch(() => ({}));
+    return NextResponse.json(result, { status: response.status });
+  }
+
+  if (body.action === "reissue_credentials") {
+    const userIds = Array.isArray(body.userIds)
+      ? body.userIds.map((value: unknown) => String(value ?? "").trim()).filter(Boolean)
+      : [];
+    if (!userIds.length || userIds.length > 20) {
+      return NextResponse.json(
+        { error: "Credential recovery batches must contain 1 to 20 Teacher accounts." },
+        { status: 400 }
+      );
+    }
+
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-bulk-account-import`, {
+      method: "POST",
+      headers: headers(token),
+      body: JSON.stringify({
+        action: "reissue_credentials",
+        user_ids: userIds,
+      }),
+      cache: "no-store",
+    });
+    const result = await response.json().catch(() => ({}));
+    return NextResponse.json(result, { status: response.status });
+  }
+
+  if (body.action !== "import" || !Array.isArray(body.rows)) {
     return NextResponse.json({ error: "Invalid import request." }, { status: 400 });
   }
 
@@ -54,6 +93,7 @@ export async function POST(request: NextRequest) {
     method: "POST",
     headers: headers(token),
     body: JSON.stringify({
+      action: "import",
       person_type: body.personType === "teacher" ? "teacher" : "student",
       file_name: String(body.fileName ?? "account-import.csv"),
       rows: body.rows.map((row: Record<string, unknown>) => ({
