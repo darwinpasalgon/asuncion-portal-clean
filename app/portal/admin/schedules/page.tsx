@@ -302,7 +302,7 @@ export default function ClassSchedulesPage() {
         <header className={styles.header}>
           <div>
             <span className={styles.eyebrow}>ADMINISTRATION</span>
-            <h1>Class schedules</h1>
+            <h1>Class Schedules</h1>
             <p>
               Schedule the class assignments already configured for the active
               school year. Teacher, section, and room conflicts are blocked automatically.
@@ -325,7 +325,7 @@ export default function ClassSchedulesPage() {
         <section className={styles.panel}>
           <div className={styles.panelHeading}>
             <div>
-              <h2>{editId ? "Edit schedule" : "Add schedule"}</h2>
+              <h2>{editId ? "Edit Schedule" : "Add Schedule"}</h2>
               <p>
                 Only active Teacher assignments for the current school year can be scheduled.
               </p>
@@ -339,7 +339,7 @@ export default function ClassSchedulesPage() {
 
           <form className={styles.form} onSubmit={saveSchedule}>
             <label className={styles.assignmentField}>
-              <span>Class assignment</span>
+              <span>Class Assignment</span>
               <select
                 required
                 value={editAssignment}
@@ -371,7 +371,7 @@ export default function ClassSchedulesPage() {
                 </label>
 
                 <label>
-                  <span>Start time</span>
+                  <span>Start Time</span>
                   <input
                     required
                     type="time"
@@ -381,7 +381,7 @@ export default function ClassSchedulesPage() {
                 </label>
 
                 <label>
-                  <span>End time</span>
+                  <span>End Time</span>
                   <input
                     required
                     type="time"
@@ -405,7 +405,7 @@ export default function ClassSchedulesPage() {
                 <div className={styles.daySelector}>
                   <div className={styles.daySelectorHeading}>
                     <div>
-                      <span>Teaching days</span>
+                      <span>Teaching Days</span>
                       <small>Select every day this class meets. Each day can have a different time and room.</small>
                     </div>
                     <div className={styles.dayHelpers}>
@@ -440,9 +440,9 @@ export default function ClassSchedulesPage() {
                   <div className={styles.dayScheduleGrid}>
                     <div className={styles.dayScheduleHeader}>
                       <span>Day</span>
-                      <span>Start time</span>
-                      <span>End time</span>
-                      <span>Room / location</span>
+                      <span>Start Time</span>
+                      <span>End Time</span>
+                      <span>Room / Location</span>
                     </div>
 
                     {selectedDays.map((day) => {
@@ -507,7 +507,7 @@ export default function ClassSchedulesPage() {
                     ? "Update schedule"
                     : selectedDays.length > 1
                       ? `Add ${selectedDays.length} schedule entries`
-                      : "Add schedule"}
+                      : "Add Schedule"}
               </button>
             </div>
           </form>
@@ -516,7 +516,7 @@ export default function ClassSchedulesPage() {
         <section className={styles.panel}>
           <div className={styles.panelHeading}>
             <div>
-              <h2>Published class schedule</h2>
+              <h2>Published Class Schedule</h2>
               <p>Active entries appear automatically in Student and Teacher dashboards.</p>
             </div>
             <button className={styles.secondary} onClick={() => void load()} disabled={loading}>
