@@ -73,17 +73,17 @@ export default function AccountApprovalsPage() {
         <nav className={styles.topActions} aria-label="Administrator navigation">
           <a className={styles.topLink} href="/portal">
             <ArrowLeft size={16} />
-            <span>Back to portal</span>
+            <span>Back to Portal</span>
           </a>
           <a className={styles.topLink} href="/portal/admin/password-resets">
-            <span>Password reset requests</span>
+            <span>Password Reset Requests</span>
           </a>
         </nav>
 
         <header className={styles.header}>
           <div>
             <span className={styles.eyebrow}>ADMINISTRATION</span>
-            <h1>Account approvals</h1>
+            <h1>Account Approvals</h1>
             <p>
               Review new student and teacher registrations before giving them
               access to school records.
@@ -98,7 +98,7 @@ export default function AccountApprovalsPage() {
         <section className={styles.panel}>
           <div className={styles.panelTop}>
             <div>
-              <h2>Pending registrations</h2>
+              <h2>Pending Registrations</h2>
               <p>{accounts.length} account{accounts.length === 1 ? "" : "s"} awaiting review</p>
             </div>
             <button className={styles.refresh} onClick={() => void loadAccounts()} disabled={loading}>

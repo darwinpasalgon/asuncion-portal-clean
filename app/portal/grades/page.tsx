@@ -296,7 +296,7 @@ export default function GradesPage() {
         <header className={styles.header}>
           <div>
             <span className={styles.eyebrow}>ACADEMIC RECORDS</span>
-            <h1>{role === "teacher" ? "Section adviser gradebook" : "My grades"}</h1>
+            <h1>{role === "teacher" ? "Section Adviser Gradebook" : "My Grades"}</h1>
             <p>
               {role === "teacher"
                 ? "Only the active Section Adviser can encode and publish official grades for learners in the section."
@@ -329,7 +329,7 @@ export default function GradesPage() {
           <>
             <section className={styles.controls}>
               <label>
-                <span>Assigned class</span>
+                <span>Assigned Class</span>
                 <select
                   value={selectedAssignmentId}
                   onChange={(event) => setSelectedAssignmentId(event.target.value)}

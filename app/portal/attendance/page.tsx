@@ -155,7 +155,7 @@ export default function AttendancePage(){
     <header className={styles.header}>
       <div>
         <span className={styles.eyebrow}>ACADEMIC RECORDS</span>
-        <h1>{role==="teacher"?"Daily attendance":"My attendance"}</h1>
+        <h1>{role==="teacher"?"Daily Attendance":"My Attendance"}</h1>
         <p>{role==="teacher"
           ?"Record daily section attendance for sections assigned to you as Attendance Teacher / Adviser."
           :"Your recorded attendance for the active school year."}</p>
@@ -188,7 +188,7 @@ export default function AttendancePage(){
           <section className={styles.panel}>
             <div className={styles.panelHeading}>
               <div>
-                <h2>{selectedSection?("Grade "+selectedSection.grade_level+" · "+selectedSection.name):"Attendance sheet"}</h2>
+                <h2>{selectedSection?("Grade "+selectedSection.grade_level+" · "+selectedSection.name):"Attendance Sheet"}</h2>
                 <p>{formatDate(date)+" · "+roster.length+" enrolled student"+(roster.length===1?"":"s")}</p>
               </div>
               <div className={styles.actions}>
@@ -223,15 +223,15 @@ export default function AttendancePage(){
 
     {role==="student"&&<>
       <div className={styles.summary}>
-        <article><ClipboardCheck size={22}/><span>Recorded days</span><strong>{counts.total}</strong></article>
+        <article><ClipboardCheck size={22}/><span>Recorded Days</span><strong>{counts.total}</strong></article>
         <article><CheckCircle2 size={22}/><span>Present</span><strong>{counts.present}</strong></article>
         <article><Clock3 size={22}/><span>Late</span><strong>{counts.late}</strong></article>
         <article><XCircle size={22}/><span>Absent / Excused</span><strong>{counts.absent+" / "+counts.excused}</strong></article>
-        <article><UserCheck size={22}/><span>Attendance rate</span><strong>{rate+"%"}</strong><small>Present + Late ÷ recorded days</small></article>
+        <article><UserCheck size={22}/><span>Attendance Rate</span><strong>{rate+"%"}</strong><small>Present + Late ÷ recorded days</small></article>
       </div>
 
       <section className={styles.panel}>
-        <div className={styles.panelHeading}><div><h2>Attendance history</h2><p>{(profile?.full_name??"Student")+" · latest recorded school days"}</p></div></div>
+        <div className={styles.panelHeading}><div><h2>Attendance History</h2><p>{(profile?.full_name??"Student")+" · latest recorded school days"}</p></div></div>
         {attendance.length===0
           ?<div className={styles.empty}>No attendance records have been recorded for you yet.</div>
           :<div className={styles.history}>

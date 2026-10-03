@@ -162,7 +162,7 @@ export default function AnnouncementsPage(){
       <div className={styles.composerHead}>
         <div>
           <span>{isAdmin?"ADMINISTRATOR / PRINCIPAL":"TEACHER"}</span>
-          <h2>Create a post</h2>
+          <h2>Create a Post</h2>
           <p>{isAdmin
             ?"Publish a school announcement or upload an official memorandum."
             :"Post an announcement to one of your assigned sections."}</p>
@@ -204,7 +204,7 @@ export default function AnnouncementsPage(){
             :<input type="hidden" name="audienceScope" value="section"/>}
 
           {isAdmin&&audienceScope==="grade"&&<label>
-            <span>Grade level</span>
+            <span>Grade Level</span>
             <select name="targetGrade" required defaultValue="">
               <option value="" disabled>Select grade</option>
               {grades.map(g=><option key={g.grade_level} value={g.grade_level}>{g.label}</option>)}
@@ -220,7 +220,7 @@ export default function AnnouncementsPage(){
           </label>}
 
           <label>
-            <span>Post status</span>
+            <span>Post Status</span>
             <select name="status" defaultValue="published">
               <option value="published">Publish now</option>
               <option value="draft">Save as draft</option>
@@ -248,12 +248,12 @@ export default function AnnouncementsPage(){
 
     <section className={styles.feed}>
       <div className={styles.feedHead}>
-        <div><h2>Latest posts</h2><p>{profile?.role==="administrator"?"Published posts and your drafts.":"Announcements relevant to your account."}</p></div>
+        <div><h2>Latest Posts</h2><p>{profile?.role==="administrator"?"Published posts and your drafts.":"Announcements relevant to your account."}</p></div>
         <span>{announcements.length} post{announcements.length===1?"":"s"}</span>
       </div>
 
       {loading?<div className={styles.empty}>Loading announcements…</div>:
-      announcements.length===0?<div className={styles.empty}><Megaphone size={30}/><strong>No announcements yet</strong><span>New school communications will appear here.</span></div>:
+      announcements.length===0?<div className={styles.empty}><Megaphone size={30}/><strong>No Announcements Yet</strong><span>New school communications will appear here.</span></div>:
       <div className={styles.list}>
         {announcements.map(item=>{
           const own=item.created_by===profile?.id;
@@ -287,7 +287,7 @@ export default function AnnouncementsPage(){
             </a>}
 
             <footer>
-              <div><span>Posted by</span><strong>{item.posted_by_name}</strong></div>
+              <div><span>Posted By</span><strong>{item.posted_by_name}</strong></div>
               <div><span>{item.status==="published"?"Published":"Created"}</span><strong>{dateLabel(item.published_at||item.created_at)}</strong></div>
               {item.expires_at&&<div><span>Expires</span><strong>{dateLabel(item.expires_at)}</strong></div>}
             </footer>

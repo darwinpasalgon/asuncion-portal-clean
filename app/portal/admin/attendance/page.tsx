@@ -89,14 +89,14 @@ export default function AdminAttendancePage(){
     {error&&<div className={styles.error}>{error}</div>}{success&&<div className={styles.success}>{success}</div>}
 
     <div className={styles.summary}>
-      <article><Users size={22}/><span>Enrolled students</span><strong>{enrollments.length}</strong></article>
+      <article><Users size={22}/><span>Enrolled Students</span><strong>{enrollments.length}</strong></article>
       <article><ClipboardCheck size={22}/><span>Present</span><strong>{count("present")}</strong></article>
       <article><CalendarDays size={22}/><span>Late</span><strong>{count("late")}</strong></article>
       <article><School size={22}/><span>Absent / Excused</span><strong>{count("absent")+count("excused")}</strong></article>
     </div>
 
     <section className={styles.panel}>
-      <div className={styles.panelHeading}><div><h2>Daily overview</h2><p>Attendance recorded across all sections for the selected date.</p></div>
+      <div className={styles.panelHeading}><div><h2>Daily Overview</h2><p>Attendance recorded across all sections for the selected date.</p></div>
         <div className={styles.dateTools}><input type="date" value={date} onChange={e=>setDate(e.target.value)}/><button onClick={()=>void load(date)}><RefreshCw size={16}/>Load</button></div>
       </div>
       <div className={styles.overviewGrid}>

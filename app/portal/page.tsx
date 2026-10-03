@@ -104,18 +104,59 @@ type Profile = {
   must_change_password: boolean;
 };
 
-const commonItems = {
-  overview: { name: "Overview" as Page, icon: LayoutDashboard },
-  grades: { name: "Grades" as Page, icon: GraduationCap },
-  attendance: { name: "Attendance" as Page, icon: ClipboardCheck },
-  schedule: { name: "Class schedule" as Page, icon: CalendarDays },
-  announcements: { name: "Announcements" as Page, icon: Megaphone },
-  resources: { name: "Learning resources" as Page, icon: FolderOpen },
-  students: { name: "Students" as Page, icon: Users },
-  setup: { name: "School setup" as Page, icon: Settings2 },
+type NavigationItem = {
+  name: Page;
+  label: string;
+  icon: typeof LayoutDashboard;
+  group: string;
 };
 
-const navigation: Record<Role, { name: Page; icon: typeof LayoutDashboard }[]> = {
+const commonItems = {
+  overview: {
+    name: "Overview" as Page,
+    label: "Overview",
+    icon: LayoutDashboard,
+    group: "WORKSPACE",
+  },
+  grades: {
+    name: "Grades" as Page,
+    label: "Grades",
+    icon: GraduationCap,
+    group: "ACADEMICS",
+  },
+  attendance: {
+    name: "Attendance" as Page,
+    label: "Attendance",
+    icon: ClipboardCheck,
+    group: "ACADEMICS",
+  },
+  schedule: {
+    name: "Class schedule" as Page,
+    label: "Class Schedule",
+    icon: CalendarDays,
+    group: "ACADEMICS",
+  },
+  announcements: {
+    name: "Announcements" as Page,
+    label: "Announcements",
+    icon: Megaphone,
+    group: "COMMUNICATION",
+  },
+  resources: {
+    name: "Learning resources" as Page,
+    label: "Learning Resources",
+    icon: FolderOpen,
+    group: "COMMUNICATION",
+  },
+  students: {
+    name: "Students" as Page,
+    label: "My Teaching Assignments",
+    icon: Users,
+    group: "TEACHING",
+  },
+};
+
+const navigation: Record<Role, NavigationItem[]> = {
   student: [
     commonItems.overview,
     commonItems.grades,
@@ -133,12 +174,7 @@ const navigation: Record<Role, { name: Page; icon: typeof LayoutDashboard }[]> =
     commonItems.announcements,
     commonItems.resources,
   ],
-  administrator: [
-    commonItems.overview,
-    commonItems.students,
-    commonItems.announcements,
-    commonItems.resources,
-  ],
+  administrator: [commonItems.overview],
   staff_administrator: [commonItems.overview],
 };
 
@@ -148,6 +184,16 @@ const roleLabel: Record<Role, string> = {
   administrator: "Super Administrator",
   staff_administrator: "Administrator",
 };
+
+function pageDisplayTitle(page: Page, role: Role) {
+  if (page === "Students") {
+    return role === "teacher" ? "My Teaching Assignments" : "Learner Management";
+  }
+  if (page === "Class schedule") return "Class Schedule";
+  if (page === "Learning resources") return "Learning Resources";
+  if (page === "School setup") return "School Setup";
+  return page;
+}
 
 function administratorLabel(profile: Profile, adminPermissions: string[] = []) {
   if (profile.role === "administrator") return "Super Administrator";
@@ -183,6 +229,9 @@ function SideNav({
   adminPermissions: string[];
 }) {
   const { setOpenMobile } = useSidebar();
+  const visibleGroups = Array.from(
+    new Set(navigation[profile.role].map((item) => item.group))
+  );
 
   function go(pageName: Page) {
     if (pageName === "Grades" && (profile.role === "teacher" || profile.role === "student")) {
@@ -232,25 +281,31 @@ function SideNav({
           <strong>{schoolYear}</strong>
         </div>
 
-        <p className="nav-label">WORKSPACE</p>
-        <SidebarMenu>
-          {navigation[profile.role].map((item) => (
-            <SidebarMenuItem key={item.name}>
-              <SidebarMenuButton
-                className="nav-button"
-                isActive={page === item.name}
-                onClick={() => go(item.name)}
-              >
-                <item.icon size={19} />
-                <span>{item.name}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+        {visibleGroups.map((group) => (
+          <div className="nav-group-section" key={group}>
+            <p className="nav-label">{group}</p>
+            <SidebarMenu>
+              {navigation[profile.role]
+                .filter((item) => item.group === group)
+                .map((item) => (
+                  <SidebarMenuItem key={item.name}>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      isActive={page === item.name}
+                      onClick={() => go(item.name)}
+                    >
+                      <item.icon size={19} />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+            </SidebarMenu>
+          </div>
+        ))}
 
         {profile.role === "teacher" && (
-          <>
-            <p className="nav-label real-admin-label">PROFILE</p>
+          <div className="nav-group-section">
+            <p className="nav-label">PROFILE</p>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
@@ -264,177 +319,232 @@ function SideNav({
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
-          </>
+          </div>
         )}
 
         {(profile.role === "administrator" || profile.role === "staff_administrator") && (
           <>
-            <p className="nav-label real-admin-label">ADMINISTRATION</p>
-            <SidebarMenu>
-              {(profile.role === "administrator" || adminPermissions.includes("sf10.manage")) && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    className="nav-button"
-                    onClick={() => {
-                      window.location.href = "/portal/admin/sf10";
-                    }}
-                  >
-                    <FileSpreadsheet size={19} />
-                    <span>SF10 Records</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              {(profile.role === "administrator" || adminPermissions.includes("hr.manage")) && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    className="nav-button"
-                    onClick={() => {
-                      window.location.href = "/portal/admin/teacher-profiles";
-                    }}
-                  >
-                    <UserRound size={19} />
-                    <span>Teacher HR profiles</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              {profile.role === "administrator" && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    className="nav-button"
-                    onClick={() => {
-                      window.location.href = "/portal/admin/administrators";
-                    }}
-                  >
-                    <ShieldCheck size={19} />
-                    <span>Administrators</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              {profile.role === "administrator" && (<>
+            {(profile.role === "administrator" || adminPermissions.includes("sf10.manage")) && (
+              <div className="nav-group-section">
+                <p className="nav-label">ACADEMIC MANAGEMENT</p>
+                <SidebarMenu>
+                  {profile.role === "administrator" && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        className="nav-button"
+                        onClick={() => {
+                          window.location.href = "/portal/admin/learners";
+                        }}
+                      >
+                        <GraduationCap size={19} />
+                        <span>Learner Management</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
+                        window.location.href = "/portal/admin/sf10";
+                      }}
+                    >
+                      <FileSpreadsheet size={19} />
+                      <span>SF10 Records</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  {profile.role === "administrator" && (
+                    <>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          className="nav-button"
+                          onClick={() => {
+                            window.location.href = "/portal/admin/teaching";
+                          }}
+                        >
+                          <BookOpen size={19} />
+                          <span>Subjects & Teachers</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          className="nav-button"
+                          onClick={() => {
+                            window.location.href = "/portal/admin/schedules";
+                          }}
+                        >
+                          <CalendarDays size={19} />
+                          <span>Class Schedules</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          className="nav-button"
+                          onClick={() => {
+                            window.location.href = "/portal/admin/attendance";
+                          }}
+                        >
+                          <ClipboardCheck size={19} />
+                          <span>Attendance</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </>
+                  )}
+                </SidebarMenu>
+              </div>
+            )}
 
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/accounts";
-                  }}
-                >
-                  <Users size={19} />
-                  <span>Account approvals</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/users";
-                  }}
-                >
-                  <Users size={19} />
-                  <span>Users & accounts</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/learners";
-                  }}
-                >
-                  <GraduationCap size={19} />
-                  <span>Learner management</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/masterlist";
-                  }}
-                >
-                  <FileSpreadsheet size={19} />
-                  <span>Bulk account import</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/teacher-import";
-                  }}
-                >
-                  <UserRound size={19} />
-                  <span>Teacher profile import</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/password-resets";
-                  }}
-                >
-                  <ShieldCheck size={19} />
-                  <span>Password resets</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/school-setup";
-                  }}
-                >
-                  <Settings2 size={19} />
-                  <span>School setup</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/teaching";
-                  }}
-                >
-                  <BookOpen size={19} />
-                  <span>Subjects & teachers</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/schedules";
-                  }}
-                >
-                  <CalendarDays size={19} />
-                  <span>Class schedules</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/attendance";
-                  }}
-                >
-                  <ClipboardCheck size={19} />
-                  <span>Attendance</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/reports";
-                  }}
-                >
-                  <BarChart3 size={19} />
-                  <span>Reports & analytics</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              </>)}
-            </SidebarMenu>
+            {profile.role === "administrator" && (
+              <div className="nav-group-section">
+                <p className="nav-label">COMMUNICATION</p>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => go("Announcements")}
+                    >
+                      <Megaphone size={19} />
+                      <span>Announcements</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => go("Learning resources")}
+                    >
+                      <FolderOpen size={19} />
+                      <span>Learning Resources</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </div>
+            )}
+
+            {profile.role === "administrator" && (
+              <div className="nav-group-section">
+                <p className="nav-label">ACCOUNTS</p>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
+                        window.location.href = "/portal/admin/users";
+                      }}
+                    >
+                      <Users size={19} />
+                      <span>Users & Accounts</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
+                        window.location.href = "/portal/admin/accounts";
+                      }}
+                    >
+                      <Users size={19} />
+                      <span>Account Approvals</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
+                        window.location.href = "/portal/admin/password-resets";
+                      }}
+                    >
+                      <ShieldCheck size={19} />
+                      <span>Password Resets</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
+                        window.location.href = "/portal/admin/masterlist";
+                      }}
+                    >
+                      <FileSpreadsheet size={19} />
+                      <span>Bulk Account Import</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </div>
+            )}
+
+            {(profile.role === "administrator" || adminPermissions.includes("hr.manage")) && (
+              <div className="nav-group-section">
+                <p className="nav-label">PERSONNEL</p>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
+                        window.location.href = "/portal/admin/teacher-profiles";
+                      }}
+                    >
+                      <UserRound size={19} />
+                      <span>Teacher HR Profiles</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  {profile.role === "administrator" && (
+                    <>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          className="nav-button"
+                          onClick={() => {
+                            window.location.href = "/portal/admin/teacher-import";
+                          }}
+                        >
+                          <UserRound size={19} />
+                          <span>Teacher Profile Import</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          className="nav-button"
+                          onClick={() => {
+                            window.location.href = "/portal/admin/administrators";
+                          }}
+                        >
+                          <ShieldCheck size={19} />
+                          <span>Administrators</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </>
+                  )}
+                </SidebarMenu>
+              </div>
+            )}
+
+            {profile.role === "administrator" && (
+              <div className="nav-group-section">
+                <p className="nav-label">SYSTEM</p>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
+                        window.location.href = "/portal/admin/school-setup";
+                      }}
+                    >
+                      <Settings2 size={19} />
+                      <span>School Setup</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
+                        window.location.href = "/portal/admin/reports";
+                      }}
+                    >
+                      <BarChart3 size={19} />
+                      <span>Reports & Analytics</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </div>
+            )}
           </>
         )}
 
@@ -448,7 +558,7 @@ function SideNav({
           }}
         >
           <LogOut size={18} />
-          Sign out
+          Sign Out
         </SidebarMenuButton>
 
       </SidebarFooter>
@@ -490,7 +600,7 @@ function EmptySection({ page, role }: { page: Page; role: Role }) {
   return (
     <section className="panel real-empty-panel">
       <Icon size={34} />
-      <h2>{page}</h2>
+      <h2>{pageDisplayTitle(page, role)}</h2>
       <p>{descriptions[page]}</p>
     </section>
   );
@@ -735,7 +845,7 @@ export default function PortalPage() {
                 ASUNCION NATIONAL HIGH SCHOOL · SCHOOL YEAR {academicContext?.school_year ?? "2026–2027"}
               </p>
               <h1>
-                {page === "Overview" ? `Welcome, ${profile.full_name}.` : page}
+                {page === "Overview" ? `Welcome, ${profile.full_name}.` : pageDisplayTitle(page, profile.role)}
               </h1>
               <p>
                 {page === "Overview"
@@ -773,17 +883,17 @@ export default function PortalPage() {
                 <div className="real-card-title">
                   <span><UserRound size={18} /></span>
                   <div>
-                    <h2>Account information</h2>
+                    <h2>Account Information</h2>
                     <p>Your verified portal identity</p>
                   </div>
                 </div>
                 <dl>
-                  <div><dt>Full name</dt><dd>{profile.full_name}</dd></div>
+                  <div><dt>Full Name</dt><dd>{profile.full_name}</dd></div>
                   <div><dt>Role</dt><dd>{displayRole}</dd></div>
                   {profile.lrn && <div><dt>LRN</dt><dd>{profile.lrn}</dd></div>}
                   {profile.role === "student" && (
                     <div>
-                      <dt>Grade & section</dt>
+                      <dt>Grade & Section</dt>
                       <dd>
                         {academicContext?.grade_level
                           ? `Grade ${academicContext.grade_level}${academicContext.section ? ` · ${academicContext.section}` : " · Section not assigned"}`
@@ -821,7 +931,7 @@ export default function PortalPage() {
                 <section className="panel real-teacher-assignments">
                   <div className="real-assignment-heading">
                     <div>
-                      <h2>My teaching assignments</h2>
+                      <h2>My Teaching Assignments</h2>
                       <p>{academicContext?.school_year ?? "Current school year"}</p>
                     </div>
                     <span className="tag blue">
@@ -872,7 +982,7 @@ export default function PortalPage() {
             <section className="panel real-teacher-class-page">
               <div className="real-assignment-heading">
                 <div>
-                  <h2>Assigned classes</h2>
+                  <h2>Assigned Classes</h2>
                   <p>
                     These are the sections and subjects currently assigned to your
                     Teacher account.
@@ -911,7 +1021,7 @@ export default function PortalPage() {
               <section className="panel real-adviser-major-panel">
                 <div className="real-assignment-heading">
                   <div>
-                    <h2>Adviser TVE Major assignment</h2>
+                    <h2>Adviser TVE Major Assignment</h2>
                     <p>
                       Set the Technical Vocational Education major for learners in your
                       Grade 8–10 advisory section.
@@ -978,7 +1088,7 @@ export default function PortalPage() {
               <section className="panel real-schedule-page">
                 <div className="real-assignment-heading">
                   <div>
-                    <h2>Class schedule</h2>
+                    <h2>Class Schedule</h2>
                     <p>
                       {academicContext?.school_year ?? "Current school year"} ·
                       official published class schedule

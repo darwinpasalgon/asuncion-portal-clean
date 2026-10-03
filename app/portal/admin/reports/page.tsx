@@ -340,7 +340,7 @@ export default function ReportsPage(){
     <header className={styles.header}>
       <div>
         <span className={styles.eyebrow}>ADMINISTRATION</span>
-        <h1>Reports & analytics</h1>
+        <h1>Reports & Analytics</h1>
         <p>Enrollment, grades, intervention, attendance, and class-list reports from the live academic database.</p>
       </div>
       {activeYear&&<div className={styles.yearCard}><CheckCircle2 size={18}/><div><span>SCHOOL YEAR</span><strong>{activeYear.name}</strong></div></div>}
@@ -353,8 +353,8 @@ export default function ReportsPage(){
       <label><span>Section</span><select value={section} onChange={e=>setSection(e.target.value)}><option value="">All sections</option>{sectionOptions.map(s=><option key={s.id} value={s.id}>{"Grade "+s.grade_level+" · "+s.name}</option>)}</select></label>
       <label><span>Teacher</span><select value={teacher} onChange={e=>setTeacher(e.target.value)}><option value="">All teachers</option>{teachers.map(t=><option key={t.id} value={t.id}>{t.full_name}</option>)}</select></label>
       <label><span>Subject</span><select value={subject} onChange={e=>setSubject(e.target.value)}><option value="">All subjects</option>{subjectOptions.map(s=><option key={s.id} value={s.id}>{s.name}{s.code?" ("+s.code+")":""}</option>)}</select></label>
-      <label><span>Attendance from</span><input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label>
-      <label><span>Attendance to</span><input type="date" value={to} onChange={e=>setTo(e.target.value)}/></label>
+      <label><span>Attendance From</span><input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label>
+      <label><span>Attendance To</span><input type="date" value={to} onChange={e=>setTo(e.target.value)}/></label>
       <button className={styles.apply} disabled={loading} onClick={()=>void load()}><RefreshCw size={16}/>{loading?"Loading…":"Apply filters"}</button>
     </section>
 
@@ -375,15 +375,15 @@ export default function ReportsPage(){
     {loading?<section className={styles.loading}><BarChart3 size={30}/><strong>Building report…</strong></section>:<>
       {tab==="overview"&&<div className={styles.overview}>
         <div className={styles.metrics}>
-          <article><Users size={22}/><span>Enrolled students</span><strong>{counts.enrolled_students}</strong></article>
-          <article><ClipboardList size={22}/><span>Teaching assignments</span><strong>{counts.active_assignments}</strong></article>
-          <article><GraduationCap size={22}/><span>Published term grades</span><strong>{counts.published_term_grades}</strong><small>{counts.draft_term_grades} draft</small></article>
-          <article><CheckCircle2 size={22}/><span>Complete final grades</span><strong>{counts.complete_final_grades}</strong><small>{counts.final_passed} passed · {counts.final_failed} failed</small></article>
+          <article><Users size={22}/><span>Enrolled Students</span><strong>{counts.enrolled_students}</strong></article>
+          <article><ClipboardList size={22}/><span>Teaching Assignments</span><strong>{counts.active_assignments}</strong></article>
+          <article><GraduationCap size={22}/><span>Published Term Grades</span><strong>{counts.published_term_grades}</strong><small>{counts.draft_term_grades} draft</small></article>
+          <article><CheckCircle2 size={22}/><span>Complete Final Grades</span><strong>{counts.complete_final_grades}</strong><small>{counts.final_passed} passed · {counts.final_failed} failed</small></article>
         </div>
 
         <div className={styles.twoColumns}>
           <section className={styles.panel}>
-            <div className={styles.panelHead}><div><h2>Proficiency distribution</h2><p>All published Term Grades matching the current filters.</p></div></div>
+            <div className={styles.panelHead}><div><h2>Proficiency Distribution</h2><p>All published Term Grades matching the current filters.</p></div></div>
             <div className={styles.bars}>
               <div><span>Advancing · 90–100</span><b>{distribution.advancing}</b><i><em style={{width:distWidth(distribution.advancing)+"%"}}/></i></div>
               <div><span>Benchmarking · 80–89</span><b>{distribution.benchmarking}</b><i><em style={{width:distWidth(distribution.benchmarking)+"%"}}/></i></div>
@@ -394,7 +394,7 @@ export default function ReportsPage(){
           </section>
 
           <section className={styles.panel}>
-            <div className={styles.panelHead}><div><h2>Attendance totals</h2><p>{from||"Start"} to {to||"Latest"} for the current filters.</p></div></div>
+            <div className={styles.panelHead}><div><h2>Attendance Totals</h2><p>{from||"Start"} to {to||"Latest"} for the current filters.</p></div></div>
             <div className={styles.attendanceCards}>
               <div><span>Present</span><strong>{attendanceTotals.present}</strong></div>
               <div><span>Late</span><strong>{attendanceTotals.late}</strong></div>
@@ -409,7 +409,7 @@ export default function ReportsPage(){
       {(tab==="grades"||tab==="intervention")&&<section className={styles.panel}>
         <div className={styles.panelHead}>
           <div>
-            <h2>{tab==="grades"?"Grade report":"Learners needing intervention"}</h2>
+            <h2>{tab==="grades"?"Grade Report":"Learners Needing Intervention"}</h2>
             <p>{tab==="grades"?"Published grades only.":"Only records below 75 for the selected period."}</p>
           </div>
           <select className={styles.periodSelect} value={period} onChange={e=>setPeriod(e.target.value as GradePeriod)}>
@@ -445,7 +445,7 @@ export default function ReportsPage(){
       </section>}
 
       {tab==="attendance"&&<section className={styles.panel}>
-        <div className={styles.panelHead}><div><h2>Attendance summary</h2><p>Present + Late is used for the displayed attendance rate. No risk threshold is applied.</p></div></div>
+        <div className={styles.panelHead}><div><h2>Attendance Summary</h2><p>Present + Late is used for the displayed attendance rate. No risk threshold is applied.</p></div></div>
         <div className={styles.tableWrap}>
           <table>
             <thead><tr><th>LRN</th><th>Learner</th><th>Class</th><th>Recorded</th><th>Present</th><th>Late</th><th>Absent</th><th>Excused</th><th>Rate</th></tr></thead>
@@ -461,7 +461,7 @@ export default function ReportsPage(){
       </section>}
 
       {tab==="classlist"&&<section className={styles.panel}>
-        <div className={styles.panelHead}><div><h2>Class list</h2><p>Active student enrollments for {activeYear?.name??"the current school year"}.</p></div><span className={styles.countBadge}>{classList.length} student{classList.length===1?"":"s"}</span></div>
+        <div className={styles.panelHead}><div><h2>Class List</h2><p>Active student enrollments for {activeYear?.name??"the current school year"}.</p></div><span className={styles.countBadge}>{classList.length} student{classList.length===1?"":"s"}</span></div>
         <div className={styles.tableWrap}>
           <table>
             <thead><tr><th>No.</th><th>LRN</th><th>Learner</th><th>Grade</th><th>Section</th></tr></thead>

@@ -106,17 +106,17 @@ export default function PasswordResetRequestsPage() {
         <nav className={styles.topActions} aria-label="Administrator navigation">
           <a className={styles.topLink} href="/portal">
             <ArrowLeft size={16} />
-            <span>Back to portal</span>
+            <span>Back to Portal</span>
           </a>
           <a className={styles.topLink} href="/portal/admin/accounts">
-            <span>Account approvals</span>
+            <span>Account Approvals</span>
           </a>
         </nav>
 
         <header className={styles.header}>
           <div>
             <span className={styles.eyebrow}>ADMINISTRATION</span>
-            <h1>Password reset requests</h1>
+            <h1>Password Reset Requests</h1>
             <p>
               Verify the user against official school records before creating a
               temporary password. Temporary passwords expire after 24 hours and
@@ -132,7 +132,7 @@ export default function PasswordResetRequestsPage() {
           <section className={styles.panel}>
             <div className={styles.panelTop}>
               <div>
-                <h2>Temporary password created</h2>
+                <h2>Temporary Password Created</h2>
                 <p>Copy it now. The portal will not display it again after this page is closed.</p>
               </div>
             </div>
@@ -161,7 +161,7 @@ export default function PasswordResetRequestsPage() {
         <section className={styles.panel + " " + styles.panelSpacing}>
           <div className={styles.panelTop}>
             <div>
-              <h2>Pending reset requests</h2>
+              <h2>Pending Reset Requests</h2>
               <p>{requests.length} request{requests.length === 1 ? "" : "s"} awaiting identity verification</p>
             </div>
             <button className={styles.refresh} onClick={() => void loadRequests()} disabled={loading}>

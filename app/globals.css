@@ -681,3 +681,24 @@ body{margin:0;background:var(--background);color:var(--foreground);font-family:A
     animation:none!important;
   }
 }
+
+
+/* Task-grouped portal navigation */
+.nav-group-section{
+  padding-bottom:2px;
+}
+.nav-group-section + .nav-group-section{
+  margin-top:18px;
+  padding-top:18px;
+  border-top:1px solid rgba(104,132,118,.14);
+}
+.nav-group-section .nav-label{
+  margin-bottom:8px;
+  color:#6d8177;
+  font-size:.62rem;
+  font-weight:800;
+  letter-spacing:.12em;
+}
+.nav-group-section .nav-button span{
+  line-height:1.3;
+}

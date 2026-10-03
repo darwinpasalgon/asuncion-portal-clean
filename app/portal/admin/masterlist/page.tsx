@@ -757,7 +757,7 @@ export default function BulkAccountImportPage() {
         <header className={styles.header}>
           <div>
             <span>ADMINISTRATION</span>
-            <h1>Bulk account import</h1>
+            <h1>Bulk Account Import</h1>
             <p>
               Create school-managed Learner and Teacher accounts in bulk.
               Learners can use the original SF1 Excel file (.xls or .xlsx) and are grouped by selected Grade Level and Section. CSV remains available as an alternative. Every imported user receives
@@ -772,7 +772,7 @@ export default function BulkAccountImportPage() {
 
         <section className={styles.panel}>
           <div className={styles.panelHead}>
-            <div><h2>Prepare the account file</h2><p>No public registration is used. Accounts are created by the school Administrator.</p></div>
+            <div><h2>Prepare the Account File</h2><p>No public registration is used. Accounts are created by the school Administrator.</p></div>
             <FileSpreadsheet size={24} />
           </div>
 
@@ -913,7 +913,7 @@ export default function BulkAccountImportPage() {
 
         {credentials.length > 0 && (
           <section className={styles.credentials}>
-            <div><KeyRound size={22} /><div><h2>Temporary credentials</h2><p>Download these now. Temporary passwords are not stored in plaintext by the portal.</p></div></div>
+            <div><KeyRound size={22} /><div><h2>Temporary Credentials</h2><p>Download these now. Temporary passwords are not stored in plaintext by the portal.</p></div></div>
             <button onClick={downloadCredentials}><Download size={16} />Download credentials CSV</button>
             <p className={styles.warning}>
               Give each user only their own credentials. On first sign-in, the portal automatically requires a new private password.
