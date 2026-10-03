@@ -587,3 +587,9 @@ body{margin:0;background:var(--background);color:var(--foreground);font-family:A
   }
   .anhs-action-wait-card{background:rgba(255,255,255,.97)!important}
 }
+
+
+/* Cleanup pass */
+.real-overview-grid>.real-profile-card:last-child{grid-column:1/-1}
+.page-heading{align-items:flex-start}
+@media(max-width:1000px){.real-overview-grid>.real-profile-card:last-child{grid-column:auto}}
