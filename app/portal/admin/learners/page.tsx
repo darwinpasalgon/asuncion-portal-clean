@@ -11,7 +11,6 @@ import {
   GraduationCap,
   History,
   KeyRound,
-  RefreshCw,
   Search,
   UserRound,
   Users,
@@ -764,9 +763,6 @@ export default function LearnerManagementPage() {
               ))}
             </select>
 
-            <button className={styles.refresh} onClick={() => void loadData()} disabled={loading}>
-              <RefreshCw size={16} />Refresh
-            </button>
           </div>
 
           <div className={styles.summaryBar}>
