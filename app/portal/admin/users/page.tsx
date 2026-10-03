@@ -394,7 +394,7 @@ export default function UsersAccountsPage() {
         <header className={styles.header}>
           <div>
             <span>ADMINISTRATION</span>
-            <h1>Users & accounts</h1>
+            <h1>Users & Accounts</h1>
             <p>
               Edit official Student and Teacher information, control account
               access, and safely remove unused accounts.
@@ -580,7 +580,7 @@ export default function UsersAccountsPage() {
             <div className={styles.modalHead}>
               <div>
                 <span>EDIT {editing.personType.toUpperCase()}</span>
-                <h2>{editing.personType === "student" ? "Learner profile" : "Update account information"}</h2>
+                <h2>{editing.personType === "student" ? "Learner Profile" : "Update Account Information"}</h2>
               </div>
               <button
                 className={styles.iconButton}
@@ -626,7 +626,7 @@ export default function UsersAccountsPage() {
                       </label>
 
                       <label>
-                        <span>Grade level</span>
+                        <span>Grade Level</span>
                         <select
                           value={editing.gradeLevel}
                           onChange={(event) =>
@@ -675,7 +675,7 @@ export default function UsersAccountsPage() {
 
                     <div className={styles.fourCol}>
                       <label>
-                        <span>Last name</span>
+                        <span>Last Name</span>
                         <input
                           value={editing.learnerInfo.last_name}
                           onChange={(event) =>
@@ -690,7 +690,7 @@ export default function UsersAccountsPage() {
                         />
                       </label>
                       <label>
-                        <span>First name</span>
+                        <span>First Name</span>
                         <input
                           value={editing.learnerInfo.first_name}
                           onChange={(event) =>
@@ -705,7 +705,7 @@ export default function UsersAccountsPage() {
                         />
                       </label>
                       <label>
-                        <span>Middle name</span>
+                        <span>Middle Name</span>
                         <input
                           value={editing.learnerInfo.middle_name}
                           onChange={(event) =>
@@ -720,7 +720,7 @@ export default function UsersAccountsPage() {
                         />
                       </label>
                       <label>
-                        <span>Name extension</span>
+                        <span>Name Extension</span>
                         <input
                           value={editing.learnerInfo.name_extension}
                           onChange={(event) =>
@@ -758,7 +758,7 @@ export default function UsersAccountsPage() {
                         </select>
                       </label>
                       <label>
-                        <span>Birth date</span>
+                        <span>Birth Date</span>
                         <input
                           type="date"
                           value={editing.learnerInfo.birth_date}
@@ -788,7 +788,7 @@ export default function UsersAccountsPage() {
 
                     <div className={styles.threeCol}>
                       <label>
-                        <span>Mother tongue</span>
+                        <span>Mother Tongue</span>
                         <input
                           value={editing.learnerInfo.mother_tongue}
                           onChange={(event) =>
@@ -803,7 +803,7 @@ export default function UsersAccountsPage() {
                         />
                       </label>
                       <label>
-                        <span>Ethnic group</span>
+                        <span>Ethnic Group</span>
                         <input
                           value={editing.learnerInfo.ethnic_group}
                           onChange={(event) =>
@@ -911,7 +911,7 @@ export default function UsersAccountsPage() {
                     </div>
                     <div className={styles.twoCol}>
                       <label>
-                        <span>Father&apos;s name</span>
+                        <span>Father&apos;s Name</span>
                         <input
                           value={editing.learnerInfo.father_name}
                           onChange={(event) =>
@@ -926,7 +926,7 @@ export default function UsersAccountsPage() {
                         />
                       </label>
                       <label>
-                        <span>Mother&apos;s maiden name</span>
+                        <span>Mother&apos;s Maiden Name</span>
                         <input
                           value={editing.learnerInfo.mother_maiden_name}
                           onChange={(event) =>
@@ -943,7 +943,7 @@ export default function UsersAccountsPage() {
                     </div>
                     <div className={styles.threeCol}>
                       <label>
-                        <span>Guardian name</span>
+                        <span>Guardian Name</span>
                         <input
                           value={editing.learnerInfo.guardian_name}
                           onChange={(event) =>
@@ -973,7 +973,7 @@ export default function UsersAccountsPage() {
                         />
                       </label>
                       <label>
-                        <span>Parent / guardian contact number</span>
+                        <span>Parent / Guardian Contact Number</span>
                         <input
                           value={editing.learnerInfo.guardian_contact_number}
                           onChange={(event) =>
@@ -997,7 +997,7 @@ export default function UsersAccountsPage() {
                     </div>
                     <div className={styles.twoCol}>
                       <label>
-                        <span>Learning modality</span>
+                        <span>Learning Modality</span>
                         <input
                           value={editing.learnerInfo.learning_modality}
                           onChange={(event) =>
@@ -1034,7 +1034,7 @@ export default function UsersAccountsPage() {
               ) : (
                 <>
                   <label>
-                    <span>Login email</span>
+                    <span>Login Email</span>
                     <input
                       type="email"
                       value={editing.email}
@@ -1069,7 +1069,7 @@ export default function UsersAccountsPage() {
                   </label>
 
                   <label>
-                    <span>Mobile / contact number</span>
+                    <span>Mobile / Contact Number</span>
                     <input
                       value={editing.recoveryPhone}
                       onChange={(event) =>
@@ -1101,7 +1101,7 @@ export default function UsersAccountsPage() {
         <div className={styles.modalBackdrop} role="presentation">
           <section className={styles.modal} role="dialog" aria-modal="true">
             <div className={styles.deleteIcon}><Trash2 size={22} /></div>
-            <h2>Permanently delete account?</h2>
+            <h2>Permanently Delete Account?</h2>
             <p className={styles.deleteText}>
               You are about to permanently delete <strong>{deleteTarget.full_name}</strong>.
               If this person already has protected school records, the portal will
@@ -1109,7 +1109,7 @@ export default function UsersAccountsPage() {
             </p>
 
             <label>
-              <span>Type DELETE to confirm</span>
+              <span>Type DELETE to Confirm</span>
               <input
                 value={deleteText}
                 onChange={(event) => setDeleteText(event.target.value)}
