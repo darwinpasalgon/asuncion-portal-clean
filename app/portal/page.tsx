@@ -219,6 +219,9 @@ function SideNav({
   adminPermissions: string[];
 }) {
   const { setOpenMobile } = useSidebar();
+  const visibleGroups = Array.from(
+    new Set(navigation[profile.role].map((item) => item.group))
+  );
 
   function go(pageName: Page) {
     if (pageName === "Grades" && (profile.role === "teacher" || profile.role === "student")) {
@@ -268,25 +271,31 @@ function SideNav({
           <strong>{schoolYear}</strong>
         </div>
 
-        <p className="nav-label">WORKSPACE</p>
-        <SidebarMenu>
-          {navigation[profile.role].map((item) => (
-            <SidebarMenuItem key={item.name}>
-              <SidebarMenuButton
-                className="nav-button"
-                isActive={page === item.name}
-                onClick={() => go(item.name)}
-              >
-                <item.icon size={19} />
-                <span>{item.name}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+        {visibleGroups.map((group) => (
+          <div className="nav-group-section" key={group}>
+            <p className="nav-label">{group}</p>
+            <SidebarMenu>
+              {navigation[profile.role]
+                .filter((item) => item.group === group)
+                .map((item) => (
+                  <SidebarMenuItem key={item.name}>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      isActive={page === item.name}
+                      onClick={() => go(item.name)}
+                    >
+                      <item.icon size={19} />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+            </SidebarMenu>
+          </div>
+        ))}
 
         {profile.role === "teacher" && (
-          <>
-            <p className="nav-label real-admin-label">PROFILE</p>
+          <div className="nav-group-section">
+            <p className="nav-label">PROFILE</p>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
@@ -300,177 +309,226 @@ function SideNav({
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
-          </>
+          </div>
         )}
 
         {(profile.role === "administrator" || profile.role === "staff_administrator") && (
           <>
-            <p className="nav-label real-admin-label">ADMINISTRATION</p>
-            <SidebarMenu>
-              {(profile.role === "administrator" || adminPermissions.includes("sf10.manage")) && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    className="nav-button"
-                    onClick={() => {
-                      window.location.href = "/portal/admin/sf10";
-                    }}
-                  >
-                    <FileSpreadsheet size={19} />
-                    <span>SF10 Records</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              {(profile.role === "administrator" || adminPermissions.includes("hr.manage")) && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    className="nav-button"
-                    onClick={() => {
-                      window.location.href = "/portal/admin/teacher-profiles";
-                    }}
-                  >
-                    <UserRound size={19} />
-                    <span>Teacher HR profiles</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              {profile.role === "administrator" && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    className="nav-button"
-                    onClick={() => {
-                      window.location.href = "/portal/admin/administrators";
-                    }}
-                  >
-                    <ShieldCheck size={19} />
-                    <span>Administrators</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              {profile.role === "administrator" && (<>
+            {(profile.role === "administrator" || adminPermissions.includes("sf10.manage")) && (
+              <div className="nav-group-section">
+                <p className="nav-label">ACADEMIC MANAGEMENT</p>
+                <SidebarMenu>
+                  {profile.role === "administrator" && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        className="nav-button"
+                        onClick={() => {
+                          window.location.href = "/portal/admin/learners";
+                        }}
+                      >
+                        <GraduationCap size={19} />
+                        <span>Learner Management</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
+                        window.location.href = "/portal/admin/sf10";
+                      }}
+                    >
+                      <FileSpreadsheet size={19} />
+                      <span>SF10 Records</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  {profile.role === "administrator" && (
+                    <>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          className="nav-button"
+                          onClick={() => {
+                            window.location.href = "/portal/admin/teaching";
+                          }}
+                        >
+                          <BookOpen size={19} />
+                          <span>Subjects & Teachers</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          className="nav-button"
+                          onClick={() => {
+                            window.location.href = "/portal/admin/schedules";
+                          }}
+                        >
+                          <CalendarDays size={19} />
+                          <span>Class Schedules</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          className="nav-button"
+                          onClick={() => {
+                            window.location.href = "/portal/admin/attendance";
+                          }}
+                        >
+                          <ClipboardCheck size={19} />
+                          <span>Attendance</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </>
+                  )}
+                </SidebarMenu>
+              </div>
+            )}
 
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/accounts";
-                  }}
-                >
-                  <Users size={19} />
-                  <span>Account approvals</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/users";
-                  }}
-                >
-                  <Users size={19} />
-                  <span>Users & accounts</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/learners";
-                  }}
-                >
-                  <GraduationCap size={19} />
-                  <span>Learner management</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/masterlist";
-                  }}
-                >
-                  <FileSpreadsheet size={19} />
-                  <span>Bulk account import</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/teacher-import";
-                  }}
-                >
-                  <UserRound size={19} />
-                  <span>Teacher profile import</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/password-resets";
-                  }}
-                >
-                  <ShieldCheck size={19} />
-                  <span>Password resets</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/school-setup";
-                  }}
-                >
-                  <Settings2 size={19} />
-                  <span>School setup</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/teaching";
-                  }}
-                >
-                  <BookOpen size={19} />
-                  <span>Subjects & teachers</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/schedules";
-                  }}
-                >
-                  <CalendarDays size={19} />
-                  <span>Class schedules</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/attendance";
-                  }}
-                >
-                  <ClipboardCheck size={19} />
-                  <span>Attendance</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="nav-button"
-                  onClick={() => {
-                    window.location.href = "/portal/admin/reports";
-                  }}
-                >
-                  <BarChart3 size={19} />
-                  <span>Reports & analytics</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              </>)}
-            </SidebarMenu>
+            {profile.role === "administrator" && (
+              <div className="nav-group-section">
+                <p className="nav-label">COMMUNICATION</p>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => go("Announcements")}
+                    >
+                      <Megaphone size={19} />
+                      <span>Announcements</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => go("Learning resources")}
+                    >
+                      <FolderOpen size={19} />
+                      <span>Learning Resources</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </div>
+            )}
+
+            {(profile.role === "administrator" || adminPermissions.includes("hr.manage")) && (
+              <div className="nav-group-section">
+                <p className="nav-label">ACCOUNTS & PERSONNEL</p>
+                <SidebarMenu>
+                  {(profile.role === "administrator" || adminPermissions.includes("hr.manage")) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        className="nav-button"
+                        onClick={() => {
+                          window.location.href = "/portal/admin/teacher-profiles";
+                        }}
+                      >
+                        <UserRound size={19} />
+                        <span>Teacher HR Profiles</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {profile.role === "administrator" && (
+                    <>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          className="nav-button"
+                          onClick={() => {
+                            window.location.href = "/portal/admin/administrators";
+                          }}
+                        >
+                          <ShieldCheck size={19} />
+                          <span>Administrators</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          className="nav-button"
+                          onClick={() => {
+                            window.location.href = "/portal/admin/accounts";
+                          }}
+                        >
+                          <Users size={19} />
+                          <span>Account Approvals</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          className="nav-button"
+                          onClick={() => {
+                            window.location.href = "/portal/admin/users";
+                          }}
+                        >
+                          <Users size={19} />
+                          <span>Users & Accounts</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          className="nav-button"
+                          onClick={() => {
+                            window.location.href = "/portal/admin/masterlist";
+                          }}
+                        >
+                          <FileSpreadsheet size={19} />
+                          <span>Bulk Account Import</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          className="nav-button"
+                          onClick={() => {
+                            window.location.href = "/portal/admin/teacher-import";
+                          }}
+                        >
+                          <UserRound size={19} />
+                          <span>Teacher Profile Import</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          className="nav-button"
+                          onClick={() => {
+                            window.location.href = "/portal/admin/password-resets";
+                          }}
+                        >
+                          <ShieldCheck size={19} />
+                          <span>Password Resets</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </>
+                  )}
+                </SidebarMenu>
+              </div>
+            )}
+
+            {profile.role === "administrator" && (
+              <div className="nav-group-section">
+                <p className="nav-label">SYSTEM</p>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
+                        window.location.href = "/portal/admin/school-setup";
+                      }}
+                    >
+                      <Settings2 size={19} />
+                      <span>School Setup</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
+                        window.location.href = "/portal/admin/reports";
+                      }}
+                    >
+                      <BarChart3 size={19} />
+                      <span>Reports & Analytics</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </div>
+            )}
           </>
         )}
 
