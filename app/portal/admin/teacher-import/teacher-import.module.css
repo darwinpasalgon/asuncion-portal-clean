@@ -330,3 +330,43 @@
   .importBar { align-items: stretch; flex-direction: column; }
   .topbar { flex-direction: column; }
 }
+
+
+.recoveryPanel{
+  border-color:#c9dfe9;
+  background:linear-gradient(135deg,rgba(237,247,252,.92),rgba(239,249,243,.92));
+}
+.recoveryActions{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  padding:16px 17px;
+  border:1px solid #d5e6e8;
+  border-radius:14px;
+  background:rgba(255,255,255,.72);
+}
+.recoveryActions strong,.recoveryActions span{display:block}
+.recoveryActions strong{color:#245874}
+.recoveryActions span{margin-top:4px;color:#6d817a;font-size:.82rem;line-height:1.5}
+.recoveryActions button{
+  min-height:44px;
+  flex:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:0 15px;
+  border:0;
+  border-radius:11px;
+  background:linear-gradient(105deg,#176ca4,#177b59);
+  color:#fff;
+  font-weight:800;
+  cursor:pointer;
+  box-shadow:0 10px 24px rgba(24,99,124,.14);
+}
+.recoveryActions button:disabled{opacity:.58;cursor:not-allowed}
+@media(max-width:760px){
+  .recoveryActions{align-items:stretch;flex-direction:column}
+  .recoveryActions button{width:100%}
+}
