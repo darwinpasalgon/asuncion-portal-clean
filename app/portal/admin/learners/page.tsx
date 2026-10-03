@@ -986,7 +986,16 @@ export default function LearnerManagementPage() {
             </div>
 
             <div className={styles.detailGrid}>
-              <div><span>Sex</span><strong>{display(detailLearner.learner_info?.sex)}</strong></div>
+              <div>
+                <span>Sex</span>
+                <strong>
+                  {detailLearner.learner_info?.sex === "M"
+                    ? "Male"
+                    : detailLearner.learner_info?.sex === "F"
+                      ? "Female"
+                      : "—"}
+                </strong>
+              </div>
               <div><span>Birth date</span><strong>{dateLabel(detailLearner.learner_info?.birth_date)}</strong></div>
               <div><span>Mother tongue</span><strong>{display(detailLearner.learner_info?.mother_tongue)}</strong></div>
               <div><span>Ethnic group</span><strong>{display(detailLearner.learner_info?.ethnic_group)}</strong></div>
