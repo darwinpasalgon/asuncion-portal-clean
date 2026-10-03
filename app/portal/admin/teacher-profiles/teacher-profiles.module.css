@@ -642,3 +642,19 @@
   .saveBar{align-items:stretch}
   .saveBar button{width:100%;justify-content:center}
 }
+
+
+/* Final alignment cleanup */
+.header{justify-content:flex-start}
+.directoryHead{justify-content:flex-start}
+.saveBar{justify-content:flex-end}
+.grid label>span{
+  min-height:2.05em;
+  display:flex;
+  align-items:flex-end;
+  line-height:1.35;
+}
+@media(max-width:700px){
+  .grid label>span{min-height:0}
+  .saveBar button{width:100%;justify-content:center}
+}
