@@ -104,6 +104,137 @@ Deno.serve(async (req) => {
   }
 
   const body = await req.json().catch(() => ({}));
+  const action = String(body.action ?? "import");
+
+  async function firstLoginTeacherCandidates() {
+    const { data: profiles, error: profileError } = await admin
+      .from("profiles")
+      .select("id,full_name,email,position,role,account_status,must_change_password")
+      .eq("role", "teacher")
+      .eq("account_status", "active")
+      .eq("must_change_password", true);
+
+    if (profileError) throw new Error("Unable to load Teacher accounts.");
+
+    const { data: authPage, error: authError } = await admin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+    if (authError) throw new Error("Unable to inspect Teacher sign-in status.");
+
+    const authById = new Map((authPage.users ?? []).map((user) => [user.id, user]));
+    return (profiles ?? []).filter((profile) => {
+      const authUser = authById.get(profile.id);
+      return authUser && !authUser.last_sign_in_at;
+    });
+  }
+
+  if (action === "credential_candidates") {
+    try {
+      const candidates = await firstLoginTeacherCandidates();
+      return json({
+        ok: true,
+        count: candidates.length,
+        candidates: candidates.map((item) => ({
+          id: item.id,
+          full_name: item.full_name,
+          email: item.email,
+          position: item.position,
+        })),
+      });
+    } catch (error) {
+      return json(
+        { error: error instanceof Error ? error.message : "Unable to load Teacher accounts." },
+        500
+      );
+    }
+  }
+
+  if (action === "reissue_credentials") {
+    const userIds = Array.from(
+      new Set(
+        (Array.isArray(body.user_ids) ? body.user_ids : [])
+          .map((value: unknown) => String(value ?? "").trim())
+          .filter(Boolean)
+      )
+    ).slice(0, 20);
+
+    if (!userIds.length) {
+      return json({ error: "Select at least one Teacher account." }, 400);
+    }
+
+    try {
+      const candidates = await firstLoginTeacherCandidates();
+      const allowed = new Map(candidates.map((item) => [item.id, item]));
+      const credentials: Array<Record<string, unknown>> = [];
+      const errors: Array<Record<string, unknown>> = [];
+
+      for (const userId of userIds) {
+        const profile = allowed.get(userId);
+        if (!profile) {
+          errors.push({ user_id: userId, error: "Account is not eligible for first-login credential recovery." });
+          continue;
+        }
+
+        const password = temporaryPassword();
+        const { error: passwordError } = await admin.auth.admin.updateUserById(userId, {
+          password,
+        });
+
+        if (passwordError) {
+          errors.push({ user_id: userId, error: "Unable to update the temporary password." });
+          continue;
+        }
+
+        const { error: profileUpdateError } = await admin
+          .from("profiles")
+          .update({
+            must_change_password: true,
+            temp_password_expires_at: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", userId);
+
+        if (profileUpdateError) {
+          errors.push({ user_id: userId, error: "Password updated but the first-login flag could not be refreshed." });
+          continue;
+        }
+
+        await admin
+          .from("password_reset_requests")
+          .update({
+            status: "cancelled",
+            resolved_at: new Date().toISOString(),
+            resolved_by: callerId,
+          })
+          .eq("user_id", userId)
+          .eq("status", "pending");
+
+        credentials.push({
+          user_id: userId,
+          full_name: profile.full_name,
+          identifier: profile.email,
+          position: profile.position,
+          temporary_password: password,
+          credential_status: "reissued",
+        });
+      }
+
+      return json({
+        ok: errors.length === 0,
+        credentials,
+        errors,
+      }, errors.length && !credentials.length ? 500 : 200);
+    } catch (error) {
+      return json(
+        { error: error instanceof Error ? error.message : "Unable to recover Teacher credentials." },
+        500
+      );
+    }
+  }
+
+  if (action !== "import") return json({ error: "Invalid action." }, 400);
+
   const personType: PersonType = body.person_type === "teacher" ? "teacher" : "student";
   const fileName = String(body.file_name ?? "Account import.csv").slice(0, 255);
   const rows = Array.isArray(body.rows) ? (body.rows as ImportRow[]) : [];
@@ -246,27 +377,8 @@ Deno.serve(async (req) => {
                 .eq("id", existingProfile[0].id);
             }
 
-            // A previous large import may have created the account before the worker timed out.
-            // If the teacher still has the one-time-password flag, issue a fresh password so
-            // the administrator never loses access to the credential after an interrupted batch.
-            if (existingProfile[0].must_change_password) {
-              const recoveryPassword = temporaryPassword();
-              const { error: passwordError } = await admin.auth.admin.updateUserById(
-                existingProfile[0].id,
-                { password: recoveryPassword }
-              );
-              if (passwordError) {
-                throw new Error("Unable to reissue the temporary password for this Teacher account.");
-              }
-              reissuedCredentials.push({
-                row_number: rowNumber,
-                full_name: fullName,
-                identifier: email,
-                position,
-                temporary_password: recoveryPassword,
-                credential_status: "reissued",
-              });
-            }
+            // Updating a Teacher Profile must never change the account password.
+            // First-login credential recovery is handled only by the explicit recovery action.
 
             updatedProfiles += 1;
           } catch (error) {
