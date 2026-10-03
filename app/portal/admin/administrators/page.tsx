@@ -301,7 +301,7 @@ export default function AdministratorsPage() {
         <section className={styles.panel} id="administrator-access-form">
           <div className={styles.panelHeading}>
             <div>
-              <h2>Add delegated Administrator</h2>
+              <h2>Add Delegated Administrator</h2>
               <p>Your Super Administrator account remains separate and cannot be created or replaced here.</p>
             </div>
             <UserPlus size={24} />
@@ -331,7 +331,7 @@ export default function AdministratorsPage() {
               </div>
             )}
             <label>
-              <span>Full name</span>
+              <span>Full Name</span>
               <input
                 name="fullName"
                 required
@@ -342,7 +342,7 @@ export default function AdministratorsPage() {
               />
             </label>
             <label>
-              <span>Email address</span>
+              <span>Email Address</span>
               <input
                 name="email"
                 required
@@ -370,7 +370,7 @@ export default function AdministratorsPage() {
               </select>
             </label>
             <label>
-              <span>Administrator role</span>
+              <span>Administrator Role</span>
               <select
                 value={adminRole}
                 onChange={(event) => {
@@ -434,7 +434,7 @@ export default function AdministratorsPage() {
         <section className={styles.panel}>
           <div className={styles.panelHeading}>
             <div>
-              <h2>Administrator accounts</h2>
+              <h2>Administrator Accounts</h2>
               <p>Only your account should show as Super Administrator unless you intentionally change the system design later.</p>
             </div>
           </div>
