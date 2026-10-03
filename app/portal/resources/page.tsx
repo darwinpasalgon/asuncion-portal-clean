@@ -189,7 +189,7 @@ export default function ResourcesPage(){
     <header className={styles.header}>
       <div>
         <span className={styles.eyebrow}>ACADEMIC MATERIALS</span>
-        <h1>Learning resources</h1>
+        <h1>Learning Resources</h1>
         <p>Class materials, activity sheets, modules, reviewers, references, and useful links for the active school year.</p>
       </div>
       {activeYear&&<div className={styles.yearCard}><CheckCircle2 size={18}/><div><span>SCHOOL YEAR</span><strong>{activeYear.name}</strong></div></div>}
@@ -202,7 +202,7 @@ export default function ResourcesPage(){
       <div className={styles.composerHead}>
         <div>
           <span>{isAdmin?"ADMINISTRATOR":"TEACHER"}</span>
-          <h2>Add a learning resource</h2>
+          <h2>Add a Learning Resource</h2>
           <p>{isAdmin?"Post school-wide material or attach a resource to a specific class.":"Post material only to classes assigned to your Teacher account."}</p>
         </div>
         <BookOpen size={28}/>
@@ -216,7 +216,7 @@ export default function ResourcesPage(){
 
         <div className={styles.formGrid}>
           {(scope==="class"||profile?.role==="teacher")&&<label className={styles.wide}>
-            <span>Assigned class</span>
+            <span>Assigned Class</span>
             <select name="assignmentId" required defaultValue="">
               <option value="" disabled>Select class</option>
               {assignments.map(a=><option key={a.id} value={a.id}>{assignmentLabel(a)}</option>)}
@@ -280,7 +280,7 @@ export default function ResourcesPage(){
 
     <section className={styles.library}>
       <div className={styles.libraryHead}>
-        <div><h2>Resource library</h2><p>{profile?.role==="student"?"Materials available to your enrolled classes.":"Published resources and any drafts available to your account."}</p></div>
+        <div><h2>Resource Library</h2><p>{profile?.role==="student"?"Materials available to your enrolled classes.":"Published resources and any drafts available to your account."}</p></div>
         <span>{filtered.length} resource{filtered.length===1?"":"s"}</span>
       </div>
 
@@ -303,7 +303,7 @@ export default function ResourcesPage(){
       </div>
 
       {loading?<div className={styles.empty}>Loading resources…</div>:
-      filtered.length===0?<div className={styles.empty}><BookOpen size={30}/><strong>No resources found</strong><span>Published materials will appear here.</span></div>:
+      filtered.length===0?<div className={styles.empty}><BookOpen size={30}/><strong>No Resources Found</strong><span>Published materials will appear here.</span></div>:
       <div className={styles.grid}>
         {filtered.map(resource=>{
           const canManage=isAdmin||resource.created_by===profile?.id;
@@ -331,7 +331,7 @@ export default function ResourcesPage(){
             </div>
 
             <footer>
-              <div><span>Posted by</span><strong>{resource.posted_by_name}</strong></div>
+              <div><span>Posted By</span><strong>{resource.posted_by_name}</strong></div>
               <div><span>{resource.status==="published"?"Published":"Created"}</span><strong>{dateLabel(resource.published_at||resource.created_at)}</strong></div>
             </footer>
 
