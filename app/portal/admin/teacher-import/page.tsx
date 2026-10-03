@@ -602,7 +602,7 @@ export default function TeacherProfileImportPage() {
           <section className={`${styles.panel} ${styles.recoveryPanel}`}>
             <div className={styles.panelHead}>
               <div>
-                <h2>First-login credential recovery</h2>
+                <h2>First-Login Credential Recovery</h2>
                 <p>
                   {recoveryCandidates.length} Teacher account{recoveryCandidates.length === 1 ? "" : "s"} had
                   the original temporary password replaced by an earlier profile re-import before first login.
@@ -630,7 +630,7 @@ export default function TeacherProfileImportPage() {
         <section className={styles.panel}>
           <div className={styles.panelHead}>
             <div>
-              <h2>1. Upload the Teacher Profile workbook</h2>
+              <h2>1. Upload the Teacher Profile Workbook</h2>
               <p>
                 Missing or duplicated source emails receive a temporary non-routable login
                 address. You can replace that email later from Users &amp; accounts.
@@ -657,7 +657,7 @@ export default function TeacherProfileImportPage() {
           <section className={styles.panel}>
             <div className={styles.panelHead}>
               <div>
-                <h2>2. Review account matching</h2>
+                <h2>2. Review Account Matching</h2>
                 <p>
                   All personnel are shown with a Personnel Type label. Only Teaching Personnel
                   are included in Teacher account creation; Non-Teaching Personnel can be assigned
@@ -756,7 +756,7 @@ export default function TeacherProfileImportPage() {
           <section className={styles.credentials}>
             <CheckCircle2 size={26} />
             <div>
-              <h2>Teacher import completed</h2>
+              <h2>Teacher Import Completed</h2>
               <p>
                 {credentials.filter((item) => item.credential_status !== "reissued").length} new account
                 {credentials.filter((item) => item.credential_status !== "reissued").length === 1 ? "" : "s"} created ·{" "}
