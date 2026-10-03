@@ -49,6 +49,13 @@ type Credential = {
   credential_status?: "new" | "reissued";
 };
 
+type CredentialCandidate = {
+  id: string;
+  full_name: string;
+  email: string;
+  position?: string | null;
+};
+
 const normalize = (value: string) =>
   value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
@@ -102,12 +109,39 @@ export default function TeacherProfileImportPage() {
   const [rows, setRows] = useState<PreparedTeacher[]>([]);
   const [excluded, setExcluded] = useState<ParsedTeacher[]>([]);
   const [credentials, setCredentials] = useState<Credential[]>([]);
+  const [recoveryCandidates, setRecoveryCandidates] = useState<CredentialCandidate[]>([]);
+  const [recoveringCredentials, setRecoveringCredentials] = useState(false);
   const [updatedProfiles, setUpdatedProfiles] = useState(0);
   const [fileName, setFileName] = useState("");
   const [loadingDirectory, setLoadingDirectory] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadRecoveryCandidates() {
+      try {
+        const response = await fetch("/api/admin/import-accounts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "credential_candidates" }),
+          cache: "no-store",
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) return;
+        if (active) setRecoveryCandidates(result.candidates ?? []);
+      } catch {
+        // Optional recovery helper. Normal Teacher import still works if this check fails.
+      }
+    }
+
+    void loadRecoveryCandidates();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -408,9 +442,8 @@ export default function TeacherProfileImportPage() {
       setCredentials(issued);
       setUpdatedProfiles(updated);
       const newCount = issued.filter((item) => item.credential_status !== "reissued").length;
-      const reissuedCount = issued.filter((item) => item.credential_status === "reissued").length;
       setMessage(
-        `Import complete: ${newCount} new Teacher account${newCount === 1 ? "" : "s"} created, ${reissuedCount} interrupted-import credential${reissuedCount === 1 ? "" : "s"} recovered, ${updated} existing profile${updated === 1 ? "" : "s"} updated, and ${savedNonTeaching} Non-Teaching Personnel record${savedNonTeaching === 1 ? "" : "s"} saved.`
+        `Import complete: ${newCount} new Teacher account${newCount === 1 ? "" : "s"} created, ${updated} existing profile${updated === 1 ? "" : "s"} updated, and ${savedNonTeaching} Non-Teaching Personnel record${savedNonTeaching === 1 ? "" : "s"} saved. Existing account passwords were not changed.`
       );
     } catch (err) {
       setCredentials(issued);
@@ -423,6 +456,103 @@ export default function TeacherProfileImportPage() {
       );
     } finally {
       setWorking(false);
+    }
+  }
+
+  async function recoverFirstLoginCredentials() {
+    const confirmed = window.confirm(
+      "Generate fresh one-time passwords for " +
+        recoveryCandidates.length +
+        " affected Teacher accounts? The new credentials will be downloaded as a CSV when finished."
+    );
+    if (!confirmed) return;
+
+    setRecoveringCredentials(true);
+    setError("");
+    setMessage("");
+    setCredentials([]);
+
+    try {
+      const candidateResponse = await fetch("/api/admin/import-accounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "credential_candidates" }),
+        cache: "no-store",
+      });
+      const candidateResult = await candidateResponse.json().catch(() => ({}));
+      if (!candidateResponse.ok) {
+        throw new Error(candidateResult.error ?? "Unable to load affected Teacher accounts.");
+      }
+
+      const candidates = (candidateResult.candidates ?? []) as CredentialCandidate[];
+      if (!candidates.length) {
+        setRecoveryCandidates([]);
+        setMessage("No Teacher accounts currently need first-login credential recovery.");
+        return;
+      }
+
+      const issued: Credential[] = [];
+      const failed: string[] = [];
+      const batchSize = 20;
+
+      for (let start = 0; start < candidates.length; start += batchSize) {
+        const batch = candidates.slice(start, start + batchSize);
+        const response = await fetch("/api/admin/import-accounts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "reissue_credentials",
+            userIds: batch.map((item) => item.id),
+          }),
+        });
+        const result = await response.json().catch(() => ({}));
+
+        issued.push(...((result.credentials ?? []) as Credential[]));
+        failed.push(
+          ...((result.errors ?? []).map((item: { error?: string }) =>
+            String(item.error ?? "Unknown recovery error")
+          ))
+        );
+
+        if (!response.ok && !(result.credentials ?? []).length) {
+          throw new Error(result.error ?? failed[0] ?? "Teacher credential recovery failed.");
+        }
+      }
+
+      setCredentials(issued);
+      setRecoveryCandidates([]);
+
+      if (issued.length) {
+        downloadCsv(
+          "ANHS_Teacher_First_Login_Credentials.csv",
+          ["Email", "Full Name", "Position", "Temporary Password"],
+          issued.map((item) => [
+            item.identifier,
+            item.full_name,
+            item.position ?? "Teacher",
+            item.temporary_password,
+          ])
+        );
+      }
+
+      if (failed.length) {
+        setError(
+          String(issued.length) +
+            " Teacher credential(s) recovered, but " +
+            String(failed.length) +
+            " account(s) need review. " +
+            failed[0]
+        );
+      } else {
+        setMessage(
+          String(issued.length) +
+            " affected Teacher account(s) received fresh first-login credentials. The CSV has been downloaded."
+        );
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Teacher credential recovery failed.");
+    } finally {
+      setRecoveringCredentials(false);
     }
   }
 
@@ -467,6 +597,35 @@ export default function TeacherProfileImportPage() {
 
         {error && <div className={styles.error}>{error}</div>}
         {message && <div className={styles.success}>{message}</div>}
+
+        {recoveryCandidates.length > 0 && (
+          <section className={`${styles.panel} ${styles.recoveryPanel}`}>
+            <div className={styles.panelHead}>
+              <div>
+                <h2>First-login credential recovery</h2>
+                <p>
+                  {recoveryCandidates.length} Teacher account{recoveryCandidates.length === 1 ? "" : "s"} had
+                  the original temporary password replaced by an earlier profile re-import before first login.
+                  Generate one fresh credential set and download it once.
+                </p>
+              </div>
+              <KeyRound size={26} />
+            </div>
+            <div className={styles.recoveryActions}>
+              <div>
+                <strong>{recoveryCandidates.length} affected account{recoveryCandidates.length === 1 ? "" : "s"}</strong>
+                <span>Only Teachers who have never signed in and match the affected import pattern are included.</span>
+              </div>
+              <button
+                onClick={() => void recoverFirstLoginCredentials()}
+                disabled={recoveringCredentials}
+              >
+                <Download size={17} />
+                {recoveringCredentials ? "Recovering credentials…" : "Generate & download fresh credentials"}
+              </button>
+            </div>
+          </section>
+        )}
 
         <section className={styles.panel}>
           <div className={styles.panelHead}>
