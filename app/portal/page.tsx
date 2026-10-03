@@ -451,13 +451,6 @@ function SideNav({
           Sign out
         </SidebarMenuButton>
 
-        <div className="side-user">
-          <span className="avatar">{initials(profile.full_name)}</span>
-          <div>
-            <strong>{profile.full_name}</strong>
-            <span>{administratorLabel(profile, adminPermissions)}</span>
-          </div>
-        </div>
       </SidebarFooter>
     </Sidebar>
   );
