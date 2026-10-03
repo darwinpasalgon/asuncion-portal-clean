@@ -419,69 +419,75 @@ function SideNav({
               </div>
             )}
 
+            {profile.role === "administrator" && (
+              <div className="nav-group-section">
+                <p className="nav-label">ACCOUNTS</p>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
+                        window.location.href = "/portal/admin/users";
+                      }}
+                    >
+                      <Users size={19} />
+                      <span>Users & Accounts</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
+                        window.location.href = "/portal/admin/accounts";
+                      }}
+                    >
+                      <Users size={19} />
+                      <span>Account Approvals</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
+                        window.location.href = "/portal/admin/password-resets";
+                      }}
+                    >
+                      <ShieldCheck size={19} />
+                      <span>Password Resets</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
+                        window.location.href = "/portal/admin/masterlist";
+                      }}
+                    >
+                      <FileSpreadsheet size={19} />
+                      <span>Bulk Account Import</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </div>
+            )}
+
             {(profile.role === "administrator" || adminPermissions.includes("hr.manage")) && (
               <div className="nav-group-section">
-                <p className="nav-label">ACCOUNTS & PERSONNEL</p>
+                <p className="nav-label">PERSONNEL</p>
                 <SidebarMenu>
-                  {(profile.role === "administrator" || adminPermissions.includes("hr.manage")) && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        className="nav-button"
-                        onClick={() => {
-                          window.location.href = "/portal/admin/teacher-profiles";
-                        }}
-                      >
-                        <UserRound size={19} />
-                        <span>Teacher HR Profiles</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
+                        window.location.href = "/portal/admin/teacher-profiles";
+                      }}
+                    >
+                      <UserRound size={19} />
+                      <span>Teacher HR Profiles</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   {profile.role === "administrator" && (
                     <>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          className="nav-button"
-                          onClick={() => {
-                            window.location.href = "/portal/admin/administrators";
-                          }}
-                        >
-                          <ShieldCheck size={19} />
-                          <span>Administrators</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          className="nav-button"
-                          onClick={() => {
-                            window.location.href = "/portal/admin/accounts";
-                          }}
-                        >
-                          <Users size={19} />
-                          <span>Account Approvals</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          className="nav-button"
-                          onClick={() => {
-                            window.location.href = "/portal/admin/users";
-                          }}
-                        >
-                          <Users size={19} />
-                          <span>Users & Accounts</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                      <SidebarMenuItem>
-                        <SidebarMenuButton
-                          className="nav-button"
-                          onClick={() => {
-                            window.location.href = "/portal/admin/masterlist";
-                          }}
-                        >
-                          <FileSpreadsheet size={19} />
-                          <span>Bulk Account Import</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           className="nav-button"
@@ -497,11 +503,11 @@ function SideNav({
                         <SidebarMenuButton
                           className="nav-button"
                           onClick={() => {
-                            window.location.href = "/portal/admin/password-resets";
+                            window.location.href = "/portal/admin/administrators";
                           }}
                         >
                           <ShieldCheck size={19} />
-                          <span>Password Resets</span>
+                          <span>Administrators</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     </>
