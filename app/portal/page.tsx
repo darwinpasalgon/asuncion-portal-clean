@@ -611,13 +611,6 @@ export default function PortalPage() {
     };
   }, []);
 
-  const accountId = useMemo(() => {
-    if (!profile) return "";
-    return profile.role === "student" && profile.lrn
-      ? `LRN ${profile.lrn}`
-      : profile.email;
-  }, [profile]);
-
   const displayRole = useMemo(
     () => (profile ? administratorLabel(profile, adminPermissions) : ""),
     [profile, adminPermissions]
