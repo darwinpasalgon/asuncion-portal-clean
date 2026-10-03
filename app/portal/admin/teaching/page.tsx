@@ -446,7 +446,7 @@ export default function TeachingSetupPage() {
         <header className={styles.header}>
           <div>
             <span className={styles.eyebrow}>ADMINISTRATION</span>
-            <h1>Advisers, subjects & teacher assignments</h1>
+            <h1>Advisers, Subjects & Teacher Assignments</h1>
             <p>
               Assign one Section Adviser to each class, then connect subject teachers
               to their subjects. Only the Section Adviser can encode and publish grades
@@ -470,22 +470,22 @@ export default function TeachingSetupPage() {
         <div className={styles.summary}>
           <article>
             <School size={22} />
-            <span>School year</span>
+            <span>School Year</span>
             <strong>{activeYear?.name ?? "Not set"}</strong>
           </article>
           <article>
             <BookOpen size={22} />
-            <span>Active subjects</span>
+            <span>Active Subjects</span>
             <strong>{activeSubjects.length}</strong>
           </article>
           <article>
             <Users size={22} />
-            <span>Active teachers</span>
+            <span>Active Teachers</span>
             <strong>{teachers.length}</strong>
           </article>
           <article>
             <UserCheck size={22} />
-            <span>Section advisers</span>
+            <span>Section Advisers</span>
             <strong>{activeAdvisers.length}</strong>
           </article>
         </div>
@@ -503,7 +503,7 @@ export default function TeachingSetupPage() {
 
           <form className={styles.adviserForm} onSubmit={saveAdviser}>
             <label>
-              <span>Grade level</span>
+              <span>Grade Level</span>
               <select
                 name="gradeLevel"
                 required
@@ -590,13 +590,13 @@ export default function TeachingSetupPage() {
           <section className={styles.panel}>
             <div className={styles.panelHeading}>
               <div>
-                <h2>Add a subject</h2>
+                <h2>Add a Subject</h2>
                 <p>Subjects are created for a specific grade level.</p>
               </div>
             </div>
             <form className={styles.form} onSubmit={addSubject}>
               <label>
-                <span>Grade level</span>
+                <span>Grade Level</span>
                 <select name="gradeLevel" required defaultValue="">
                   <option value="" disabled>Select grade level</option>
                   {grades.map((grade) => (
@@ -607,7 +607,7 @@ export default function TeachingSetupPage() {
                 </select>
               </label>
               <label>
-                <span>Subject name</span>
+                <span>Subject Name</span>
                 <input name="subjectName" required minLength={2} maxLength={100} placeholder="e.g. Mathematics" />
               </label>
               <button type="submit" disabled={working === "subject"}>
@@ -619,7 +619,7 @@ export default function TeachingSetupPage() {
           <section className={styles.panel}>
             <div className={styles.panelHeading}>
               <div>
-                <h2>Assign a subject teacher</h2>
+                <h2>Assign a Subject Teacher</h2>
                 <p>
                   One Teacher is assigned to each section-subject combination. Subject teachers keep
                   their teaching assignment even when the Section Adviser is a different teacher.
@@ -628,7 +628,7 @@ export default function TeachingSetupPage() {
             </div>
             <form className={styles.form} onSubmit={saveAssignment}>
               <label>
-                <span>Grade level</span>
+                <span>Grade Level</span>
                 <select
                   name="gradeLevel"
                   required
@@ -764,7 +764,7 @@ export default function TeachingSetupPage() {
         <section className={styles.panel}>
           <div className={styles.panelHeading}>
             <div>
-              <h2>Subjects by grade</h2>
+              <h2>Subjects by Grade</h2>
               <p>Inactive subjects remain in historical records but cannot receive new active assignments.</p>
             </div>
             <button className={styles.refresh} onClick={() => void load()} disabled={loading}>
@@ -845,7 +845,7 @@ export default function TeachingSetupPage() {
         <section className={styles.panel}>
           <div className={styles.panelHeading}>
             <div>
-              <h2>Subject teacher assignments</h2>
+              <h2>Subject Teacher Assignments</h2>
               <p>
                 {activeYear ? activeYear.name : "Active school year"} subject assignments.
                 These assignments identify who teaches each subject; grading authority belongs to the Section Adviser.
