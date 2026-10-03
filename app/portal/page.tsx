@@ -104,18 +104,59 @@ type Profile = {
   must_change_password: boolean;
 };
 
-const commonItems = {
-  overview: { name: "Overview" as Page, icon: LayoutDashboard },
-  grades: { name: "Grades" as Page, icon: GraduationCap },
-  attendance: { name: "Attendance" as Page, icon: ClipboardCheck },
-  schedule: { name: "Class schedule" as Page, icon: CalendarDays },
-  announcements: { name: "Announcements" as Page, icon: Megaphone },
-  resources: { name: "Learning resources" as Page, icon: FolderOpen },
-  students: { name: "Students" as Page, icon: Users },
-  setup: { name: "School setup" as Page, icon: Settings2 },
+type NavigationItem = {
+  name: Page;
+  label: string;
+  icon: typeof LayoutDashboard;
+  group: string;
 };
 
-const navigation: Record<Role, { name: Page; icon: typeof LayoutDashboard }[]> = {
+const commonItems = {
+  overview: {
+    name: "Overview" as Page,
+    label: "Overview",
+    icon: LayoutDashboard,
+    group: "WORKSPACE",
+  },
+  grades: {
+    name: "Grades" as Page,
+    label: "Grades",
+    icon: GraduationCap,
+    group: "ACADEMICS",
+  },
+  attendance: {
+    name: "Attendance" as Page,
+    label: "Attendance",
+    icon: ClipboardCheck,
+    group: "ACADEMICS",
+  },
+  schedule: {
+    name: "Class schedule" as Page,
+    label: "Class Schedule",
+    icon: CalendarDays,
+    group: "ACADEMICS",
+  },
+  announcements: {
+    name: "Announcements" as Page,
+    label: "Announcements",
+    icon: Megaphone,
+    group: "COMMUNICATION",
+  },
+  resources: {
+    name: "Learning resources" as Page,
+    label: "Learning Resources",
+    icon: FolderOpen,
+    group: "COMMUNICATION",
+  },
+  students: {
+    name: "Students" as Page,
+    label: "My Teaching Assignments",
+    icon: Users,
+    group: "TEACHING",
+  },
+};
+
+const navigation: Record<Role, NavigationItem[]> = {
   student: [
     commonItems.overview,
     commonItems.grades,
@@ -133,12 +174,7 @@ const navigation: Record<Role, { name: Page; icon: typeof LayoutDashboard }[]> =
     commonItems.announcements,
     commonItems.resources,
   ],
-  administrator: [
-    commonItems.overview,
-    commonItems.students,
-    commonItems.announcements,
-    commonItems.resources,
-  ],
+  administrator: [commonItems.overview],
   staff_administrator: [commonItems.overview],
 };
 
