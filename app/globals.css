@@ -593,3 +593,91 @@ body{margin:0;background:var(--background);color:var(--foreground);font-family:A
 .real-overview-grid>.real-profile-card:last-child{grid-column:1/-1}
 .page-heading{align-items:flex-start}
 @media(max-width:1000px){.real-overview-grid>.real-profile-card:last-child{grid-column:auto}}
+
+
+/* Dashboard hero motion */
+.real-welcome{
+  isolation:isolate;
+  background-size:140% 140%!important;
+  animation:anhsHeroGlow 16s ease-in-out infinite;
+}
+.real-welcome::after{
+  content:"";
+  position:absolute;
+  inset:-35% -20%;
+  z-index:0;
+  pointer-events:none;
+  background:linear-gradient(
+    112deg,
+    transparent 36%,
+    rgba(255,255,255,0) 43%,
+    rgba(255,255,255,.18) 49%,
+    rgba(255,255,255,.28) 50%,
+    rgba(255,255,255,.12) 53%,
+    rgba(255,255,255,0) 59%,
+    transparent 66%
+  );
+  transform:translateX(-72%) rotate(1deg);
+  animation:anhsHeroShine 8.5s cubic-bezier(.4,0,.2,1) infinite;
+}
+.real-welcome::before{
+  animation:anhsHeroRing 7s ease-in-out infinite;
+}
+.real-seal-frame{
+  transform-origin:center;
+  animation:anhsSealFloat 5.6s ease-in-out infinite;
+}
+.real-academic-motif .hero-logo{
+  transform-origin:center;
+  animation:anhsLogoBreath 4.8s ease-in-out infinite;
+  will-change:transform,filter;
+}
+.real-academic-motif>span,
+.real-academic-motif small{
+  animation:anhsMotifFade 6s ease-in-out infinite;
+}
+
+@keyframes anhsHeroGlow{
+  0%,100%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+}
+@keyframes anhsHeroShine{
+  0%,58%{transform:translateX(-78%) rotate(1deg);opacity:0}
+  64%{opacity:.95}
+  78%{transform:translateX(78%) rotate(1deg);opacity:.88}
+  86%,100%{transform:translateX(78%) rotate(1deg);opacity:0}
+}
+@keyframes anhsHeroRing{
+  0%,100%{transform:scale(1);opacity:.84}
+  50%{transform:scale(1.035);opacity:1}
+}
+@keyframes anhsSealFloat{
+  0%,100%{transform:translateY(0) scale(1)}
+  50%{transform:translateY(-7px) scale(1.012)}
+}
+@keyframes anhsLogoBreath{
+  0%,100%{
+    transform:scale(1) rotate(0deg);
+    filter:drop-shadow(0 7px 16px rgba(5,45,66,.28));
+  }
+  50%{
+    transform:scale(1.035) rotate(.8deg);
+    filter:drop-shadow(0 12px 24px rgba(5,45,66,.38));
+  }
+}
+@keyframes anhsMotifFade{
+  0%,100%{opacity:.9}
+  50%{opacity:1}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .real-welcome,
+  .real-welcome::before,
+  .real-welcome::after,
+  .real-seal-frame,
+  .real-academic-motif .hero-logo,
+  .real-academic-motif>span,
+  .real-academic-motif small{
+    animation:none!important;
+  }
+}
