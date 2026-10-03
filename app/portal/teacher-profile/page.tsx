@@ -90,7 +90,7 @@ const nameFields = [
 const graduateFields = [
   [
     "graduate_units",
-    "Indicate if graduated or units earned if not graduated or CAR for completed Academic Requirements",
+    "Graduate status / units earned / CAR",
   ],
   ["graduate_course", "Degree"],
 ] as const;
@@ -107,7 +107,7 @@ const earningUnitsFields = [
 ] as const;
 
 const otherFields = [
-  ["skills", "SKILLS / SPECIALIZATION (NC I, NC II, NC III / TRAINERS METHODOLOGY)"],
+  ["skills", "Skills / specialization (NC I, NC II, NC III / Trainers Methodology)"],
   ["philsys_number", "Philsys (National ID) Number"],
   ["religion", "Religion"],
   ["ethnic_group", "Ethnic Group"],
@@ -220,7 +220,6 @@ export default function MyTeacherProfilePage() {
       <div className={styles.shell}>
         <nav className={styles.topbar}>
           <a href="/portal"><ArrowLeft size={16} />Back to portal</a>
-          <span><ShieldCheck size={16} />Official HR fields are protected</span>
         </nav>
 
         <header className={styles.header}>
@@ -229,10 +228,6 @@ export default function MyTeacherProfilePage() {
             <span>MY TEACHER PROFILE</span>
             <h1>{teacher?.full_name || "Teacher Profile"}</h1>
             <p>Asuncion National High School personnel profile</p>
-            <div className={styles.profileMeta}>
-              <span><BriefcaseBusiness size={15} />{teacher?.position || "Position not recorded"}</span>
-              <span><ShieldCheck size={15} />Verified Teacher account</span>
-            </div>
           </div>
         </header>
 
@@ -263,10 +258,10 @@ export default function MyTeacherProfilePage() {
         <div className={styles.notice}>
           <ShieldCheck size={20} />
           <div>
-            <strong>You may update the editable profile information below.</strong>
+            <strong>You can update the profile information below.</strong>
             <span>
-              Position, Date of Original Appointment, service records, salary information, and
-              performance ratings are maintained by Human Resources.
+              Employment details, service records, salary information, and performance ratings
+              are maintained by Human Resources.
             </span>
           </div>
         </div>
@@ -370,12 +365,8 @@ export default function MyTeacherProfilePage() {
         </section>
 
         <div className={styles.saveBar}>
-          <div>
-            <strong>Teacher&apos;s Profile</strong>
-            <span>Review your information before saving changes.</span>
-          </div>
           <button onClick={() => void save()} disabled={saving}>
-            <Save size={17} />{saving ? "Saving…" : "Save Teacher Profile"}
+            <Save size={17} />{saving ? "Saving…" : "Save changes"}
           </button>
         </div>
       </div>
