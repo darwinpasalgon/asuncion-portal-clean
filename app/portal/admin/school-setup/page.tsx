@@ -249,7 +249,7 @@ export default function SchoolSetupPage() {
         <header className={styles.header}>
           <div>
             <span className={styles.eyebrow}>ADMINISTRATION</span>
-            <h1>School setup</h1>
+            <h1>School Setup</h1>
             <p>
               Manage the academic structure used by student enrollment and future
               grades, attendance, schedules, and teacher assignments.
@@ -272,22 +272,22 @@ export default function SchoolSetupPage() {
         <div className={styles.summary}>
           <article>
             <School size={22} />
-            <span>School year</span>
+            <span>School Year</span>
             <strong>{activeYear?.name ?? "Not set"}</strong>
           </article>
           <article>
             <Layers3 size={22} />
-            <span>Grade levels</span>
+            <span>Grade Levels</span>
             <strong>{gradeLevels.length}</strong>
           </article>
           <article>
             <BookOpen size={22} />
-            <span>Active sections</span>
+            <span>Active Sections</span>
             <strong>{sections.filter((section) => section.is_active).length}</strong>
           </article>
           <article>
             <Users size={22} />
-            <span>Active enrollments</span>
+            <span>Active Enrollments</span>
             <strong>{activeEnrollments.length}</strong>
           </article>
         </div>
@@ -295,7 +295,7 @@ export default function SchoolSetupPage() {
         <section className={styles.panel}>
           <div className={styles.panelHeading}>
             <div>
-              <h2>School years</h2>
+              <h2>School Years</h2>
               <p>
                 Create the next school year before bulk promotion or retention.
                 A future school year can receive learner enrollments while remaining inactive.
@@ -339,7 +339,7 @@ export default function SchoolSetupPage() {
 
           <form className={styles.addYearForm} onSubmit={addSchoolYear}>
             <label>
-              <span>New school-year start</span>
+              <span>New School-Year Start</span>
               <input
                 type="number"
                 min={2000}
@@ -368,7 +368,7 @@ export default function SchoolSetupPage() {
         <section className={styles.panel}>
           <div className={styles.panelHeading}>
             <div>
-              <h2>Grade levels and sections</h2>
+              <h2>Grade Levels and Sections</h2>
               <p>
                 Sections are stored in the database. Deactivating a section does
                 not remove historical enrollment records.
@@ -436,7 +436,7 @@ export default function SchoolSetupPage() {
         <section className={styles.panel}>
           <div className={styles.panelHeading}>
             <div>
-              <h2>Add a section</h2>
+              <h2>Add a Section</h2>
               <p>
                 Use this when you are ready to add Grade 11, Grade 12, or future
                 section names.
@@ -446,7 +446,7 @@ export default function SchoolSetupPage() {
 
           <form className={styles.addForm} onSubmit={addSection}>
             <label>
-              <span>Grade level</span>
+              <span>Grade Level</span>
               <select name="gradeLevel" required defaultValue="">
                 <option value="" disabled>Select grade level</option>
                 {gradeLevels.map((grade) => (
@@ -458,7 +458,7 @@ export default function SchoolSetupPage() {
             </label>
 
             <label>
-              <span>Section name</span>
+              <span>Section Name</span>
               <input
                 name="sectionName"
                 required
