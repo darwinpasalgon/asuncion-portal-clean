@@ -717,7 +717,7 @@ export default function TeacherProfileImportPage() {
                       </td>
                       <td>
                         {row.account_mode === "not_applicable" ? (
-                          <span>Not a Teacher account</span>
+                          <span>Not a Teacher Account</span>
                         ) : (
                           <span className={row.account_mode === "update" ? styles.update : styles.create}>
                             {row.account_mode === "update" ? "Update profile" : "Create account"}
@@ -734,7 +734,7 @@ export default function TeacherProfileImportPage() {
 
             <div className={styles.importBar}>
               <div>
-                <strong>Ready to import</strong>
+                <strong>Ready to Import</strong>
                 <span>
                   Existing Teacher accounts keep their passwords. New Teacher accounts receive a one-time
                   temporary password and must change it on first login. Non-Teaching Personnel are saved to
