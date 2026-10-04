@@ -70,3 +70,56 @@
   .quickDayChoice,.quickDaySelected{flex:1;width:auto;min-width:42px}
   .advancedPanel>summary{align-items:flex-start}
 }
+
+/* Quick Section Schedule alignment fix */
+.quickPicker,.quickRow,.quickDays,.quickTime,.quickRoom,.quickSave,.quickSubject{min-width:0}
+.quickPicker label,.quickTime,.quickRoom{min-width:0}
+.quickPicker select,.quickTime input,.quickRoom input{
+  box-sizing:border-box;
+  min-width:0;
+  max-width:100%;
+}
+.quickRow{
+  grid-template-columns:minmax(180px,1.25fr) minmax(230px,1.3fr) minmax(105px,.62fr) minmax(105px,.62fr) minmax(160px,.9fr) minmax(82px,.5fr);
+  align-items:start;
+  column-gap:12px;
+  row-gap:10px;
+}
+.quickSubject{padding-top:2px}
+.quickDays,.quickTime,.quickRoom,.quickSave{align-self:start}
+.quickTime>span,.quickRoom>span,.quickFieldLabel{min-height:18px}
+.quickDayChoices{display:grid;grid-template-columns:repeat(5,minmax(34px,1fr));gap:5px;min-width:0}
+.quickDayChoice,.quickDaySelected{width:100%;min-width:0}
+.quickSave{padding-top:24px}
+.quickSave button{width:100%;min-width:78px;box-sizing:border-box}
+.quickExisting{grid-column:1/-1;min-width:0;padding-top:0}
+
+@media(max-width:1199px){
+  .quickRow{
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);
+    align-items:start;
+  }
+  .quickSubject{grid-column:1/-1;padding-bottom:2px}
+  .quickDays{grid-column:1/-1}
+  .quickTime{grid-column:auto}
+  .quickRoom{grid-column:auto}
+  .quickSave{grid-column:1/-1;padding-top:0;justify-content:flex-end}
+  .quickSave button{width:auto;min-width:120px}
+  .quickExisting{grid-column:1/-1}
+}
+@media(max-width:800px){
+  .quickPicker{grid-template-columns:1fr 1fr}
+  .quickSummary{grid-column:1/-1;justify-self:stretch}
+  .quickRow{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .quickSubject,.quickDays,.quickRoom,.quickSave,.quickExisting{grid-column:1/-1}
+  .quickTime{grid-column:auto}
+  .quickSave button{width:100%}
+}
+@media(max-width:520px){
+  .quickPicker{grid-template-columns:1fr;padding:14px}
+  .quickSummary{grid-column:auto}
+  .quickRow{grid-template-columns:1fr;padding:13px}
+  .quickSubject,.quickDays,.quickTime,.quickRoom,.quickSave,.quickExisting{grid-column:1}
+  .quickDayChoices{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .quickDayChoice,.quickDaySelected{width:100%;min-width:0}
+}
