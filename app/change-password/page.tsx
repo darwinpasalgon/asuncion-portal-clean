@@ -63,7 +63,7 @@ export default function ChangePasswordPage() {
         </div>
 
         <section className={styles.authCard}>
-          <h1>Create your new password</h1>
+          <h1>Create Your New Password</h1>
           <p>
             You signed in using a temporary password issued by the school.
             Create a private password before accessing the portal.
@@ -80,7 +80,7 @@ export default function ChangePasswordPage() {
               </div>
 
               <label className={styles.field}>
-                <span>New password</span>
+                <span>New Password</span>
                 <div className={styles.inputWrap}>
                   <LockKeyhole size={18} />
                   <input
@@ -104,7 +104,7 @@ export default function ChangePasswordPage() {
               </label>
 
               <label className={styles.field}>
-                <span>Confirm new password</span>
+                <span>Confirm New Password</span>
                 <div className={styles.inputWrap}>
                   <KeyRound size={18} />
                   <input
@@ -121,7 +121,7 @@ export default function ChangePasswordPage() {
               {error && <p className={styles.error}>{error}</p>}
 
               <button className={styles.signInButton} type="submit" disabled={loading}>
-                {loading ? "Updating password..." : "Save new password"}
+                {loading ? "Updating password..." : "Save New Password"}
                 {!loading && <ArrowRight size={18} />}
               </button>
             </form>
@@ -132,7 +132,7 @@ export default function ChangePasswordPage() {
                 your new password.
               </div>
               <button className={styles.signInButton} onClick={() => router.replace("/")}>
-                Return to sign in <ArrowRight size={18} />
+                Return to Sign In <ArrowRight size={18} />
               </button>
             </>
           )}
