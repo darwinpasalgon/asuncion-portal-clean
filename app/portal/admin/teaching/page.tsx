@@ -510,7 +510,7 @@ export default function TeachingSetupPage() {
                 value={adviserGrade}
                 onChange={(event) => setAdviserGrade(event.target.value)}
               >
-                <option value="">Select grade level</option>
+                <option value="">Select Grade Level</option>
                 {grades.map((grade) => (
                   <option key={grade.grade_level} value={grade.grade_level}>
                     {grade.label}
@@ -598,7 +598,7 @@ export default function TeachingSetupPage() {
               <label>
                 <span>Grade Level</span>
                 <select name="gradeLevel" required defaultValue="">
-                  <option value="" disabled>Select grade level</option>
+                  <option value="" disabled>Select Grade Level</option>
                   {grades.map((grade) => (
                     <option key={grade.grade_level} value={grade.grade_level}>
                       {grade.label}
@@ -639,7 +639,7 @@ export default function TeachingSetupPage() {
                     setAssignmentMajor("");
                   }}
                 >
-                  <option value="">Select grade level</option>
+                  <option value="">Select Grade Level</option>
                   {grades.map((grade) => (
                     <option key={grade.grade_level} value={grade.grade_level}>
                       {grade.label}
@@ -710,7 +710,7 @@ export default function TeachingSetupPage() {
                     value={assignmentMajor}
                     onChange={(event) => setAssignmentMajor(event.target.value)}
                   >
-                    <option value="">Select major</option>
+                    <option value="">Select Major</option>
                     {TECHNICAL_VOCATIONAL_MAJORS.map((major) => (
                       <option key={major} value={major}>{major}</option>
                     ))}
