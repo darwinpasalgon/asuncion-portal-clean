@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   GraduationCap,
@@ -36,7 +36,16 @@ type Enrollment = {
   section_id: string | null;
   tve_major: string | null;
 };
-type Student = { id: string; full_name: string; lrn: string | null };
+type Student = {
+  id: string;
+  full_name: string;
+  lrn: string | null;
+  last_name: string | null;
+  first_name: string | null;
+  middle_name: string | null;
+  name_extension: string | null;
+  sex: string | null;
+};
 type Grade = {
   id: string;
   student_id: string;
@@ -55,6 +64,41 @@ function descriptor(grade: number) {
   if (grade >= 75) return "Connecting / Natutungo";
   if (grade >= 65) return "Developing / Napauunlad";
   return "Emerging / Nagsisimula";
+}
+
+function sexGroup(value: string | null) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  if (normalized === "m" || normalized === "male") return "Male";
+  if (normalized === "f" || normalized === "female") return "Female";
+  return "Unspecified";
+}
+
+function compareStudents(a: Student, b: Student) {
+  const rank = (value: string | null) => {
+    const group = sexGroup(value);
+    return group === "Male" ? 0 : group === "Female" ? 1 : 2;
+  };
+
+  const bySex = rank(a.sex) - rank(b.sex);
+  if (bySex !== 0) return bySex;
+
+  const byLast = (a.last_name ?? a.full_name).localeCompare(
+    b.last_name ?? b.full_name,
+    undefined,
+    { sensitivity: "base" }
+  );
+  if (byLast !== 0) return byLast;
+
+  const byFirst = (a.first_name ?? a.full_name).localeCompare(
+    b.first_name ?? b.full_name,
+    undefined,
+    { sensitivity: "base" }
+  );
+  if (byFirst !== 0) return byFirst;
+
+  return a.full_name.localeCompare(b.full_name, undefined, {
+    sensitivity: "base",
+  });
 }
 
 export default function GradesPage() {
@@ -143,8 +187,21 @@ export default function GradesPage() {
       )
       .map((item) => studentMap.get(item.student_id))
       .filter((item): item is Student => Boolean(item))
-      .sort((a, b) => a.full_name.localeCompare(b.full_name));
+      .sort(compareStudents);
   }, [selectedAssignment, enrollments, studentMap]);
+
+  const classStudentGroups = useMemo(
+    () =>
+      ["Male", "Female", "Unspecified"]
+        .map((group) => ({
+          group,
+          students: classStudents.filter(
+            (student) => sexGroup(student.sex) === group
+          ),
+        }))
+        .filter((item) => item.students.length > 0),
+    [classStudents]
+  );
 
   useEffect(() => {
     if (role !== "teacher" || !selectedAssignmentId) return;
@@ -433,94 +490,120 @@ export default function GradesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {classStudents.map((student) => {
-                        const saved = grades.find(
-                          (item) =>
-                            item.student_id === student.id &&
-                            item.teacher_assignment_id === selectedAssignmentId &&
-                            item.term_no === selectedTerm
-                        );
-                        const value = drafts[student.id] ?? "";
-
-                        return (
-                          <tr key={student.id}>
-                            <td>
-                              <strong>{student.full_name}</strong>
-                              <span>{student.lrn ? `LRN ${student.lrn}` : "Student"}</span>
-                            </td>
-                            <td>
-                              <input
-                                className={styles.termInput}
-                                type="number"
-                                min="0"
-                                max="100"
-                                step="1"
-                                value={value}
-                                disabled={saved?.status === "published"}
-                                onChange={(event) =>
-                                  setDrafts((current) => ({
-                                    ...current,
-                                    [student.id]: event.target.value,
-                                  }))
-                                }
-                                aria-label={`${student.full_name} Term ${selectedTerm} grade`}
-                              />
-                            </td>
-                            <td>
-                              {saved ? (
-                                <strong>{descriptor(saved.term_grade)}</strong>
-                              ) : (
-                                "—"
-                              )}
-                            </td>
-                            <td>
-                              {saved ? (
-                                <span
-                                  className={
-                                    saved.term_grade < 75
-                                      ? styles.intervention
-                                      : styles.onTrack
-                                  }
-                                >
-                                  {saved.term_grade < 75
-                                    ? "Intervention needed"
-                                    : "Meets minimum standard"}
-                                </span>
-                              ) : (
-                                "—"
-                              )}
-                            </td>
-                            <td>
-                              {saved ? (
-                                <span
-                                  className={
-                                    saved.status === "published"
-                                      ? styles.published
-                                      : styles.draft
-                                  }
-                                >
-                                  {saved.status === "published" ? "Published" : "Draft"}
-                                </span>
-                              ) : (
-                                <span className={styles.notSaved}>Not Saved</span>
-                              )}
-                            </td>
-                            <td>
-                              <button
-                                className={styles.saveButton}
-                                disabled={
-                                  working === student.id ||
-                                  saved?.status === "published"
-                                }
-                                onClick={() => void saveGrade(student.id)}
-                              >
-                                <Save size={15} />
-                                {working === student.id ? "Saving…" : "Save"}
-                              </button>
+                      {classStudentGroups.map(({ group, students: groupStudents }) => (
+                        <Fragment key={group}>
+                          <tr className={styles.sexGroupRow}>
+                            <td colSpan={6}>
+                              <strong>{group}</strong>
+                              <span>
+                                {groupStudents.length} learner
+                                {groupStudents.length === 1 ? "" : "s"}
+                              </span>
                             </td>
                           </tr>
-                        );
-                      })}
+                          {groupStudents.map((student) => {
+                            const saved = grades.find(
+                              (item) =>
+                                item.student_id === student.id &&
+                                item.teacher_assignment_id === selectedAssignmentId &&
+                                item.term_no === selectedTerm
+                            );
+                            const value = drafts[student.id] ?? "";
+
+                            return (
+                              <tr key={student.id}>
+                                <td>
+                                  <strong>{student.full_name}</strong>
+                                  <span>
+                                    {(student.last_name && student.first_name
+                                      ? `${student.last_name}, ${student.first_name}${
+                                          student.middle_name
+                                            ? ` ${student.middle_name}`
+                                            : ""
+                                        }${
+                                          student.name_extension
+                                            ? ` ${student.name_extension}`
+                                            : ""
+                                        }`
+                                      : student.full_name)}
+                                    {student.lrn ? ` · LRN ${student.lrn}` : ""}
+                                  </span>
+                                </td>
+                                <td>
+                                  <input
+                                    className={styles.termInput}
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    step="1"
+                                    value={value}
+                                    disabled={saved?.status === "published"}
+                                    onChange={(event) =>
+                                      setDrafts((current) => ({
+                                        ...current,
+                                        [student.id]: event.target.value,
+                                      }))
+                                    }
+                                    aria-label={`${student.full_name} Term ${selectedTerm} grade`}
+                                  />
+                                </td>
+                                <td>
+                                  {saved ? (
+                                    <strong>{descriptor(saved.term_grade)}</strong>
+                                  ) : (
+                                    "—"
+                                  )}
+                                </td>
+                                <td>
+                                  {saved ? (
+                                    <span
+                                      className={
+                                        saved.term_grade < 75
+                                          ? styles.intervention
+                                          : styles.onTrack
+                                      }
+                                    >
+                                      {saved.term_grade < 75
+                                        ? "Intervention needed"
+                                        : "Meets minimum standard"}
+                                    </span>
+                                  ) : (
+                                    "—"
+                                  )}
+                                </td>
+                                <td>
+                                  {saved ? (
+                                    <span
+                                      className={
+                                        saved.status === "published"
+                                          ? styles.published
+                                          : styles.draft
+                                      }
+                                    >
+                                      {saved.status === "published" ? "Published" : "Draft"}
+                                    </span>
+                                  ) : (
+                                    <span className={styles.notSaved}>Not Saved</span>
+                                  )}
+                                </td>
+                                <td>
+                                  <button
+                                    className={styles.saveButton}
+                                    disabled={
+                                      working === student.id ||
+                                      saved?.status === "published"
+                                    }
+                                    onClick={() => void saveGrade(student.id)}
+                                  >
+                                    <Save size={15} />
+                                    {working === student.id ? "Saving…" : "Save"}
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </Fragment>
+                      ))}
                     </tbody>
                   </table>
                 </div>
