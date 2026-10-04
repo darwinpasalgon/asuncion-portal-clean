@@ -302,9 +302,7 @@ export async function GET(request: NextRequest) {
 
     const { date: schoolDate, isSchoolWeekday } = manilaDateParts();
 
-    const earliestAttendanceStart = Array.from(
-      adviserStartBySection.values()
-    ).sort()[0];
+    const monthStart = `${schoolDate.slice(0, 7)}-01`;
 
     const [gradeRows, attendanceRows, exclusionRows] = await Promise.all([
       assignmentIds.length
@@ -317,11 +315,11 @@ export async function GET(request: NextRequest) {
             token
           )
         : Promise.resolve([]),
-      earliestAttendanceStart && studentIds.length
+      studentIds.length
         ? getRows(
             `daily_attendance?school_year_id=eq.${encodeURIComponent(
               activeYear.id
-            )}&attendance_date=gte.${earliestAttendanceStart}&attendance_date=lte.${schoolDate}&section_id=in.${encodeURIComponent(
+            )}&attendance_date=gte.${monthStart}&attendance_date=lte.${schoolDate}&section_id=in.${encodeURIComponent(
               sectionFilter
             )}&student_id=in.${encodeURIComponent(
               studentFilter
@@ -329,11 +327,11 @@ export async function GET(request: NextRequest) {
             token
           )
         : Promise.resolve([]),
-      earliestAttendanceStart
+      monthStart
         ? getRows(
             `attendance_day_exclusions?school_year_id=eq.${encodeURIComponent(
               activeYear.id
-            )}&attendance_date=gte.${earliestAttendanceStart}&attendance_date=lte.${schoolDate}&section_id=in.${encodeURIComponent(
+            )}&attendance_date=gte.${monthStart}&attendance_date=lte.${schoolDate}&section_id=in.${encodeURIComponent(
               sectionFilter
             )}&select=section_id,attendance_date`,
             token
@@ -560,11 +558,10 @@ export async function GET(request: NextRequest) {
     }> = [];
 
     for (const sectionId of sectionIds) {
-      const start = adviserStartBySection.get(sectionId);
       const expected = expectedBySection.get(sectionId) ?? 0;
-      if (!start || expected === 0) continue;
+      if (expected === 0) continue;
 
-      for (const attendanceDate of weekdayDates(start, schoolDate)) {
+      for (const attendanceDate of weekdayDates(monthStart, schoolDate)) {
         const key = `${sectionId}|${attendanceDate}`;
         if (excludedDateKeys.has(key)) continue;
         const recorded = recordedBySectionDate.get(key)?.size ?? 0;
@@ -584,9 +581,9 @@ export async function GET(request: NextRequest) {
       alerts.push({
         id: "attendance",
         severity: "warning",
-        title: "Attendance Needs Attention",
+        title: "Monthly Attendance Needs Attention",
         detail:
-          `${pendingAttendanceDates.length} weekday(s) still need complete attendance or a No Classes designation.`,
+          `${pendingAttendanceDates.length} weekday(s) this month still need complete attendance or a No Classes designation.`,
         count: pendingAttendanceDates.length,
         href: `/portal/attendance?date=${encodeURIComponent(
           latest.date
