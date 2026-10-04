@@ -131,13 +131,6 @@ export function personnelProfileMissingFields(input: Record<string, string>) {
     missing.push("Bachelor's Degree");
   } else {
     if (
-      bachelorDegree === "BACHELOR OF SECONDARY EDUCATION (BSED)" ||
-      bachelorDegree === "BACHELOR OF TECHNICAL-VOCATIONAL TEACHER EDUCATION (BTVTED)"
-    ) {
-      if (!String(input.major ?? "").trim()) missing.push("Bachelor's Degree Major");
-      if (!String(input.minor ?? "").trim()) missing.push("Bachelor's Degree Minor");
-    }
-    if (
       bachelorDegree === "OTHER BACHELOR'S DEGREE" &&
       !String(input.bachelors_degree_other ?? "").trim()
     ) {
