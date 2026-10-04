@@ -9,6 +9,8 @@ import {
   ratingFields,
   normalizeTeacherNameFields,
   teacherDisplayName,
+  normalizeGraduateProfile,
+  personnelProfileMissingFields,
 } from "../_shared/teacher-profile.ts";
 import { parseTeacherWorkbook } from "../_shared/teacher-workbook.ts";
 
@@ -37,10 +39,129 @@ Deno.serve(async req => {
     const { data } = await admin.from("administrator_permissions").select("permission").eq("administrator_id", caller.id).eq("permission", "hr.manage").maybeSingle();
     canManage = Boolean(data);
   }
-  if (!canManage && caller.role !== "teacher") return json({ error: "Teacher or Human Resources access required." }, 403);
+  const { data: linkedNonTeaching } = await admin
+    .from("non_teaching_personnel")
+    .select("id,full_name,email,position,personal,official,portal_user_id,is_active,updated_at")
+    .eq("portal_user_id", caller.id)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!canManage && caller.role !== "teacher" && !linkedNonTeaching) {
+    return json({ error: "Teaching, Non-Teaching, or Human Resources access required." }, 403);
+  }
+
   const body = await req.json().catch(() => null);
   if (!body) return json({ error: "Invalid request." }, 400);
   const action = String(body.action ?? "get");
+
+  if (action === "profile_attention") {
+    const incompleteTeachers: Array<Record<string, unknown>> = [];
+    const incompleteNonTeaching: Array<Record<string, unknown>> = [];
+
+    if (canManage) {
+      const [{ data: teacherProfiles }, { data: teacherInfo }, { data: nonTeaching }] =
+        await Promise.all([
+          admin
+            .from("profiles")
+            .select("id,full_name,email,position,role,requested_role,account_status")
+            .eq("account_status", "active")
+            .or("role.eq.teacher,requested_role.eq.teacher")
+            .order("full_name")
+            .limit(1000),
+          admin
+            .from("teacher_information")
+            .select("teacher_id,personal")
+            .limit(1000),
+          admin
+            .from("non_teaching_personnel")
+            .select("id,full_name,email,position,personal,portal_user_id,is_active")
+            .eq("is_active", true)
+            .order("full_name")
+            .limit(1000),
+        ]);
+
+      const nonTeachingPortalIds = new Set(
+        (nonTeaching ?? [])
+          .map((item) => String(item.portal_user_id ?? ""))
+          .filter(Boolean)
+      );
+      const teacherPersonal = new Map(
+        (teacherInfo ?? []).map((item) => [
+          String(item.teacher_id),
+          (item.personal ?? {}) as Record<string, string>,
+        ])
+      );
+
+      for (const teacher of teacherProfiles ?? []) {
+        if (nonTeachingPortalIds.has(String(teacher.id))) continue;
+        const missing = personnelProfileMissingFields(
+          teacherPersonal.get(String(teacher.id)) ?? {}
+        );
+        if (!missing.length) continue;
+        incompleteTeachers.push({
+          id: teacher.id,
+          full_name: teacher.full_name,
+          email: teacher.email,
+          position: teacher.position,
+          personnel_type: "teaching",
+          missing_fields: missing,
+        });
+      }
+
+      for (const person of nonTeaching ?? []) {
+        const missing = personnelProfileMissingFields(
+          (person.personal ?? {}) as Record<string, string>
+        );
+        if (!missing.length) continue;
+        incompleteNonTeaching.push({
+          id: person.id,
+          portal_user_id: person.portal_user_id,
+          full_name: person.full_name,
+          email: person.email,
+          position: person.position,
+          personnel_type: "non_teaching",
+          missing_fields: missing,
+        });
+      }
+    }
+
+    let self: Record<string, unknown> | null = null;
+    if (linkedNonTeaching) {
+      const missing = personnelProfileMissingFields(
+        (linkedNonTeaching.personal ?? {}) as Record<string, string>
+      );
+      self = {
+        personnel_type: "non_teaching",
+        full_name: linkedNonTeaching.full_name,
+        missing_fields: missing,
+        complete: missing.length === 0,
+      };
+    } else if (caller.role === "teacher") {
+      const { data: ownInfo } = await admin
+        .from("teacher_information")
+        .select("personal")
+        .eq("teacher_id", caller.id)
+        .maybeSingle();
+      const missing = personnelProfileMissingFields(
+        (ownInfo?.personal ?? {}) as Record<string, string>
+      );
+      self = {
+        personnel_type: "teaching",
+        missing_fields: missing,
+        complete: missing.length === 0,
+      };
+    }
+
+    return json({
+      self,
+      can_manage: canManage,
+      incomplete_teaching: incompleteTeachers,
+      incomplete_non_teaching: incompleteNonTeaching,
+      teaching_count: incompleteTeachers.length,
+      non_teaching_count: incompleteNonTeaching.length,
+      total_incomplete: incompleteTeachers.length + incompleteNonTeaching.length,
+    });
+  }
 
   if (action === "preview") {
     if (!superAdmin) return json({ error: "Super Administrator access required for account imports." }, 403);
@@ -114,6 +235,95 @@ Deno.serve(async req => {
     if (error) return json({ error: "Unable to load teachers." }, 500);
     return json({ teachers: data, can_manage: true, can_import: superAdmin });
   }
+  if (linkedNonTeaching && !canManage && !body.teacher_id) {
+    const record = {
+      teacher_id: caller.id,
+      personal: linkedNonTeaching.personal ?? {},
+      official: linkedNonTeaching.official ?? {},
+      service_records: [],
+      ratings: [],
+      version: 0,
+    };
+
+    if (action === "get") {
+      return json({
+        teacher: {
+          id: caller.id,
+          full_name: linkedNonTeaching.full_name,
+          email: linkedNonTeaching.email ?? "",
+          position: linkedNonTeaching.position ?? "",
+        },
+        record,
+        personnel_type: "non_teaching",
+        can_manage: false,
+      });
+    }
+
+    if (action !== "save") return json({ error: "Unknown action." }, 400);
+    if (["official", "service_records", "ratings", "source_data", "position"].some(key => key in body)) {
+      return json({ error: "Only Human Resources can edit official employment records and ratings." }, 403);
+    }
+
+    try {
+      const mergedPersonal = {
+        ...((linkedNonTeaching.personal ?? {}) as Record<string, string>),
+        ...cleanDetails(body.personal ?? {}, personalFields),
+      };
+      const normalized = normalizeGraduateProfile(
+        normalizeTeacherNameFields(mergedPersonal)
+      );
+      const missing = personnelProfileMissingFields(normalized);
+      if (missing.length) {
+        return json({
+          error: `Complete the required profile fields: ${missing.join(", ")}.`,
+          missing_fields: missing,
+        }, 400);
+      }
+
+      const displayName = teacherDisplayName(normalized, linkedNonTeaching.full_name);
+      const { data: saved, error: saveError } = await admin
+        .from("non_teaching_personnel")
+        .update({
+          personal: normalized,
+          full_name: displayName || linkedNonTeaching.full_name,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", linkedNonTeaching.id)
+        .select("id,full_name,email,position,personal,official,updated_at")
+        .single();
+
+      if (saveError || !saved) return json({ error: "Unable to save personnel information." }, 500);
+
+      if (displayName && displayName !== linkedNonTeaching.full_name) {
+        await admin
+          .from("profiles")
+          .update({ full_name: displayName, updated_at: new Date().toISOString() })
+          .eq("id", caller.id);
+      }
+
+      return json({
+        teacher: {
+          id: caller.id,
+          full_name: saved.full_name,
+          email: saved.email ?? "",
+          position: saved.position ?? "",
+        },
+        record: {
+          teacher_id: caller.id,
+          personal: saved.personal ?? {},
+          official: saved.official ?? {},
+          service_records: [],
+          ratings: [],
+          version: 0,
+        },
+        personnel_type: "non_teaching",
+        can_manage: false,
+      });
+    } catch (error) {
+      return json({ error: error instanceof Error ? error.message : "Invalid details." }, 400);
+    }
+  }
+
   const teacherId = String(body.teacher_id ?? caller.id);
   if (!canManage && teacherId !== caller.id) return json({ error: "You can only access your own teacher profile." }, 403);
   const { data: teacher } = await admin.from("profiles").select("id,full_name,email,position,account_status,role,requested_role").eq("id", teacherId).or("role.eq.teacher,requested_role.eq.teacher").maybeSingle();
@@ -121,7 +331,7 @@ Deno.serve(async req => {
   const { data: existing, error: readError } = await admin.from("teacher_information").select("*").eq("teacher_id", teacherId).maybeSingle();
   if (readError) return json({ error: "Unable to read teacher information." }, 500);
   const record = existing ?? { teacher_id: teacherId, personal: {}, official: {}, service_records: [], ratings: [], version: 0 };
-  if (action === "get") return json({ teacher, record, can_manage: canManage });
+  if (action === "get") return json({ teacher, record, personnel_type: "teaching", can_manage: canManage });
   if (action !== "save") return json({ error: "Unknown action." }, 400);
   if (Number(body.version) !== record.version) return json({ error: "This profile was changed by another user. Reload it before saving." }, 409);
   if (!canManage && ["official", "service_records", "ratings", "source_data", "position"].some(key => key in body)) return json({ error: "Only Human Resources can edit official employment records and ratings." }, 403);
@@ -141,9 +351,15 @@ Deno.serve(async req => {
       ...record.personal,
       ...cleanDetails(body.personal ?? {}, personalFields),
     };
-    const normalizedPersonal = normalizeTeacherNameFields(
-      mergedPersonal as Record<string, string>
+    const normalizedPersonal = normalizeGraduateProfile(
+      normalizeTeacherNameFields(mergedPersonal as Record<string, string>)
     );
+    const missingRequired = personnelProfileMissingFields(normalizedPersonal);
+    if (missingRequired.length) {
+      throw new Error(
+        `Complete the required profile fields: ${missingRequired.join(", ")}.`
+      );
+    }
     update = {
       personal: normalizedPersonal,
       version: record.version + 1,
@@ -200,5 +416,5 @@ Deno.serve(async req => {
     responseTeacher = updatedTeacher;
   }
 
-  return json({ teacher: responseTeacher, record: saved, can_manage: canManage });
+  return json({ teacher: responseTeacher, record: saved, personnel_type: "teaching", can_manage: canManage });
 });
