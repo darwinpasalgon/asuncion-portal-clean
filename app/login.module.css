@@ -1267,3 +1267,39 @@
     }
   }
 }
+
+
+/* APK v1 mobile background fill */
+/* Fill the mobile/APK login viewport with the same school background used by desktop. */
+@media screen and (max-device-width:600px){
+  .page{
+    position:relative!important;
+    background:
+      linear-gradient(115deg,rgba(9,54,94,.72) 0%,rgba(16,87,116,.58) 52%,rgba(12,116,78,.50) 100%),
+      linear-gradient(180deg,rgba(6,34,59,.08),rgba(6,34,59,.30)),
+      url("/login-bg.png") center center / cover no-repeat fixed!important;
+  }
+
+  .formPanel{
+    background:transparent!important;
+  }
+
+  .formWrap{
+    background:rgba(255,255,255,.68)!important;
+    border:1px solid rgba(255,255,255,.82)!important;
+    box-shadow:
+      0 18px 42px rgba(10,50,76,.18),
+      inset 0 1px 0 rgba(255,255,255,.88)!important;
+    backdrop-filter:blur(22px) saturate(155%)!important;
+    -webkit-backdrop-filter:blur(22px) saturate(155%)!important;
+  }
+}
+
+@media screen and (max-device-width:600px) and (max-height:700px){
+  .page{
+    background:
+      linear-gradient(115deg,rgba(9,54,94,.72) 0%,rgba(16,87,116,.58) 52%,rgba(12,116,78,.50) 100%),
+      linear-gradient(180deg,rgba(6,34,59,.08),rgba(6,34,59,.30)),
+      url("/login-bg.png") center center / cover no-repeat fixed!important;
+  }
+}
