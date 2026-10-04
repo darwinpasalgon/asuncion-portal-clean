@@ -231,13 +231,7 @@ export async function GET(request: NextRequest) {
 
       const filter = sectionFilter(sectionIds);
       const today = manilaToday();
-      const adviserStartBySection = new Map<string, string>(
-        advisers.map((item) => [
-          String(item.section_id),
-          manilaDateFromTimestamp(item.assigned_at),
-        ])
-      );
-      const earliestStart = Array.from(adviserStartBySection.values()).sort()[0];
+      const monthStart = `${today.slice(0, 7)}-01`;
 
       const [
         sections,
@@ -291,21 +285,21 @@ export async function GET(request: NextRequest) {
               token
             )
           : Promise.resolve([]),
-        earliestStart && earliestStart <= today
+        monthStart <= today
           ? getRows(
               `daily_attendance?school_year_id=eq.${encodeURIComponent(
                 year.id
-              )}&attendance_date=gte.${earliestStart}&attendance_date=lte.${today}&section_id=in.${encodeURIComponent(
+              )}&attendance_date=gte.${monthStart}&attendance_date=lte.${today}&section_id=in.${encodeURIComponent(
                 filter
               )}&select=student_id,section_id,attendance_date`,
               token
             )
           : Promise.resolve([]),
-        earliestStart && earliestStart <= today
+        monthStart <= today
           ? getRows(
               `attendance_day_exclusions?school_year_id=eq.${encodeURIComponent(
                 year.id
-              )}&attendance_date=gte.${earliestStart}&attendance_date=lte.${today}&section_id=in.${encodeURIComponent(
+              )}&attendance_date=gte.${monthStart}&attendance_date=lte.${today}&section_id=in.${encodeURIComponent(
                 filter
               )}&select=section_id,attendance_date,exclusion_type,reason`,
               token
@@ -390,12 +384,11 @@ export async function GET(request: NextRequest) {
       }> = [];
 
       for (const sectionId of sectionIds) {
-        const start = adviserStartBySection.get(sectionId);
         const expected = expectedCountBySection.get(sectionId) ?? 0;
         const section = sectionNameMap.get(sectionId);
-        if (!start || !expected || !section) continue;
+        if (!expected || !section) continue;
 
-        for (const attendanceDate of dateRange(start, today)) {
+        for (const attendanceDate of dateRange(monthStart, today)) {
           if (!isWeekday(attendanceDate)) continue;
           const key = `${sectionId}|${attendanceDate}`;
           if (excludedKeys.has(key)) continue;
@@ -432,6 +425,7 @@ export async function GET(request: NextRequest) {
         date: validDate(date) ? date : null,
         isWeekday: validDate(date) ? isWeekday(date) : null,
         today,
+        attendanceMonth: today.slice(0, 7),
       });
     }
 
