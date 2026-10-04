@@ -578,7 +578,7 @@ export default function TeachingSetupPage() {
                       {working === current.id ? "Removing…" : "Remove"}
                     </button>
                   ) : (
-                    <span className={styles.noAdviser}>Grades locked</span>
+                    <span className={styles.noAdviser}>Grades Locked</span>
                   )}
                 </div>
               );
@@ -777,7 +777,7 @@ export default function TeachingSetupPage() {
           ) : subjects.length === 0 ? (
             <div className={styles.empty}>
               <GraduationCap size={28} />
-              <strong>No subjects added yet</strong>
+              <strong>No Subjects Added Yet</strong>
               <span>Add your first subject using the form above.</span>
             </div>
           ) : (
@@ -847,7 +847,7 @@ export default function TeachingSetupPage() {
             <div>
               <h2>Subject Teacher Assignments</h2>
               <p>
-                {activeYear ? activeYear.name : "Active school year"} subject assignments.
+                {activeYear ? activeYear.name : "Active School Year"} subject assignments.
                 These assignments identify who teaches each subject; grading authority belongs to the Section Adviser.
               </p>
             </div>
@@ -856,7 +856,7 @@ export default function TeachingSetupPage() {
           {assignments.length === 0 ? (
             <div className={styles.empty}>
               <UserCheck size={28} />
-              <strong>No teacher assignments yet</strong>
+              <strong>No Teacher Assignments Yet</strong>
               <span>Create a subject, then assign it to a section and Teacher.</span>
             </div>
           ) : (
