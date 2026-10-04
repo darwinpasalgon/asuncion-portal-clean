@@ -1219,8 +1219,8 @@ export default function PortalPage() {
                     academicContext?.grade_level &&
                     [8, 9, 10].includes(academicContext.grade_level) && (
                       <div>
-                        <dt>TVE Major</dt>
-                        <dd>{academicContext.tve_major || "Not Assigned yet"}</dd>
+                        <dt>Technical Vocational Education Major</dt>
+                        <dd>{academicContext.tve_major || "Not Assigned Yet"}</dd>
                       </div>
                     )}
                   <div><dt>Email</dt><dd>{profile.email}</dd></div>
