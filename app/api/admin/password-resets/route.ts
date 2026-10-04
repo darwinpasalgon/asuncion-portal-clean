@@ -35,14 +35,30 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json().catch(() => null);
-  if (!body?.requestId) {
-    return NextResponse.json({ error: "Reset request is required." }, { status: 400 });
+  if (!body) {
+    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
-  const response = await callAdminReset(token, {
-    action: "reset",
-    request_id: body.requestId,
-  });
-  const result = await response.json().catch(() => ({}));
-  return NextResponse.json(result, { status: response.status });
+  if (body.userId) {
+    const response = await callAdminReset(token, {
+      action: "request",
+      user_id: String(body.userId),
+    });
+    const result = await response.json().catch(() => ({}));
+    return NextResponse.json(result, { status: response.status });
+  }
+
+  if (body.requestId) {
+    const response = await callAdminReset(token, {
+      action: "reset",
+      request_id: String(body.requestId),
+    });
+    const result = await response.json().catch(() => ({}));
+    return NextResponse.json(result, { status: response.status });
+  }
+
+  return NextResponse.json(
+    { error: "User account or reset request is required." },
+    { status: 400 }
+  );
 }
