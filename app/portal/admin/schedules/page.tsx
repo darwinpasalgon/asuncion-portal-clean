@@ -529,7 +529,7 @@ export default function ClassSchedulesPage() {
           ) : orderedSchedules.length === 0 ? (
             <div className={styles.empty}>
               <CalendarDays size={30} />
-              <strong>No class schedules yet</strong>
+              <strong>No Class Schedules Yet</strong>
               <span>Add the first real schedule above.</span>
             </div>
           ) : (
