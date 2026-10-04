@@ -80,17 +80,30 @@ function formatPhilSysInput(value: string) {
   return digits.match(/.{1,4}/g)?.join(" - ") ?? digits;
 }
 
+const bachelorDegreeOptions = [
+  ["BACHELOR OF ELEMENTARY EDUCATION (BEED)", "Bachelor of Elementary Education (BEEd)"],
+  ["BACHELOR OF SECONDARY EDUCATION (BSED)", "Bachelor of Secondary Education (BSEd)"],
+  ["BACHELOR OF EARLY CHILDHOOD EDUCATION (BECED)", "Bachelor of Early Childhood Education (BECEd)"],
+  ["BACHELOR OF SPECIAL NEEDS EDUCATION (BSNED)", "Bachelor of Special Needs Education (BSNEd)"],
+  ["BACHELOR OF PHYSICAL EDUCATION (BPED)", "Bachelor of Physical Education (BPEd)"],
+  ["BACHELOR OF TECHNOLOGY AND LIVELIHOOD EDUCATION (BTLED)", "Bachelor of Technology and Livelihood Education (BTLEd)"],
+  ["BACHELOR OF TECHNICAL-VOCATIONAL TEACHER EDUCATION (BTVTED)", "Bachelor of Technical-Vocational Teacher Education (BTVTEd)"],
+  ["OTHER BACHELOR'S DEGREE", "Other Bachelor's Degree"],
+] as const;
+
 function requiredMissingFields(personal: Details) {
   const missing: string[] = [];
-  if (!["GRADUATED", "ON GOING", "NONE"].includes(personal.graduate_status ?? "")) {
-    missing.push("Graduate Studies");
+  if (!["GRADUATED", "ON GOING", "NONE"].includes(personal.graduate_status ?? "")) missing.push("Graduate Studies");
+  const degree=String(personal.bachelors_degree??"");
+  if (!bachelorDegreeOptions.some(([value])=>value===degree)) missing.push("Bachelor's Degree");
+  if ((degree==="BACHELOR OF SECONDARY EDUCATION (BSED)"||degree==="BACHELOR OF TECHNICAL-VOCATIONAL TEACHER EDUCATION (BTVTED)")) {
+    if(!String(personal.major??"").trim()) missing.push("Bachelor's Degree Major");
+    if(!String(personal.minor??"").trim()) missing.push("Bachelor's Degree Minor");
   }
-  if (!String(personal.bachelors_degree ?? "").trim()) {
-    missing.push("Bachelor's Degree");
-  }
-  if (String(personal.philsys_number ?? "").replace(/\D/g, "").length !== 16) {
-    missing.push("PhilSys (National ID) Number");
-  }
+  if(degree==="OTHER BACHELOR'S DEGREE"&&!String(personal.bachelors_degree_other??"").trim()) missing.push("Other Bachelor's Degree Course");
+  if (String(personal.philsys_number ?? "").replace(/\D/g, "").length !== 16) missing.push("PhilSys (National ID) Number");
+  if(!String(personal.religion??"").trim()) missing.push("Religion");
+  if(!String(personal.ethnic_group??"").trim()) missing.push("Ethnic Group");
   return missing;
 }
 
@@ -105,17 +118,6 @@ const nameFields = [
   ["first_name", "First Name"],
   ["middle_name", "Middle Name"],
   ["name_extension", "Name Extension"],
-] as const;
-
-const tertiaryFields = [
-  ["bachelors_degree", "Course"],
-  ["major", "Major"],
-  ["minor", "Minor"],
-] as const;
-
-const earningUnitsFields = [
-  ["education_units_major", "Major"],
-  ["education_units_minor", "Minor"],
 ] as const;
 
 const otherFields = [
@@ -399,31 +401,34 @@ export default function MyTeacherProfilePage() {
             <h2>Tertiary (Bachelor&apos;s Degree)</h2>
           </div>
           <div className={styles.grid}>
-            {tertiaryFields.map(([key, label]) =>
-              key === "bachelors_degree" ? (
-                <label key={key}>
-                  <span>Bachelor&apos;s Degree <b className={styles.required}>Required</b></span>
-                  <input
-                    required
-                    value={personal[key] ?? ""}
-                    onChange={(event) =>
-                      setPersonal((current) => ({ ...current, [key]: event.target.value }))
-                    }
-                    placeholder="Example: Bachelor of Secondary Education"
-                  />
-                </label>
-              ) : field(key, label)
-            )}
-          </div>
-        </section>
-
-        <section className={styles.panel}>
-          <div className={styles.panelHead}>
-            <GraduationCap size={22} />
-            <h2>BSED-Earning Units</h2>
-          </div>
-          <div className={styles.grid}>
-            {earningUnitsFields.map(([key, label]) => field(key, label))}
+            <label className={styles.wide}>
+              <span>Bachelor&apos;s Degree <b className={styles.required}>Required</b></span>
+              <select value={personal.bachelors_degree ?? ""} onChange={(event)=>{
+                const value=event.target.value;
+                setPersonal(current=>({...current,bachelors_degree:value,
+                  major:(value==="BACHELOR OF SECONDARY EDUCATION (BSED)"||value==="BACHELOR OF TECHNICAL-VOCATIONAL TEACHER EDUCATION (BTVTED)")?current.major??"":"",
+                  minor:(value==="BACHELOR OF SECONDARY EDUCATION (BSED)"||value==="BACHELOR OF TECHNICAL-VOCATIONAL TEACHER EDUCATION (BTVTED)")?current.minor??"":"",
+                  bachelors_degree_other:value==="OTHER BACHELOR'S DEGREE"?current.bachelors_degree_other??"":""
+                }))
+              }}>
+                <option value="">Select Bachelor&apos;s Degree</option>
+                {bachelorDegreeOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}
+              </select>
+            </label>
+            {(personal.bachelors_degree==="BACHELOR OF SECONDARY EDUCATION (BSED)"||personal.bachelors_degree==="BACHELOR OF TECHNICAL-VOCATIONAL TEACHER EDUCATION (BTVTED)")&&<>
+              <label><span>Major <b className={styles.required}>Required</b></span><input value={personal.major??""} onChange={e=>setPersonal(cur=>({...cur,major:e.target.value}))}/></label>
+              <label><span>Minor <b className={styles.required}>Required</b></span><input value={personal.minor??""} onChange={e=>setPersonal(cur=>({...cur,minor:e.target.value}))}/></label>
+            </>}
+            {personal.bachelors_degree==="OTHER BACHELOR'S DEGREE"&&
+              <label className={styles.wide}><span>Course Taken <b className={styles.required}>Required</b></span><input value={personal.bachelors_degree_other??""} onChange={e=>setPersonal(cur=>({...cur,bachelors_degree_other:e.target.value}))} placeholder="Enter bachelor's degree/course"/></label>}
+            <label className={styles.checkboxField}>
+              <input type="checkbox" checked={(personal.bsed_earning_units??"NO")==="YES"} onChange={e=>setPersonal(cur=>({...cur,bsed_earning_units:e.target.checked?"YES":"NO",education_units_major:e.target.checked?cur.education_units_major??"":"",education_units_minor:e.target.checked?cur.education_units_minor??"":""}))}/>
+              <span>Took BSEd-Earning Units</span>
+            </label>
+            {(personal.bsed_earning_units??"NO")==="YES"&&<>
+              <label><span>BSEd-Earning Units Major</span><input value={personal.education_units_major??""} onChange={e=>setPersonal(cur=>({...cur,education_units_major:e.target.value}))}/></label>
+              <label><span>BSEd-Earning Units Minor</span><input value={personal.education_units_minor??""} onChange={e=>setPersonal(cur=>({...cur,education_units_minor:e.target.value}))}/></label>
+            </>}
           </div>
         </section>
 
@@ -452,6 +457,11 @@ export default function MyTeacherProfilePage() {
                     placeholder="1234 - 5678 - 9012 - 3456"
                   />
                   <small className={styles.fieldHint}>16 digits · xxxx - xxxx - xxxx - xxxx</small>
+                </label>
+              ) : key === "religion" || key === "ethnic_group" ? (
+                <label key={key}>
+                  <span>{label} <b className={styles.required}>Required</b></span>
+                  <input required value={personal[key] ?? ""} onChange={e=>setPersonal(cur=>({...cur,[key]:e.target.value}))}/>
                 </label>
               ) : field(key, label, key === "skills", key === "skills")
             )}
