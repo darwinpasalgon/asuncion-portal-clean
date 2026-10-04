@@ -198,7 +198,7 @@ export default function AdministratorsPage() {
       <ActionWaitOverlay visible={Boolean(working)} message="Please wait…" />
       <div className={styles.shell}>
         <nav className={styles.topActions}>
-          <a href="/portal"><ArrowLeft size={16} />Back to portal</a>
+          <a href="/portal"><ArrowLeft size={16} />Back to Portal</a>
           <button onClick={() => void load()} disabled={loading}>
             <RefreshCw size={16} />Refresh
           </button>
@@ -358,7 +358,7 @@ export default function AdministratorsPage() {
                 defaultValue={String(selectedPersonnel?.position ?? "").toUpperCase()}
                 required
               >
-                <option value="">Select non-teaching position</option>
+                <option value="">Select Non-Teaching Position</option>
                 {positionOptions(nonTeachingPositions, selectedPersonnel?.position).map((item) => (
                   <option key={item} value={item}>
                     {item}
@@ -378,9 +378,9 @@ export default function AdministratorsPage() {
                   setPermissions([]);
                 }}
               >
-                <option value="registrar">Registrar - SF10 records</option>
-                <option value="human_resources">Human Resources - personnel profiles</option>
-                <option value="content_administrator">Content Administrator - announcements/resources</option>
+                <option value="registrar">Registrar - SF10 Records</option>
+                <option value="human_resources">Human Resources - Personnel Profiles</option>
+                <option value="content_administrator">Content Administrator - Announcements/Resources</option>
                 <option value="school_administrator">Custom Administrator</option>
               </select>
             </label>
