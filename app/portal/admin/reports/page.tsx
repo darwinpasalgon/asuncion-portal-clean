@@ -51,10 +51,12 @@ type GradeRow={
 type AttendanceRow=Student&{
   present:number;
   absent:number;
-  late:number;
-  excused:number;
+  absent_morning:number;
+  cutting_classes:number;
+  transferred_in:number;
+  transferred_out:number;
+  dropped:number;
   total:number;
-  attendance_rate:number|null;
 };
 type Counts={
   enrolled_students:number;
@@ -75,8 +77,11 @@ type Distribution={
 type AttendanceTotals={
   present:number;
   absent:number;
-  late:number;
-  excused:number;
+  absent_morning:number;
+  cutting_classes:number;
+  transferred_in:number;
+  transferred_out:number;
+  dropped:number;
   total:number;
 };
 type ReportTab="overview"|"grades"|"intervention"|"attendance"|"classlist";
@@ -141,7 +146,8 @@ export default function ReportsPage(){
     advancing:0,benchmarking:0,connecting:0,developing:0,emerging:0,
   });
   const [attendanceTotals,setAttendanceTotals]=useState<AttendanceTotals>({
-    present:0,absent:0,late:0,excused:0,total:0,
+    present:0,absent:0,absent_morning:0,cutting_classes:0,
+    transferred_in:0,transferred_out:0,dropped:0,total:0,
   });
   const [grade,setGrade]=useState("");
   const [section,setSection]=useState("");
@@ -235,7 +241,8 @@ export default function ReportsPage(){
   const attendanceSorted=useMemo(
     ()=>[...attendanceRows].sort((a,b)=>
       b.absent-a.absent||
-      b.late-a.late||
+      b.absent_morning-a.absent_morning||
+      b.cutting_classes-a.cutting_classes||
       a.full_name.localeCompare(b.full_name)
     ),
     [attendanceRows]
@@ -288,11 +295,11 @@ export default function ReportsPage(){
     if(tab==="attendance"){
       downloadCsv(
         prefix+"-attendance-report.csv",
-        ["LRN","Learner","Grade","Section","Recorded Days","Present","Late","Absent","Excused","Attendance Rate"],
+        ["LRN","Learner","Grade","Section","Recorded Days","Present","Absent","Absent in the Morning","Cutting Classes","Transferred In","Transferred Out","Dropped"],
         attendanceSorted.map(row=>[
           row.lrn,row.full_name,row.grade_level,row.section_name,row.total,
-          row.present,row.late,row.absent,row.excused,
-          row.attendance_rate===null?"":row.attendance_rate+"%",
+          row.present,row.absent,row.absent_morning,row.cutting_classes,
+          row.transferred_in,row.transferred_out,row.dropped,
         ])
       );
       return;
@@ -320,9 +327,12 @@ export default function ReportsPage(){
         ["Final Grades Failed",counts.final_failed],
         ["Attendance Records",attendanceTotals.total],
         ["Attendance Present",attendanceTotals.present],
-        ["Attendance Late",attendanceTotals.late],
         ["Attendance Absent",attendanceTotals.absent],
-        ["Attendance Excused",attendanceTotals.excused],
+        ["Attendance Absent in the Morning",attendanceTotals.absent_morning],
+        ["Attendance Cutting Classes",attendanceTotals.cutting_classes],
+        ["Attendance Transferred In",attendanceTotals.transferred_in],
+        ["Attendance Transferred Out",attendanceTotals.transferred_out],
+        ["Attendance Dropped",attendanceTotals.dropped],
       ]
     );
   }
@@ -397,9 +407,12 @@ export default function ReportsPage(){
             <div className={styles.panelHead}><div><h2>Attendance Totals</h2><p>{from||"Start"} to {to||"Latest"} for the current filters.</p></div></div>
             <div className={styles.attendanceCards}>
               <div><span>Present</span><strong>{attendanceTotals.present}</strong></div>
-              <div><span>Late</span><strong>{attendanceTotals.late}</strong></div>
               <div><span>Absent</span><strong>{attendanceTotals.absent}</strong></div>
-              <div><span>Excused</span><strong>{attendanceTotals.excused}</strong></div>
+              <div><span>Absent in the Morning</span><strong>{attendanceTotals.absent_morning}</strong></div>
+              <div><span>Cutting Classes</span><strong>{attendanceTotals.cutting_classes}</strong></div>
+              <div><span>Transferred In</span><strong>{attendanceTotals.transferred_in}</strong></div>
+              <div><span>Transferred Out</span><strong>{attendanceTotals.transferred_out}</strong></div>
+              <div><span>Dropped</span><strong>{attendanceTotals.dropped}</strong></div>
             </div>
             <p className={styles.note}>{attendanceTotals.total} total recorded student-day attendance entries in this date range.</p>
           </section>
@@ -445,16 +458,16 @@ export default function ReportsPage(){
       </section>}
 
       {tab==="attendance"&&<section className={styles.panel}>
-        <div className={styles.panelHead}><div><h2>Attendance Summary</h2><p>Present + Late is used for the displayed attendance rate. No risk threshold is applied.</p></div></div>
+        <div className={styles.panelHead}><div><h2>Attendance Summary</h2><p>Counts use the same attendance statuses available to Section Advisers.</p></div></div>
         <div className={styles.tableWrap}>
           <table>
-            <thead><tr><th>LRN</th><th>Learner</th><th>Class</th><th>Recorded</th><th>Present</th><th>Late</th><th>Absent</th><th>Excused</th><th>Rate</th></tr></thead>
+            <thead><tr><th>LRN</th><th>Learner</th><th>Class</th><th>Recorded</th><th>Present</th><th>Absent</th><th>Absent AM</th><th>Cutting Classes</th><th>Transferred In</th><th>Transferred Out</th><th>Dropped</th></tr></thead>
             <tbody>
               {attendanceSorted.map(row=><tr key={row.student_id}>
                 <td>{row.lrn||"—"}</td><td><strong>{row.full_name}</strong></td><td>Grade {row.grade_level} · {row.section_name}</td>
-                <td>{row.total}</td><td>{row.present}</td><td>{row.late}</td><td>{row.absent}</td><td>{row.excused}</td><td>{row.attendance_rate===null?"—":row.attendance_rate+"%"}</td>
+                <td>{row.total}</td><td>{row.present}</td><td>{row.absent}</td><td>{row.absent_morning}</td><td>{row.cutting_classes}</td><td>{row.transferred_in}</td><td>{row.transferred_out}</td><td>{row.dropped}</td>
               </tr>)}
-              {attendanceSorted.length===0&&<tr><td colSpan={9} className={styles.emptyCell}>No enrolled students match these filters.</td></tr>}
+              {attendanceSorted.length===0&&<tr><td colSpan={11} className={styles.emptyCell}>No enrolled students match these filters.</td></tr>}
             </tbody>
           </table>
         </div>
