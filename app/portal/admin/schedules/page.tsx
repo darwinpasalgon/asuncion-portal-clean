@@ -10,7 +10,8 @@ import {
   Pencil,
   Plus,
   RefreshCw,
-  School,
+  Save,
+  WandSparkles,
 } from "lucide-react";
 import styles from "./schedules.module.css";
 
@@ -42,15 +43,24 @@ type DayDraft = {
   room: string;
 };
 
+type QuickDraft = {
+  days: number[];
+  startTime: string;
+  endTime: string;
+  room: string;
+};
+
 const DAYS = [
-  { value: 1, label: "Monday" },
-  { value: 2, label: "Tuesday" },
-  { value: 3, label: "Wednesday" },
-  { value: 4, label: "Thursday" },
-  { value: 5, label: "Friday" },
-  { value: 6, label: "Saturday" },
-  { value: 7, label: "Sunday" },
+  { value: 1, label: "Monday", short: "Mon" },
+  { value: 2, label: "Tuesday", short: "Tue" },
+  { value: 3, label: "Wednesday", short: "Wed" },
+  { value: 4, label: "Thursday", short: "Thu" },
+  { value: 5, label: "Friday", short: "Fri" },
+  { value: 6, label: "Saturday", short: "Sat" },
+  { value: 7, label: "Sunday", short: "Sun" },
 ];
+
+const WEEKDAYS = DAYS.slice(0, 5);
 
 function timeLabel(value: string) {
   const [hourText, minute] = value.slice(0, 5).split(":");
@@ -60,6 +70,10 @@ function timeLabel(value: string) {
   return `${display}:${minute} ${suffix}`;
 }
 
+function emptyQuickDraft(): QuickDraft {
+  return { days: [], startTime: "", endTime: "", room: "" };
+}
+
 export default function ClassSchedulesPage() {
   const [activeYear, setActiveYear] = useState<Year | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -67,6 +81,11 @@ export default function ClassSchedulesPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+
+  const [quickGrade, setQuickGrade] = useState("");
+  const [quickSection, setQuickSection] = useState("");
+  const [quickDrafts, setQuickDrafts] = useState<Record<string, QuickDraft>>({});
+
   const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [dayDrafts, setDayDrafts] = useState<Record<number, DayDraft>>({});
   const [editId, setEditId] = useState("");
@@ -75,6 +94,8 @@ export default function ClassSchedulesPage() {
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
   const [editRoom, setEditRoom] = useState("");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState("");
   const [error, setError] = useState("");
@@ -84,7 +105,9 @@ export default function ClassSchedulesPage() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/admin/class-schedules", { cache: "no-store" });
+      const response = await fetch("/api/admin/class-schedules", {
+        cache: "no-store",
+      });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
         setError(result.error ?? "Unable to load class schedules.");
@@ -112,10 +135,64 @@ export default function ClassSchedulesPage() {
     const subjectsById = new Map(
       subjects.map((item) => [item.id, { name: item.name }])
     );
-    const teachersById = new Map(teachers.map((item) => [item.id, item.full_name]));
-    const assignmentsById = new Map(assignments.map((item) => [item.id, item]));
+    const teachersById = new Map(
+      teachers.map((item) => [item.id, item.full_name])
+    );
+    const assignmentsById = new Map(
+      assignments.map((item) => [item.id, item])
+    );
     return { sectionsById, subjectsById, teachersById, assignmentsById };
   }, [sections, subjects, teachers, assignments]);
+
+  const gradeOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          assignments
+            .map((item) => item.grade_level)
+            .filter((value) => Number.isInteger(value))
+        )
+      ).sort((a, b) => a - b),
+    [assignments]
+  );
+
+  const quickSectionOptions = useMemo(() => {
+    if (!quickGrade) return [];
+    const grade = Number(quickGrade);
+    const assignedSectionIds = new Set(
+      assignments
+        .filter((item) => item.grade_level === grade)
+        .map((item) => item.section_id)
+    );
+
+    return sections
+      .filter(
+        (section) =>
+          section.grade_level === grade && assignedSectionIds.has(section.id)
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [assignments, sections, quickGrade]);
+
+  const quickAssignments = useMemo(
+    () =>
+      assignments
+        .filter((item) => item.section_id === quickSection)
+        .sort((a, b) => {
+          const subjectA = lookup.subjectsById.get(a.subject_id)?.name ?? "";
+          const subjectB = lookup.subjectsById.get(b.subject_id)?.name ?? "";
+          const bySubject = subjectA.localeCompare(subjectB);
+          if (bySubject !== 0) return bySubject;
+          return String(a.major ?? "").localeCompare(String(b.major ?? ""));
+        }),
+    [assignments, quickSection, lookup.subjectsById]
+  );
+
+  const quickSectionScheduleCount = useMemo(() => {
+    const ids = new Set(quickAssignments.map((item) => item.id));
+    return schedules.filter(
+      (item) => item.is_active && ids.has(item.teacher_assignment_id)
+    ).length;
+  }, [quickAssignments, schedules]);
 
   function assignmentLabel(assignment: Assignment) {
     const subject = lookup.subjectsById.get(assignment.subject_id);
@@ -125,7 +202,161 @@ export default function ClassSchedulesPage() {
       subject?.name ?? "Unknown subject",
       assignment.major ?? "",
       lookup.teachersById.get(assignment.teacher_id) ?? "Unknown teacher",
-    ].filter(Boolean).join(" · ");
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
+
+  function schedulesForAssignment(assignmentId: string) {
+    return schedules
+      .filter(
+        (schedule) =>
+          schedule.teacher_assignment_id === assignmentId && schedule.is_active
+      )
+      .sort((a, b) => {
+        if (a.day_of_week !== b.day_of_week) {
+          return a.day_of_week - b.day_of_week;
+        }
+        return a.start_time.localeCompare(b.start_time);
+      });
+  }
+
+  function updateQuickDraft(
+    assignmentId: string,
+    field: keyof Omit<QuickDraft, "days">,
+    value: string
+  ) {
+    setQuickDrafts((current) => ({
+      ...current,
+      [assignmentId]: {
+        ...(current[assignmentId] ?? emptyQuickDraft()),
+        [field]: value,
+      },
+    }));
+  }
+
+  function toggleQuickDay(assignmentId: string, day: number) {
+    setQuickDrafts((current) => {
+      const draft = current[assignmentId] ?? emptyQuickDraft();
+      const selected = draft.days.includes(day);
+      return {
+        ...current,
+        [assignmentId]: {
+          ...draft,
+          days: selected
+            ? draft.days.filter((value) => value !== day)
+            : [...draft.days, day].sort((a, b) => a - b),
+        },
+      };
+    });
+  }
+
+  function setQuickWeekdays(assignmentId: string) {
+    setQuickDrafts((current) => ({
+      ...current,
+      [assignmentId]: {
+        ...(current[assignmentId] ?? emptyQuickDraft()),
+        days: [1, 2, 3, 4, 5],
+      },
+    }));
+  }
+
+  function clearQuickDraft(assignmentId: string) {
+    setQuickDrafts((current) => ({
+      ...current,
+      [assignmentId]: emptyQuickDraft(),
+    }));
+  }
+
+  async function saveQuickAssignment(assignment: Assignment) {
+    const draft = quickDrafts[assignment.id] ?? emptyQuickDraft();
+
+    if (!draft.days.length) {
+      setError("Select at least one day for this subject.");
+      return;
+    }
+    if (!draft.startTime || !draft.endTime || draft.startTime >= draft.endTime) {
+      setError("Enter a valid start and end time for this subject.");
+      return;
+    }
+
+    setWorking(`quick:${assignment.id}`);
+    setError("");
+    setSuccess("");
+
+    try {
+      const existing = schedulesForAssignment(assignment.id);
+      const existingByDay = new Map(
+        existing.map((schedule) => [schedule.day_of_week, schedule])
+      );
+
+      const newDays: number[] = [];
+
+      for (const day of draft.days) {
+        const current = existingByDay.get(day);
+        if (!current) {
+          newDays.push(day);
+          continue;
+        }
+
+        const response = await fetch("/api/admin/class-schedules", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "save_schedule",
+            id: current.id,
+            assignmentId: assignment.id,
+            dayOfWeek: day,
+            startTime: draft.startTime,
+            endTime: draft.endTime,
+            room: draft.room,
+          }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(
+            result.error ??
+              `Unable to update the ${DAYS.find((item) => item.value === day)?.label ?? "selected day"} schedule.`
+          );
+        }
+      }
+
+      if (newDays.length) {
+        const response = await fetch("/api/admin/class-schedules", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "save_schedule",
+            assignmentId: assignment.id,
+            entries: newDays.map((day) => ({
+              dayOfWeek: day,
+              startTime: draft.startTime,
+              endTime: draft.endTime,
+              room: draft.room,
+            })),
+          }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(result.error ?? "Unable to save the selected days.");
+        }
+      }
+
+      const subject =
+        lookup.subjectsById.get(assignment.subject_id)?.name ?? "Subject";
+      setSuccess(
+        `${subject} schedule saved for ${draft.days.length} day${draft.days.length === 1 ? "" : "s"}.`
+      );
+      clearQuickDraft(assignment.id);
+      await load();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to save this subject schedule."
+      );
+      await load();
+    } finally {
+      setWorking("");
+    }
   }
 
   function resetForm() {
@@ -168,7 +399,9 @@ export default function ClassSchedulesPage() {
     setDayDrafts((drafts) => {
       const next = { ...drafts };
       for (const day of weekdays) {
-        if (!next[day]) next[day] = { startTime: "", endTime: "", room: "" };
+        if (!next[day]) {
+          next[day] = { startTime: "", endTime: "", room: "" };
+        }
       }
       return next;
     });
@@ -196,6 +429,7 @@ export default function ClassSchedulesPage() {
     setEditStart(schedule.start_time.slice(0, 5));
     setEditEnd(schedule.end_time.slice(0, 5));
     setEditRoom(schedule.room ?? "");
+    setAdvancedOpen(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -241,7 +475,9 @@ export default function ClassSchedulesPage() {
       setSuccess(
         editId
           ? "Schedule updated."
-          : `${result.count ?? selectedDays.length} schedule entr${(result.count ?? selectedDays.length) === 1 ? "y" : "ies"} added.`
+          : `${result.count ?? selectedDays.length} schedule entr${
+              (result.count ?? selectedDays.length) === 1 ? "y" : "ies"
+            } added.`
       );
       resetForm();
       await load();
@@ -283,19 +519,30 @@ export default function ClassSchedulesPage() {
   }
 
   const orderedSchedules = [...schedules].sort((a, b) => {
-    if (a.day_of_week !== b.day_of_week) return a.day_of_week - b.day_of_week;
+    if (a.day_of_week !== b.day_of_week) {
+      return a.day_of_week - b.day_of_week;
+    }
     return a.start_time.localeCompare(b.start_time);
   });
+
+  const visibleSchedules = quickSection
+    ? orderedSchedules.filter((schedule) => {
+        const assignment = lookup.assignmentsById.get(
+          schedule.teacher_assignment_id
+        );
+        return assignment?.section_id === quickSection;
+      })
+    : orderedSchedules;
 
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
         <nav className={styles.topActions}>
           <a href="/portal" className={styles.topLink}>
-            <ArrowLeft size={16} /> Back to portal
+            <ArrowLeft size={16} /> Back to Portal
           </a>
           <a href="/portal/admin/teaching" className={styles.topLink}>
-            Subjects & teachers
+            Subjects & Teachers
           </a>
         </nav>
 
@@ -304,8 +551,9 @@ export default function ClassSchedulesPage() {
             <span className={styles.eyebrow}>ADMINISTRATION</span>
             <h1>Class Schedules</h1>
             <p>
-              Schedule the class assignments already configured for the active
-              school year. Teacher, section, and room conflicts are blocked automatically.
+              Build schedules by section. Subject and Teacher assignments are already
+              filled in for you, while Teacher, Section, and room conflicts remain
+              blocked automatically.
             </p>
           </div>
           {activeYear && (
@@ -322,220 +570,527 @@ export default function ClassSchedulesPage() {
         {error && <div className={styles.error}>{error}</div>}
         {success && <div className={styles.success}>{success}</div>}
 
-        <section className={styles.panel}>
+        <section className={`${styles.panel} ${styles.quickPanel}`}>
           <div className={styles.panelHeading}>
             <div>
-              <h2>{editId ? "Edit Schedule" : "Add Schedule"}</h2>
+              <div className={styles.quickTitle}>
+                <WandSparkles size={18} />
+                <span>RECOMMENDED</span>
+              </div>
+              <h2>Quick Section Schedule</h2>
               <p>
-                Only active Teacher assignments for the current school year can be scheduled.
+                Choose a section once, then schedule each assigned subject directly
+                from the list below.
               </p>
             </div>
-            {editId && (
-              <button type="button" className={styles.secondary} onClick={resetForm}>
-                Cancel edit
-              </button>
-            )}
           </div>
 
-          <form className={styles.form} onSubmit={saveSchedule}>
-            <label className={styles.assignmentField}>
-              <span>Class Assignment</span>
+          <div className={styles.quickPicker}>
+            <label>
+              <span>Grade Level</span>
               <select
-                required
-                value={editAssignment}
-                onChange={(event) => setEditAssignment(event.target.value)}
+                value={quickGrade}
+                onChange={(event) => {
+                  setQuickGrade(event.target.value);
+                  setQuickSection("");
+                  setQuickDrafts({});
+                  setError("");
+                  setSuccess("");
+                }}
               >
-                <option value="">Select Class Assignment</option>
-                {assignments.map((assignment) => (
-                  <option key={assignment.id} value={assignment.id}>
-                    {assignmentLabel(assignment)}
+                <option value="">Select Grade Level</option>
+                {gradeOptions.map((grade) => (
+                  <option key={grade} value={grade}>
+                    Grade {grade}
                   </option>
                 ))}
               </select>
             </label>
 
-            {editId ? (
-              <div className={styles.editGrid}>
-                <label>
-                  <span>Day</span>
-                  <select
-                    required
-                    value={editDay}
-                    onChange={(event) => setEditDay(event.target.value)}
-                  >
-                    <option value="">Select Day</option>
-                    {DAYS.map((day) => (
-                      <option key={day.value} value={day.value}>{day.label}</option>
-                    ))}
-                  </select>
-                </label>
-
-                <label>
-                  <span>Start Time</span>
-                  <input
-                    required
-                    type="time"
-                    value={editStart}
-                    onChange={(event) => setEditStart(event.target.value)}
-                  />
-                </label>
-
-                <label>
-                  <span>End Time</span>
-                  <input
-                    required
-                    type="time"
-                    value={editEnd}
-                    onChange={(event) => setEditEnd(event.target.value)}
-                  />
-                </label>
-
-                <label>
-                  <span>Room / Location <small>optional</small></span>
-                  <input
-                    maxLength={80}
-                    placeholder="e.g. Computer Laboratory"
-                    value={editRoom}
-                    onChange={(event) => setEditRoom(event.target.value)}
-                  />
-                </label>
-              </div>
-            ) : (
-              <>
-                <div className={styles.daySelector}>
-                  <div className={styles.daySelectorHeading}>
-                    <div>
-                      <span>Teaching Days</span>
-                      <small>Select every day this class meets. Each day can have a different time and room.</small>
-                    </div>
-                    <div className={styles.dayHelpers}>
-                      <button type="button" className={styles.secondary} onClick={selectWeekdays}>
-                        Select Monday–Friday
-                      </button>
-                      <button type="button" className={styles.secondary} onClick={clearDays}>
-                        Clear days
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className={styles.dayChoices}>
-                    {DAYS.map((day) => {
-                      const selected = selectedDays.includes(day.value);
-                      return (
-                        <button
-                          key={day.value}
-                          type="button"
-                          className={selected ? styles.daySelected : styles.dayChoice}
-                          onClick={() => toggleDay(day.value)}
-                          aria-pressed={selected}
-                        >
-                          {day.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {selectedDays.length > 0 && (
-                  <div className={styles.dayScheduleGrid}>
-                    <div className={styles.dayScheduleHeader}>
-                      <span>Day</span>
-                      <span>Start Time</span>
-                      <span>End Time</span>
-                      <span>Room / Location</span>
-                    </div>
-
-                    {selectedDays.map((day) => {
-                      const dayInfo = DAYS.find((item) => item.value === day);
-                      const draft = dayDrafts[day] ?? {
-                        startTime: "",
-                        endTime: "",
-                        room: "",
-                      };
-
-                      return (
-                        <div className={styles.dayScheduleRow} key={day}>
-                          <strong>{dayInfo?.label}</strong>
-                          <input
-                            required
-                            type="time"
-                            aria-label={`${dayInfo?.label} start time`}
-                            value={draft.startTime}
-                            onChange={(event) =>
-                              updateDayDraft(day, "startTime", event.target.value)
-                            }
-                          />
-                          <input
-                            required
-                            type="time"
-                            aria-label={`${dayInfo?.label} end time`}
-                            value={draft.endTime}
-                            onChange={(event) =>
-                              updateDayDraft(day, "endTime", event.target.value)
-                            }
-                          />
-                          <input
-                            maxLength={80}
-                            aria-label={`${dayInfo?.label} room or location`}
-                            placeholder="Optional"
-                            value={draft.room}
-                            onChange={(event) =>
-                              updateDayDraft(day, "room", event.target.value)
-                            }
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            )}
-
-            <div className={styles.formActions}>
-              <button
-                type="submit"
-                disabled={
-                  working === "save" ||
-                  assignments.length === 0 ||
-                  (!editId && selectedDays.length === 0)
-                }
+            <label>
+              <span>Section</span>
+              <select
+                value={quickSection}
+                disabled={!quickGrade}
+                onChange={(event) => {
+                  setQuickSection(event.target.value);
+                  setQuickDrafts({});
+                  setError("");
+                  setSuccess("");
+                }}
               >
-                {editId ? <Pencil size={17} /> : <Plus size={17} />}
-                {working === "save"
-                  ? "Saving…"
-                  : editId
-                    ? "Update schedule"
-                    : selectedDays.length > 1
-                      ? `Add ${selectedDays.length} schedule entries`
-                      : "Add Schedule"}
-              </button>
+                <option value="">
+                  {quickGrade ? "Select Section" : "Select Grade Level First"}
+                </option>
+                {quickSectionOptions.map((section) => (
+                  <option key={section.id} value={section.id}>
+                    {section.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            {quickSection && (
+              <div className={styles.quickSummary}>
+                <strong>{quickAssignments.length}</strong>
+                <span>Subject Assignment{quickAssignments.length === 1 ? "" : "s"}</span>
+                <small>
+                  {quickSectionScheduleCount} active schedule entr
+                  {quickSectionScheduleCount === 1 ? "y" : "ies"}
+                </small>
+              </div>
+            )}
+          </div>
+
+          {!quickSection ? (
+            <div className={styles.quickEmpty}>
+              <CalendarDays size={26} />
+              <strong>Select a Grade Level and Section</strong>
+              <span>The assigned Subjects and Teachers will appear automatically.</span>
             </div>
-          </form>
+          ) : quickAssignments.length === 0 ? (
+            <div className={styles.quickEmpty}>
+              <CalendarDays size={26} />
+              <strong>No Subject Teacher Assignments Yet</strong>
+              <span>
+                Configure the section first in Subjects & Teachers, then return here.
+              </span>
+            </div>
+          ) : (
+            <div className={styles.quickRows}>
+              {quickAssignments.map((assignment) => {
+                const draft =
+                  quickDrafts[assignment.id] ?? emptyQuickDraft();
+                const subject =
+                  lookup.subjectsById.get(assignment.subject_id)?.name ??
+                  "Unknown Subject";
+                const teacher =
+                  lookup.teachersById.get(assignment.teacher_id) ??
+                  "Unknown Teacher";
+                const existing = schedulesForAssignment(assignment.id);
+                const quickWorking = working === `quick:${assignment.id}`;
+
+                return (
+                  <article className={styles.quickRow} key={assignment.id}>
+                    <div className={styles.quickSubject}>
+                      <span>SUBJECT</span>
+                      <strong>{subject}</strong>
+                      {assignment.major && <small>{assignment.major}</small>}
+                      <p>{teacher}</p>
+                    </div>
+
+                    <div className={styles.quickDays}>
+                      <div className={styles.quickFieldLabel}>
+                        <span>Days</span>
+                        <button
+                          type="button"
+                          onClick={() => setQuickWeekdays(assignment.id)}
+                        >
+                          Mon–Fri
+                        </button>
+                      </div>
+                      <div className={styles.quickDayChoices}>
+                        {WEEKDAYS.map((day) => {
+                          const selected = draft.days.includes(day.value);
+                          return (
+                            <button
+                              key={day.value}
+                              type="button"
+                              className={
+                                selected
+                                  ? styles.quickDaySelected
+                                  : styles.quickDayChoice
+                              }
+                              onClick={() =>
+                                toggleQuickDay(assignment.id, day.value)
+                              }
+                              aria-pressed={selected}
+                            >
+                              {day.short}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <label className={styles.quickTime}>
+                      <span>Start</span>
+                      <input
+                        type="time"
+                        value={draft.startTime}
+                        onChange={(event) =>
+                          updateQuickDraft(
+                            assignment.id,
+                            "startTime",
+                            event.target.value
+                          )
+                        }
+                      />
+                    </label>
+
+                    <label className={styles.quickTime}>
+                      <span>End</span>
+                      <input
+                        type="time"
+                        value={draft.endTime}
+                        onChange={(event) =>
+                          updateQuickDraft(
+                            assignment.id,
+                            "endTime",
+                            event.target.value
+                          )
+                        }
+                      />
+                    </label>
+
+                    <label className={styles.quickRoom}>
+                      <span>Room <small>optional</small></span>
+                      <input
+                        maxLength={80}
+                        placeholder="Room / Location"
+                        value={draft.room}
+                        onChange={(event) =>
+                          updateQuickDraft(
+                            assignment.id,
+                            "room",
+                            event.target.value
+                          )
+                        }
+                      />
+                    </label>
+
+                    <div className={styles.quickSave}>
+                      <button
+                        type="button"
+                        disabled={
+                          quickWorking ||
+                          !draft.days.length ||
+                          !draft.startTime ||
+                          !draft.endTime
+                        }
+                        onClick={() => void saveQuickAssignment(assignment)}
+                      >
+                        <Save size={15} />
+                        {quickWorking ? "Saving…" : "Save"}
+                      </button>
+                    </div>
+
+                    {existing.length > 0 && (
+                      <div className={styles.quickExisting}>
+                        <span>Current:</span>
+                        {existing.map((schedule) => (
+                          <button
+                            type="button"
+                            key={schedule.id}
+                            onClick={() => startEdit(schedule)}
+                            title="Edit this schedule entry"
+                          >
+                            <strong>
+                              {DAYS.find(
+                                (day) => day.value === schedule.day_of_week
+                              )?.short}
+                            </strong>
+                            {timeLabel(schedule.start_time)}–
+                            {timeLabel(schedule.end_time)}
+                            {schedule.room ? ` · ${schedule.room}` : ""}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
         </section>
+
+        <details
+          className={styles.advancedPanel}
+          open={advancedOpen}
+          onToggle={(event) =>
+            setAdvancedOpen((event.currentTarget as HTMLDetailsElement).open)
+          }
+        >
+          <summary>
+            <div>
+              <strong>
+                {editId ? "Editing Schedule Entry" : "Advanced Schedule Entry"}
+              </strong>
+              <span>
+                Use this only when one subject needs different times on different
+                days or weekend scheduling.
+              </span>
+            </div>
+            <span>{editId ? "Editing" : "Optional"}</span>
+          </summary>
+
+          <div className={styles.advancedBody}>
+            <div className={styles.panelHeading}>
+              <div>
+                <h2>{editId ? "Edit Schedule" : "Add Advanced Schedule"}</h2>
+                <p>
+                  Select any active Teacher assignment and configure each day
+                  separately.
+                </p>
+              </div>
+              {editId && (
+                <button
+                  type="button"
+                  className={styles.secondary}
+                  onClick={() => {
+                    resetForm();
+                    setAdvancedOpen(false);
+                  }}
+                >
+                  Cancel Edit
+                </button>
+              )}
+            </div>
+
+            <form className={styles.form} onSubmit={saveSchedule}>
+              <label className={styles.assignmentField}>
+                <span>Class Assignment</span>
+                <select
+                  required
+                  value={editAssignment}
+                  onChange={(event) => setEditAssignment(event.target.value)}
+                >
+                  <option value="">Select Class Assignment</option>
+                  {assignments.map((assignment) => (
+                    <option key={assignment.id} value={assignment.id}>
+                      {assignmentLabel(assignment)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {editId ? (
+                <div className={styles.editGrid}>
+                  <label>
+                    <span>Day</span>
+                    <select
+                      required
+                      value={editDay}
+                      onChange={(event) => setEditDay(event.target.value)}
+                    >
+                      <option value="">Select Day</option>
+                      {DAYS.map((day) => (
+                        <option key={day.value} value={day.value}>
+                          {day.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    <span>Start Time</span>
+                    <input
+                      required
+                      type="time"
+                      value={editStart}
+                      onChange={(event) => setEditStart(event.target.value)}
+                    />
+                  </label>
+
+                  <label>
+                    <span>End Time</span>
+                    <input
+                      required
+                      type="time"
+                      value={editEnd}
+                      onChange={(event) => setEditEnd(event.target.value)}
+                    />
+                  </label>
+
+                  <label>
+                    <span>
+                      Room / Location <small>optional</small>
+                    </span>
+                    <input
+                      maxLength={80}
+                      placeholder="e.g. Computer Laboratory"
+                      value={editRoom}
+                      onChange={(event) => setEditRoom(event.target.value)}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <>
+                  <div className={styles.daySelector}>
+                    <div className={styles.daySelectorHeading}>
+                      <div>
+                        <span>Teaching Days</span>
+                        <small>
+                          Select every day this class meets. Each day can have a
+                          different time and room.
+                        </small>
+                      </div>
+                      <div className={styles.dayHelpers}>
+                        <button
+                          type="button"
+                          className={styles.secondary}
+                          onClick={selectWeekdays}
+                        >
+                          Select Monday–Friday
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.secondary}
+                          onClick={clearDays}
+                        >
+                          Clear Days
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className={styles.dayChoices}>
+                      {DAYS.map((day) => {
+                        const selected = selectedDays.includes(day.value);
+                        return (
+                          <button
+                            key={day.value}
+                            type="button"
+                            className={
+                              selected
+                                ? styles.daySelected
+                                : styles.dayChoice
+                            }
+                            onClick={() => toggleDay(day.value)}
+                            aria-pressed={selected}
+                          >
+                            {day.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {selectedDays.length > 0 && (
+                    <div className={styles.dayScheduleGrid}>
+                      <div className={styles.dayScheduleHeader}>
+                        <span>Day</span>
+                        <span>Start Time</span>
+                        <span>End Time</span>
+                        <span>Room / Location</span>
+                      </div>
+
+                      {selectedDays.map((day) => {
+                        const dayInfo = DAYS.find(
+                          (item) => item.value === day
+                        );
+                        const draft = dayDrafts[day] ?? {
+                          startTime: "",
+                          endTime: "",
+                          room: "",
+                        };
+
+                        return (
+                          <div className={styles.dayScheduleRow} key={day}>
+                            <strong>{dayInfo?.label}</strong>
+                            <input
+                              required
+                              type="time"
+                              aria-label={`${dayInfo?.label} start time`}
+                              value={draft.startTime}
+                              onChange={(event) =>
+                                updateDayDraft(
+                                  day,
+                                  "startTime",
+                                  event.target.value
+                                )
+                              }
+                            />
+                            <input
+                              required
+                              type="time"
+                              aria-label={`${dayInfo?.label} end time`}
+                              value={draft.endTime}
+                              onChange={(event) =>
+                                updateDayDraft(
+                                  day,
+                                  "endTime",
+                                  event.target.value
+                                )
+                              }
+                            />
+                            <input
+                              maxLength={80}
+                              aria-label={`${dayInfo?.label} room or location`}
+                              placeholder="Optional"
+                              value={draft.room}
+                              onChange={(event) =>
+                                updateDayDraft(day, "room", event.target.value)
+                              }
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+
+              <div className={styles.formActions}>
+                <button
+                  type="submit"
+                  disabled={
+                    working === "save" ||
+                    assignments.length === 0 ||
+                    (!editId && selectedDays.length === 0)
+                  }
+                >
+                  {editId ? <Pencil size={17} /> : <Plus size={17} />}
+                  {working === "save"
+                    ? "Saving…"
+                    : editId
+                      ? "Update Schedule"
+                      : selectedDays.length > 1
+                        ? `Add ${selectedDays.length} Schedule Entries`
+                        : "Add Schedule"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </details>
 
         <section className={styles.panel}>
           <div className={styles.panelHeading}>
             <div>
-              <h2>Published Class Schedule</h2>
-              <p>Active entries appear automatically in Student and Teacher dashboards.</p>
+              <h2>
+                {quickSection ? "Selected Section Schedule" : "Published Class Schedule"}
+              </h2>
+              <p>
+                Active entries appear automatically in Student and Teacher
+                dashboards.
+              </p>
             </div>
-            <button className={styles.secondary} onClick={() => void load()} disabled={loading}>
+            <button
+              className={styles.secondary}
+              onClick={() => void load()}
+              disabled={loading}
+            >
               <RefreshCw size={16} /> Refresh
             </button>
           </div>
 
           {loading ? (
             <div className={styles.empty}>Loading schedules…</div>
-          ) : orderedSchedules.length === 0 ? (
+          ) : visibleSchedules.length === 0 ? (
             <div className={styles.empty}>
               <CalendarDays size={30} />
               <strong>No Class Schedules Yet</strong>
-              <span>Add the first real schedule above.</span>
+              <span>
+                {quickSection
+                  ? "Use Quick Section Schedule above to add this section."
+                  : "Choose a section above to start building schedules."}
+              </span>
             </div>
           ) : (
             <div className={styles.scheduleList}>
-              {orderedSchedules.map((schedule) => {
-                const assignment = lookup.assignmentsById.get(schedule.teacher_assignment_id);
+              {visibleSchedules.map((schedule) => {
+                const assignment = lookup.assignmentsById.get(
+                  schedule.teacher_assignment_id
+                );
                 const subject = assignment
                   ? lookup.subjectsById.get(assignment.subject_id)
                   : null;
@@ -544,14 +1099,23 @@ export default function ClassSchedulesPage() {
                   <article key={schedule.id} className={styles.scheduleRow}>
                     <div className={styles.dayBox}>
                       <CalendarDays size={18} />
-                      <strong>{DAYS.find((day) => day.value === schedule.day_of_week)?.label}</strong>
+                      <strong>
+                        {
+                          DAYS.find(
+                            (day) => day.value === schedule.day_of_week
+                          )?.label
+                        }
+                      </strong>
                     </div>
 
                     <div>
                       <span>CLASS</span>
                       <strong>
                         {assignment
-                          ? `Grade ${assignment.grade_level} · ${lookup.sectionsById.get(assignment.section_id) ?? "Unknown"}`
+                          ? `Grade ${assignment.grade_level} · ${
+                              lookup.sectionsById.get(assignment.section_id) ??
+                              "Unknown"
+                            }`
                           : "Unknown class"}
                       </strong>
                       <small>
@@ -564,7 +1128,8 @@ export default function ClassSchedulesPage() {
                       <span>TEACHER</span>
                       <strong>
                         {assignment
-                          ? lookup.teachersById.get(assignment.teacher_id) ?? "Unknown teacher"
+                          ? lookup.teachersById.get(assignment.teacher_id) ??
+                            "Unknown teacher"
                           : "Unknown teacher"}
                       </strong>
                     </div>
@@ -573,7 +1138,8 @@ export default function ClassSchedulesPage() {
                       <span>TIME & ROOM</span>
                       <strong className={styles.inline}>
                         <Clock3 size={15} />
-                        {timeLabel(schedule.start_time)} – {timeLabel(schedule.end_time)}
+                        {timeLabel(schedule.start_time)} –{" "}
+                        {timeLabel(schedule.end_time)}
                       </strong>
                       <small className={styles.inline}>
                         <MapPin size={14} />
@@ -582,13 +1148,23 @@ export default function ClassSchedulesPage() {
                     </div>
 
                     <div className={styles.actions}>
-                      <button className={styles.edit} onClick={() => startEdit(schedule)}>
+                      <button
+                        className={styles.edit}
+                        onClick={() => startEdit(schedule)}
+                      >
                         <Pencil size={15} /> Edit
                       </button>
                       <button
-                        className={schedule.is_active ? styles.active : styles.inactive}
+                        className={
+                          schedule.is_active ? styles.active : styles.inactive
+                        }
                         disabled={working === schedule.id}
-                        onClick={() => void setScheduleActive(schedule, !schedule.is_active)}
+                        onClick={() =>
+                          void setScheduleActive(
+                            schedule,
+                            !schedule.is_active
+                          )
+                        }
                       >
                         {schedule.is_active ? "Active" : "Inactive"}
                       </button>
