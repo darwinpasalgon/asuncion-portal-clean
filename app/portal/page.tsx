@@ -759,11 +759,11 @@ export default function PortalPage() {
     return (
       <main className="real-portal-loading">
         <img src="/school-logo.png" alt="" />
-        <strong>Opening your academic portal…</strong>
+        <strong>Opening Your Academic Portal…</strong>
         <div
           className="real-portal-loading-track"
           role="progressbar"
-          aria-label="Loading academic portal"
+          aria-label="Loading Academic Portal"
           aria-valuetext="Loading"
         >
           <span className="real-portal-loading-bar" />
@@ -899,7 +899,7 @@ export default function PortalPage() {
                           ? `Grade ${academicContext.grade_level}${academicContext.section ? ` · ${academicContext.section}` : " · Section not assigned"}`
                           : profile.grade_level
                             ? `Grade ${profile.grade_level}${profile.section ? ` · ${profile.section}` : " · Section not assigned"}`
-                            : "Not assigned yet"}
+                            : "Not Assigned yet"}
                       </dd>
                     </div>
                   )}
@@ -920,7 +920,7 @@ export default function PortalPage() {
                     [8, 9, 10].includes(academicContext.grade_level) && (
                       <div>
                         <dt>TVE Major</dt>
-                        <dd>{academicContext.tve_major || "Not assigned yet"}</dd>
+                        <dd>{academicContext.tve_major || "Not Assigned yet"}</dd>
                       </div>
                     )}
                   <div><dt>Email</dt><dd>{profile.email}</dd></div>
@@ -1067,7 +1067,7 @@ export default function PortalPage() {
                                 )
                               }
                             >
-                              <option value="">Not assigned</option>
+                              <option value="">Not Assigned</option>
                               {adviserMajors.map((major) => (
                                 <option key={major} value={major}>{major}</option>
                               ))}
@@ -1167,7 +1167,7 @@ export default function PortalPage() {
 
           <footer className="page-footer">
             <span>Asuncion National High School</span>
-            <span>Academic Portal · Authenticated workspace</span>
+            <span>Academic Portal · Authenticated Workspace</span>
           </footer>
         </div>
       </main>
