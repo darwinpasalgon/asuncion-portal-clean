@@ -43,6 +43,7 @@ type Page =
   | "Announcements"
   | "Learning resources"
   | "Students"
+  | "My learners"
   | "Teaching assignments"
   | "School forms"
   | "School setup";
@@ -60,6 +61,7 @@ type AcademicContext = {
 type TeacherAssignment = {
   id: string;
   grade_level: number;
+  section_id?: string;
   section: string;
   subject: string;
   major: string | null;
@@ -70,6 +72,28 @@ type AdviserSection = {
   id: string;
   grade_level: number;
   name: string;
+};
+
+type TeacherLearner = {
+  student_id: string;
+  full_name: string;
+  lrn: string | null;
+  last_name: string | null;
+  first_name: string | null;
+  sex: string | null;
+};
+
+type TeacherLearnerSection = {
+  id: string;
+  grade_level: number;
+  name: string;
+  learner_count: number;
+  subjects: Array<{
+    assignment_id: string;
+    subject: string;
+    major: string | null;
+  }>;
+  learners: TeacherLearner[];
 };
 
 type AdviserLearner = {
@@ -195,6 +219,12 @@ const commonItems = {
     icon: FileSpreadsheet,
     group: "ADVISER TOOLS",
   },
+  myLearners: {
+    name: "My learners" as Page,
+    label: "My Learners",
+    icon: Users,
+    group: "TEACHING",
+  },
   teachingAssignments: {
     name: "Teaching assignments" as Page,
     label: "My Teaching Assignments",
@@ -218,6 +248,7 @@ const navigation: Record<Role, NavigationItem[]> = {
     { ...commonItems.grades, group: "ADVISER TOOLS" },
     { ...commonItems.attendance, group: "ADVISER TOOLS" },
     commonItems.schoolForms,
+    commonItems.myLearners,
     commonItems.teachingAssignments,
     { ...commonItems.schedule, group: "TEACHING" },
     { ...commonItems.resources, group: "TEACHING" },
@@ -238,6 +269,7 @@ function pageDisplayTitle(page: Page, role: Role) {
   if (page === "Students") {
     return role === "teacher" ? "My Students" : "Learner Management";
   }
+  if (page === "My learners") return "My Learners";
   if (page === "Teaching assignments") return "My Teaching Assignments";
   if (page === "School forms") return "School Forms";
   if (page === "Class schedule") return "Class Schedule";
@@ -272,16 +304,29 @@ function SideNav({
   onPage,
   schoolYear,
   adminPermissions,
+  isAdviser,
 }: {
   profile: Profile;
   page: Page;
   onPage: (page: Page) => void;
   schoolYear: string;
   adminPermissions: string[];
+  isAdviser: boolean;
 }) {
   const { setOpenMobile } = useSidebar();
   const visibleGroups = Array.from(
-    new Set(navigation[profile.role].map((item) => item.group))
+    new Set(
+      navigation[profile.role]
+        .filter(
+          (item) =>
+            !(
+              profile.role === "teacher" &&
+              item.group === "ADVISER TOOLS" &&
+              !isAdviser
+            )
+        )
+        .map((item) => item.group)
+    )
   );
 
   function go(pageName: Page) {
@@ -307,6 +352,11 @@ function SideNav({
 
     if (pageName === "Students" && profile.role === "teacher") {
       window.location.href = "/portal/my-students";
+      return;
+    }
+
+    if (pageName === "My learners" && profile.role === "teacher") {
+      window.location.href = "/portal/my-learners";
       return;
     }
 
@@ -342,7 +392,15 @@ function SideNav({
             <p className="nav-label">{group}</p>
             <SidebarMenu>
               {navigation[profile.role]
-                .filter((item) => item.group === group)
+                .filter(
+                  (item) =>
+                    item.group === group &&
+                    !(
+                      profile.role === "teacher" &&
+                      item.group === "ADVISER TOOLS" &&
+                      !isAdviser
+                    )
+                )
                 .map((item) => (
                   <SidebarMenuItem key={item.name}>
                     <SidebarMenuButton
@@ -667,6 +725,7 @@ function EmptySection({ page, role }: { page: Page; role: Role }) {
     Students: role === "administrator"
       ? "Student enrollment records will appear here after the academic database is configured."
       : "Your advisory students will appear here after a Section Adviser assignment is configured.",
+    "My learners": "Your assigned class rosters are available from the dedicated My Learners page.",
     "Teaching assignments": "Your active Subject Teacher assignments will appear here.",
     "School forms": "School Forms are not available yet. This module is still under development.",
     "School setup": "School year, grade levels, sections, subjects, and assignments will be configured in the next phase.",
@@ -680,6 +739,7 @@ function EmptySection({ page, role }: { page: Page; role: Role }) {
     Announcements: Megaphone,
     "Learning resources": FolderOpen,
     Students: Users,
+    "My learners": Users,
     "Teaching assignments": BookOpen,
     "School forms": FileSpreadsheet,
     "School setup": Settings2,
@@ -703,6 +763,8 @@ export default function PortalPage() {
   const [page, setPage] = useState<Page>("Overview");
   const [teacherAssignments, setTeacherAssignments] = useState<TeacherAssignment[]>([]);
   const [teacherAssignmentsLoading, setTeacherAssignmentsLoading] = useState(false);
+  const [teacherLearnerSections, setTeacherLearnerSections] = useState<TeacherLearnerSection[]>([]);
+  const [teacherLearnersLoading, setTeacherLearnersLoading] = useState(false);
   const [adviserSections, setAdviserSections] = useState<AdviserSection[]>([]);
   const [adviserLearners, setAdviserLearners] = useState<AdviserLearner[]>([]);
   const [adviserMajors, setAdviserMajors] = useState<string[]>([]);
@@ -742,25 +804,41 @@ export default function PortalPage() {
 
           if (loadedProfile.role === "teacher") {
             setTeacherAssignmentsLoading(true);
+            setTeacherLearnersLoading(true);
             setAdviserLearnersLoading(true);
             setAdviserAttentionLoading(true);
             try {
-              const [assignmentResponse, adviserResponse, attentionResponse] =
-                await Promise.all([
-                  fetch("/api/academic/my-assignments", { cache: "no-store" }),
-                  fetch("/api/academic/adviser-students", { cache: "no-store" }),
-                  fetch("/api/academic/adviser-attention", { cache: "no-store" }),
-                ]);
-              const [assignmentResult, adviserResult, attentionResult] =
-                await Promise.all([
-                  assignmentResponse.json().catch(() => ({})),
-                  adviserResponse.json().catch(() => ({})),
-                  attentionResponse.json().catch(() => ({})),
-                ]);
+              const [
+                assignmentResponse,
+                learnersResponse,
+                adviserResponse,
+                attentionResponse,
+              ] = await Promise.all([
+                fetch("/api/academic/my-assignments", { cache: "no-store" }),
+                fetch("/api/academic/my-learners", { cache: "no-store" }),
+                fetch("/api/academic/adviser-students", { cache: "no-store" }),
+                fetch("/api/academic/adviser-attention", { cache: "no-store" }),
+              ]);
+              const [
+                assignmentResult,
+                learnersResult,
+                adviserResult,
+                attentionResult,
+              ] = await Promise.all([
+                assignmentResponse.json().catch(() => ({})),
+                learnersResponse.json().catch(() => ({})),
+                adviserResponse.json().catch(() => ({})),
+                attentionResponse.json().catch(() => ({})),
+              ]);
 
               if (active && assignmentResponse.ok) {
                 setTeacherAssignments(
                   (assignmentResult.assignments ?? []) as TeacherAssignment[]
+                );
+              }
+              if (active && learnersResponse.ok) {
+                setTeacherLearnerSections(
+                  (learnersResult.sections ?? []) as TeacherLearnerSection[]
                 );
               }
               if (active && adviserResponse.ok) {
@@ -785,6 +863,7 @@ export default function PortalPage() {
             } finally {
               if (active) {
                 setTeacherAssignmentsLoading(false);
+                setTeacherLearnersLoading(false);
                 setAdviserLearnersLoading(false);
                 setAdviserAttentionLoading(false);
               }
@@ -901,6 +980,7 @@ export default function PortalPage() {
         onPage={setPage}
         schoolYear={academicContext?.school_year ?? "2026–2027"}
         adminPermissions={adminPermissions}
+        isAdviser={adviserSections.length > 0}
       />
 
       <main className="workspace">
@@ -1146,6 +1226,77 @@ export default function PortalPage() {
                   <div><dt>Email</dt><dd>{profile.email}</dd></div>
                 </dl>
               </section>
+
+              {profile.role === "teacher" && (
+                <section className="panel real-my-learners-dashboard">
+                  <div className="real-assignment-heading">
+                    <div>
+                      <h2>My Learners by Section</h2>
+                      <p>
+                        View-only rosters for the sections where you are assigned as
+                        a Subject Teacher.
+                      </p>
+                    </div>
+                    <a className="real-my-learners-link" href="/portal/my-learners">
+                      Open Full Roster
+                      <ChevronRight size={15} />
+                    </a>
+                  </div>
+
+                  {teacherLearnersLoading ? (
+                    <p className="real-assignment-empty">Loading learner rosters…</p>
+                  ) : teacherLearnerSections.length === 0 ? (
+                    <p className="real-assignment-empty">
+                      No active Subject Teacher learner rosters are assigned to you yet.
+                    </p>
+                  ) : (
+                    <div className="real-my-learners-sections">
+                      {teacherLearnerSections.map((section) => (
+                        <details key={section.id}>
+                          <summary>
+                            <div>
+                              <span>
+                                Grade {section.grade_level} · {section.name}
+                              </span>
+                              <strong>
+                                {section.learner_count} learner
+                                {section.learner_count === 1 ? "" : "s"}
+                              </strong>
+                            </div>
+                            <div className="real-my-learners-subjects">
+                              {section.subjects.slice(0, 3).map((subject) => (
+                                <span key={subject.assignment_id}>
+                                  {subject.subject}
+                                  {subject.major ? ` · ${subject.major}` : ""}
+                                </span>
+                              ))}
+                              {section.subjects.length > 3 && (
+                                <span>+{section.subjects.length - 3} more</span>
+                              )}
+                            </div>
+                          </summary>
+                          <div className="real-my-learners-roster">
+                            {section.learners.map((learner, index) => (
+                              <div key={learner.student_id}>
+                                <span>{index + 1}</span>
+                                <strong>{learner.full_name}</strong>
+                                <small>{learner.lrn ? `LRN ${learner.lrn}` : "LRN Not Recorded"}</small>
+                              </div>
+                            ))}
+                          </div>
+                          <a
+                            className="real-my-learners-section-link"
+                            href={`/portal/my-learners?section=${section.id}`}
+                          >
+                            Open Grade {section.grade_level} · {section.name}
+                            <ChevronRight size={14} />
+                          </a>
+                        </details>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )}
 
               {profile.role === "teacher" && (
                 <section className="panel real-teacher-assignments">
