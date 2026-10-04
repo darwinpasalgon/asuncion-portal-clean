@@ -142,7 +142,7 @@ export default function LoginPage() {
                   type="button"
                   className={styles.passwordToggle}
                   onClick={() => setShowPassword((value) => !value)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? "Hide Password" : "Show Password"}
                   disabled={loading}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -168,7 +168,7 @@ export default function LoginPage() {
               className={styles.signInButton}
               disabled={loading}
             >
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? "Signing In..." : "Sign In"}
               {!loading && <ArrowRight size={18} />}
             </button>
           </form>
