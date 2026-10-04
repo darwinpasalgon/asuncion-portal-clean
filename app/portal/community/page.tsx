@@ -1,20 +1,26 @@
 "use client";
 
 import {
+  AlertTriangle,
   ArrowLeft,
+  CheckCircle2,
   Circle,
   Clock3,
+  Flag,
   MessageCircle,
   Send,
   Shield,
+  ShieldAlert,
   Trash2,
   UserRound,
   Users,
   Volume2,
   VolumeX,
+  X,
 } from "lucide-react";
 import {
   FormEvent,
+  Fragment,
   KeyboardEvent,
   useCallback,
   useEffect,
@@ -48,6 +54,20 @@ type Mute = {
   reason: string | null;
 };
 
+type Report = {
+  id: string;
+  message_id: string | null;
+  reported_user_id: string;
+  reporter_id: string;
+  reporter_name: string;
+  sender_name: string;
+  sender_role: Role;
+  message_body: string;
+  reason: string;
+  status: "pending";
+  created_at: string;
+};
+
 type CommunityState = {
   me: {
     id: string;
@@ -59,6 +79,11 @@ type CommunityState = {
   online: Member[];
   muted: Mute | null;
   mutes: Mute[];
+  reports: Report[];
+  unread_count: number;
+  read_state: {
+    last_read_at: string;
+  };
 };
 
 const roleLabel: Record<Role, string> = {
@@ -115,30 +140,68 @@ export default function CommunityPage() {
   const [sending, setSending] = useState(false);
   const [working, setWorking] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [connected, setConnected] = useState(true);
+  const [readBoundary, setReadBoundary] = useState<string | null>(null);
+  const [reportTarget, setReportTarget] = useState<Message | null>(null);
+  const [reportReason, setReportReason] = useState("");
+  const [reporting, setReporting] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const initializedRef = useRef(false);
+  const readBoundaryRef = useRef<string | null>(null);
+  const lastMarkedReadRef = useRef<string | null>(null);
 
-  const loadCommunity = useCallback(async (quiet = false) => {
+  const markRead = useCallback(async (messages: Message[]) => {
+    const latest = messages[messages.length - 1]?.created_at;
+    if (!latest || latest === lastMarkedReadRef.current) return;
+    lastMarkedReadRef.current = latest;
+
     try {
-      const response = await fetch("/api/community", { cache: "no-store" });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        if (!quiet) setError(result.error ?? "Unable to load My Community.");
-        setConnected(false);
-        return;
-      }
-
-      setCommunity(result as CommunityState);
-      setConnected(true);
-      if (!quiet) setError("");
+      await fetch("/api/community", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "mark_read", lastReadAt: latest }),
+        cache: "no-store",
+      });
     } catch {
-      setConnected(false);
-      if (!quiet) setError("Unable to reach My Community.");
-    } finally {
-      if (!quiet) setLoading(false);
+      // Read state is best-effort and will retry on the next update.
     }
   }, []);
+
+  const loadCommunity = useCallback(
+    async (quiet = false) => {
+      try {
+        const response = await fetch("/api/community", { cache: "no-store" });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          if (!quiet) setError(result.error ?? "Unable to load My Community.");
+          setConnected(false);
+          return;
+        }
+
+        const next = result as CommunityState;
+        if (!readBoundaryRef.current) {
+          const boundary = next.read_state?.last_read_at ?? new Date().toISOString();
+          readBoundaryRef.current = boundary;
+          setReadBoundary(boundary);
+        }
+
+        setCommunity(next);
+        setConnected(true);
+        if (!quiet) setError("");
+
+        if (document.visibilityState === "visible") {
+          void markRead(next.messages ?? []);
+        }
+      } catch {
+        setConnected(false);
+        if (!quiet) setError("Unable to reach My Community.");
+      } finally {
+        if (!quiet) setLoading(false);
+      }
+    },
+    [markRead]
+  );
 
   useEffect(() => {
     void loadCommunity();
@@ -207,6 +270,18 @@ export default function CommunityPage() {
     return groups;
   }, [community?.messages]);
 
+  const firstUnreadId = useMemo(() => {
+    if (!community?.me.id || !readBoundary) return null;
+    const boundary = new Date(readBoundary).getTime();
+    return (
+      community.messages.find(
+        (message) =>
+          message.user_id !== community.me.id &&
+          new Date(message.created_at).getTime() > boundary
+      )?.id ?? null
+    );
+  }, [community?.me.id, community?.messages, readBoundary]);
+
   async function sendMessage(event?: FormEvent) {
     event?.preventDefault();
     const message = draft.trim();
@@ -214,6 +289,7 @@ export default function CommunityPage() {
 
     setSending(true);
     setError("");
+    setNotice("");
     try {
       const response = await fetch("/api/community", {
         method: "POST",
@@ -246,6 +322,7 @@ export default function CommunityPage() {
   async function deleteMessage(messageId: string) {
     setWorking(messageId);
     setError("");
+    setNotice("");
     try {
       const response = await fetch("/api/community", {
         method: "POST",
@@ -257,6 +334,75 @@ export default function CommunityPage() {
         setError(result.error ?? "Unable to remove this message.");
         return;
       }
+      setNotice("Message removed.");
+      await loadCommunity(true);
+    } finally {
+      setWorking("");
+    }
+  }
+
+  async function submitReport(event: FormEvent) {
+    event.preventDefault();
+    if (!reportTarget || reporting) return;
+
+    const reason = reportReason.trim();
+    if (reason.length < 3) {
+      setError("Please provide a brief reason for the report.");
+      return;
+    }
+
+    setReporting(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await fetch("/api/community", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "report",
+          messageId: reportTarget.id,
+          reason,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(result.error ?? "Unable to submit the report.");
+        return;
+      }
+
+      setReportTarget(null);
+      setReportReason("");
+      setNotice("Message reported to the Super Administrator.");
+      await loadCommunity(true);
+    } finally {
+      setReporting(false);
+    }
+  }
+
+  async function reviewReport(
+    reportId: string,
+    action: "dismiss_report" | "remove_reported_message"
+  ) {
+    setWorking(`report:${reportId}`);
+    setError("");
+    setNotice("");
+    try {
+      const response = await fetch("/api/community", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, reportId }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(result.error ?? "Unable to review this report.");
+        return;
+      }
+
+      setNotice(
+        action === "remove_reported_message"
+          ? "Reported message removed and report resolved."
+          : "Report dismissed."
+      );
       await loadCommunity(true);
     } finally {
       setWorking("");
@@ -266,6 +412,7 @@ export default function CommunityPage() {
   async function toggleMute(userId: string, isMuted: boolean) {
     setWorking(`mute:${userId}`);
     setError("");
+    setNotice("");
     try {
       const response = await fetch("/api/community", {
         method: "POST",
@@ -330,6 +477,12 @@ export default function CommunityPage() {
         </header>
 
         {error && <div className={styles.error}>{error}</div>}
+        {notice && (
+          <div className={styles.notice}>
+            <CheckCircle2 size={16} />
+            {notice}
+          </div>
+        )}
 
         <div className={styles.communityGrid}>
           <section className={styles.chatPanel}>
@@ -367,67 +520,90 @@ export default function CommunityPage() {
                         Boolean(community?.me.is_admin) &&
                         !mine &&
                         message.sender_role !== "administrator";
+                      const canReport = !mine;
                       const muted = mutedUserIds.has(message.user_id);
 
                       return (
-                        <article
-                          key={message.id}
-                          className={mine ? styles.messageOwn : styles.message}
-                        >
-                          {!mine && (
-                            <div className={styles.avatar}>
-                              {initials(message.sender_name)}
+                        <Fragment key={message.id}>
+                          {message.id === firstUnreadId && (
+                            <div className={styles.newMessagesDivider}>
+                              <span>New Messages</span>
                             </div>
                           )}
 
-                          <div className={styles.messageContent}>
-                            <div className={styles.messageMeta}>
-                              <strong>{mine ? "You" : message.sender_name}</strong>
-                              <span className={styles.roleBadge}>
-                                {roleLabel[message.sender_role]}
-                              </span>
-                              <time>
-                                <Clock3 size={11} />
-                                {messageTime(message.created_at)}
-                              </time>
-                            </div>
-
-                            <div className={styles.bubble}>
-                              <p>{message.body}</p>
-                            </div>
-
-                            {(canDelete || canMute) && (
-                              <div className={styles.messageActions}>
-                                {canDelete && (
-                                  <button
-                                    type="button"
-                                    disabled={working === message.id}
-                                    onClick={() => void deleteMessage(message.id)}
-                                  >
-                                    <Trash2 size={12} />
-                                    Remove
-                                  </button>
-                                )}
-                                {canMute && (
-                                  <button
-                                    type="button"
-                                    disabled={working === `mute:${message.user_id}`}
-                                    onClick={() =>
-                                      void toggleMute(message.user_id, muted)
-                                    }
-                                  >
-                                    {muted ? (
-                                      <Volume2 size={12} />
-                                    ) : (
-                                      <VolumeX size={12} />
-                                    )}
-                                    {muted ? "Unmute" : "Mute 1 Hour"}
-                                  </button>
-                                )}
+                          <article
+                            className={mine ? styles.messageOwn : styles.message}
+                          >
+                            {!mine && (
+                              <div className={styles.avatar}>
+                                {initials(message.sender_name)}
                               </div>
                             )}
-                          </div>
-                        </article>
+
+                            <div className={styles.messageContent}>
+                              <div className={styles.messageMeta}>
+                                <strong>{mine ? "You" : message.sender_name}</strong>
+                                <span className={styles.roleBadge}>
+                                  {roleLabel[message.sender_role]}
+                                </span>
+                                <time>
+                                  <Clock3 size={11} />
+                                  {messageTime(message.created_at)}
+                                </time>
+                              </div>
+
+                              <div className={styles.bubble}>
+                                <p>{message.body}</p>
+                              </div>
+
+                              {(canDelete || canMute || canReport) && (
+                                <div className={styles.messageActions}>
+                                  {canReport && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setReportTarget(message);
+                                        setReportReason("");
+                                        setError("");
+                                      }}
+                                    >
+                                      <Flag size={12} />
+                                      Report
+                                    </button>
+                                  )}
+
+                                  {canDelete && (
+                                    <button
+                                      type="button"
+                                      disabled={working === message.id}
+                                      onClick={() => void deleteMessage(message.id)}
+                                    >
+                                      <Trash2 size={12} />
+                                      Remove
+                                    </button>
+                                  )}
+
+                                  {canMute && (
+                                    <button
+                                      type="button"
+                                      disabled={working === `mute:${message.user_id}`}
+                                      onClick={() =>
+                                        void toggleMute(message.user_id, muted)
+                                      }
+                                    >
+                                      {muted ? (
+                                        <Volume2 size={12} />
+                                      ) : (
+                                        <VolumeX size={12} />
+                                      )}
+                                      {muted ? "Unmute" : "Mute 1 Hour"}
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </article>
+                        </Fragment>
                       );
                     })}
                   </div>
@@ -514,9 +690,7 @@ export default function CommunityPage() {
                         <span />
                       </div>
                       <div className={styles.memberInfo}>
-                        <strong>
-                          {mine ? "You" : member.display_name}
-                        </strong>
+                        <strong>{mine ? "You" : member.display_name}</strong>
                         <span>{roleLabel[member.role]}</span>
                       </div>
                       {muted && (
@@ -529,6 +703,67 @@ export default function CommunityPage() {
                 })
               )}
             </div>
+
+            {community?.me.is_admin && (
+              <section className={styles.moderationPanel}>
+                <div className={styles.moderationHeading}>
+                  <div>
+                    <ShieldAlert size={16} />
+                    <strong>Reported Messages</strong>
+                  </div>
+                  <span>{community.reports?.length ?? 0}</span>
+                </div>
+
+                {(community.reports?.length ?? 0) === 0 ? (
+                  <div className={styles.noReports}>
+                    <CheckCircle2 size={16} />
+                    No pending reports.
+                  </div>
+                ) : (
+                  <div className={styles.reportList}>
+                    {community.reports.map((report) => (
+                      <article key={report.id} className={styles.reportCard}>
+                        <div className={styles.reportMeta}>
+                          <strong>{report.sender_name}</strong>
+                          <span>{roleLabel[report.sender_role]}</span>
+                        </div>
+                        <p>{report.message_body}</p>
+                        <div className={styles.reportReason}>
+                          <AlertTriangle size={13} />
+                          <span>{report.reason}</span>
+                        </div>
+                        <small>Reported by {report.reporter_name}</small>
+                        <div className={styles.reportActions}>
+                          <button
+                            type="button"
+                            disabled={working === `report:${report.id}`}
+                            onClick={() =>
+                              void reviewReport(report.id, "dismiss_report")
+                            }
+                          >
+                            Dismiss
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.removeReported}
+                            disabled={working === `report:${report.id}`}
+                            onClick={() =>
+                              void reviewReport(
+                                report.id,
+                                "remove_reported_message"
+                              )
+                            }
+                          >
+                            <Trash2 size={12} />
+                            Remove Message
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
 
             <div className={styles.communityRules}>
               <Shield size={17} />
@@ -547,8 +782,8 @@ export default function CommunityPage() {
                 <div>
                   <strong>Moderator Mode</strong>
                   <span>
-                    You can remove messages and temporarily mute members directly
-                    from the conversation.
+                    Reports are private. You can dismiss them, remove reported
+                    messages, or temporarily mute members.
                   </span>
                 </div>
               </div>
@@ -556,6 +791,80 @@ export default function CommunityPage() {
           </aside>
         </div>
       </div>
+
+      {reportTarget && (
+        <div
+          className={styles.modalBackdrop}
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target && !reporting) {
+              setReportTarget(null);
+              setReportReason("");
+            }
+          }}
+        >
+          <form className={styles.reportModal} onSubmit={submitReport}>
+            <div className={styles.reportModalHeading}>
+              <div>
+                <Flag size={18} />
+                <div>
+                  <strong>Report Message</strong>
+                  <span>This report is visible only to the Super Administrator.</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={reporting}
+                onClick={() => {
+                  setReportTarget(null);
+                  setReportReason("");
+                }}
+                aria-label="Close report dialog"
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            <div className={styles.reportPreview}>
+              <strong>{reportTarget.sender_name}</strong>
+              <p>{reportTarget.body}</p>
+            </div>
+
+            <label className={styles.reportField}>
+              <span>Why are you reporting this message?</span>
+              <textarea
+                required
+                rows={4}
+                minLength={3}
+                maxLength={500}
+                value={reportReason}
+                onChange={(event) => setReportReason(event.target.value)}
+                placeholder="Example: Bullying, inappropriate language, spam, or sharing private information."
+              />
+              <small>{reportReason.length}/500</small>
+            </label>
+
+            <div className={styles.reportModalActions}>
+              <button
+                type="button"
+                disabled={reporting}
+                onClick={() => {
+                  setReportTarget(null);
+                  setReportReason("");
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={reporting || reportReason.trim().length < 3}
+              >
+                <Flag size={14} />
+                {reporting ? "Submitting…" : "Submit Report"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </main>
   );
 }
