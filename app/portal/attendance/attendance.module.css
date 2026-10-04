@@ -4,3 +4,29 @@
 .sexGroupHeading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 18px;background:#eef5f9;border-bottom:1px solid #dfe7ec}
 .sexGroupHeading strong{color:#31566e;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em}
 .sexGroupHeading span{color:#7b8f9b;font-size:.7rem;font-weight:700}
+
+/* 2026 attendance polish */
+.page{background:linear-gradient(180deg,#f7fafc,#f4f7f9);padding-top:28px}
+.shell{width:min(1180px,100%)}
+.topLink{padding:7px 10px;border-radius:8px}
+.topLink:hover{background:#edf5fa;color:#125b91}
+.header{align-items:center}
+.header h1{font-size:clamp(1.8rem,3vw,2.55rem)}
+.yearCard{border-radius:12px;box-shadow:0 8px 22px rgba(35,112,82,.05)}
+.controls{border-radius:14px;box-shadow:0 10px 28px rgba(25,67,94,.045)}
+.controls select,.controls input,.roster select,.roster input{background:#fcfefe;transition:border-color .18s ease,box-shadow .18s ease}
+.controls select:focus,.controls input:focus,.roster select:focus,.roster input:focus{outline:0;border-color:#6da9cc;box-shadow:0 0 0 3px rgba(23,110,180,.09)}
+.panel,.emptyPanel{border-radius:15px;box-shadow:0 14px 38px rgba(22,71,106,.055)}
+.panelHeading{padding:18px 20px;background:linear-gradient(180deg,#fff,#fcfefe)}
+.markAll:hover:not(:disabled){background:#edf8f1;border-color:#b9dcc7}
+.saveAll{background:linear-gradient(110deg,#176aab,#18845a);box-shadow:0 7px 18px rgba(27,117,83,.12)}
+.saveAll:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 10px 22px rgba(27,117,83,.16)}
+.roster article{transition:background-color .15s ease}
+.roster article:hover{background:#fbfdfd}
+.student>span{box-shadow:inset 0 0 0 1px #e3eaee}
+.summary{gap:10px}
+.summary article{border-radius:13px;box-shadow:0 8px 24px rgba(25,67,94,.035)}
+.summary article:hover{border-color:#cfdfe6;transform:translateY(-1px)}
+.history article:hover{background:#fbfdfd}
+.sexGroupHeading{background:linear-gradient(90deg,#eef6fb,#f2f8f5)}
+@media(max-width:600px){.page{padding:22px 12px 42px}.header h1{font-size:1.7rem}.controls{padding:14px}.panel,.emptyPanel{border-radius:12px}.summary{grid-template-columns:1fr 1fr}.panelHeading{padding:16px}.roster article{padding:12px 14px}}
