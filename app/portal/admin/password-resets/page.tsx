@@ -141,7 +141,7 @@ export default function PasswordResetRequestsPage() {
                 <span className={styles.avatar}><KeyRound size={22} /></span>
                 <div>
                   <h3>{issued.name}</h3>
-                  <span className={styles.role}>Identity verified</span>
+                  <span className={styles.role}>Identity Verified</span>
                 </div>
               </div>
               <div className={styles.tempPassword}>{issued.password}</div>
@@ -175,12 +175,12 @@ export default function PasswordResetRequestsPage() {
           {loading ? (
             <div className={styles.empty}>
               <Clock3 size={28} />
-              <strong>Loading reset requests…</strong>
+              <strong>Loading Reset Requests…</strong>
             </div>
           ) : requests.length === 0 ? (
             <div className={styles.empty}>
               <Check size={30} />
-              <strong>No pending password resets</strong>
+              <strong>No Pending Password Resets</strong>
               <span>New administrator-assisted requests will appear here.</span>
             </div>
           ) : (
