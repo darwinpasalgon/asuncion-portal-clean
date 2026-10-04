@@ -1061,12 +1061,6 @@ export default function PortalPage() {
                 </div>
               )}
             </section>
-
-
-                )}
-              </section>
-            )}
-            </>
           )}
 
           {(profile.role === "teacher" || profile.role === "student") &&
