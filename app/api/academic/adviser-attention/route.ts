@@ -147,16 +147,6 @@ function manilaDateParts() {
   return { date, isSchoolWeekday: weekday >= 1 && weekday <= 5 };
 }
 
-function manilaDateFromTimestamp(value: string) {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Manila",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  return formatter.format(new Date(value));
-}
-
 function weekdayDates(start: string, end: string) {
   if (!start || !end || start > end) return [];
   const result: string[] = [];
@@ -207,21 +197,14 @@ export async function GET(request: NextRequest) {
         activeYear.id
       )}&teacher_id=eq.${encodeURIComponent(
         userId
-      )}&is_active=eq.true&select=section_id,assigned_at`,
+      )}&is_active=eq.true&select=section_id`,
       token
-    )) as Array<{ section_id: string; assigned_at: string }>;
+    )) as Array<{ section_id: string }>;
 
     const sectionIds: string[] = Array.from(
       new Set<string>(
         (adviserRows ?? []).map((item) => String(item.section_id))
       )
-    );
-
-    const adviserStartBySection = new Map<string, string>(
-      (adviserRows ?? []).map((item) => [
-        String(item.section_id),
-        manilaDateFromTimestamp(item.assigned_at),
-      ])
     );
 
     if (sectionIds.length === 0) {
