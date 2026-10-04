@@ -127,3 +127,62 @@
   .composerFooter>span{display:none}
   .composerFooter{justify-content:flex-end}
 }
+
+.notice{
+  display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:11px 13px;
+  border:1px solid #cfe4d7;border-radius:10px;background:#f1faf4;color:#397458;
+  font-size:.7rem;font-weight:700;
+}
+.newMessagesDivider{display:flex;align-items:center;gap:8px;margin:6px 0 8px}
+.newMessagesDivider::before,.newMessagesDivider::after{content:"";height:1px;flex:1;background:#efb7ad}
+.newMessagesDivider span{
+  padding:3px 8px;border-radius:999px;background:#fff3f0;color:#a55748;
+  font-size:.55rem;font-weight:850;letter-spacing:.04em;text-transform:uppercase
+}
+.moderationPanel{border-top:1px solid #e6ecef;background:#fff}
+.moderationHeading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 13px;background:#fff9f3}
+.moderationHeading>div{display:flex;align-items:center;gap:7px;color:#855d40}
+.moderationHeading strong{font-size:.65rem}
+.moderationHeading>span{min-width:23px;height:23px;border-radius:999px;display:grid;place-items:center;background:#9a6543;color:#fff;font-size:.57rem;font-weight:850}
+.noReports{display:flex;align-items:center;gap:6px;padding:12px 13px;color:#698376;font-size:.61rem}
+.reportList{display:grid;gap:8px;max-height:320px;overflow-y:auto;padding:9px}
+.reportCard{padding:10px;border:1px solid #eadfd8;border-radius:9px;background:#fff}
+.reportMeta{display:flex;align-items:center;gap:6px}
+.reportMeta strong{font-size:.64rem;color:#4b6675}
+.reportMeta span{padding:2px 5px;border-radius:999px;background:#f0f4f6;color:#728691;font-size:.49rem;font-weight:800}
+.reportCard>p{margin:7px 0;padding:7px 8px;border-radius:7px;background:#f8fafb;color:#526d7d;font-size:.62rem;line-height:1.42;overflow-wrap:anywhere}
+.reportReason{display:flex;align-items:flex-start;gap:5px;color:#965f3e}
+.reportReason span{font-size:.58rem;line-height:1.4}
+.reportCard>small{display:block;margin-top:7px;color:#909da3;font-size:.52rem}
+.reportActions{display:flex;gap:6px;margin-top:8px}
+.reportActions button{border:1px solid #dce5e9;border-radius:7px;background:#fff;color:#5f7784;padding:6px 8px;font-size:.55rem;font-weight:750;cursor:pointer}
+.reportActions button:disabled{opacity:.45}
+.reportActions .removeReported{display:inline-flex;align-items:center;gap:4px;border-color:#e6c8be;background:#fff7f4;color:#985840}
+.modalBackdrop{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:18px;background:rgba(23,45,58,.4);backdrop-filter:blur(3px)}
+.reportModal{width:min(500px,100%);border:1px solid #dce6ea;border-radius:15px;background:#fff;box-shadow:0 24px 70px rgba(18,48,67,.2);overflow:hidden}
+.reportModalHeading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:15px 16px;border-bottom:1px solid #e7edf0;background:#fbfdfd}
+.reportModalHeading>div{display:flex;align-items:flex-start;gap:9px}
+.reportModalHeading>div>svg{margin-top:2px;color:#a35d49}
+.reportModalHeading strong,.reportModalHeading span{display:block}
+.reportModalHeading strong{font-size:.77rem;color:#3e6174}
+.reportModalHeading span{margin-top:3px;font-size:.6rem;color:#87979f}
+.reportModalHeading>button{border:0;background:transparent;color:#82929a;cursor:pointer;padding:3px}
+.reportPreview{margin:14px 16px 0;padding:10px 11px;border:1px solid #e4eaed;border-radius:9px;background:#f8fafb}
+.reportPreview strong{display:block;font-size:.63rem;color:#49697a}
+.reportPreview p{margin:5px 0 0;color:#607985;font-size:.66rem;line-height:1.45}
+.reportField{display:grid;gap:6px;padding:14px 16px}
+.reportField>span{font-size:.66rem;font-weight:800;color:#516d7d}
+.reportField textarea{width:100%;box-sizing:border-box;resize:vertical;min-height:96px;border:1px solid #d7e2e7;border-radius:9px;padding:9px 10px;color:#395c70;font:inherit;font-size:.7rem;line-height:1.45}
+.reportField textarea:focus{outline:0;border-color:#72a4bf;box-shadow:0 0 0 3px rgba(45,122,166,.08)}
+.reportField small{justify-self:end;color:#929fa5;font-size:.54rem}
+.reportModalActions{display:flex;justify-content:flex-end;gap:7px;padding:12px 16px;border-top:1px solid #e7edf0;background:#fbfdfd}
+.reportModalActions button{min-height:35px;border:1px solid #d7e2e7;border-radius:8px;background:#fff;color:#5c7583;padding:0 11px;font-size:.62rem;font-weight:800;cursor:pointer}
+.reportModalActions button:last-child{display:inline-flex;align-items:center;gap:5px;border:0;background:#a45f4a;color:#fff}
+.reportModalActions button:disabled{opacity:.45;cursor:not-allowed}
+.membersPanel{display:flex;flex-direction:column}
+.memberList{flex:1;min-height:160px}
+@media(max-width:650px){
+  .reportModal{border-radius:12px}
+  .reportModalActions{flex-direction:column-reverse}
+  .reportModalActions button{width:100%;justify-content:center}
+}
