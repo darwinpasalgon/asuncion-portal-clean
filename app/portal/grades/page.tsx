@@ -367,6 +367,20 @@ export default function GradesPage() {
     return `Grade ${assignment.grade_level} · ${sectionMap.get(assignment.section_id) ?? "Unknown"} · ${subject?.name ?? "Unknown subject"}${showMajor ? ` · ${assignment.major}` : ""}`;
   }
 
+  function updateMapehDraft(
+    studentId: string,
+    field: keyof MapehDraft,
+    value: string
+  ) {
+    setMapehDrafts((current) => ({
+      ...current,
+      [studentId]: {
+        ...(current[studentId] ?? emptyMapehDraft()),
+        [field]: value,
+      },
+    }));
+  }
+
   async function saveGrade(studentId: string) {
     if (!selectedAssignmentId) return;
 
@@ -625,134 +639,293 @@ export default function GradesPage() {
                 </div>
               ) : (
                 <div className={styles.tableWrap}>
-                  <table className={styles.gradeTable}>
-                    <thead>
-                      <tr>
-                        <th>Learner</th>
-                        <th>Term Grade</th>
-                        <th>Proficiency Descriptor</th>
-                        <th>Support</th>
-                        <th>Status</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {classStudentGroups.map(({ group, students: groupStudents }) => (
-                        <Fragment key={group}>
-                          <tr className={styles.sexGroupRow}>
-                            <td colSpan={6}>
-                              <strong>{group}</strong>
-                              <span>
-                                {groupStudents.length} learner
-                                {groupStudents.length === 1 ? "" : "s"}
-                              </span>
-                            </td>
-                          </tr>
-                          {groupStudents.map((student) => {
-                            const saved = grades.find(
-                              (item) =>
-                                item.student_id === student.id &&
-                                item.teacher_assignment_id === selectedAssignmentId &&
-                                item.term_no === selectedTerm
-                            );
-                            const value = drafts[student.id] ?? "";
+                  {selectedIsMapeh ? (
+                    <table className={`${styles.gradeTable} ${styles.mapehTable}`}>
+                      <thead>
+                        <tr>
+                          <th>Learner</th>
+                          <th>Music</th>
+                          <th>Arts</th>
+                          <th>Physical Education</th>
+                          <th>Health</th>
+                          <th>MAPEH Grade</th>
+                          <th>Proficiency Descriptor</th>
+                          <th>Support</th>
+                          <th>Status</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {classStudentGroups.map(({ group, students: groupStudents }) => (
+                          <Fragment key={group}>
+                            <tr className={styles.sexGroupRow}>
+                              <td colSpan={10}>
+                                <strong>{group}</strong>
+                                <span>
+                                  {groupStudents.length} learner
+                                  {groupStudents.length === 1 ? "" : "s"}
+                                </span>
+                              </td>
+                            </tr>
+                            {groupStudents.map((student) => {
+                              const saved = savedGradeForStudent(student.id);
+                              const draft =
+                                mapehDrafts[student.id] ?? emptyMapehDraft();
+                              const average = computedMapehAverage(draft);
+                              const effectiveGrade =
+                                average ?? saved?.term_grade ?? null;
+                              const published = saved?.status === "published";
 
-                            return (
-                              <tr key={student.id}>
-                                <td>
-                                  <strong>{student.full_name}</strong>
-                                  <span>
-                                    {(student.last_name && student.first_name
-                                      ? `${student.last_name}, ${student.first_name}${
-                                          student.middle_name
-                                            ? ` ${student.middle_name}`
-                                            : ""
-                                        }${
-                                          student.name_extension
-                                            ? ` ${student.name_extension}`
-                                            : ""
-                                        }`
-                                      : student.full_name)}
-                                    {student.lrn ? ` · LRN ${student.lrn}` : ""}
-                                  </span>
-                                </td>
-                                <td>
-                                  <input
-                                    className={styles.termInput}
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    step="1"
-                                    value={value}
-                                    disabled={saved?.status === "published"}
-                                    onChange={(event) =>
-                                      setDrafts((current) => ({
-                                        ...current,
-                                        [student.id]: event.target.value,
-                                      }))
-                                    }
-                                    aria-label={`${student.full_name} Term ${selectedTerm} grade`}
-                                  />
-                                </td>
-                                <td>
-                                  {saved ? (
-                                    <strong>{descriptor(saved.term_grade)}</strong>
-                                  ) : (
-                                    "—"
-                                  )}
-                                </td>
-                                <td>
-                                  {saved ? (
-                                    <span
-                                      className={
-                                        saved.term_grade < 75
-                                          ? styles.intervention
-                                          : styles.onTrack
+                              return (
+                                <tr key={student.id}>
+                                  <td>
+                                    <strong>{student.full_name}</strong>
+                                    <span>
+                                      {(student.last_name && student.first_name
+                                        ? `${student.last_name}, ${student.first_name}${
+                                            student.middle_name
+                                              ? ` ${student.middle_name}`
+                                              : ""
+                                          }${
+                                            student.name_extension
+                                              ? ` ${student.name_extension}`
+                                              : ""
+                                          }`
+                                        : student.full_name)}
+                                      {student.lrn ? ` · LRN ${student.lrn}` : ""}
+                                    </span>
+                                  </td>
+                                  {(
+                                    [
+                                      ["music", "Music"],
+                                      ["arts", "Arts"],
+                                      ["physicalEducation", "Physical Education"],
+                                      ["health", "Health"],
+                                    ] as Array<[keyof MapehDraft, string]>
+                                  ).map(([field, label]) => (
+                                    <td key={field}>
+                                      <input
+                                        className={styles.componentInput}
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        value={draft[field]}
+                                        disabled={published}
+                                        onChange={(event) =>
+                                          updateMapehDraft(
+                                            student.id,
+                                            field,
+                                            event.target.value
+                                          )
+                                        }
+                                        aria-label={`${student.full_name} ${label} Term ${selectedTerm} grade`}
+                                      />
+                                    </td>
+                                  ))}
+                                  <td>
+                                    <div className={styles.autoGrade}>
+                                      <strong>
+                                        {effectiveGrade === null ? "—" : effectiveGrade}
+                                      </strong>
+                                      <small>Automatic Average</small>
+                                    </div>
+                                  </td>
+                                  <td>
+                                    {effectiveGrade === null
+                                      ? "—"
+                                      : <strong>{descriptor(effectiveGrade)}</strong>}
+                                  </td>
+                                  <td>
+                                    {effectiveGrade === null ? (
+                                      "—"
+                                    ) : (
+                                      <span
+                                        className={
+                                          effectiveGrade < 75
+                                            ? styles.intervention
+                                            : styles.onTrack
+                                        }
+                                      >
+                                        {effectiveGrade < 75
+                                          ? "Intervention needed"
+                                          : "Meets minimum standard"}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td>
+                                    {saved ? (
+                                      <span
+                                        className={
+                                          saved.status === "published"
+                                            ? styles.published
+                                            : styles.draft
+                                        }
+                                      >
+                                        {saved.status === "published"
+                                          ? "Published"
+                                          : "Draft"}
+                                      </span>
+                                    ) : (
+                                      <span className={styles.notSaved}>Not Saved</span>
+                                    )}
+                                  </td>
+                                  <td>
+                                    <button
+                                      className={styles.saveButton}
+                                      disabled={
+                                        working === student.id ||
+                                        published ||
+                                        average === null
+                                      }
+                                      onClick={() => void saveGrade(student.id)}
+                                    >
+                                      <Save size={15} />
+                                      {working === student.id ? "Saving…" : "Save"}
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </Fragment>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <table className={styles.gradeTable}>
+                      <thead>
+                        <tr>
+                          <th>Learner</th>
+                          <th>Term Grade</th>
+                          <th>Proficiency Descriptor</th>
+                          <th>Support</th>
+                          <th>Status</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {classStudentGroups.map(({ group, students: groupStudents }) => (
+                          <Fragment key={group}>
+                            <tr className={styles.sexGroupRow}>
+                              <td colSpan={6}>
+                                <strong>{group}</strong>
+                                <span>
+                                  {groupStudents.length} learner
+                                  {groupStudents.length === 1 ? "" : "s"}
+                                </span>
+                              </td>
+                            </tr>
+                            {groupStudents.map((student) => {
+                              const saved = savedGradeForStudent(student.id);
+                              const value = drafts[student.id] ?? "";
+
+                              return (
+                                <tr key={student.id}>
+                                  <td>
+                                    <strong>{student.full_name}</strong>
+                                    <span>
+                                      {(student.last_name && student.first_name
+                                        ? `${student.last_name}, ${student.first_name}${
+                                            student.middle_name
+                                              ? ` ${student.middle_name}`
+                                              : ""
+                                          }${
+                                            student.name_extension
+                                              ? ` ${student.name_extension}`
+                                              : ""
+                                          }`
+                                        : student.full_name)}
+                                      {student.lrn ? ` · LRN ${student.lrn}` : ""}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <input
+                                      className={styles.termInput}
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      step="1"
+                                      value={value}
+                                      disabled={saved?.status === "published"}
+                                      onChange={(event) =>
+                                        setDrafts((current) => ({
+                                          ...current,
+                                          [student.id]: event.target.value,
+                                        }))
+                                      }
+                                      aria-label={`${student.full_name} Term ${selectedTerm} grade`}
+                                    />
+                                  </td>
+                                  <td>
+                                    {saved ? (
+                                      <strong>{descriptor(saved.term_grade)}</strong>
+                                    ) : (
+                                      "—"
+                                    )}
+                                  </td>
+                                  <td>
+                                    {saved ? (
+                                      <span
+                                        className={
+                                          saved.term_grade < 75
+                                            ? styles.intervention
+                                            : styles.onTrack
+                                        }
+                                      >
+                                        {saved.term_grade < 75
+                                          ? "Intervention needed"
+                                          : "Meets minimum standard"}
+                                      </span>
+                                    ) : (
+                                      "—"
+                                    )}
+                                  </td>
+                                  <td>
+                                    {saved ? (
+                                      <span
+                                        className={
+                                          saved.status === "published"
+                                            ? styles.published
+                                            : styles.draft
+                                        }
+                                      >
+                                        {saved.status === "published"
+                                          ? "Published"
+                                          : "Draft"}
+                                      </span>
+                                    ) : (
+                                      <span className={styles.notSaved}>Not Saved</span>
+                                    )}
+                                  </td>
+                                  <td>
+                                    <button
+                                      className={styles.saveButton}
+                                      disabled={
+                                        working === student.id ||
+                                        saved?.status === "published" ||
+                                        (selectedIsTve &&
+                                          !gradeAssignmentIdForStudent(student.id))
+                                      }
+                                      onClick={() => void saveGrade(student.id)}
+                                      title={
+                                        selectedIsTve &&
+                                        !gradeAssignmentIdForStudent(student.id)
+                                          ? "Assign this learner's TVE Major in My Students first."
+                                          : undefined
                                       }
                                     >
-                                      {saved.term_grade < 75
-                                        ? "Intervention needed"
-                                        : "Meets minimum standard"}
-                                    </span>
-                                  ) : (
-                                    "—"
-                                  )}
-                                </td>
-                                <td>
-                                  {saved ? (
-                                    <span
-                                      className={
-                                        saved.status === "published"
-                                          ? styles.published
-                                          : styles.draft
-                                      }
-                                    >
-                                      {saved.status === "published" ? "Published" : "Draft"}
-                                    </span>
-                                  ) : (
-                                    <span className={styles.notSaved}>Not Saved</span>
-                                  )}
-                                </td>
-                                <td>
-                                  <button
-                                    className={styles.saveButton}
-                                    disabled={
-                                      working === student.id ||
-                                      saved?.status === "published"
-                                    }
-                                    onClick={() => void saveGrade(student.id)}
-                                  >
-                                    <Save size={15} />
-                                    {working === student.id ? "Saving…" : "Save"}
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </Fragment>
-                      ))}
-                    </tbody>
-                  </table>
+                                      <Save size={15} />
+                                      {working === student.id ? "Saving…" : "Save"}
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </Fragment>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               )}
             </section>
@@ -809,6 +982,16 @@ export default function GradesPage() {
                             <>
                               <strong>{term.term_grade}</strong>
                               <small>{descriptor(term.term_grade)}</small>
+                              {isMapeh(subject?.name) &&
+                                term.music_grade !== null &&
+                                term.arts_grade !== null &&
+                                term.physical_education_grade !== null &&
+                                term.health_grade !== null && (
+                                  <span className={styles.componentSummary}>
+                                    Music {term.music_grade} · Arts {term.arts_grade} ·
+                                    PE {term.physical_education_grade} · Health {term.health_grade}
+                                  </span>
+                                )}
                               {term.term_grade < 75 && <em>Intervention needed</em>}
                             </>
                           ) : (
