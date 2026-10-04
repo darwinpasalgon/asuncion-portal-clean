@@ -236,18 +236,6 @@ export default function GradesPage() {
   const selectedIsTve = isTechnicalVocationalEducation(selectedSubject?.name);
   const selectedIsMapeh = isMapeh(selectedSubject?.name);
 
-  const selectedAssignmentIds = useMemo(() => {
-    if (!selectedAssignment) return [];
-    if (!selectedIsTve) return [selectedAssignment.id];
-    return assignments
-      .filter(
-        (item) =>
-          item.section_id === selectedAssignment.section_id &&
-          item.subject_id === selectedAssignment.subject_id
-      )
-      .map((item) => item.id);
-  }, [assignments, selectedAssignment, selectedIsTve]);
-
   function gradeAssignmentIdForStudent(studentId: string) {
     if (!selectedAssignment) return "";
     if (!selectedIsTve) return selectedAssignment.id;
@@ -455,12 +443,6 @@ export default function GradesPage() {
       setWorking("");
     }
   }
-
-  const selectedTermGrades = grades.filter(
-    (item) =>
-      selectedAssignmentIds.includes(item.teacher_assignment_id) &&
-      item.term_no === selectedTerm
-  );
 
   const allPublished =
     classStudents.length > 0 &&
