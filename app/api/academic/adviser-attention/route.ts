@@ -22,10 +22,25 @@ type LearnerInfo = {
   first_name: string | null;
   sex: string | null;
   birth_date: string | null;
-  address_barangay: string | null;
-  address_municipality_city: string | null;
-  guardian_name: string | null;
-  guardian_contact_number: string | null;
+  mother_tongue: string | null;
+  religion: string | null;
+  learning_modality: string | null;
+};
+
+type StudentProfile = {
+  id: string;
+  full_name: string;
+  lrn: string | null;
+};
+
+type AttentionLearnerDetail = {
+  studentId: string;
+  fullName: string;
+  lrn: string | null;
+  gradeLevel: number;
+  section: string;
+  missingFields: string[];
+  href: string;
 };
 
 type Subject = {
@@ -61,6 +76,7 @@ type AttentionAlert = {
   href: string | null;
   actionLabel: string | null;
   administratorAction: boolean;
+  learners?: AttentionLearnerDetail[];
 };
 
 function authHeaders(token: string) {
@@ -194,6 +210,7 @@ export async function GET(request: NextRequest) {
       sectionRows,
       enrollmentRows,
       learnerInfoRows,
+      studentProfileRows,
       subjectRows,
       assignmentRows,
     ] = await Promise.all([
@@ -212,7 +229,11 @@ export async function GET(request: NextRequest) {
         token
       ),
       getRows(
-        "learner_information?select=student_id,last_name,first_name,sex,birth_date,address_barangay,address_municipality_city,guardian_name,guardian_contact_number",
+        "learner_information?select=student_id,last_name,first_name,sex,birth_date,mother_tongue,religion,learning_modality",
+        token
+      ),
+      getRows(
+        "profiles?role=eq.student&account_status=eq.active&select=id,full_name,lrn",
         token
       ),
       getRows(
@@ -232,6 +253,7 @@ export async function GET(request: NextRequest) {
     const sections = (sectionRows ?? []) as AdviserSection[];
     const enrollments = (enrollmentRows ?? []) as Enrollment[];
     const learnerInformation = (learnerInfoRows ?? []) as LearnerInfo[];
+    const studentProfiles = (studentProfileRows ?? []) as StudentProfile[];
     const subjects = (subjectRows ?? []) as Subject[];
     const assignments = (assignmentRows ?? []) as Assignment[];
 
@@ -281,55 +303,95 @@ export async function GET(request: NextRequest) {
     const learnerInfoMap = new Map(
       learnerInformation.map((item) => [item.student_id, item] as const)
     );
+    const studentProfileMap = new Map(
+      studentProfiles.map((item) => [item.id, item] as const)
+    );
+    const sectionMap = new Map(
+      sections.map((item) => [item.id, item] as const)
+    );
 
     const alerts: AttentionAlert[] = [];
 
-    const missingProfileLearners = enrollments.filter((enrollment) => {
-      const info = learnerInfoMap.get(enrollment.student_id);
-      if (!info) return true;
-      return [
-        info.last_name,
-        info.first_name,
-        info.sex,
-        info.birth_date,
-        info.address_barangay,
-        info.address_municipality_city,
-        info.guardian_name,
-        info.guardian_contact_number,
-      ].some(missing);
-    });
+    const requiredLearnerFields = enrollments
+      .map((enrollment) => {
+        const info = learnerInfoMap.get(enrollment.student_id);
+        const profile = studentProfileMap.get(enrollment.student_id);
+        const section = sectionMap.get(enrollment.section_id);
+        const missingFields: string[] = [];
 
-    if (missingProfileLearners.length > 0) {
+        if (!info || missing(info.last_name)) missingFields.push("Last Name");
+        if (!info || missing(info.first_name)) missingFields.push("First Name");
+        if (!info || missing(info.sex)) missingFields.push("Sex");
+        if (!info || missing(info.birth_date)) missingFields.push("Birth Date");
+        if (!info || missing(info.mother_tongue)) {
+          missingFields.push("Mother Tongue");
+        }
+        if (!info || missing(info.religion)) missingFields.push("Religion");
+        if (!info || missing(info.learning_modality)) {
+          missingFields.push("Learning Modality");
+        }
+        if (
+          [8, 9, 10].includes(enrollment.grade_level) &&
+          missing(enrollment.tve_major)
+        ) {
+          missingFields.push("TVE Major");
+        }
+
+        const fullName =
+          profile?.full_name ||
+          [info?.last_name, info?.first_name].filter(Boolean).join(", ") ||
+          "Unnamed Learner";
+
+        return {
+          studentId: enrollment.student_id,
+          fullName,
+          lrn: profile?.lrn ?? null,
+          gradeLevel: enrollment.grade_level,
+          section: section?.name ?? "Section Not Found",
+          missingFields,
+          href: `/portal/my-students?student=${encodeURIComponent(
+            enrollment.student_id
+          )}`,
+          sex: info?.sex ?? null,
+          lastName: info?.last_name ?? fullName,
+          firstName: info?.first_name ?? fullName,
+        };
+      })
+      .filter((item) => item.missingFields.length > 0)
+      .sort((a, b) => {
+        const sexRank = (value: string | null) => {
+          const normalized = String(value ?? "").trim().toLowerCase();
+          if (normalized === "m" || normalized === "male") return 0;
+          if (normalized === "f" || normalized === "female") return 1;
+          return 2;
+        };
+
+        const bySex = sexRank(a.sex) - sexRank(b.sex);
+        if (bySex !== 0) return bySex;
+
+        const byLast = a.lastName.localeCompare(b.lastName, undefined, {
+          sensitivity: "base",
+        });
+        if (byLast !== 0) return byLast;
+
+        return a.firstName.localeCompare(b.firstName, undefined, {
+          sensitivity: "base",
+        });
+      })
+      .map(({ sex, lastName, firstName, ...item }) => item);
+
+    if (requiredLearnerFields.length > 0) {
       alerts.push({
         id: "learner-information",
         severity: "warning",
-        title: "Incomplete Learner Information",
+        title: "Required Learner Information Missing",
         detail:
-          "Some learners are missing important profile, address, birth date, sex, or guardian information.",
-        count: missingProfileLearners.length,
+          "Review the learners below. The dashboard lists the exact required field(s) missing from each learner record.",
+        count: requiredLearnerFields.length,
         href: "/portal/my-students",
-        actionLabel: "Review My Students",
+        actionLabel: "Open My Students",
         administratorAction: false,
-      });
-    }
-
-    const missingTveMajors = enrollments.filter(
-      (enrollment) =>
-        [8, 9, 10].includes(enrollment.grade_level) &&
-        missing(enrollment.tve_major)
-    );
-
-    if (missingTveMajors.length > 0) {
-      alerts.push({
-        id: "tve-major",
-        severity: "warning",
-        title: "TVE Major Not Assigned",
-        detail:
-          "Assign each Grade 8–10 learner's TVE Major before TVE grades can be encoded correctly.",
-        count: missingTveMajors.length,
-        href: "/portal/my-students",
-        actionLabel: "Assign TVE Majors",
-        administratorAction: false,
+        learners: requiredLearnerFields,
       });
     }
 
