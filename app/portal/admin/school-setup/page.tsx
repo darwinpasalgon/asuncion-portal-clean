@@ -448,7 +448,7 @@ export default function SchoolSetupPage() {
             <label>
               <span>Grade Level</span>
               <select name="gradeLevel" required defaultValue="">
-                <option value="" disabled>Select grade level</option>
+                <option value="" disabled>Select Grade Level</option>
                 {gradeLevels.map((grade) => (
                   <option key={grade.grade_level} value={grade.grade_level}>
                     {grade.label}
