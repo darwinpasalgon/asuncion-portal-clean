@@ -32,6 +32,17 @@ async function isAdmin(token: string) {
   return hasAdminPermission(token, "teaching.manage");
 }
 
+function isSupportedAcademicLevel(gradeLevel: number) {
+  return Number.isInteger(gradeLevel) && (
+    gradeLevel === 0 ||
+    (gradeLevel >= 7 && gradeLevel <= 12)
+  );
+}
+
+function academicLevelLabel(gradeLevel: number) {
+  return gradeLevel === 0 ? "ALS A&E" : `Grade ${gradeLevel}`;
+}
+
 async function getRows(path: string, token: string) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     headers: authHeaders(token),
@@ -197,8 +208,8 @@ export async function POST(request: NextRequest) {
     const gradeLevel = Number(body?.gradeLevel ?? 0);
     const name = String(body?.name ?? "").trim().replace(/\s+/g, " ");
 
-    if (!Number.isInteger(gradeLevel) || gradeLevel < 7 || gradeLevel > 12) {
-      return NextResponse.json({ error: "Select a valid grade level." }, { status: 400 });
+    if (!isSupportedAcademicLevel(gradeLevel)) {
+      return NextResponse.json({ error: "Select a valid Grade Level or ALS A&E program." }, { status: 400 });
     }
     if (name.length < 2 || name.length > 100) {
       return NextResponse.json(
@@ -369,12 +380,10 @@ export async function POST(request: NextRequest) {
 
     if (
       !sectionId ||
-      !Number.isInteger(gradeLevel) ||
-      gradeLevel < 7 ||
-      gradeLevel > 12
+      !isSupportedAcademicLevel(gradeLevel)
     ) {
       return NextResponse.json(
-        { error: "Select a valid Grade Level and Section." },
+        { error: "Select a valid Grade Level / Program and Section." },
         { status: 400 }
       );
     }
@@ -737,12 +746,10 @@ export async function POST(request: NextRequest) {
     if (
       !teacherId ||
       !sectionId ||
-      !Number.isInteger(gradeLevel) ||
-      gradeLevel < 7 ||
-      gradeLevel > 12
+      !isSupportedAcademicLevel(gradeLevel)
     ) {
       return NextResponse.json(
-        { error: "Select the Grade Level, Section, and Adviser." },
+        { error: "Select the Grade Level / Program, Section, and Adviser." },
         { status: 400 }
       );
     }
@@ -777,7 +784,7 @@ export async function POST(request: NextRequest) {
       );
     }
     if (!sectionRows?.[0]) {
-      return NextResponse.json({ error: "Select an active section for this grade." }, { status: 400 });
+      return NextResponse.json({ error: "Select an active section for this Grade Level / Program." }, { status: 400 });
     }
 
     const existingRows = await getRows(
@@ -911,12 +918,10 @@ export async function POST(request: NextRequest) {
       !teacherId ||
       !sectionId ||
       !subjectId ||
-      !Number.isInteger(gradeLevel) ||
-      gradeLevel < 7 ||
-      gradeLevel > 12
+      !isSupportedAcademicLevel(gradeLevel)
     ) {
       return NextResponse.json(
-        { error: "Complete the teacher, grade, section, and subject." },
+        { error: "Complete the Teacher, Grade Level / Program, Section, and Subject." },
         { status: 400 }
       );
     }
@@ -957,10 +962,10 @@ export async function POST(request: NextRequest) {
       );
     }
     if (!sectionRows?.[0]) {
-      return NextResponse.json({ error: "Select an active section for this grade." }, { status: 400 });
+      return NextResponse.json({ error: "Select an active section for this Grade Level / Program." }, { status: 400 });
     }
     if (!subjectRows?.[0]) {
-      return NextResponse.json({ error: "Select an active subject for this grade." }, { status: 400 });
+      return NextResponse.json({ error: "Select an active subject for this Grade Level / Program." }, { status: 400 });
     }
 
     const requiresMajor = requiresTechnicalVocationalMajor(
