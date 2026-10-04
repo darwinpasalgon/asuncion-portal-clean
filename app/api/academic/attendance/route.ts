@@ -1,6 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
+type AdviserRow = {
+  id: string;
+  section_id: string;
+  teacher_id: string;
+  assigned_at: string;
+};
+
+type EnrollmentRow = {
+  id: string;
+  student_id: string;
+  grade_level: number;
+  section_id: string;
+};
+
+type AttendanceRow = {
+  id?: string;
+  student_id: string;
+  section_id: string;
+  attendance_date: string;
+  status: string;
+  note?: string | null;
+  updated_at?: string;
+};
+
+type ExclusionRow = {
+  id?: string;
+  school_year_id: string;
+  section_id: string;
+  attendance_date: string;
+  exclusion_type: string;
+  reason: string | null;
+  recorded_by?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
 function headers(token: string) {
   return {
     apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -63,6 +99,76 @@ function validDate(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
+function manilaToday() {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = Object.fromEntries(
+    formatter
+      .formatToParts(new Date())
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value])
+  );
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function manilaDateFromTimestamp(value: string) {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return formatter.format(new Date(value));
+}
+
+function isWeekday(value: string) {
+  if (!validDate(value)) return false;
+  const day = new Date(`${value}T12:00:00Z`).getUTCDay();
+  return day >= 1 && day <= 5;
+}
+
+function dateRange(start: string, end: string) {
+  if (!validDate(start) || !validDate(end) || start > end) return [];
+  const result: string[] = [];
+  const current = new Date(`${start}T12:00:00Z`);
+  const last = new Date(`${end}T12:00:00Z`);
+
+  while (current <= last) {
+    const value = current.toISOString().slice(0, 10);
+    result.push(value);
+    current.setUTCDate(current.getUTCDate() + 1);
+  }
+  return result;
+}
+
+function sectionFilter(sectionIds: string[]) {
+  return `(${sectionIds.join(",")})`;
+}
+
+async function verifyAdviser(
+  token: string,
+  userId: string,
+  schoolYearId: string,
+  sectionId: string
+) {
+  const rows = await getRows(
+    `section_advisers?school_year_id=eq.${encodeURIComponent(
+      schoolYearId
+    )}&section_id=eq.${encodeURIComponent(
+      sectionId
+    )}&teacher_id=eq.${encodeURIComponent(
+      userId
+    )}&is_active=eq.true&select=id&limit=1`,
+    token
+  ).catch(() => []);
+
+  return Boolean(rows?.[0]);
+}
+
 export async function GET(request: NextRequest) {
   const auth = await identity(request);
   if (!auth) {
@@ -87,52 +193,127 @@ export async function GET(request: NextRequest) {
         enrollments: [],
         students: [],
         attendance: [],
+        dateExclusions: [],
+        pendingDates: [],
       });
     }
 
     if (profile.role === "teacher") {
-      const advisers = await getRows(
+      const advisers = (await getRows(
         `section_advisers?school_year_id=eq.${encodeURIComponent(
           year.id
         )}&teacher_id=eq.${encodeURIComponent(
           userId
-        )}&is_active=eq.true&select=id,section_id,teacher_id`,
+        )}&is_active=eq.true&select=id,section_id,teacher_id,assigned_at`,
         token
+      )) as AdviserRow[];
+
+      const sectionIds = Array.from(
+        new Set((advisers ?? []).map((item) => String(item.section_id)))
       );
 
-      const sectionIds = new Set(
-        (advisers ?? []).map((item: { section_id: string }) => item.section_id)
-      );
+      if (!sectionIds.length) {
+        return NextResponse.json({
+          role: profile.role,
+          profile,
+          activeYear: year,
+          advisers,
+          sections: [],
+          enrollments: [],
+          students: [],
+          attendance: [],
+          dateExclusions: [],
+          pendingDates: [],
+          date: validDate(date) ? date : null,
+          isWeekday: validDate(date) ? isWeekday(date) : null,
+        });
+      }
 
-      const [sections, enrollments, students, learnerInformation, attendance] =
-        await Promise.all([
-          getRows(
-            "sections?select=id,grade_level,name&order=grade_level.asc,name.asc",
-            token
-          ),
-          getRows(
-            `student_enrollments?school_year_id=eq.${encodeURIComponent(
-              year.id
-            )}&enrollment_status=eq.active&select=id,student_id,grade_level,section_id`,
-            token
-          ),
-          getRows(
-            "profiles?role=eq.student&account_status=eq.active&select=id,full_name,lrn",
-            token
-          ),
-          getRows(
-            "learner_information?select=student_id,last_name,first_name,middle_name,name_extension,sex",
-            token
-          ),
-          validDate(date)
-            ? getRows(
-                `daily_attendance?school_year_id=eq.${encodeURIComponent(
-                  year.id
-                )}&attendance_date=eq.${date}&select=id,student_id,section_id,attendance_date,status,note,updated_at&order=updated_at.asc`,
-                token
-              )
-            : Promise.resolve([]),
-        ]);
+      const filter = sectionFilter(sectionIds);
+      const today = manilaToday();
+      const adviserStartBySection = new Map(
+        advisers.map((item) => [
+          String(item.section_id),
+          manilaDateFromTimestamp(item.assigned_at),
+        ])
+      );
+      const earliestStart = Array.from(adviserStartBySection.values()).sort()[0];
+
+      const [
+        sections,
+        enrollmentRows,
+        students,
+        learnerInformation,
+        attendance,
+        selectedExclusions,
+        attendanceRange,
+        exclusionRange,
+      ] = await Promise.all([
+        getRows(
+          `sections?id=in.${encodeURIComponent(
+            filter
+          )}&select=id,grade_level,name&order=grade_level.asc,name.asc`,
+          token
+        ),
+        getRows(
+          `student_enrollments?school_year_id=eq.${encodeURIComponent(
+            year.id
+          )}&section_id=in.${encodeURIComponent(
+            filter
+          )}&enrollment_status=eq.active&select=id,student_id,grade_level,section_id`,
+          token
+        ),
+        getRows(
+          "profiles?role=eq.student&account_status=eq.active&select=id,full_name,lrn",
+          token
+        ),
+        getRows(
+          "learner_information?select=student_id,last_name,first_name,middle_name,name_extension,sex",
+          token
+        ),
+        validDate(date)
+          ? getRows(
+              `daily_attendance?school_year_id=eq.${encodeURIComponent(
+                year.id
+              )}&attendance_date=eq.${date}&section_id=in.${encodeURIComponent(
+                filter
+              )}&select=id,student_id,section_id,attendance_date,status,note,updated_at&order=updated_at.asc`,
+              token
+            )
+          : Promise.resolve([]),
+        validDate(date)
+          ? getRows(
+              `attendance_day_exclusions?school_year_id=eq.${encodeURIComponent(
+                year.id
+              )}&attendance_date=eq.${date}&section_id=in.${encodeURIComponent(
+                filter
+              )}&select=id,school_year_id,section_id,attendance_date,exclusion_type,reason,recorded_by,created_at,updated_at`,
+              token
+            )
+          : Promise.resolve([]),
+        earliestStart && earliestStart <= today
+          ? getRows(
+              `daily_attendance?school_year_id=eq.${encodeURIComponent(
+                year.id
+              )}&attendance_date=gte.${earliestStart}&attendance_date=lte.${today}&section_id=in.${encodeURIComponent(
+                filter
+              )}&select=student_id,section_id,attendance_date`,
+              token
+            )
+          : Promise.resolve([]),
+        earliestStart && earliestStart <= today
+          ? getRows(
+              `attendance_day_exclusions?school_year_id=eq.${encodeURIComponent(
+                year.id
+              )}&attendance_date=gte.${earliestStart}&attendance_date=lte.${today}&section_id=in.${encodeURIComponent(
+                filter
+              )}&select=section_id,attendance_date,exclusion_type,reason`,
+              token
+            )
+          : Promise.resolve([]),
+      ]);
+
+      const enrollments = (enrollmentRows ?? []) as EnrollmentRow[];
 
       type LearnerInfo = {
         student_id: string;
@@ -164,18 +345,91 @@ export async function GET(request: NextRequest) {
         }
       );
 
+      const expectedCountBySection = new Map<string, number>();
+      for (const enrollment of enrollments) {
+        const key = String(enrollment.section_id);
+        expectedCountBySection.set(
+          key,
+          (expectedCountBySection.get(key) ?? 0) + 1
+        );
+      }
+
+      const recordedBySectionDate = new Map<string, Set<string>>();
+      for (const row of (attendanceRange ?? []) as AttendanceRow[]) {
+        const key = `${row.section_id}|${row.attendance_date}`;
+        if (!recordedBySectionDate.has(key)) {
+          recordedBySectionDate.set(key, new Set<string>());
+        }
+        recordedBySectionDate.get(key)?.add(String(row.student_id));
+      }
+
+      const excludedKeys = new Set(
+        ((exclusionRange ?? []) as ExclusionRow[]).map(
+          (row) => `${row.section_id}|${row.attendance_date}`
+        )
+      );
+
+      const sectionNameMap = new Map(
+        (sections ?? []).map(
+          (item: { id: string; grade_level: number; name: string }) => [
+            String(item.id),
+            item,
+          ]
+        )
+      );
+
+      const pendingDates: Array<{
+        section_id: string;
+        grade_level: number;
+        section: string;
+        attendance_date: string;
+        expected_count: number;
+        recorded_count: number;
+      }> = [];
+
+      for (const sectionId of sectionIds) {
+        const start = adviserStartBySection.get(sectionId);
+        const expected = expectedCountBySection.get(sectionId) ?? 0;
+        const section = sectionNameMap.get(sectionId);
+        if (!start || !expected || !section) continue;
+
+        for (const attendanceDate of dateRange(start, today)) {
+          if (!isWeekday(attendanceDate)) continue;
+          const key = `${sectionId}|${attendanceDate}`;
+          if (excludedKeys.has(key)) continue;
+
+          const recorded = recordedBySectionDate.get(key)?.size ?? 0;
+          if (recorded < expected) {
+            pendingDates.push({
+              section_id: sectionId,
+              grade_level: Number(section.grade_level),
+              section: String(section.name),
+              attendance_date: attendanceDate,
+              expected_count: expected,
+              recorded_count: recorded,
+            });
+          }
+        }
+      }
+
+      pendingDates.sort((a, b) =>
+        b.attendance_date.localeCompare(a.attendance_date)
+      );
+
       return NextResponse.json({
         role: profile.role,
         profile,
         activeYear: year,
         advisers,
-        sections: (sections ?? []).filter((item: { id: string }) =>
-          sectionIds.has(item.id)
-        ),
+        sections,
         enrollments,
         students: attendanceStudents,
         attendance,
+        dateExclusions: selectedExclusions,
+        pendingDates,
         date: validDate(date) ? date : null,
+        isWeekday: validDate(date) ? isWeekday(date) : null,
+        today,
       });
     }
 
@@ -218,27 +472,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const auth = await identity(request);
   if (!auth || auth.profile.role !== "teacher") {
-    return NextResponse.json({ error: "Teacher access required." }, { status: 403 });
+    return NextResponse.json(
+      { error: "Teacher access required." },
+      { status: 403 }
+    );
   }
 
   const { token, userId } = auth;
   const body = await request.json().catch(() => null);
   const action = String(body?.action ?? "");
-
-  if (action !== "save_attendance") {
-    return NextResponse.json({ error: "Invalid action." }, { status: 400 });
-  }
-
   const sectionId = String(body?.sectionId ?? "");
   const attendanceDate = String(body?.attendanceDate ?? "");
-  const records = Array.isArray(body?.records) ? body.records : [];
-
-  if (!sectionId || !validDate(attendanceDate) || records.length === 0) {
-    return NextResponse.json(
-      { error: "Select a section and date, then complete the attendance sheet." },
-      { status: 400 }
-    );
-  }
 
   const year = await activeYear(token).catch(() => null);
   if (!year) {
@@ -248,21 +492,177 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const adviserRows = await getRows(
-    `section_advisers?school_year_id=eq.${encodeURIComponent(
-      year.id
-    )}&section_id=eq.${encodeURIComponent(
-      sectionId
-    )}&teacher_id=eq.${encodeURIComponent(
-      userId
-    )}&is_active=eq.true&select=id&limit=1`,
-    token
-  ).catch(() => []);
+  if (!sectionId || !validDate(attendanceDate)) {
+    return NextResponse.json(
+      { error: "Select a valid section and date." },
+      { status: 400 }
+    );
+  }
 
-  if (!adviserRows?.[0]) {
+  if (!isWeekday(attendanceDate)) {
+    return NextResponse.json(
+      { error: "Attendance is recorded on weekdays only." },
+      { status: 400 }
+    );
+  }
+
+  const adviserAllowed = await verifyAdviser(
+    token,
+    userId,
+    year.id,
+    sectionId
+  );
+  if (!adviserAllowed) {
     return NextResponse.json(
       { error: "You are not the Attendance Teacher / Adviser for this section." },
       { status: 403 }
+    );
+  }
+
+  if (action === "mark_no_classes") {
+    const exclusionType = String(body?.exclusionType ?? "");
+    const reason = String(body?.reason ?? "").trim();
+    const allowedTypes = new Set([
+      "regular_holiday",
+      "special_non_working_holiday",
+      "class_suspension",
+    ]);
+
+    if (!allowedTypes.has(exclusionType)) {
+      return NextResponse.json(
+        { error: "Select a valid No Classes type." },
+        { status: 400 }
+      );
+    }
+    if (reason.length > 300) {
+      return NextResponse.json(
+        { error: "The optional reason must be 300 characters or fewer." },
+        { status: 400 }
+      );
+    }
+
+    const exclusionResponse = await fetch(
+      `${SUPABASE_URL}/rest/v1/attendance_day_exclusions?on_conflict=school_year_id,section_id,attendance_date`,
+      {
+        method: "POST",
+        headers: {
+          ...headers(token),
+          Prefer: "resolution=merge-duplicates,return=representation",
+        },
+        body: JSON.stringify([
+          {
+            school_year_id: year.id,
+            section_id: sectionId,
+            attendance_date: attendanceDate,
+            exclusion_type: exclusionType,
+            reason: reason || null,
+            recorded_by: userId,
+            updated_at: new Date().toISOString(),
+          },
+        ]),
+        cache: "no-store",
+      }
+    );
+
+    const exclusion = await exclusionResponse.json().catch(() => []);
+    if (!exclusionResponse.ok || !Array.isArray(exclusion)) {
+      return NextResponse.json(
+        { error: "Unable to mark this date as No Classes." },
+        { status: 400 }
+      );
+    }
+
+    const deleteResponse = await fetch(
+      `${SUPABASE_URL}/rest/v1/daily_attendance?school_year_id=eq.${encodeURIComponent(
+        year.id
+      )}&section_id=eq.${encodeURIComponent(
+        sectionId
+      )}&attendance_date=eq.${attendanceDate}`,
+      {
+        method: "DELETE",
+        headers: {
+          ...headers(token),
+          Prefer: "return=representation",
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!deleteResponse.ok) {
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/attendance_day_exclusions?school_year_id=eq.${encodeURIComponent(
+          year.id
+        )}&section_id=eq.${encodeURIComponent(
+          sectionId
+        )}&attendance_date=eq.${attendanceDate}`,
+        {
+          method: "DELETE",
+          headers: headers(token),
+          cache: "no-store",
+        }
+      );
+      return NextResponse.json(
+        { error: "Unable to clear attendance records for this No Classes date." },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ ok: true, exclusion: exclusion[0] ?? null });
+  }
+
+  if (action === "restore_school_day") {
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/attendance_day_exclusions?school_year_id=eq.${encodeURIComponent(
+        year.id
+      )}&section_id=eq.${encodeURIComponent(
+        sectionId
+      )}&attendance_date=eq.${attendanceDate}`,
+      {
+        method: "DELETE",
+        headers: {
+          ...headers(token),
+          Prefer: "return=representation",
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: "Unable to restore this date as a school day." },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ ok: true });
+  }
+
+  if (action !== "save_attendance") {
+    return NextResponse.json({ error: "Invalid action." }, { status: 400 });
+  }
+
+  const records = Array.isArray(body?.records) ? body.records : [];
+
+  if (records.length === 0) {
+    return NextResponse.json(
+      { error: "Complete the attendance sheet before saving." },
+      { status: 400 }
+    );
+  }
+
+  const existingExclusions = await getRows(
+    `attendance_day_exclusions?school_year_id=eq.${encodeURIComponent(
+      year.id
+    )}&section_id=eq.${encodeURIComponent(
+      sectionId
+    )}&attendance_date=eq.${attendanceDate}&select=id&limit=1`,
+    token
+  ).catch(() => []);
+
+  if (existingExclusions?.[0]) {
+    return NextResponse.json(
+      { error: "This date is marked as No Classes. Restore it first to record attendance." },
+      { status: 409 }
     );
   }
 
@@ -288,7 +688,7 @@ export async function POST(request: NextRequest) {
 
   if (records.length !== allowedStudents.size) {
     return NextResponse.json(
-      { error: "Complete attendance for every active student before saving." },
+      { error: "Tag attendance for every active learner before saving." },
       { status: 400 }
     );
   }
@@ -302,6 +702,7 @@ export async function POST(request: NextRequest) {
     "transferred_out",
     "dropped",
   ]);
+
   const payload: Array<{
     student_id: string;
     school_year_id: string;
@@ -316,7 +717,7 @@ export async function POST(request: NextRequest) {
   const seen = new Set<string>();
   for (const record of records) {
     const studentId = String(record?.studentId ?? "");
-    const status = String(record?.status ?? "");
+    const status = String(record?.status ?? "").trim();
     const noteRaw = String(record?.note ?? "").trim();
 
     if (
@@ -326,7 +727,7 @@ export async function POST(request: NextRequest) {
       !allowedStatuses.has(status)
     ) {
       return NextResponse.json(
-        { error: "The attendance sheet contains an invalid student or status." },
+        { error: "Every learner must have a valid attendance tag before saving." },
         { status: 400 }
       );
     }
