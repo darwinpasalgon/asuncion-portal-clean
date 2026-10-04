@@ -476,7 +476,7 @@ export default function GradesPage() {
                                   {saved.status === "published" ? "Published" : "Draft"}
                                 </span>
                               ) : (
-                                <span className={styles.notSaved}>Not saved</span>
+                                <span className={styles.notSaved}>Not Saved</span>
                               )}
                             </td>
                             <td>
