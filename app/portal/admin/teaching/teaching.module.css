@@ -125,3 +125,30 @@
 .assignmentCompactRow>div strong,.assignmentCompactRow>div span{display:block}
 .assignmentCompactRow>div strong{font-size:.79rem;color:#365b71}
 .assignmentCompactRow>div span{font-size:.7rem;color:#82949e;margin-top:3px}
+
+/* 2026 teaching-setup polish */
+.page{background:linear-gradient(180deg,#f7fafc,#f4f7f9);padding-top:28px}
+.shell{width:min(1240px,100%)}
+.topLink{padding:7px 10px;border-radius:8px}
+.topLink:hover{background:#edf5fa;color:#125b91}
+.header{align-items:center}
+.header h1{font-size:clamp(1.85rem,3vw,2.6rem)}
+.activeYear{border-radius:12px;box-shadow:0 8px 22px rgba(35,112,82,.05)}
+.summary article{border-radius:14px;box-shadow:0 9px 28px rgba(22,71,106,.04);transition:transform .16s ease,border-color .16s ease}
+.summary article:hover{transform:translateY(-1px);border-color:#cfdfe6}
+.panel{border-radius:16px;box-shadow:0 14px 42px rgba(22,71,106,.055)}
+.panelHeading{padding:19px 21px;background:linear-gradient(180deg,#fff,#fcfefe)}
+.form select,.form input,.adviserForm select,.setupPicker select,.setupHeader select,.setupTable select{border-radius:9px;background:#fcfefe;transition:border-color .18s ease,box-shadow .18s ease}
+.form select:focus,.form input:focus,.adviserForm select:focus,.setupPicker select:focus,.setupHeader select:focus,.setupTable select:focus{outline:0;border-color:#6da9cc;box-shadow:0 0 0 3px rgba(23,110,180,.09)}
+.form button,.adviserForm button,.setupFooter button{background:linear-gradient(110deg,#176aab,#18845a);box-shadow:0 7px 18px rgba(27,117,83,.12)}
+.form button:hover:not(:disabled),.adviserForm button:hover:not(:disabled),.setupFooter button:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 10px 22px rgba(27,117,83,.16)}
+.subjectCard,.assignmentGradeGroup,.assignmentSectionCard{border-radius:13px}
+.subjectCard{transition:border-color .16s ease,box-shadow .16s ease}
+.subjectCard:hover{border-color:#cfdfe6;box-shadow:0 10px 26px rgba(24,65,93,.045)}
+.assignmentCompactRow,.row,.adviserRow,.assignmentRow{transition:background-color .15s ease}
+.assignmentCompactRow:hover,.row:hover,.adviserRow:hover,.assignmentRow:hover{background:#fbfdfd}
+.setupPicker,.adviserForm,.setupFooter{background:#fbfdfd}
+.setupTable tbody tr:hover td{background:#fbfdfd}
+.editSubject:hover,.assignmentSectionHeading button:hover,.refresh:hover{background:#f2f8fb}
+.removeSubject:hover,.removeAdviser:hover{background:#fff1f1}
+@media(max-width:520px){.page{padding:21px 11px 42px}.header h1{font-size:1.72rem}.panel{border-radius:12px}.summary{gap:9px}.summary article{padding:15px}}
