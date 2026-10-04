@@ -9,6 +9,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  Save,
   School,
   Trash2,
   UserCheck,
@@ -64,6 +65,10 @@ export default function TeachingSetupPage() {
   const [assignmentSubject, setAssignmentSubject] = useState("");
   const [assignmentMajor, setAssignmentMajor] = useState("");
   const [adviserGrade, setAdviserGrade] = useState("");
+  const [setupGrade, setSetupGrade] = useState("");
+  const [setupSectionId, setSetupSectionId] = useState("");
+  const [setupAdviserId, setSetupAdviserId] = useState("");
+  const [setupTeachers, setSetupTeachers] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState("");
   const [error, setError] = useState("");
@@ -128,6 +133,59 @@ export default function TeachingSetupPage() {
     [activeSubjects, assignmentGrade]
   );
 
+  const sectionsForSetup = useMemo(
+    () =>
+      activeSections.filter(
+        (item) => String(item.grade_level) === setupGrade
+      ),
+    [activeSections, setupGrade]
+  );
+
+  const subjectsForSetup = useMemo(
+    () =>
+      activeSubjects.filter(
+        (item) => String(item.grade_level) === setupGrade
+      ),
+    [activeSubjects, setupGrade]
+  );
+
+  const setupSection = useMemo(
+    () => activeSections.find((item) => item.id === setupSectionId) ?? null,
+    [activeSections, setupSectionId]
+  );
+
+  const setupRows = useMemo(
+    () =>
+      subjectsForSetup.flatMap((subject) => {
+        if (requiresTechnicalVocationalMajor(subject.grade_level, subject.name)) {
+          return TECHNICAL_VOCATIONAL_MAJORS.map((major) => ({
+            key: `${subject.id}::${major}`,
+            subject,
+            major,
+          }));
+        }
+        return [{ key: `${subject.id}::`, subject, major: null as string | null }];
+      }),
+    [subjectsForSetup]
+  );
+
+  const groupedAssignments = useMemo(() => {
+    return grades
+      .map((grade) => ({
+        grade,
+        sections: activeSections
+          .filter((section) => section.grade_level === grade.grade_level)
+          .map((section) => ({
+            section,
+            assignments: assignments.filter(
+              (assignment) => assignment.section_id === section.id
+            ),
+          }))
+          .filter((item) => item.assignments.length > 0),
+      }))
+      .filter((item) => item.sections.length > 0);
+  }, [grades, activeSections, assignments]);
+
   function sectionName(id: string) {
     return sections.find((item) => item.id === id)?.name ?? "Unknown section";
   }
@@ -143,6 +201,90 @@ export default function TeachingSetupPage() {
 
   function adviserForSection(sectionId: string) {
     return activeAdvisers.find((item) => item.section_id === sectionId) ?? null;
+  }
+
+  function assignmentFor(
+    sectionId: string,
+    subjectId: string,
+    major: string | null
+  ) {
+    return assignments.find(
+      (item) =>
+        item.section_id === sectionId &&
+        item.subject_id === subjectId &&
+        (item.major ?? null) === major
+    ) ?? null;
+  }
+
+  function prepareSectionSetup(sectionId: string) {
+    setSetupSectionId(sectionId);
+    const adviser = adviserForSection(sectionId);
+    setSetupAdviserId(adviser?.teacher_id ?? "");
+
+    const section = activeSections.find((item) => item.id === sectionId);
+    if (!section) {
+      setSetupTeachers({});
+      return;
+    }
+
+    const next: Record<string, string> = {};
+    activeSubjects
+      .filter((subject) => subject.grade_level === section.grade_level)
+      .forEach((subject) => {
+        if (requiresTechnicalVocationalMajor(subject.grade_level, subject.name)) {
+          TECHNICAL_VOCATIONAL_MAJORS.forEach((major) => {
+            const assignment = assignmentFor(sectionId, subject.id, major);
+            next[`${subject.id}::${major}`] =
+              assignment?.is_active ? assignment.teacher_id : "";
+          });
+        } else {
+          const assignment = assignmentFor(sectionId, subject.id, null);
+          next[`${subject.id}::`] =
+            assignment?.is_active ? assignment.teacher_id : "";
+        }
+      });
+    setSetupTeachers(next);
+  }
+
+  async function saveSectionSetup() {
+    if (!setupSection || !setupGrade) return;
+
+    setWorking("section-setup");
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch("/api/admin/teaching-setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_section_setup",
+          gradeLevel: Number(setupGrade),
+          sectionId: setupSection.id,
+          adviserTeacherId: setupAdviserId,
+          assignments: setupRows.map((row) => ({
+            subjectId: row.subject.id,
+            major: row.major,
+            teacherId: setupTeachers[row.key] ?? "",
+          })),
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setError(result.error ?? "Unable to save the section setup.");
+        return;
+      }
+
+      setSuccess(
+        `Grade ${setupSection.grade_level} ${setupSection.name} setup saved. ${result.activeAssignments ?? 0} active subject assignment(s).`
+      );
+      await load();
+    } catch {
+      setError("Unable to reach the teaching setup service.");
+    } finally {
+      setWorking("");
+    }
   }
 
   async function saveAdviser(event: FormEvent<HTMLFormElement>) {
@@ -436,7 +578,7 @@ export default function TeachingSetupPage() {
       <div className={styles.shell}>
         <nav className={styles.topActions} aria-label="Administrator navigation">
           <a href="/portal" className={styles.topLink}>
-            <ArrowLeft size={16} /> Back to portal
+            <ArrowLeft size={16} /> Back to Portal
           </a>
           <a href="/portal/admin/school-setup" className={styles.topLink}>
             School setup
@@ -489,6 +631,193 @@ export default function TeachingSetupPage() {
             <strong>{activeAdvisers.length}</strong>
           </article>
         </div>
+
+        <section className={styles.panel}>
+          <div className={styles.panelHeading}>
+            <div>
+              <h2>Quick Section Setup</h2>
+              <p>
+                Recommended workflow: choose one Grade Level and Section, then assign the Adviser
+                and all Subject Teachers from one grouped screen.
+              </p>
+            </div>
+            <button className={styles.refresh} onClick={() => void load()} disabled={loading}>
+              <RefreshCw size={16} /> Refresh
+            </button>
+          </div>
+
+          <div className={styles.setupPicker}>
+            <label>
+              <span>Grade Level</span>
+              <select
+                value={setupGrade}
+                onChange={(event) => {
+                  setSetupGrade(event.target.value);
+                  setSetupSectionId("");
+                  setSetupAdviserId("");
+                  setSetupTeachers({});
+                }}
+              >
+                <option value="">Select Grade Level</option>
+                {grades.map((grade) => (
+                  <option key={grade.grade_level} value={grade.grade_level}>
+                    {grade.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Section</span>
+              <select
+                value={setupSectionId}
+                disabled={!setupGrade}
+                onChange={(event) => prepareSectionSetup(event.target.value)}
+              >
+                <option value="">
+                  {setupGrade ? "Select Section" : "Select Grade Level First"}
+                </option>
+                {sectionsForSetup.map((section) => {
+                  const adviser = adviserForSection(section.id);
+                  const activeCount = activeAssignments.filter(
+                    (assignment) => assignment.section_id === section.id
+                  ).length;
+                  return (
+                    <option key={section.id} value={section.id}>
+                      {section.name} · {activeCount}/{activeSubjects.filter(
+                        (subject) => subject.grade_level === section.grade_level &&
+                          !requiresTechnicalVocationalMajor(subject.grade_level, subject.name)
+                      ).length + activeSubjects.filter(
+                        (subject) => subject.grade_level === section.grade_level &&
+                          requiresTechnicalVocationalMajor(subject.grade_level, subject.name)
+                      ).length * TECHNICAL_VOCATIONAL_MAJORS.length} assignment rows
+                      {adviser ? ` · Adviser: ${teacherName(adviser.teacher_id)}` : " · No Adviser"}
+                    </option>
+                  );
+                })}
+              </select>
+            </label>
+          </div>
+
+          {setupSection ? (
+            <div className={styles.setupWorkspace}>
+              <div className={styles.setupHeader}>
+                <div>
+                  <span>SECTION</span>
+                  <h3>Grade {setupSection.grade_level} · {setupSection.name}</h3>
+                </div>
+                <label>
+                  <span>Section Adviser</span>
+                  <select
+                    value={setupAdviserId}
+                    onChange={(event) => setSetupAdviserId(event.target.value)}
+                  >
+                    <option value="">Not Assigned</option>
+                    {teachers.map((teacher) => (
+                      <option key={teacher.id} value={teacher.id}>
+                        {teacher.full_name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className={styles.setupTableWrap}>
+                <table className={styles.setupTable}>
+                  <thead>
+                    <tr>
+                      <th>Subject</th>
+                      <th>TVE Major</th>
+                      <th>Subject Teacher</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {setupRows.map((row) => {
+                      const current = assignmentFor(
+                        setupSection.id,
+                        row.subject.id,
+                        row.major
+                      );
+                      const selectedTeacher = setupTeachers[row.key] ?? "";
+                      return (
+                        <tr key={row.key}>
+                          <td>
+                            <strong>{row.subject.name}</strong>
+                            {row.subject.grade_level === 7 &&
+                              isTechnicalVocationalEducation(row.subject.name) && (
+                                <small>Exploratory</small>
+                              )}
+                          </td>
+                          <td>{row.major ?? "—"}</td>
+                          <td>
+                            <select
+                              value={selectedTeacher}
+                              onChange={(event) =>
+                                setSetupTeachers((currentTeachers) => ({
+                                  ...currentTeachers,
+                                  [row.key]: event.target.value,
+                                }))
+                              }
+                            >
+                              <option value="">Not Assigned</option>
+                              {teachers.map((teacher) => (
+                                <option key={teacher.id} value={teacher.id}>
+                                  {teacher.full_name}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td>
+                            <span
+                              className={
+                                selectedTeacher ? styles.setupAssigned : styles.setupMissing
+                              }
+                            >
+                              {selectedTeacher
+                                ? current?.is_active &&
+                                  current.teacher_id === selectedTeacher
+                                  ? "Assigned"
+                                  : "Ready to Save"
+                                : current?.is_active
+                                  ? "Will Remove"
+                                  : "Not Assigned"}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className={styles.setupFooter}>
+                <div>
+                  <strong>
+                    {setupRows.filter((row) => setupTeachers[row.key]).length}
+                    /{setupRows.length} Assignment Rows Selected
+                  </strong>
+                  <span>
+                    Unassigned rows can be completed later. Clearing an existing Teacher and saving
+                    will deactivate that assignment.
+                  </span>
+                </div>
+                <button
+                  onClick={() => void saveSectionSetup()}
+                  disabled={working === "section-setup" || setupRows.length === 0}
+                >
+                  <Save size={17} />
+                  {working === "section-setup" ? "Saving Section…" : "Save Section Setup"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className={styles.setupEmpty}>
+              <School size={30} />
+              <strong>Select a Grade Level and Section</strong>
+              <span>All subjects and Teacher assignments for that section will appear together.</span>
+            </div>
+          )}
+        </section>
 
         <section className={styles.panel}>
           <div className={styles.panelHeading}>
@@ -552,7 +881,7 @@ export default function TeachingSetupPage() {
               </select>
             </label>
             <button type="submit" disabled={working === "adviser" || !adviserGrade || teachers.length === 0}>
-              <UserCheck size={17} /> {working === "adviser" ? "Assigning…" : "Assign adviser"}
+              <UserCheck size={17} /> {working === "adviser" ? "Assigning…" : "Assign Adviser"}
             </button>
           </form>
 
@@ -619,7 +948,7 @@ export default function TeachingSetupPage() {
           <section className={styles.panel}>
             <div className={styles.panelHeading}>
               <div>
-                <h2>Assign a Subject Teacher</h2>
+                <h2>Advanced: Assign One Subject Teacher</h2>
                 <p>
                   One Teacher is assigned to each section-subject combination. Subject teachers keep
                   their teaching assignment even when the Section Adviser is a different teacher.
@@ -755,7 +1084,7 @@ export default function TeachingSetupPage() {
                   ) && !assignmentMajor)
                 }
               >
-                <UserCheck size={17} /> {working === "assignment" ? "Saving…" : "Save assignment"}
+                <UserCheck size={17} /> {working === "assignment" ? "Saving…" : "Save Assignment"}
               </button>
             </form>
           </section>
@@ -857,35 +1186,65 @@ export default function TeachingSetupPage() {
             <div className={styles.empty}>
               <UserCheck size={28} />
               <strong>No Teacher Assignments Yet</strong>
-              <span>Create a subject, then assign it to a section and Teacher.</span>
+              <span>Use Quick Section Setup above to assign a whole section at once.</span>
             </div>
           ) : (
-            <div className={styles.assignmentList}>
-              {assignments.map((assignment) => (
-                <article className={styles.assignmentRow} key={assignment.id}>
-                  <div className={styles.assignmentIdentity}>
-                    <span>Grade {assignment.grade_level}</span>
-                    <strong>{sectionName(assignment.section_id)}</strong>
+            <div className={styles.groupedAssignments}>
+              {groupedAssignments.map(({ grade, sections: gradeSections }) => (
+                <section className={styles.assignmentGradeGroup} key={grade.grade_level}>
+                  <div className={styles.assignmentGradeHeading}>
+                    <strong>{grade.label}</strong>
+                    <span>
+                      {gradeSections.reduce(
+                        (total, item) =>
+                          total +
+                          item.assignments.filter((assignment) => assignment.is_active).length,
+                        0
+                      )} active assignment(s)
+                    </span>
                   </div>
-                  <div>
-                    <span>SUBJECT</span>
-                    <strong>
-                      {subjectName(assignment.subject_id)}
-                      {assignment.major ? ` · ${assignment.major}` : ""}
-                    </strong>
+                  <div className={styles.assignmentSectionGrid}>
+                    {gradeSections.map(({ section, assignments: sectionAssignments }) => (
+                      <article className={styles.assignmentSectionCard} key={section.id}>
+                        <div className={styles.assignmentSectionHeading}>
+                          <div>
+                            <span>SECTION</span>
+                            <strong>{section.name}</strong>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setSetupGrade(String(section.grade_level));
+                              prepareSectionSetup(section.id);
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
+                          >
+                            Edit Section
+                          </button>
+                        </div>
+                        {sectionAssignments.map((assignment) => (
+                          <div className={styles.assignmentCompactRow} key={assignment.id}>
+                            <div>
+                              <strong>
+                                {subjectName(assignment.subject_id)}
+                                {assignment.major ? ` · ${assignment.major}` : ""}
+                              </strong>
+                              <span>{teacherName(assignment.teacher_id)}</span>
+                            </div>
+                            <button
+                              className={assignment.is_active ? styles.active : styles.inactive}
+                              disabled={working === assignment.id}
+                              onClick={() =>
+                                void setAssignmentActive(assignment, !assignment.is_active)
+                              }
+                            >
+                              {assignment.is_active ? "Active" : "Inactive"}
+                            </button>
+                          </div>
+                        ))}
+                      </article>
+                    ))}
                   </div>
-                  <div>
-                    <span>SUBJECT TEACHER</span>
-                    <strong>{teacherName(assignment.teacher_id)}</strong>
-                  </div>
-                  <button
-                    className={assignment.is_active ? styles.active : styles.inactive}
-                    disabled={working === assignment.id}
-                    onClick={() => void setAssignmentActive(assignment, !assignment.is_active)}
-                  >
-                    {assignment.is_active ? "Active" : "Inactive"}
-                  </button>
-                </article>
+                </section>
               ))}
             </div>
           )}
