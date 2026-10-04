@@ -32,7 +32,14 @@ type Subject = {
   name: string;
   is_active: boolean;
 };
-type Teacher = { id: string; full_name: string; email: string };
+type Teacher = {
+  id: string;
+  full_name: string;
+  email: string;
+  position?: string | null;
+  is_head_teacher?: boolean;
+  linked?: boolean;
+};
 type Assignment = {
   id: string;
   teacher_id: string;
@@ -59,6 +66,7 @@ export default function TeachingSetupPage() {
   const [sections, setSections] = useState<Section[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [subjectTeachers, setSubjectTeachers] = useState<Teacher[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [advisers, setAdvisers] = useState<Adviser[]>([]);
   const [assignmentGrade, setAssignmentGrade] = useState("");
@@ -91,6 +99,7 @@ export default function TeachingSetupPage() {
       setSections(result.sections ?? []);
       setSubjects(result.subjects ?? []);
       setTeachers(result.teachers ?? []);
+      setSubjectTeachers(result.subjectTeachers ?? result.teachers ?? []);
       setAssignments(result.assignments ?? []);
       setAdvisers(result.advisers ?? []);
     } catch {
@@ -196,7 +205,17 @@ export default function TeachingSetupPage() {
   }
 
   function teacherName(id: string) {
-    return teachers.find((item) => item.id === id)?.full_name ?? "Unknown teacher";
+    return (
+      subjectTeachers.find((item) => item.id === id)?.full_name ??
+      teachers.find((item) => item.id === id)?.full_name ??
+      "Unknown teacher"
+    );
+  }
+
+  function subjectTeacherLabel(teacher: Teacher) {
+    return teacher.is_head_teacher && teacher.position
+      ? `${teacher.full_name} · ${teacher.position}`
+      : teacher.full_name;
   }
 
   function adviserForSection(sectionId: string) {
@@ -622,8 +641,8 @@ export default function TeachingSetupPage() {
           </article>
           <article>
             <Users size={22} />
-            <span>Active Teachers</span>
-            <strong>{teachers.length}</strong>
+            <span>Subject Teacher Options</span>
+            <strong>{subjectTeachers.length}</strong>
           </article>
           <article>
             <UserCheck size={22} />
@@ -638,7 +657,8 @@ export default function TeachingSetupPage() {
               <h2>Quick Section Setup</h2>
               <p>
                 Recommended workflow: choose one Grade Level and Section, then assign the Adviser
-                and all Subject Teachers from one grouped screen.
+                and all Subject Teachers from one grouped screen. Head Teachers are available as
+                Subject Teachers but remain separate from the Section Adviser list.
               </p>
             </div>
             <button className={styles.refresh} onClick={() => void load()} disabled={loading}>
@@ -760,9 +780,9 @@ export default function TeachingSetupPage() {
                               }
                             >
                               <option value="">Not Assigned</option>
-                              {teachers.map((teacher) => (
+                              {subjectTeachers.map((teacher) => (
                                 <option key={teacher.id} value={teacher.id}>
-                                  {teacher.full_name}
+                                  {subjectTeacherLabel(teacher)}
                                 </option>
                               ))}
                             </select>
@@ -1059,12 +1079,14 @@ export default function TeachingSetupPage() {
                 )}
               <label>
                 <span>Teacher</span>
-                <select name="teacherId" required defaultValue="" disabled={teachers.length === 0}>
+                <select name="teacherId" required defaultValue="" disabled={subjectTeachers.length === 0}>
                   <option value="" disabled>
-                    {teachers.length ? "Select teacher" : "No active teachers"}
+                    {subjectTeachers.length ? "Select Teacher or Head Teacher" : "No active teaching personnel"}
                   </option>
-                  {teachers.map((teacher) => (
-                    <option key={teacher.id} value={teacher.id}>{teacher.full_name}</option>
+                  {subjectTeachers.map((teacher) => (
+                    <option key={teacher.id} value={teacher.id}>
+                      {subjectTeacherLabel(teacher)}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -1075,7 +1097,7 @@ export default function TeachingSetupPage() {
                   !assignmentGrade ||
                   !assignmentSubject ||
                   subjectsForAssignment.length === 0 ||
-                  teachers.length === 0 ||
+                  subjectTeachers.length === 0 ||
                   (requiresTechnicalVocationalMajor(
                     Number(assignmentGrade),
                     subjectsForAssignment.find(
