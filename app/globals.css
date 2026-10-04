@@ -924,3 +924,147 @@ img,svg,video,canvas{max-width:100%}
 .real-my-learners-roster>div small{color:#8a9aa3;font-size:.55rem;white-space:nowrap}
 .real-my-learners-section-link{margin:0 13px 11px}
 @media(max-width:767px){.real-my-learners-sections summary{align-items:flex-start;flex-direction:column}.real-my-learners-subjects{justify-content:flex-start}.real-my-learners-roster{grid-template-columns:1fr}.real-my-learners-roster>div{grid-template-columns:26px minmax(0,1fr)}.real-my-learners-roster>div small{grid-column:2}}
+
+/* 2026 portal-wide visual polish */
+:root{
+  --background:#f5f8fb;
+  --foreground:#233b4a;
+  --card:#ffffff;
+  --primary:#176eb4;
+  --secondary:#edf5f1;
+  --muted:#f4f7f8;
+  --muted-foreground:#6f818c;
+  --border:#dfe8ed;
+  --input:#d5e1e7;
+  --ring:#2a83b8;
+  --radius:.78rem;
+  --sidebar:#ffffff;
+  --sidebar-border:#e3ebef;
+}
+body{
+  background:
+    radial-gradient(circle at top right,rgba(23,110,180,.055),transparent 28rem),
+    linear-gradient(180deg,#f7fafc 0,#f4f7f9 100%);
+  color:#294658;
+  font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+button,a,input,select,textarea{transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease,color .18s ease,transform .18s ease}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:3px solid rgba(42,131,184,.2);
+  outline-offset:2px;
+}
+input:focus,select:focus,textarea:focus{
+  border-color:#6da9cc!important;
+  box-shadow:0 0 0 3px rgba(23,110,180,.09);
+}
+.workspace{background:transparent}
+.brand{
+  padding:22px 19px;
+  border-bottom:1px solid #e7eef1;
+  background:linear-gradient(180deg,#fff,#fcfefe);
+}
+.brand-mark img{filter:drop-shadow(0 5px 10px rgba(20,68,98,.12))}
+.brand strong{font-size:.9rem;letter-spacing:.055em;color:#174f83}
+.brand span{font-size:.71rem;color:#4f7b68}
+.side-content{padding:18px 14px 22px}
+.school-year{
+  margin-bottom:22px;
+  padding:13px 14px;
+  border-radius:11px;
+  background:linear-gradient(135deg,#eef6fc,#f7fbfe);
+  border-color:#d9e8f2;
+}
+.school-year>span:first-child{font-size:.63rem;font-weight:800;letter-spacing:.12em;color:#7390a1}
+.school-year strong{font-size:.9rem;color:#195b8f;margin-bottom:0}
+.nav-group-section{margin-bottom:18px}
+.nav-label{font-size:.62rem;font-weight:850;letter-spacing:.13em;color:#8a9aa2;margin-bottom:8px;padding:0 10px}
+.nav-button{
+  min-height:43px;
+  margin-bottom:4px;
+  border-radius:10px;
+  padding:10px 11px;
+  color:#59717f;
+  font-weight:650;
+}
+.nav-button:hover{background:#f1f6f8;color:#285e7c;transform:translateX(1px)}
+.nav-button[data-active=true]{
+  background:linear-gradient(90deg,#eaf6ef,#eff7fb);
+  color:#17694c;
+  box-shadow:inset 3px 0 #178b5c,0 4px 14px rgba(39,112,81,.05);
+}
+.side-footer{background:#fbfdfd;border-top-color:#e7eef1}
+.topbar{
+  min-height:72px;
+  padding:14px 30px;
+  border-top:3px solid #176eb4;
+  border-bottom:1px solid #e3ebef;
+  box-shadow:0 4px 18px rgba(28,65,89,.035);
+}
+.crumb{font-size:.8rem;color:#81919a}
+.crumb strong{color:#365a70;font-weight:700}
+.real-user-badge{
+  padding:6px 9px 6px 6px;
+  border:1px solid #e1e9ed;
+  border-radius:999px;
+  background:#fbfdfd;
+}
+.real-user-badge>div strong{color:#365a6e;font-size:.78rem}
+.real-user-badge>div span{color:#84939b;font-size:.65rem}
+.page-wrap{max-width:1540px;padding:30px 30px 28px}
+.page-heading{margin-bottom:24px}
+.eyebrow{font-size:.64rem;letter-spacing:.12em;color:#50806b;font-weight:800;margin-bottom:8px}
+h1{font-size:clamp(1.65rem,2.4vw,2.15rem);letter-spacing:-.035em;color:#164b7e}
+.page-heading>div>p:last-child{max-width:780px;font-size:.86rem;line-height:1.65;color:#778991;margin-top:7px}
+.panel,.stat,.real-role-card{
+  border-color:#e0e8ec;
+  border-radius:14px;
+  box-shadow:0 10px 34px rgba(24,65,93,.045);
+}
+.panel{background:rgba(255,255,255,.96)}
+.panel-heading{padding:19px 21px}
+.panel-heading h2{color:#2e536a}
+.stat{padding:18px 19px}
+.stat:hover{border-color:#cedee6;box-shadow:0 14px 38px rgba(24,65,93,.075);transform:translateY(-1px)}
+.welcome-card{
+  min-height:250px;
+  border-radius:16px;
+  padding:30px;
+  box-shadow:0 18px 50px rgba(15,72,91,.16);
+}
+.welcome-card h2{font-family:ui-serif,Georgia,serif;font-size:2.05rem}
+.tag{border-radius:999px;padding:4px 9px;font-weight:700}
+.search-box,.picker,.field input,.field textarea,.field [data-slot=select-trigger]{
+  border-radius:9px;
+}
+th[data-slot=table-head]{
+  background:#f6f9fa;
+  color:#6f8490;
+  font-size:.66rem;
+  font-weight:800;
+  letter-spacing:.07em;
+}
+td[data-slot=table-cell]{color:#496574}
+.real-empty-panel{border-style:dashed!important;background:rgba(255,255,255,.72)!important}
+.real-empty-panel svg{color:#6e9ab5}
+.real-assignment-list article,.real-schedule-list article{transition:background-color .18s ease,border-color .18s ease}
+.real-assignment-list article:hover,.real-schedule-list article:hover{background:#fbfdfd;border-color:#d9e6eb}
+.real-school-forms-unavailable,.real-adviser-attention,.real-my-learners-dashboard{border-radius:14px!important}
+@media(max-width:950px){
+  .page-wrap{padding:25px 20px 22px}
+  .topbar{padding-left:20px;padding-right:20px}
+}
+@media(max-width:767px){
+  .topbar{min-height:62px;padding:10px 13px;border-top-width:3px}
+  .real-user-badge{max-width:60%;padding-right:7px}
+  .real-user-badge>div strong{max-width:125px}
+  .real-user-badge>div span{font-size:.6rem}
+  .page-wrap{padding:20px 13px 18px}
+  .page-heading{margin-bottom:19px}
+  .page-heading>div>p:last-child{font-size:.79rem}
+  h1{font-size:1.55rem}
+  .panel,.stat,.real-role-card{border-radius:12px}
+  .welcome-card{border-radius:13px;padding:23px;min-height:245px}
+  .welcome-card h2{font-size:1.8rem}
+}
