@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const year = await activeYear(token);
-    const [grades, sections, teachers, advisers, enrollments, students, attendance] =
+    const [grades, sections, teachers, advisers, enrollments, students, attendance, exclusions] =
       await Promise.all([
         getRows("grade_levels?select=grade_level,label,sort_order&order=sort_order.asc", token),
         getRows("sections?is_active=eq.true&select=id,grade_level,name&order=grade_level.asc,name.asc", token),
@@ -95,6 +95,14 @@ export async function GET(request: NextRequest) {
               token
             )
           : Promise.resolve([]),
+        year && validDate(date)
+          ? getRows(
+              `attendance_day_exclusions?school_year_id=eq.${encodeURIComponent(
+                year.id
+              )}&attendance_date=eq.${date}&select=id,section_id,attendance_date,exclusion_type,reason`,
+              token
+            )
+          : Promise.resolve([]),
       ]);
 
     return NextResponse.json({
@@ -106,6 +114,7 @@ export async function GET(request: NextRequest) {
       enrollments,
       students,
       attendance,
+      exclusions,
       date: validDate(date) ? date : null,
     });
   } catch {
