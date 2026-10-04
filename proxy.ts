@@ -118,8 +118,8 @@ function destination(request: NextRequest, state: AccessState) {
 
   const studentTeacherOnly =
     pathname === "/portal/grades" || pathname === "/portal/attendance";
+  const personnelProfilePage = pathname === "/portal/teacher-profile";
   const teacherOnly =
-    pathname === "/portal/teacher-profile" ||
     pathname === "/portal/my-students" ||
     pathname === "/portal/my-learners";
   const announcementsPage = pathname === "/portal/announcements";
@@ -144,6 +144,16 @@ function destination(request: NextRequest, state: AccessState) {
   }
 
   if (teacherOnly && state.role !== "teacher") {
+    const url = new URL("/portal", request.url);
+    url.searchParams.set("reason", "forbidden");
+    return NextResponse.redirect(url);
+  }
+
+  if (
+    personnelProfilePage &&
+    state.role !== "teacher" &&
+    state.role !== "staff_administrator"
+  ) {
     const url = new URL("/portal", request.url);
     url.searchParams.set("reason", "forbidden");
     return NextResponse.redirect(url);
