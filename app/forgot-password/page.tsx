@@ -102,7 +102,7 @@ export default function ForgotPasswordPage() {
               {error && <p className={styles.error}>{error}</p>}
 
               <button className={styles.signInButton} type="submit" disabled={loading}>
-                {loading ? "Submitting request..." : "Request Password Reset"}
+                {loading ? "Submitting Request..." : "Request Password Reset"}
                 {!loading && <ArrowRight size={18} />}
               </button>
             </form>
