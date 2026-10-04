@@ -325,7 +325,7 @@ export default function CommunityPage() {
 
           <div className={connected ? styles.connection : styles.connectionOffline}>
             <Circle size={9} fill="currentColor" />
-            {connected ? "Live" : "Reconnecting"}
+            {connected ? "Auto Updates" : "Reconnecting"}
           </div>
         </header>
 
