@@ -750,8 +750,8 @@ export default function BulkAccountImportPage() {
     <main className={styles.page}>
       <div className={styles.shell}>
         <nav className={styles.topbar}>
-          <a href="/portal"><ArrowLeft size={16} />Back to portal</a>
-          <a href="/portal/admin/users"><Users size={16} />Users & accounts</a>
+          <a href="/portal"><ArrowLeft size={16} />Back to Portal</a>
+          <a href="/portal/admin/users"><Users size={16} />Users & Accounts</a>
         </nav>
 
         <header className={styles.header}>
@@ -810,7 +810,7 @@ export default function BulkAccountImportPage() {
                     resetImport();
                   }}
                 >
-                  <option value="">Select grade level</option>
+                  <option value="">Select Grade Level</option>
                   {gradeOptions.map((grade) => (
                     <option key={grade} value={grade}>Grade {grade}</option>
                   ))}
@@ -828,7 +828,7 @@ export default function BulkAccountImportPage() {
                   }}
                 >
                   <option value="">
-                    {selectedGrade ? "Select section" : "Select grade level first"}
+                    {selectedGrade ? "Select section" : "Select Grade Level first"}
                   </option>
                   {sectionOptions.map((section) => (
                     <option key={section.id} value={section.name}>{section.name}</option>
@@ -887,7 +887,7 @@ export default function BulkAccountImportPage() {
               <div className={styles.summary}>
                 <span>Total <strong>{summary.total}</strong></span>
                 <span>Ready <strong>{summary.valid}</strong></span>
-                <span>Needs correction <strong>{summary.invalid}</strong></span>
+                <span>Needs Correction <strong>{summary.invalid}</strong></span>
                 <button className={styles.primary} onClick={() => void importAccounts()} disabled={working || summary.invalid > 0 || summary.valid === 0}>
                   <KeyRound size={16} />{working ? "Creating accounts…" : "Create accounts"}
                 </button>
@@ -914,7 +914,7 @@ export default function BulkAccountImportPage() {
         {credentials.length > 0 && (
           <section className={styles.credentials}>
             <div><KeyRound size={22} /><div><h2>Temporary Credentials</h2><p>Download these now. Temporary passwords are not stored in plaintext by the portal.</p></div></div>
-            <button onClick={downloadCredentials}><Download size={16} />Download credentials CSV</button>
+            <button onClick={downloadCredentials}><Download size={16} />Download Credentials CSV</button>
             <p className={styles.warning}>
               Give each user only their own credentials. On first sign-in, the portal automatically requires a new private password.
             </p>
