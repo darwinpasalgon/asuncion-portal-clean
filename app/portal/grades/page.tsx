@@ -642,106 +642,101 @@ export default function GradesPage() {
               ) : (
                 <div className={styles.tableWrap}>
                   {selectedIsMapeh ? (
-                    <table className={`${styles.gradeTable} ${styles.mapehTable}`}>
-                      <thead>
-                        <tr>
-                          <th>Learner</th>
-                          <th>Music</th>
-                          <th>Arts</th>
-                          <th>Physical Education</th>
-                          <th>Health</th>
-                          <th>MAPEH Grade</th>
-                          <th>Proficiency Descriptor</th>
-                          <th>Support</th>
-                          <th>Status</th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {classStudentGroups.map(({ group, students: groupStudents }) => (
-                          <Fragment key={group}>
-                            <tr className={styles.sexGroupRow}>
-                              <td colSpan={10}>
-                                <strong>{group}</strong>
-                                <span>
-                                  {groupStudents.length} learner
-                                  {groupStudents.length === 1 ? "" : "s"}
-                                </span>
-                              </td>
-                            </tr>
-                            {groupStudents.map((student) => {
-                              const saved = savedGradeForStudent(student.id);
-                              const draft =
-                                mapehDrafts[student.id] ?? emptyMapehDraft();
-                              const average = computedMapehAverage(draft);
-                              const effectiveGrade =
-                                average ?? saved?.term_grade ?? null;
-                              const published = saved?.status === "published";
+                    <div className={styles.mapehGradebook}>
+                      <div className={styles.mapehHeader}>
+                        <span>Learner</span>
+                        <span>Music</span>
+                        <span>Arts</span>
+                        <span>PE</span>
+                        <span>Health</span>
+                        <span>MAPEH Result</span>
+                        <span>Action</span>
+                      </div>
 
-                              return (
-                                <tr key={student.id}>
-                                  <td>
-                                    <strong>{student.full_name}</strong>
-                                    <span>
-                                      {(student.last_name && student.first_name
-                                        ? `${student.last_name}, ${student.first_name}${
-                                            student.middle_name
-                                              ? ` ${student.middle_name}`
-                                              : ""
-                                          }${
-                                            student.name_extension
-                                              ? ` ${student.name_extension}`
-                                              : ""
-                                          }`
-                                        : student.full_name)}
-                                      {student.lrn ? ` · LRN ${student.lrn}` : ""}
-                                    </span>
-                                  </td>
-                                  {(
-                                    [
-                                      ["music", "Music"],
-                                      ["arts", "Arts"],
-                                      ["physicalEducation", "Physical Education"],
-                                      ["health", "Health"],
-                                    ] as Array<[keyof MapehDraft, string]>
-                                  ).map(([field, label]) => (
-                                    <td key={field}>
-                                      <input
-                                        className={styles.componentInput}
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        step="1"
-                                        value={draft[field]}
-                                        disabled={published}
-                                        onChange={(event) =>
-                                          updateMapehDraft(
-                                            student.id,
-                                            field,
-                                            event.target.value
-                                          )
-                                        }
-                                        aria-label={`${student.full_name} ${label} Term ${selectedTerm} grade`}
-                                      />
-                                    </td>
-                                  ))}
-                                  <td>
-                                    <div className={styles.autoGrade}>
-                                      <strong>
-                                        {effectiveGrade === null ? "—" : effectiveGrade}
-                                      </strong>
-                                      <small>Automatic Average</small>
-                                    </div>
-                                  </td>
-                                  <td>
-                                    {effectiveGrade === null
-                                      ? "—"
-                                      : <strong>{descriptor(effectiveGrade)}</strong>}
-                                  </td>
-                                  <td>
-                                    {effectiveGrade === null ? (
-                                      "—"
-                                    ) : (
+                      {classStudentGroups.map(({ group, students: groupStudents }) => (
+                        <Fragment key={group}>
+                          <div className={styles.mapehGroupHeading}>
+                            <strong>{group}</strong>
+                            <span>
+                              {groupStudents.length} learner
+                              {groupStudents.length === 1 ? "" : "s"}
+                            </span>
+                          </div>
+
+                          {groupStudents.map((student) => {
+                            const saved = savedGradeForStudent(student.id);
+                            const draft =
+                              mapehDrafts[student.id] ?? emptyMapehDraft();
+                            const average = computedMapehAverage(draft);
+                            const effectiveGrade =
+                              average ?? saved?.term_grade ?? null;
+                            const published = saved?.status === "published";
+
+                            return (
+                              <div className={styles.mapehRow} key={student.id}>
+                                <div className={styles.mapehLearner}>
+                                  <strong>{student.full_name}</strong>
+                                  <span>
+                                    {(student.last_name && student.first_name
+                                      ? `${student.last_name}, ${student.first_name}${
+                                          student.middle_name
+                                            ? ` ${student.middle_name}`
+                                            : ""
+                                        }${
+                                          student.name_extension
+                                            ? ` ${student.name_extension}`
+                                            : ""
+                                        }`
+                                      : student.full_name)}
+                                  </span>
+                                  {student.lrn && <small>LRN {student.lrn}</small>}
+                                </div>
+
+                                {(
+                                  [
+                                    ["music", "Music"],
+                                    ["arts", "Arts"],
+                                    ["physicalEducation", "PE"],
+                                    ["health", "Health"],
+                                  ] as Array<[keyof MapehDraft, string]>
+                                ).map(([field, label]) => (
+                                  <label
+                                    className={styles.mapehComponent}
+                                    key={field}
+                                  >
+                                    <span>{label}</span>
+                                    <input
+                                      className={styles.componentInput}
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      step="1"
+                                      value={draft[field]}
+                                      disabled={published}
+                                      onChange={(event) =>
+                                        updateMapehDraft(
+                                          student.id,
+                                          field,
+                                          event.target.value
+                                        )
+                                      }
+                                      aria-label={`${student.full_name} ${label} Term ${selectedTerm} grade`}
+                                    />
+                                  </label>
+                                ))}
+
+                                <div className={styles.mapehResult}>
+                                  <div className={styles.autoGrade}>
+                                    <strong>
+                                      {effectiveGrade === null ? "—" : effectiveGrade}
+                                    </strong>
+                                    <small>Automatic Average</small>
+                                  </div>
+                                  {effectiveGrade !== null && (
+                                    <>
+                                      <span className={styles.mapehDescriptor}>
+                                        {descriptor(effectiveGrade)}
+                                      </span>
                                       <span
                                         className={
                                           effectiveGrade < 75
@@ -753,46 +748,45 @@ export default function GradesPage() {
                                           ? "Intervention needed"
                                           : "Meets minimum standard"}
                                       </span>
-                                    )}
-                                  </td>
-                                  <td>
-                                    {saved ? (
-                                      <span
-                                        className={
-                                          saved.status === "published"
-                                            ? styles.published
-                                            : styles.draft
-                                        }
-                                      >
-                                        {saved.status === "published"
-                                          ? "Published"
-                                          : "Draft"}
-                                      </span>
-                                    ) : (
-                                      <span className={styles.notSaved}>Not Saved</span>
-                                    )}
-                                  </td>
-                                  <td>
-                                    <button
-                                      className={styles.saveButton}
-                                      disabled={
-                                        working === student.id ||
-                                        published ||
-                                        average === null
+                                    </>
+                                  )}
+                                  {saved ? (
+                                    <span
+                                      className={
+                                        saved.status === "published"
+                                          ? styles.published
+                                          : styles.draft
                                       }
-                                      onClick={() => void saveGrade(student.id)}
                                     >
-                                      <Save size={15} />
-                                      {working === student.id ? "Saving…" : "Save"}
-                                    </button>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </Fragment>
-                        ))}
-                      </tbody>
-                    </table>
+                                      {saved.status === "published"
+                                        ? "Published"
+                                        : "Draft"}
+                                    </span>
+                                  ) : (
+                                    <span className={styles.notSaved}>Not Saved</span>
+                                  )}
+                                </div>
+
+                                <div className={styles.mapehAction}>
+                                  <button
+                                    className={styles.saveButton}
+                                    disabled={
+                                      working === student.id ||
+                                      published ||
+                                      average === null
+                                    }
+                                    onClick={() => void saveGrade(student.id)}
+                                  >
+                                    <Save size={15} />
+                                    {working === student.id ? "Saving…" : "Save"}
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </Fragment>
+                      ))}
+                    </div>
                   ) : (
                     <table className={styles.gradeTable}>
                       <thead>
