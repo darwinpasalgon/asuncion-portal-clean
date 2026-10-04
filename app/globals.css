@@ -890,3 +890,17 @@ img,svg,video,canvas{max-width:100%}
 .real-attention-learner>div small{margin-top:5px;color:#9a552d;font-size:.65rem;line-height:1.45;font-weight:700}
 .real-attention-open{flex:none;display:inline-flex;align-items:center;gap:4px;color:#765a18;font-size:.63rem;font-weight:800;white-space:nowrap}
 @media(max-width:767px){.real-attention-learner{align-items:flex-start;flex-direction:column}.real-attention-open{width:100%;justify-content:flex-end}}
+
+.real-school-forms-unavailable{overflow:hidden;background:rgba(255,255,255,.86)}
+.real-school-forms-warning{display:grid;grid-template-columns:46px minmax(0,1fr) auto;gap:14px;align-items:start;padding:22px 24px;border-bottom:1px solid #eadfbe;background:linear-gradient(135deg,#fffaf0,#fffdf8)}
+.real-school-forms-icon{width:44px;height:44px;display:grid;place-items:center;border-radius:12px;background:#fff1c9;color:#8b681d;border:1px solid #ead08b}
+.real-school-forms-kicker{display:block;font-size:.62rem;font-weight:800;letter-spacing:.11em;color:#9a7a31}
+.real-school-forms-warning h2{margin:6px 0 7px;color:#654f20;font-size:1.15rem}
+.real-school-forms-warning p{margin:0;max-width:760px;color:#80714e;font-size:.78rem;line-height:1.6}
+.real-school-forms-status{align-self:center;border-radius:999px;padding:7px 10px;background:#8b681d;color:#fff;font-size:.66rem;font-weight:800;white-space:nowrap}
+.real-school-forms-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:20px 22px}
+.real-school-forms-list article{padding:15px 16px;border:1px solid #e1e8ec;border-radius:11px;background:#fbfdfd}
+.real-school-forms-list article strong{display:block;color:#36586c;font-size:.78rem}
+.real-school-forms-list article p{margin:7px 0 0;color:#788b96;font-size:.69rem;line-height:1.55}
+.real-school-forms-note{display:flex;align-items:center;gap:9px;padding:14px 22px;border-top:1px solid #e7edef;background:#f5f8fa;color:#6d808c;font-size:.72rem;font-weight:650}
+@media(max-width:767px){.real-school-forms-warning{grid-template-columns:42px 1fr}.real-school-forms-status{grid-column:1/-1;justify-self:start}.real-school-forms-list{grid-template-columns:1fr;padding:14px}}
