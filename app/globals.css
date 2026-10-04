@@ -904,3 +904,23 @@ img,svg,video,canvas{max-width:100%}
 .real-school-forms-list article p{margin:7px 0 0;color:#788b96;font-size:.69rem;line-height:1.55}
 .real-school-forms-note{display:flex;align-items:center;gap:9px;padding:14px 22px;border-top:1px solid #e7edef;background:#f5f8fa;color:#6d808c;font-size:.72rem;font-weight:650}
 @media(max-width:767px){.real-school-forms-warning{grid-template-columns:42px 1fr}.real-school-forms-status{grid-column:1/-1;justify-self:start}.real-school-forms-list{grid-template-columns:1fr;padding:14px}}
+
+.real-my-learners-dashboard{grid-column:1/-1}
+.real-my-learners-link,.real-my-learners-section-link{display:inline-flex;align-items:center;gap:4px;text-decoration:none;color:#356987;font-size:.67rem;font-weight:800}
+.real-my-learners-link{padding:7px 9px;border:1px solid #d8e6ed;border-radius:8px;background:#f8fbfc}
+.real-my-learners-sections{display:grid;gap:9px;margin-top:12px}
+.real-my-learners-sections details{border:1px solid #e1e9ed;border-radius:10px;background:#fbfdfd;overflow:hidden}
+.real-my-learners-sections summary{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 13px;cursor:pointer;list-style:none}
+.real-my-learners-sections summary::-webkit-details-marker{display:none}
+.real-my-learners-sections summary>div:first-child span,.real-my-learners-sections summary>div:first-child strong{display:block}
+.real-my-learners-sections summary>div:first-child span{font-size:.63rem;color:#78909d}
+.real-my-learners-sections summary>div:first-child strong{margin-top:3px;font-size:.74rem;color:#365a70}
+.real-my-learners-subjects{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:5px}
+.real-my-learners-subjects span{padding:4px 7px;border-radius:999px;background:#edf5f9;color:#456f87;font-size:.57rem;font-weight:750}
+.real-my-learners-roster{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:10px 13px;border-top:1px solid #e7edef}
+.real-my-learners-roster>div{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:7px;align-items:center;padding:7px 8px;border:1px solid #e7edef;border-radius:8px;background:#fff}
+.real-my-learners-roster>div>span{display:grid;place-items:center;width:23px;height:23px;border-radius:6px;background:#eef4f6;color:#6c8491;font-size:.57rem;font-weight:800}
+.real-my-learners-roster>div strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#416274;font-size:.65rem}
+.real-my-learners-roster>div small{color:#8a9aa3;font-size:.55rem;white-space:nowrap}
+.real-my-learners-section-link{margin:0 13px 11px}
+@media(max-width:767px){.real-my-learners-sections summary{align-items:flex-start;flex-direction:column}.real-my-learners-subjects{justify-content:flex-start}.real-my-learners-roster{grid-template-columns:1fr}.real-my-learners-roster>div{grid-template-columns:26px minmax(0,1fr)}.real-my-learners-roster>div small{grid-column:2}}
