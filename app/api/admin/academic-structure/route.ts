@@ -34,6 +34,35 @@ async function restJson(url: string, token: string) {
   return response.json();
 }
 
+async function restAllJson(url: string, token: string, pageSize = 1000) {
+  const rows: unknown[] = [];
+  let start = 0;
+
+  while (true) {
+    const response = await fetch(url, {
+      headers: {
+        ...headers(token),
+        Range: `${start}-${start + pageSize - 1}`,
+      },
+      cache: "no-store",
+    });
+    if (!response.ok) throw new Error("Academic structure paged query failed.");
+
+    const page = await response.json().catch(() => []);
+    if (!Array.isArray(page)) throw new Error("Invalid academic structure response.");
+
+    rows.push(...page);
+    if (page.length < pageSize) break;
+
+    start += pageSize;
+    if (start >= 100000) {
+      throw new Error("Academic structure enrollment set is unexpectedly large.");
+    }
+  }
+
+  return rows;
+}
+
 export async function GET(request: NextRequest) {
   const token = tokenFrom(request);
   if (!token || !(await isAdmin(token))) {
@@ -41,7 +70,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [schoolYears, gradeLevels, sections, enrollments] = await Promise.all([
+    const [schoolYears, gradeLevels, sections] = await Promise.all([
       restJson(
         `${SUPABASE_URL}/rest/v1/school_years?select=id,name,start_year,end_year,is_active&order=start_year.desc`,
         token
@@ -54,11 +83,20 @@ export async function GET(request: NextRequest) {
         `${SUPABASE_URL}/rest/v1/sections?select=id,grade_level,name,is_active&order=grade_level.asc,name.asc`,
         token
       ),
-      restJson(
-        `${SUPABASE_URL}/rest/v1/student_enrollments?select=id,school_year_id,grade_level,section_id,enrollment_status&order=enrolled_at.desc`,
-        token
-      ),
     ]);
+
+    const activeYear = (schoolYears ?? []).find(
+      (year: { is_active?: boolean }) => year.is_active === true
+    );
+
+    const enrollments = activeYear?.id
+      ? await restAllJson(
+          `${SUPABASE_URL}/rest/v1/student_enrollments?school_year_id=eq.${encodeURIComponent(
+            String(activeYear.id)
+          )}&enrollment_status=eq.active&select=id,school_year_id,grade_level,section_id,enrollment_status&order=enrolled_at.desc`,
+          token
+        )
+      : [];
 
     return NextResponse.json({
       schoolYears,
