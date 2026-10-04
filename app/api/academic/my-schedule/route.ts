@@ -77,7 +77,11 @@ export async function GET(request: NextRequest) {
   }
 
   let visibleAssignments = assignments;
-  if (profile.role === "student") {
+  if (profile.role === "teacher") {
+    visibleAssignments = assignments.filter(
+      (item: { teacher_id: string }) => item.teacher_id === userId
+    );
+  } else if (profile.role === "student") {
     const enrollmentRows = await getRows(
       `student_enrollments?student_id=eq.${encodeURIComponent(
         userId
