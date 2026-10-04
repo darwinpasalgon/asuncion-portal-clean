@@ -179,8 +179,9 @@ export default function Sf10Page() {
             <span>REGISTRAR</span>
             <h1>SF10 Records</h1>
             <p>
-              Build the learner permanent academic record from portal enrollment and published grade data.
-              Print actions are recorded for accountability.
+              Learner identity fields are initialized from verified SF1 data. Historical eligibility,
+              school history, and credentials must still come from official records. Published grades
+              flow into the scholastic record automatically.
             </p>
           </div>
           <div className={styles.badge}><ShieldCheck size={18} />Restricted Record Access</div>
@@ -288,7 +289,8 @@ export default function Sf10Page() {
                       <>
                         <label>
                           <span>JHS Eligibility</span>
-                          <select name="eligibility_type" defaultValue={record.eligibility_type ?? "elementary_completer"}>
+                          <select name="eligibility_type" defaultValue={record.eligibility_type ?? ""}>
+                            <option value="">Not Yet Recorded</option>
                             <option value="elementary_completer">Elementary School Completer</option>
                             <option value="pept">PEPT Passer</option>
                             <option value="a_and_e">ALS A&amp;E Passer</option>
