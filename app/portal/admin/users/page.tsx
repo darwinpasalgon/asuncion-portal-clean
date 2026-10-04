@@ -334,6 +334,42 @@ export default function UsersAccountsPage() {
     }
   }
 
+  async function requestPasswordReset(user: UserRecord) {
+    if (user.account_status !== "active") {
+      setError("Only active accounts can request a password reset.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Create a password reset request for ${user.full_name}? You will be taken to Password Resets to issue the temporary password.`
+    );
+    if (!confirmed) return;
+
+    setWorking(user.id);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch("/api/admin/password-resets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setError(result.error ?? "Unable to create the password reset request.");
+        return;
+      }
+
+      window.location.href = "/portal/admin/password-resets";
+    } catch {
+      setError("Unable to reach the password reset service.");
+    } finally {
+      setWorking("");
+    }
+  }
+
   async function deleteUser() {
     if (!deleteTarget || deleteText !== "DELETE") return;
 
@@ -544,9 +580,12 @@ export default function UsersAccountsPage() {
                             <a href="/portal/admin/accounts">Review</a>
                           )}
 
-                          <a href="/portal/admin/password-resets">
-                            <KeyRound size={15} /> Reset
-                          </a>
+                          <button
+                            onClick={() => void requestPasswordReset(user)}
+                            disabled={working === user.id || user.account_status !== "active"}
+                          >
+                            <KeyRound size={15} /> Reset Password
+                          </button>
 
                           <button
                             className={styles.dangerAction}
