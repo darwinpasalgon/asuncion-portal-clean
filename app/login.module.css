@@ -1139,3 +1139,131 @@
     gap:7px;
   }
 }
+
+
+/* APK v1 force phone zoom-out */
+/*
+  Some Android WebViews report a desktop-sized layout viewport even on a phone.
+  max-device-width catches the physical phone screen, then forces the login page
+  into the mobile layout and visually scales it to 82% (similar to pinch-zooming out).
+  This is scoped only to the login page via .page.
+*/
+@media screen and (max-device-width:600px){
+  .page{
+    display:block!important;
+    grid-template-columns:1fr!important;
+    width:121.95122%!important;
+    min-height:121.95122dvh!important;
+    overflow-x:hidden!important;
+    zoom:.82;
+    background:
+      radial-gradient(circle at 80% 8%,rgba(42,125,181,.12),transparent 26%),
+      radial-gradient(circle at 10% 92%,rgba(28,145,96,.10),transparent 25%),
+      #f4f8fb;
+  }
+
+  .brandPanel{
+    display:none!important;
+  }
+
+  .formPanel{
+    display:flex!important;
+    align-items:flex-start!important;
+    justify-content:center!important;
+    place-items:unset!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:121.95122dvh!important;
+    padding:
+      max(12px,env(safe-area-inset-top))
+      max(12px,env(safe-area-inset-right))
+      max(16px,env(safe-area-inset-bottom))
+      max(12px,env(safe-area-inset-left))!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+  }
+
+  .formWrap{
+    width:100%!important;
+    max-width:430px!important;
+    min-width:0!important;
+    margin:0 auto!important;
+    padding:18px 16px!important;
+    border-radius:14px!important;
+  }
+
+  .mobileBrand{
+    display:flex!important;
+    margin:0 0 16px!important;
+    gap:10px!important;
+  }
+
+  .mobileBrand img{
+    width:42px!important;
+    height:42px!important;
+  }
+
+  .intro{
+    margin-bottom:16px!important;
+  }
+
+  .demoPill{
+    margin-bottom:8px!important;
+  }
+
+  .intro h2{
+    font-size:1.55rem!important;
+    line-height:1.08!important;
+    margin-bottom:6px!important;
+  }
+
+  .intro p{
+    font-size:.78rem!important;
+    line-height:1.4!important;
+  }
+
+  .form{
+    gap:12px!important;
+  }
+
+  .field{
+    gap:6px!important;
+    font-size:.74rem!important;
+  }
+
+  .inputWrap{
+    min-height:46px!important;
+    padding:0 12px!important;
+  }
+
+  .inputWrap input{
+    min-width:0!important;
+    font-size:16px!important;
+  }
+
+  .signInButton{
+    min-height:46px!important;
+  }
+
+  .demoNote{
+    margin-top:11px!important;
+    padding:10px 11px!important;
+  }
+
+  .demoNote p{
+    font-size:.67rem!important;
+    line-height:1.4!important;
+  }
+}
+
+/* Transform fallback for engines that do not support CSS zoom. */
+@supports not (zoom:1){
+  @media screen and (max-device-width:600px){
+    .page{
+      zoom:1;
+      width:121.95122%!important;
+      transform:scale(.82);
+      transform-origin:top left;
+    }
+  }
+}
