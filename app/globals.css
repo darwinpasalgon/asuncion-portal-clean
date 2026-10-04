@@ -702,3 +702,147 @@ body{margin:0;background:var(--background);color:var(--foreground);font-family:A
 .nav-group-section .nav-button span{
   line-height:1.3;
 }
+
+
+/* APK v1 mobile fit pass */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+body{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+*,*::before,*::after{box-sizing:border-box}
+img,svg,video,canvas{max-width:100%}
+
+@media(max-width:767px){
+  html,body{min-height:100%;overscroll-behavior-x:none}
+  [data-slot="sidebar-wrapper"],.workspace,.page-wrap,.topbar,.real-status-bar,.page-heading,.real-overview-grid,.panel,.real-welcome,.real-profile-card,.real-teacher-class-page,.real-schedule-page{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+  }
+  [data-slot="sidebar-wrapper"]{min-height:100dvh}
+  .workspace{overflow-x:hidden}
+  .topbar{
+    min-height:60px;
+    padding:max(10px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 10px max(14px,env(safe-area-inset-left));
+    gap:8px;
+  }
+  .crumb{min-width:0;gap:8px}
+  .crumb>span{display:none}
+  .crumb>strong{
+    display:block;
+    min-width:0;
+    max-width:55vw;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .real-user-badge{min-width:0;flex:none}
+  .real-status-bar{
+    min-height:auto;
+    padding:8px max(14px,env(safe-area-inset-right)) 8px max(14px,env(safe-area-inset-left));
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+  .page-wrap{
+    padding:18px max(14px,env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));
+    overflow-x:hidden;
+  }
+  .page-heading{
+    display:block;
+    margin-bottom:18px;
+    padding-bottom:16px;
+  }
+  .page-heading>div{min-width:0}
+  .eyebrow{
+    font-size:.6rem;
+    line-height:1.55;
+    letter-spacing:.08em;
+    overflow-wrap:anywhere;
+  }
+  .page-heading h1{
+    font-size:clamp(1.55rem,7.4vw,1.95rem);
+    line-height:1.12;
+    overflow-wrap:anywhere;
+  }
+  .page-heading>div>p:last-child{
+    margin-top:7px;
+    font-size:.82rem;
+    line-height:1.5;
+  }
+  .real-overview-grid{grid-template-columns:minmax(0,1fr);gap:16px}
+  .real-overview-grid>*{min-width:0}
+  .real-welcome{
+    min-height:auto;
+    padding:22px 18px;
+    border-radius:14px;
+  }
+  .real-welcome-copy{width:100%;min-width:0}
+  .real-welcome h2{
+    margin:12px 0 10px;
+    font-size:clamp(1.55rem,7.2vw,1.95rem);
+    line-height:1.08;
+    overflow-wrap:anywhere;
+  }
+  .real-welcome p{font-size:.83rem;line-height:1.58}
+  .real-welcome-highlights{gap:7px;margin-top:16px}
+  .real-welcome-highlights span{
+    max-width:100%;
+    padding:7px 9px;
+    white-space:normal;
+  }
+  .real-academic-motif{display:none}
+  .panel{overflow:hidden}
+  .real-profile-card,.real-admin-card,.real-next-card{padding:18px 16px}
+  .real-card-title{align-items:flex-start;gap:9px;margin-bottom:14px}
+  .real-card-title>div{min-width:0}
+  .real-card-title h2,.real-card-title p{overflow-wrap:anywhere}
+  .real-profile-card dl div{grid-template-columns:1fr;gap:4px;padding:9px 0}
+  .real-profile-card dt,.real-profile-card dd{
+    min-width:0;
+    overflow-wrap:anywhere;
+    word-break:break-word;
+  }
+  .real-admin-card>div:last-child{grid-template-columns:1fr}
+  .real-admin-card button{width:100%;white-space:normal}
+  .real-assignment-heading{
+    padding:16px;
+    gap:10px;
+    align-items:flex-start;
+  }
+  .real-assignment-heading>div{min-width:0}
+  .real-assignment-heading h2,.real-assignment-heading p{overflow-wrap:anywhere}
+  .real-assignment-list article{padding:14px 16px;min-width:0}
+  .real-assignment-list article>div{min-width:0}
+  .real-assignment-list article strong,.real-assignment-list article span{overflow-wrap:anywhere}
+  .real-schedule-day article{padding:14px 16px;min-width:0}
+  .real-schedule-day article>div{min-width:0}
+  .toolbar,.filter-group{width:100%;max-width:100%}
+  .toolbar>*,.filter-group>*{max-width:100%;min-width:0}
+  .picker,select,input,textarea{max-width:100%}
+  input,select,textarea{font-size:16px}
+  button,a,input,select,textarea{touch-action:manipulation}
+  [data-slot="table-container"]{
+    width:100%;
+    max-width:100%;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  [data-slot="dialog-content"]{
+    width:calc(100vw - 24px)!important;
+    max-width:calc(100vw - 24px)!important;
+    max-height:calc(100dvh - 24px);
+    overflow:auto;
+  }
+  .anhs-action-wait{
+    padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+  }
+}
+
+@media(max-width:420px){
+  .page-wrap{
+    padding-left:max(12px,env(safe-area-inset-left));
+    padding-right:max(12px,env(safe-area-inset-right));
+  }
+  .real-welcome{padding:20px 16px}
+  .real-profile-card,.real-admin-card,.real-next-card{padding:16px 14px}
+  .real-assignment-heading{padding:14px}
+  .real-assignment-list article{padding:13px 14px}
+}
