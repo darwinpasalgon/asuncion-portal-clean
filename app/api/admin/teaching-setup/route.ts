@@ -759,7 +759,7 @@ export async function POST(request: NextRequest) {
       getRows(
         `profiles?id=eq.${encodeURIComponent(
           teacherId
-        )}&account_status=eq.active&select=id,role,position&limit=1`,
+        )}&role=eq.teacher&account_status=eq.active&select=id&limit=1`,
         token
       ),
       getRows(
@@ -770,9 +770,9 @@ export async function POST(request: NextRequest) {
       ),
     ]).catch(() => [[], []]);
 
-    if (!teacherRows?.[0] || !subjectTeacherEligible(teacherRows[0])) {
+    if (!teacherRows?.[0]) {
       return NextResponse.json(
-        { error: "Select an active Teacher or Head Teacher account." },
+        { error: "Select an active Teacher account for the Section Adviser." },
         { status: 400 }
       );
     }
@@ -933,7 +933,7 @@ export async function POST(request: NextRequest) {
       getRows(
         `profiles?id=eq.${encodeURIComponent(
           teacherId
-        )}&role=eq.teacher&account_status=eq.active&select=id&limit=1`,
+        )}&account_status=eq.active&select=id,role,position&limit=1`,
         token
       ),
       getRows(
@@ -950,8 +950,11 @@ export async function POST(request: NextRequest) {
       ),
     ]).catch(() => [[], [], []]);
 
-    if (!teacherRows?.[0]) {
-      return NextResponse.json({ error: "Select an active Teacher account." }, { status: 400 });
+    if (!teacherRows?.[0] || !subjectTeacherEligible(teacherRows[0])) {
+      return NextResponse.json(
+        { error: "Select an active Teacher or Head Teacher account." },
+        { status: 400 }
+      );
     }
     if (!sectionRows?.[0]) {
       return NextResponse.json({ error: "Select an active section for this grade." }, { status: 400 });
