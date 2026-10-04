@@ -3,7 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
+  AlertTriangle,
+  ArrowRight,
   CalendarDays,
+  CalendarOff,
   CheckCircle2,
   ClipboardCheck,
   Clock3,
@@ -29,7 +32,10 @@ type AttendanceStatus =
   | "transferred_out"
   | "dropped";
 type RecordRow={id?:string;student_id:string;section_id:string;attendance_date:string;status:AttendanceStatus;note:string|null};
-type Draft={status:AttendanceStatus;note:string};
+type Draft={status:AttendanceStatus|"";note:string};
+type ExclusionType="regular_holiday"|"special_non_working_holiday"|"class_suspension";
+type DateExclusion={id?:string;school_year_id:string;section_id:string;attendance_date:string;exclusion_type:ExclusionType;reason:string|null};
+type PendingDate={section_id:string;grade_level:number;section:string;attendance_date:string;expected_count:number;recorded_count:number};
 
 function localDate(){
   const d=new Date();
@@ -51,6 +57,18 @@ const ATTENDANCE_LABELS:Record<AttendanceStatus,string>={
   transferred_out:"Transferred Out",
   dropped:"Dropped",
 };
+
+const NO_CLASS_LABELS:Record<ExclusionType,string>={
+  regular_holiday:"Regular Holiday",
+  special_non_working_holiday:"Special Non-Working Holiday",
+  class_suspension:"Suspension of Classes",
+};
+
+function isWeekday(value:string){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
+  const day=new Date(value+"T12:00:00Z").getUTCDay();
+  return day>=1&&day<=5;
+}
 
 function sexGroup(value:string|null){
   const normalized=(value??"").trim().toLowerCase();
@@ -85,15 +103,20 @@ export default function AttendancePage(){
   const [enrollments,setEnrollments]=useState<Enrollment[]>([]);
   const [students,setStudents]=useState<Student[]>([]);
   const [attendance,setAttendance]=useState<RecordRow[]>([]);
+  const [dateExclusions,setDateExclusions]=useState<DateExclusion[]>([]);
+  const [pendingDates,setPendingDates]=useState<PendingDate[]>([]);
   const [date,setDate]=useState(localDate());
   const [sectionId,setSectionId]=useState("");
   const [drafts,setDrafts]=useState<Record<string,Draft>>({});
+  const [noClassType,setNoClassType]=useState<ExclusionType|"">("");
+  const [noClassReason,setNoClassReason]=useState("");
   const [loading,setLoading]=useState(true);
   const [working,setWorking]=useState(false);
+  const [calendarWorking,setCalendarWorking]=useState(false);
   const [error,setError]=useState("");
   const [success,setSuccess]=useState("");
 
-  async function load(targetDate=date){
+  async function load(targetDate=date,targetSectionId=sectionId){
     setLoading(true);setError("");
     try{
       const r=await fetch("/api/academic/attendance?date="+encodeURIComponent(targetDate),{cache:"no-store"});
@@ -102,12 +125,24 @@ export default function AttendancePage(){
       setRole(x.role??null);setProfile(x.profile??null);setActiveYear(x.activeYear??null);
       setAdvisers(x.advisers??[]);setSections(x.sections??[]);setEnrollments(x.enrollments??[]);
       setStudents(x.students??[]);setAttendance(x.attendance??[]);
-      if(x.role==="teacher" && !sectionId && x.sections?.[0]?.id)setSectionId(x.sections[0].id);
+      setDateExclusions(x.dateExclusions??[]);setPendingDates(x.pendingDates??[]);
+      if(x.role==="teacher"){
+        const requested=targetSectionId&&x.sections?.some((item:Section)=>item.id===targetSectionId)
+          ? targetSectionId
+          : x.sections?.[0]?.id??"";
+        if(requested)setSectionId(requested);
+      }
     }catch{setError("Unable to reach the attendance service.");}
     finally{setLoading(false);}
   }
 
-  useEffect(()=>{void load(date);},[]);
+  useEffect(()=>{
+    const params=typeof window!=="undefined"?new URLSearchParams(window.location.search):null;
+    const requestedDate=params?.get("date")||localDate();
+    const requestedSection=params?.get("section")||"";
+    setDate(requestedDate);
+    void load(requestedDate,requestedSection);
+  },[]);
 
   const studentMap=useMemo(()=>new Map(students.map(s=>[s.id,s])),[students]);
   const selectedSection=sections.find(s=>s.id===sectionId);
@@ -133,7 +168,7 @@ export default function AttendancePage(){
     const next:Record<string,Draft>={};
     for(const student of roster){
       const existing=attendance.find(a=>a.student_id===student.id&&a.section_id===sectionId);
-      next[student.id]={status:existing?.status??"present",note:existing?.note??""};
+      next[student.id]={status:existing?.status??"",note:existing?.note??""};
     }
     setDrafts(next);
   },[role,sectionId,roster,attendance]);
@@ -148,7 +183,7 @@ export default function AttendancePage(){
     setDrafts(cur=>({
       ...cur,
       [studentId]:{
-        ...(cur[studentId]??{status:"present",note:""}),
+        ...(cur[studentId]??{status:"",note:""}),
         [field]:value,
       } as Draft,
     }));
@@ -167,7 +202,7 @@ export default function AttendancePage(){
           attendanceDate:date,
           records:roster.map(s=>({
             studentId:s.id,
-            status:drafts[s.id]?.status??"present",
+            status:drafts[s.id]?.status??"",
             note:drafts[s.id]?.note??"",
           })),
         }),
@@ -179,6 +214,71 @@ export default function AttendancePage(){
       await load(date);
     }catch{setError("Unable to reach the attendance service.");}
     finally{setWorking(false);}
+  }
+
+  const selectedExclusion=dateExclusions.find(
+    item=>item.section_id===sectionId&&item.attendance_date===date
+  );
+  const selectedIsWeekday=isWeekday(date);
+  const untaggedCount=roster.filter(student=>!drafts[student.id]?.status).length;
+
+  function openPending(item:PendingDate){
+    setSectionId(item.section_id);
+    setDate(item.attendance_date);
+    setSuccess("");
+    setError("");
+    void load(item.attendance_date,item.section_id);
+    if(typeof window!=="undefined"){
+      const url=new URL(window.location.href);
+      url.searchParams.set("date",item.attendance_date);
+      url.searchParams.set("section",item.section_id);
+      window.history.replaceState(null,"",url.toString());
+    }
+  }
+
+  async function markNoClasses(){
+    if(!sectionId||!noClassType||!selectedIsWeekday)return;
+    setCalendarWorking(true);setError("");setSuccess("");
+    try{
+      const r=await fetch("/api/academic/attendance",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          action:"mark_no_classes",
+          sectionId,
+          attendanceDate:date,
+          exclusionType:noClassType,
+          reason:noClassReason,
+        }),
+      });
+      const x=await r.json().catch(()=>({}));
+      if(!r.ok){setError(x.error??"Unable to mark this date as No Classes.");return;}
+      setSuccess(formatDate(date)+" marked as "+NO_CLASS_LABELS[noClassType]+".");
+      setNoClassType("");setNoClassReason("");
+      await load(date,sectionId);
+    }catch{setError("Unable to reach the attendance service.");}
+    finally{setCalendarWorking(false);}
+  }
+
+  async function restoreSchoolDay(){
+    if(!sectionId||!selectedExclusion)return;
+    setCalendarWorking(true);setError("");setSuccess("");
+    try{
+      const r=await fetch("/api/academic/attendance",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          action:"restore_school_day",
+          sectionId,
+          attendanceDate:date,
+        }),
+      });
+      const x=await r.json().catch(()=>({}));
+      if(!r.ok){setError(x.error??"Unable to restore this school day.");return;}
+      setSuccess(formatDate(date)+" restored as a school day.");
+      await load(date,sectionId);
+    }catch{setError("Unable to reach the attendance service.");}
+    finally{setCalendarWorking(false);}
   }
 
   const counts=useMemo(()=>{
@@ -231,11 +331,91 @@ export default function AttendancePage(){
                 {sections.map(s=><option key={s.id} value={s.id}>{"Grade "+s.grade_level+" · "+s.name}</option>)}
               </select>
             </label>
-            <label><span>Date</span><input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
+            <label><span>Date</span><input type="date" value={date} max={localDate()} onChange={e=>setDate(e.target.value)}/></label>
             <button className={styles.loadButton} onClick={()=>void load(date)}><CalendarDays size={16}/>Load Date</button>
           </section>
 
-          <section className={styles.panel}>
+          {pendingDates.length>0&&<section className={styles.pendingPanel}>
+            <div className={styles.pendingHeading}>
+              <div>
+                <AlertTriangle size={19}/>
+                <div>
+                  <strong>Unrecorded Weekdays</strong>
+                  <span>Record attendance or mark the date as No Classes.</span>
+                </div>
+              </div>
+              <span className={styles.pendingCount}>{pendingDates.length}</span>
+            </div>
+            <div className={styles.pendingList}>
+              {pendingDates.slice(0,12).map(item=><button
+                type="button"
+                key={item.section_id+"-"+item.attendance_date}
+                className={styles.pendingDate}
+                onClick={()=>openPending(item)}
+              >
+                <div>
+                  <strong>{formatDate(item.attendance_date)}</strong>
+                  <span>{"Grade "+item.grade_level+" · "+item.section}</span>
+                  <small>{item.recorded_count===0
+                    ?"No attendance tagged"
+                    :item.recorded_count+" of "+item.expected_count+" learner records tagged"}</small>
+                </div>
+                <ArrowRight size={16}/>
+              </button>)}
+            </div>
+            {pendingDates.length>12&&<div className={styles.pendingMore}>
+              Showing the 12 most recent dates. Older unrecorded weekdays remain tracked.
+            </div>}
+          </section>}
+
+          {!selectedIsWeekday&&<section className={styles.weekendNotice}>
+            <CalendarOff size={20}/>
+            <div>
+              <strong>No Attendance Required</strong>
+              <span>Attendance is recorded Monday to Friday only. Weekend dates are not included.</span>
+            </div>
+          </section>}
+
+          {selectedIsWeekday&&selectedExclusion&&<section className={styles.noClassesBanner}>
+            <CalendarOff size={21}/>
+            <div>
+              <span>NO CLASSES</span>
+              <strong>{NO_CLASS_LABELS[selectedExclusion.exclusion_type]}</strong>
+              <p>{selectedExclusion.reason||"No additional reason provided."}</p>
+            </div>
+            <button disabled={calendarWorking} onClick={()=>void restoreSchoolDay()}>
+              {calendarWorking?"Restoring…":"Restore as School Day"}
+            </button>
+          </section>}
+
+          {selectedIsWeekday&&!selectedExclusion&&<details className={styles.noClassesControl}>
+            <summary><CalendarOff size={17}/>Mark This Date as No Classes</summary>
+            <div className={styles.noClassesForm}>
+              <label>
+                <span>Type</span>
+                <select value={noClassType} onChange={e=>setNoClassType(e.target.value as ExclusionType|"")}>
+                  <option value="">Select Type</option>
+                  <option value="regular_holiday">Regular Holiday</option>
+                  <option value="special_non_working_holiday">Special Non-Working Holiday</option>
+                  <option value="class_suspension">Suspension of Classes</option>
+                </select>
+              </label>
+              <label className={styles.reasonField}>
+                <span>Reason (Optional)</span>
+                <input
+                  maxLength={300}
+                  placeholder="Example: Flood, typhoon, local suspension"
+                  value={noClassReason}
+                  onChange={e=>setNoClassReason(e.target.value)}
+                />
+              </label>
+              <button disabled={calendarWorking||!noClassType} onClick={()=>void markNoClasses()}>
+                <CalendarOff size={16}/>{calendarWorking?"Saving…":"Mark as No Classes"}
+              </button>
+            </div>
+          </details>}
+
+          {selectedIsWeekday&&!selectedExclusion&&<section className={styles.panel}>
             <div className={styles.panelHeading}>
               <div>
                 <h2>{selectedSection?("Grade "+selectedSection.grade_level+" · "+selectedSection.name):"Attendance Sheet"}</h2>
@@ -243,9 +423,16 @@ export default function AttendancePage(){
               </div>
               <div className={styles.actions}>
                 <button className={styles.markAll} onClick={markAllPresent}><CheckCircle2 size={16}/>Mark All Present</button>
-                <button className={styles.saveAll} disabled={working||!roster.length} onClick={()=>void save()}><Save size={16}/>{working?"Saving…":"Save Attendance"}</button>
+                <button className={styles.saveAll} disabled={working||!roster.length||untaggedCount>0} onClick={()=>void save()}><Save size={16}/>{working?"Saving…":"Save Attendance"}</button>
               </div>
             </div>
+
+            {untaggedCount>0&&<div className={styles.untaggedNotice}>
+              <AlertTriangle size={16}/>
+              <span>
+                {untaggedCount+" learner"+(untaggedCount===1?"":"s")+" still need an attendance tag before this date can be saved."}
+              </span>
+            </div>}
 
             {roster.length===0
               ?<div className={styles.empty}>No active students are enrolled in this section.</div>
@@ -258,7 +445,7 @@ export default function AttendancePage(){
                       <span>{groupStudents.length} learner{groupStudents.length===1?"":"s"}</span>
                     </div>
                     {groupStudents.map((student,index)=>{
-                      const d=drafts[student.id]??{status:"present",note:""};
+                      const d=drafts[student.id]??{status:"",note:""};
                       return <article key={student.id}>
                         <div className={styles.student}>
                           <span>{startIndex+index+1}</span>
@@ -274,7 +461,8 @@ export default function AttendancePage(){
                             </small>
                           </div>
                         </div>
-                        <select className={styles[d.status]} value={d.status} onChange={e=>update(student.id,"status",e.target.value)}>
+                        <select className={d.status?styles[d.status]:styles.untagged} value={d.status} onChange={e=>update(student.id,"status",e.target.value)}>
+                          <option value="">Select Attendance</option>
                           <option value="present">Present</option>
                           <option value="absent">Absent</option>
                           <option value="absent_morning">Absent in the Morning</option>
@@ -289,7 +477,7 @@ export default function AttendancePage(){
                   </section>;
                 })}
               </div>}
-          </section>
+          </section>}
         </>}
     </>}
 
