@@ -768,7 +768,7 @@ export default function PortalPage() {
         >
           <span className="real-portal-loading-bar" />
         </div>
-        <span className="real-portal-loading-caption">Preparing your workspace</span>
+        <span className="real-portal-loading-caption">Preparing Your Workspace</span>
       </main>
     );
   }
@@ -779,7 +779,7 @@ export default function PortalPage() {
         <ShieldCheck size={34} />
         <strong>We could not open your portal.</strong>
         <span>{error || "Please sign in again."}</span>
-        <button onClick={() => (window.location.href = "/")}>Return to sign in</button>
+        <button onClick={() => (window.location.href = "/")}>Return to Sign In</button>
       </main>
     );
   }
