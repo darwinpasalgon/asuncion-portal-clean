@@ -1068,3 +1068,40 @@ td[data-slot=table-cell]{color:#496574}
   .welcome-card{border-radius:13px;padding:23px;min-height:245px}
   .welcome-card h2{font-size:1.8rem}
 }
+
+.real-personnel-attention .real-attention-icon{
+  background:linear-gradient(135deg,#e9f3fb,#eaf7ef);
+  color:#24749c;
+}
+.real-personnel-list{
+  display:grid;
+  gap:7px;
+  margin-top:10px;
+}
+.real-personnel-list>div{
+  display:grid;
+  gap:2px;
+  padding:9px 10px;
+  border:1px solid #e3e9ed;
+  border-radius:9px;
+  background:#fbfdfd;
+}
+.real-personnel-list>div strong{
+  color:#34596e;
+  font-size:.72rem;
+}
+.real-personnel-list>div span{
+  color:#708691;
+  font-size:.63rem;
+}
+.real-personnel-list>div small{
+  color:#9a6841;
+  font-size:.6rem;
+  line-height:1.4;
+}
+.real-personnel-more{
+  display:block;
+  padding:3px 2px;
+  color:#7f8f97;
+  font-size:.62rem;
+}
