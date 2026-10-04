@@ -237,9 +237,16 @@ export default function TeacherProfileImportPage() {
       if (!response.ok) throw new Error(result.error ?? "Unable to read the Teacher Profile workbook.");
 
       const parsed = (result.rows ?? []) as ParsedTeacher[];
-      const personnelTypeOf = (row: ParsedTeacher) =>
-        String(row.source_data?.personnel_type ?? "").trim() ||
-        (/teacher/i.test(String(row.position ?? "")) ? "Teaching Personnel" : "Non-Teaching Personnel");
+      const personnelTypeOf = (row: ParsedTeacher) => {
+        const position = String(row.position ?? "").trim();
+        if (/^HEAD TEACHER\b/i.test(position)) return "Teaching Personnel";
+        return (
+          String(row.source_data?.personnel_type ?? "").trim() ||
+          (/teacher/i.test(position)
+            ? "Teaching Personnel"
+            : "Non-Teaching Personnel")
+        );
+      };
       const teaching = parsed.filter((row) => personnelTypeOf(row) === "Teaching Personnel");
       const nonTeaching = parsed.filter((row) => personnelTypeOf(row) === "Non-Teaching Personnel");
       setExcluded(nonTeaching);
