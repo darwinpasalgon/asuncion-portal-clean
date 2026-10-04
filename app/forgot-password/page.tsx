@@ -21,7 +21,7 @@ export default function ForgotPasswordPage() {
     const identifier = String(data.get("identifier") || "").trim();
 
     if (!identifier) {
-      setError("Enter your LRN or registered email address.");
+      setError("Enter your LRN or Registered Email address.");
       return;
     }
 
@@ -67,7 +67,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         <section className={styles.authCard}>
-          <h1>Forgot your password?</h1>
+          <h1>Forgot Your Password?</h1>
           <p>
             Submit a password reset request using your student LRN or registered
             staff email. An authorized school administrator must verify your
@@ -77,7 +77,7 @@ export default function ForgotPasswordPage() {
           {!complete ? (
             <form className={styles.form} onSubmit={requestReset}>
               <label className={styles.field}>
-                <span>LRN or registered email</span>
+                <span>LRN or Registered Email</span>
                 <div className={styles.inputWrap}>
                   <UserRound size={18} />
                   <input
@@ -102,7 +102,7 @@ export default function ForgotPasswordPage() {
               {error && <p className={styles.error}>{error}</p>}
 
               <button className={styles.signInButton} type="submit" disabled={loading}>
-                {loading ? "Submitting request..." : "Request password reset"}
+                {loading ? "Submitting request..." : "Request Password Reset"}
                 {!loading && <ArrowRight size={18} />}
               </button>
             </form>
@@ -119,7 +119,7 @@ export default function ForgotPasswordPage() {
                 type="button"
                 onClick={() => router.push("/")}
               >
-                Return to sign in <ArrowRight size={18} />
+                Return to Sign In <ArrowRight size={18} />
               </button>
             </>
           )}
