@@ -168,7 +168,7 @@ export default function Sf10Page() {
     <main className={styles.page}>
       <div className={styles.shell}>
         <nav className={styles.topActions}>
-          <a href="/portal"><ArrowLeft size={16} />Back to portal</a>
+          <a href="/portal"><ArrowLeft size={16} />Back to Portal</a>
           <button onClick={() => void loadStudents()} disabled={loading}>
             <RefreshCw size={16} />Refresh
           </button>
@@ -228,7 +228,7 @@ export default function Sf10Page() {
             {!selectedId ? (
               <div className={styles.placeholder}>
                 <FileSpreadsheet size={40} />
-                <strong>Select a learner</strong>
+                <strong>Select a Learner</strong>
                 <span>The learner’s permanent record and scholastic history will appear here.</span>
               </div>
             ) : working === "load" || !detail ? (
@@ -292,14 +292,14 @@ export default function Sf10Page() {
                             <option value="elementary_completer">Elementary School Completer</option>
                             <option value="pept">PEPT Passer</option>
                             <option value="a_and_e">ALS A&amp;E Passer</option>
-                            <option value="other">Other credential</option>
+                            <option value="other">Other Credential</option>
                           </select>
                         </label>
                         <label><span>Elementary School</span><input name="elementary_school_name" defaultValue={record.elementary_school_name ?? ""} /></label>
                         <label><span>Elementary School ID</span><input name="elementary_school_id" defaultValue={record.elementary_school_id ?? ""} /></label>
                         <label className={styles.wide}><span>Elementary School Address</span><input name="elementary_school_address" defaultValue={record.elementary_school_address ?? ""} /></label>
                         <label><span>Elementary General Average</span><input name="elementary_general_average" type="number" min="0" max="100" step="0.01" defaultValue={record.elementary_general_average ?? ""} /></label>
-                        <label><span>Citation, if any</span><input name="elementary_citation" defaultValue={record.elementary_citation ?? ""} /></label>
+                        <label><span>Citation, If Any</span><input name="elementary_citation" defaultValue={record.elementary_citation ?? ""} /></label>
                         <label><span>Eligibility Rating</span><input name="eligibility_rating" defaultValue={record.eligibility_rating ?? ""} /></label>
                         <label><span>Other Credential</span><input name="eligibility_other" defaultValue={record.eligibility_other ?? ""} /></label>
                         <label><span>Assessment Date</span><input name="assessment_date" type="date" defaultValue={record.assessment_date ?? ""} /></label>
