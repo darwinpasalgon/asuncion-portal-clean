@@ -120,7 +120,8 @@ function destination(request: NextRequest, state: AccessState) {
     pathname === "/portal/grades" || pathname === "/portal/attendance";
   const teacherOnly =
     pathname === "/portal/teacher-profile" ||
-    pathname === "/portal/my-students";
+    pathname === "/portal/my-students" ||
+    pathname === "/portal/my-learners";
   const announcementsPage = pathname === "/portal/announcements";
   const resourcesPage = pathname === "/portal/resources";
 
