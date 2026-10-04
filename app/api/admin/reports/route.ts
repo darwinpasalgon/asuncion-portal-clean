@@ -106,11 +106,20 @@ type GradeRow = {
   status: "draft" | "published";
 };
 
+type AttendanceStatus =
+  | "present"
+  | "absent"
+  | "absent_morning"
+  | "cutting_classes"
+  | "transferred_in"
+  | "transferred_out"
+  | "dropped";
+
 type AttendanceRow = {
   student_id: string;
   section_id: string;
   attendance_date: string;
-  status: "present" | "absent" | "late" | "excused";
+  status: AttendanceStatus;
 };
 
 type SectionMeta = {
@@ -210,8 +219,11 @@ export async function GET(request: NextRequest) {
         attendanceTotals: {
           present: 0,
           absent: 0,
-          late: 0,
-          excused: 0,
+          absent_morning: 0,
+          cutting_classes: 0,
+          transferred_in: 0,
+          transferred_out: 0,
+          dropped: 0,
           total: 0,
         },
       });
@@ -445,26 +457,33 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const attendanceByStudent = new Map<
-      string,
-      {
-        present: number;
-        absent: number;
-        late: number;
-        excused: number;
-        total: number;
-      }
-    >();
+    type AttendanceSummary = {
+      present: number;
+      absent: number;
+      absent_morning: number;
+      cutting_classes: number;
+      transferred_in: number;
+      transferred_out: number;
+      dropped: number;
+      total: number;
+    };
+
+    const emptyAttendanceSummary = (): AttendanceSummary => ({
+      present: 0,
+      absent: 0,
+      absent_morning: 0,
+      cutting_classes: 0,
+      transferred_in: 0,
+      transferred_out: 0,
+      dropped: 0,
+      total: 0,
+    });
+
+    const attendanceByStudent = new Map<string, AttendanceSummary>();
 
     for (const row of filteredAttendance) {
       if (!attendanceByStudent.has(row.student_id)) {
-        attendanceByStudent.set(row.student_id, {
-          present: 0,
-          absent: 0,
-          late: 0,
-          excused: 0,
-          total: 0,
-        });
+        attendanceByStudent.set(row.student_id, emptyAttendanceSummary());
       }
 
       const summary = attendanceByStudent.get(row.student_id)!;
@@ -472,23 +491,10 @@ export async function GET(request: NextRequest) {
       summary[row.status] += 1;
     }
 
-    const attendanceRows = students.map((student) => {
-      const summary =
-        attendanceByStudent.get(student.student_id) ?? {
-          present: 0,
-          absent: 0,
-          late: 0,
-          excused: 0,
-          total: 0,
-        };
-      const attended = summary.present + summary.late;
-      return {
-        ...student,
-        ...summary,
-        attendance_rate:
-          summary.total > 0 ? Math.round((attended / summary.total) * 100) : null,
-      };
-    });
+    const attendanceRows = students.map((student) => ({
+      ...student,
+      ...(attendanceByStudent.get(student.student_id) ?? emptyAttendanceSummary()),
+    }));
 
     const gradeDistribution = {
       advancing: publishedGrades.filter((item) => item.term_grade >= 90).length,
@@ -510,7 +516,16 @@ export async function GET(request: NextRequest) {
         acc[row.status] += 1;
         return acc;
       },
-      { present: 0, absent: 0, late: 0, excused: 0, total: 0 }
+      {
+        present: 0,
+        absent: 0,
+        absent_morning: 0,
+        cutting_classes: 0,
+        transferred_in: 0,
+        transferred_out: 0,
+        dropped: 0,
+        total: 0,
+      }
     );
 
     return NextResponse.json({
