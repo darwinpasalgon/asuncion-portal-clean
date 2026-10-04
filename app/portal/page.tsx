@@ -332,6 +332,7 @@ function SideNav({
   adminPermissions,
   isAdviser,
   hasPersonnelProfile,
+  communityUnread,
 }: {
   profile: Profile;
   page: Page;
@@ -340,6 +341,7 @@ function SideNav({
   adminPermissions: string[];
   isAdviser: boolean;
   hasPersonnelProfile: boolean;
+  communityUnread: number;
 }) {
   const { setOpenMobile } = useSidebar();
   const visibleGroups = Array.from(
@@ -457,6 +459,11 @@ function SideNav({
               >
                 <MessageCircle size={19} />
                 <span>Community Chat</span>
+                {communityUnread > 0 && (
+                  <span className="community-unread-badge">
+                    {communityUnread > 99 ? "99+" : communityUnread}
+                  </span>
+                )}
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -821,6 +828,7 @@ export default function PortalPage() {
   const [adviserAttentionLoading, setAdviserAttentionLoading] = useState(false);
   const [personnelAttention, setPersonnelAttention] = useState<PersonnelProfileAttention | null>(null);
   const [personnelAttentionLoading, setPersonnelAttentionLoading] = useState(false);
+  const [communityUnread, setCommunityUnread] = useState(0);
   const [majorSaving, setMajorSaving] = useState("");
   const [classSchedules, setClassSchedules] = useState<ClassScheduleEntry[]>([]);
   const [classSchedulesLoading, setClassSchedulesLoading] = useState(false);
@@ -967,6 +975,45 @@ export default function PortalPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!profile) return;
+
+    let active = true;
+    async function loadCommunityUnread() {
+      try {
+        const response = await fetch("/api/community?summary=1", {
+          cache: "no-store",
+        });
+        const result = await response.json().catch(() => ({}));
+        if (active && response.ok) {
+          setCommunityUnread(Number(result.unread_count ?? 0));
+        }
+      } catch {
+        // Unread count is a non-blocking sidebar enhancement.
+      }
+    }
+
+    void loadCommunityUnread();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void loadCommunityUnread();
+      }
+    }, 5000);
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void loadCommunityUnread();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [profile]);
+
   const displayRole = useMemo(
     () => (profile ? administratorLabel(profile, adminPermissions) : ""),
     [profile, adminPermissions]
@@ -1049,6 +1096,7 @@ export default function PortalPage() {
         hasPersonnelProfile={
           profile.role === "teacher" || Boolean(personnelAttention?.self)
         }
+        communityUnread={communityUnread}
       />
 
       <main className="workspace">
