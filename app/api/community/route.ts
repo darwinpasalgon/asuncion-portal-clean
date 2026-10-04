@@ -8,6 +8,12 @@ type Profile = {
   account_status: string;
 };
 
+type ReadState = {
+  user_id: string;
+  last_read_at: string;
+  updated_at: string;
+};
+
 function headers(token: string) {
   return {
     apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -67,6 +73,76 @@ function validUuid(value: string) {
   );
 }
 
+async function ensureReadState(
+  token: string,
+  userId: string
+): Promise<ReadState | null> {
+  const currentResponse = await rest(
+    `community_read_state?user_id=eq.${encodeURIComponent(
+      userId
+    )}&select=user_id,last_read_at,updated_at&limit=1`,
+    token
+  );
+  const current = currentResponse.ok
+    ? await currentResponse.json().catch(() => [])
+    : [];
+
+  if (current?.[0]) return current[0] as ReadState;
+
+  const now = new Date().toISOString();
+  const insertResponse = await rest(
+    "community_read_state?on_conflict=user_id",
+    token,
+    {
+      method: "POST",
+      headers: {
+        Prefer: "resolution=merge-duplicates,return=representation",
+      },
+      body: JSON.stringify([
+        {
+          user_id: userId,
+          last_read_at: now,
+          updated_at: now,
+        },
+      ]),
+    }
+  );
+  const inserted = await insertResponse.json().catch(() => []);
+  return inserted?.[0] ?? {
+    user_id: userId,
+    last_read_at: now,
+    updated_at: now,
+  };
+}
+
+async function unreadCount(
+  token: string,
+  userId: string,
+  lastReadAt: string
+) {
+  const response = await rest(
+    `community_messages?created_at=gt.${encodeURIComponent(
+      lastReadAt
+    )}&user_id=neq.${encodeURIComponent(userId)}&select=id`,
+    token,
+    {
+      headers: {
+        Prefer: "count=exact",
+        Range: "0-0",
+      },
+    }
+  );
+
+  if (!response.ok) return 0;
+
+  const contentRange = response.headers.get("content-range") ?? "";
+  const match = contentRange.match(/\/(\d+)$/);
+  if (match) return Number(match[1]) || 0;
+
+  const rows = await response.json().catch(() => []);
+  return Array.isArray(rows) ? rows.length : 0;
+}
+
 export async function GET(request: NextRequest) {
   const auth = await identity(request);
   if (!auth) {
@@ -74,9 +150,20 @@ export async function GET(request: NextRequest) {
   }
 
   const { token, userId, profile } = auth;
+  const readState = await ensureReadState(token, userId);
+  const lastReadAt = readState?.last_read_at ?? new Date().toISOString();
+  const unread = await unreadCount(token, userId, lastReadAt);
+
+  if (request.nextUrl.searchParams.get("summary") === "1") {
+    return NextResponse.json({
+      unread_count: unread,
+      last_read_at: lastReadAt,
+    });
+  }
+
   const onlineSince = new Date(Date.now() - 60_000).toISOString();
 
-  const [messagesResponse, presenceResponse, muteResponse] = await Promise.all([
+  const requests = [
     rest(
       "community_messages?select=id,user_id,sender_name,sender_role,body,created_at&order=created_at.desc&limit=100",
       token
@@ -91,7 +178,20 @@ export async function GET(request: NextRequest) {
       "community_mutes?select=user_id,muted_until,reason,created_by,created_at",
       token
     ),
-  ]);
+  ];
+
+  if (profile.role === "administrator") {
+    requests.push(
+      rest(
+        "community_reports?status=eq.pending&select=id,message_id,reported_user_id,reporter_id,reporter_name,sender_name,sender_role,message_body,reason,status,created_at&order=created_at.desc&limit=50",
+        token
+      )
+    );
+  }
+
+  const responses = await Promise.all(requests);
+  const [messagesResponse, presenceResponse, muteResponse, reportsResponse] =
+    responses;
 
   if (!messagesResponse.ok || !presenceResponse.ok) {
     return NextResponse.json(
@@ -105,6 +205,10 @@ export async function GET(request: NextRequest) {
   const mutes = muteResponse.ok
     ? await muteResponse.json().catch(() => [])
     : [];
+  const reports =
+    profile.role === "administrator" && reportsResponse?.ok
+      ? await reportsResponse.json().catch(() => [])
+      : [];
 
   const ownMute = (mutes ?? []).find(
     (item: { user_id?: string }) => item.user_id === userId
@@ -127,6 +231,11 @@ export async function GET(request: NextRequest) {
     online: online ?? [],
     muted: activeMute,
     mutes: profile.role === "administrator" ? mutes ?? [] : [],
+    reports,
+    unread_count: unread,
+    read_state: {
+      last_read_at: lastReadAt,
+    },
   });
 }
 
@@ -174,6 +283,49 @@ export async function POST(request: NextRequest) {
       { method: "DELETE", headers: { Prefer: "return=minimal" } }
     );
     return NextResponse.json({ ok: response.ok });
+  }
+
+  if (action === "mark_read") {
+    const supplied = String(body?.lastReadAt ?? "");
+    const suppliedDate = new Date(supplied);
+    if (!supplied || Number.isNaN(suppliedDate.getTime())) {
+      return NextResponse.json(
+        { error: "Invalid read marker." },
+        { status: 400 }
+      );
+    }
+
+    const state = await ensureReadState(token, userId);
+    const currentDate = new Date(
+      state?.last_read_at ?? "1970-01-01T00:00:00.000Z"
+    );
+    const now = new Date();
+    const candidate =
+      suppliedDate.getTime() > now.getTime() ? now : suppliedDate;
+    const nextDate =
+      candidate.getTime() > currentDate.getTime() ? candidate : currentDate;
+
+    const response = await rest(
+      `community_read_state?user_id=eq.${encodeURIComponent(userId)}`,
+      token,
+      {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          last_read_at: nextDate.toISOString(),
+          updated_at: now.toISOString(),
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: "Unable to save the read position." },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ ok: true, last_read_at: nextDate.toISOString() });
   }
 
   if (action === "send") {
@@ -237,6 +389,151 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (action === "report") {
+    const messageId = String(body?.messageId ?? "");
+    const reason = String(body?.reason ?? "").trim();
+
+    if (!validUuid(messageId)) {
+      return NextResponse.json({ error: "Invalid message." }, { status: 400 });
+    }
+    if (reason.length < 3 || reason.length > 500) {
+      return NextResponse.json(
+        { error: "Please provide a brief reason for the report." },
+        { status: 400 }
+      );
+    }
+
+    const response = await rest("community_reports", token, {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify([
+        {
+          message_id: messageId,
+          reporter_id: userId,
+          reason,
+        },
+      ]),
+    });
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const duplicate =
+        String(result?.code ?? "") === "23505" ||
+        JSON.stringify(result).toLowerCase().includes("duplicate");
+      return NextResponse.json(
+        {
+          error: duplicate
+            ? "You already reported this message."
+            : "Unable to submit the report.",
+        },
+        { status: duplicate ? 409 : 400 }
+      );
+    }
+
+    return NextResponse.json({ ok: true });
+  }
+
+  if (action === "dismiss_report" || action === "remove_reported_message") {
+    if (profile.role !== "administrator") {
+      return NextResponse.json(
+        { error: "Super Administrator access required." },
+        { status: 403 }
+      );
+    }
+
+    const reportId = String(body?.reportId ?? "");
+    if (!validUuid(reportId)) {
+      return NextResponse.json({ error: "Invalid report." }, { status: 400 });
+    }
+
+    const reportResponse = await rest(
+      `community_reports?id=eq.${encodeURIComponent(
+        reportId
+      )}&status=eq.pending&select=id,message_id&limit=1`,
+      token
+    );
+    const reportRows = reportResponse.ok
+      ? await reportResponse.json().catch(() => [])
+      : [];
+    const report = reportRows?.[0];
+
+    if (!report) {
+      return NextResponse.json(
+        { error: "This report is no longer pending." },
+        { status: 409 }
+      );
+    }
+
+    if (action === "remove_reported_message" && report.message_id) {
+      const relatedResponse = await rest(
+        `community_reports?message_id=eq.${encodeURIComponent(
+          report.message_id
+        )}&status=eq.pending&select=id`,
+        token
+      );
+      const related = relatedResponse.ok
+        ? await relatedResponse.json().catch(() => [])
+        : [];
+
+      const deleteResponse = await rest(
+        `community_messages?id=eq.${encodeURIComponent(report.message_id)}`,
+        token,
+        {
+          method: "DELETE",
+          headers: { Prefer: "return=representation" },
+        }
+      );
+      if (!deleteResponse.ok) {
+        return NextResponse.json(
+          { error: "Unable to remove the reported message." },
+          { status: 400 }
+        );
+      }
+
+      const reviewedAt = new Date().toISOString();
+      for (const item of related ?? []) {
+        await rest(
+          `community_reports?id=eq.${encodeURIComponent(item.id)}`,
+          token,
+          {
+            method: "PATCH",
+            headers: { Prefer: "return=minimal" },
+            body: JSON.stringify({
+              status: "removed",
+              reviewed_by: userId,
+              reviewed_at: reviewedAt,
+            }),
+          }
+        );
+      }
+
+      return NextResponse.json({ ok: true });
+    }
+
+    const response = await rest(
+      `community_reports?id=eq.${encodeURIComponent(reportId)}`,
+      token,
+      {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          status: "dismissed",
+          reviewed_by: userId,
+          reviewed_at: new Date().toISOString(),
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: "Unable to dismiss the report." },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json({ ok: true });
   }
 
