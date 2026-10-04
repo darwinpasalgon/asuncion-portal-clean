@@ -349,10 +349,10 @@ export default function ReportsPage(){
     {error&&<div className={styles.error}>{error}</div>}
 
     <section className={styles.filters}>
-      <label><span>Grade</span><select value={grade} onChange={e=>setGrade(e.target.value)}><option value="">All grades</option>{gradeLevels.map(g=><option key={g.grade_level} value={g.grade_level}>{g.label}</option>)}</select></label>
-      <label><span>Section</span><select value={section} onChange={e=>setSection(e.target.value)}><option value="">All sections</option>{sectionOptions.map(s=><option key={s.id} value={s.id}>{"Grade "+s.grade_level+" · "+s.name}</option>)}</select></label>
-      <label><span>Teacher</span><select value={teacher} onChange={e=>setTeacher(e.target.value)}><option value="">All teachers</option>{teachers.map(t=><option key={t.id} value={t.id}>{t.full_name}</option>)}</select></label>
-      <label><span>Subject</span><select value={subject} onChange={e=>setSubject(e.target.value)}><option value="">All subjects</option>{subjectOptions.map(s=><option key={s.id} value={s.id}>{s.name}{s.code?" ("+s.code+")":""}</option>)}</select></label>
+      <label><span>Grade</span><select value={grade} onChange={e=>setGrade(e.target.value)}><option value="">All Grades</option>{gradeLevels.map(g=><option key={g.grade_level} value={g.grade_level}>{g.label}</option>)}</select></label>
+      <label><span>Section</span><select value={section} onChange={e=>setSection(e.target.value)}><option value="">All Sections</option>{sectionOptions.map(s=><option key={s.id} value={s.id}>{"Grade "+s.grade_level+" · "+s.name}</option>)}</select></label>
+      <label><span>Teacher</span><select value={teacher} onChange={e=>setTeacher(e.target.value)}><option value="">All Teachers</option>{teachers.map(t=><option key={t.id} value={t.id}>{t.full_name}</option>)}</select></label>
+      <label><span>Subject</span><select value={subject} onChange={e=>setSubject(e.target.value)}><option value="">All Subjects</option>{subjectOptions.map(s=><option key={s.id} value={s.id}>{s.name}{s.code?" ("+s.code+")":""}</option>)}</select></label>
       <label><span>Attendance From</span><input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label>
       <label><span>Attendance To</span><input type="date" value={to} onChange={e=>setTo(e.target.value)}/></label>
       <button className={styles.apply} disabled={loading} onClick={()=>void load()}><RefreshCw size={16}/>{loading?"Loading…":"Apply filters"}</button>
