@@ -483,7 +483,7 @@ export default function TeacherProfilesHrPage() {
                   ) : service.map((item, index) => (
                     <div className={styles.entry} key={index}>
                       <div className={styles.entryTop}>
-                        <strong>Service record {index + 1}</strong>
+                        <strong>Service Record {index + 1}</strong>
                         <button onClick={() => setService((current) => current.filter((_, i) => i !== index))}><Trash2 size={15} />Remove</button>
                       </div>
                       <div className={styles.grid}>
