@@ -104,27 +104,62 @@ export async function GET(request: NextRequest) {
         (advisers ?? []).map((item: { section_id: string }) => item.section_id)
       );
 
-      const [sections, enrollments, students, attendance] = await Promise.all([
-        getRows("sections?select=id,grade_level,name&order=grade_level.asc,name.asc", token),
-        getRows(
-          `student_enrollments?school_year_id=eq.${encodeURIComponent(
-            year.id
-          )}&enrollment_status=eq.active&select=id,student_id,grade_level,section_id`,
-          token
-        ),
-        getRows(
-          "profiles?role=eq.student&account_status=eq.active&select=id,full_name,lrn&order=full_name.asc",
-          token
-        ),
-        validDate(date)
-          ? getRows(
-              `daily_attendance?school_year_id=eq.${encodeURIComponent(
-                year.id
-              )}&attendance_date=eq.${date}&select=id,student_id,section_id,attendance_date,status,note,updated_at&order=updated_at.asc`,
-              token
-            )
-          : Promise.resolve([]),
-      ]);
+      const [sections, enrollments, students, learnerInformation, attendance] =
+        await Promise.all([
+          getRows(
+            "sections?select=id,grade_level,name&order=grade_level.asc,name.asc",
+            token
+          ),
+          getRows(
+            `student_enrollments?school_year_id=eq.${encodeURIComponent(
+              year.id
+            )}&enrollment_status=eq.active&select=id,student_id,grade_level,section_id`,
+            token
+          ),
+          getRows(
+            "profiles?role=eq.student&account_status=eq.active&select=id,full_name,lrn",
+            token
+          ),
+          getRows(
+            "learner_information?select=student_id,last_name,first_name,middle_name,name_extension,sex",
+            token
+          ),
+          validDate(date)
+            ? getRows(
+                `daily_attendance?school_year_id=eq.${encodeURIComponent(
+                  year.id
+                )}&attendance_date=eq.${date}&select=id,student_id,section_id,attendance_date,status,note,updated_at&order=updated_at.asc`,
+                token
+              )
+            : Promise.resolve([]),
+        ]);
+
+      const learnerInfoMap = new Map(
+        (learnerInformation ?? []).map(
+          (item: {
+            student_id: string;
+            last_name?: string | null;
+            first_name?: string | null;
+            middle_name?: string | null;
+            name_extension?: string | null;
+            sex?: string | null;
+          }) => [item.student_id, item]
+        )
+      );
+
+      const attendanceStudents = (students ?? []).map(
+        (student: { id: string; full_name: string; lrn?: string | null }) => {
+          const info = learnerInfoMap.get(student.id);
+          return {
+            ...student,
+            last_name: info?.last_name ?? null,
+            first_name: info?.first_name ?? null,
+            middle_name: info?.middle_name ?? null,
+            name_extension: info?.name_extension ?? null,
+            sex: info?.sex ?? null,
+          };
+        }
+      );
 
       return NextResponse.json({
         role: profile.role,
@@ -135,7 +170,7 @@ export async function GET(request: NextRequest) {
           sectionIds.has(item.id)
         ),
         enrollments,
-        students,
+        students: attendanceStudents,
         attendance,
         date: validDate(date) ? date : null,
       });
