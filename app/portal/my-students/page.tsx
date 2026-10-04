@@ -111,7 +111,11 @@ export default function MyStudentsPage() {
   }
 
   useEffect(() => {
-    void load("");
+    const requestedStudent =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("student") ?? ""
+        : "";
+    void load(requestedStudent);
   }, []);
 
   const filtered = useMemo(() => {
