@@ -757,6 +757,8 @@ export default function BulkAccountImportPage() {
         ])
       );
     }
+  }
+
   async function recoverLearnerCredentials() {
     if (!recoveryGrade || !recoverySection) {
       setError("Select the Grade Level and Section for credential recovery.");
@@ -818,8 +820,6 @@ export default function BulkAccountImportPage() {
     } finally {
       setRecoveryWorking(false);
     }
-  }
-
   }
 
   return (
