@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
+import { hasAdminPermission } from "@/lib/admin-access";
 
 function headers(token: string) {
   return {
@@ -10,32 +11,13 @@ function headers(token: string) {
 }
 
 async function isActiveAdmin(token: string) {
-  const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-    headers: headers(token),
-    cache: "no-store",
-  });
-  if (!userResponse.ok) return false;
-  const user = await userResponse.json().catch(() => null);
-  const id = String(user?.id ?? "");
-  if (!id) return false;
-
-  const profileResponse = await fetch(
-    `${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(id)}&select=role,account_status,admin_role&limit=1`,
-    { headers: headers(token), cache: "no-store" }
-  );
-  if (!profileResponse.ok) return false;
-  const profiles = await profileResponse.json().catch(() => []);
-  return (
-    profiles?.[0]?.role === "administrator" &&
-    profiles?.[0]?.account_status === "active" &&
-    profiles?.[0]?.admin_role === "super_administrator"
-  );
+  return hasAdminPermission(token, "bulk_import.manage");
 }
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get("anhs-access-token")?.value ?? "";
   if (!token || !(await isActiveAdmin(token))) {
-    return NextResponse.json({ error: "Super Administrator access required." }, { status: 403 });
+    return NextResponse.json({ error: "Bulk Account Import permission required." }, { status: 403 });
   }
 
   const body = await request.json().catch(() => null);
