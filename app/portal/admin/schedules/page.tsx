@@ -345,7 +345,7 @@ export default function ClassSchedulesPage() {
                 value={editAssignment}
                 onChange={(event) => setEditAssignment(event.target.value)}
               >
-                <option value="">Select class assignment</option>
+                <option value="">Select Class Assignment</option>
                 {assignments.map((assignment) => (
                   <option key={assignment.id} value={assignment.id}>
                     {assignmentLabel(assignment)}
@@ -363,7 +363,7 @@ export default function ClassSchedulesPage() {
                     value={editDay}
                     onChange={(event) => setEditDay(event.target.value)}
                   >
-                    <option value="">Select day</option>
+                    <option value="">Select Day</option>
                     {DAYS.map((day) => (
                       <option key={day.value} value={day.value}>{day.label}</option>
                     ))}
@@ -391,7 +391,7 @@ export default function ClassSchedulesPage() {
                 </label>
 
                 <label>
-                  <span>Room / location <small>optional</small></span>
+                  <span>Room / Location <small>optional</small></span>
                   <input
                     maxLength={80}
                     placeholder="e.g. Computer Laboratory"
