@@ -275,6 +275,348 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, subject: result[0] });
   }
 
+  if (action === "save_section_setup") {
+    const gradeLevel = Number(body?.gradeLevel ?? 0);
+    const sectionId = String(body?.sectionId ?? "");
+    const adviserTeacherId = String(body?.adviserTeacherId ?? "");
+    const requestedAssignments = Array.isArray(body?.assignments)
+      ? body.assignments
+      : [];
+
+    if (
+      !sectionId ||
+      !Number.isInteger(gradeLevel) ||
+      gradeLevel < 7 ||
+      gradeLevel > 12
+    ) {
+      return NextResponse.json(
+        { error: "Select a valid Grade Level and Section." },
+        { status: 400 }
+      );
+    }
+
+    const activeYear = await getActiveSchoolYear(token).catch(() => null);
+    if (!activeYear) {
+      return NextResponse.json(
+        { error: "No active school year is configured." },
+        { status: 409 }
+      );
+    }
+
+    const [sectionRows, subjectRows, teacherRows] = await Promise.all([
+      getRows(
+        `sections?id=eq.${encodeURIComponent(
+          sectionId
+        )}&grade_level=eq.${gradeLevel}&is_active=eq.true&select=id,name&limit=1`,
+        token
+      ),
+      getRows(
+        `subjects?grade_level=eq.${gradeLevel}&is_active=eq.true&select=id,name,grade_level`,
+        token
+      ),
+      getRows(
+        "profiles?role=eq.teacher&account_status=eq.active&select=id",
+        token
+      ),
+    ]).catch(() => [[], [], []]);
+
+    if (!sectionRows?.[0]) {
+      return NextResponse.json(
+        { error: "Select an active Section for this Grade Level." },
+        { status: 400 }
+      );
+    }
+
+    const subjectById = new Map(
+      (subjectRows ?? []).map((item: { id: string; name: string; grade_level: number }) => [
+        String(item.id),
+        item,
+      ])
+    );
+    const validTeacherIds = new Set(
+      (teacherRows ?? []).map((item: { id: string }) => String(item.id))
+    );
+
+    if (adviserTeacherId && !validTeacherIds.has(adviserTeacherId)) {
+      return NextResponse.json(
+        { error: "Select an active Teacher account for the Section Adviser." },
+        { status: 400 }
+      );
+    }
+
+    const normalizedAssignments: Array<{
+      subjectId: string;
+      major: string | null;
+      teacherId: string;
+    }> = [];
+    const seen = new Set<string>();
+
+    for (const item of requestedAssignments) {
+      const subjectId = String(item?.subjectId ?? "");
+      const teacherId = String(item?.teacherId ?? "");
+      const subject = subjectById.get(subjectId);
+
+      if (!subject) {
+        return NextResponse.json(
+          { error: "One of the selected subjects is not active for this Grade Level." },
+          { status: 400 }
+        );
+      }
+
+      const needsMajor = requiresTechnicalVocationalMajor(
+        gradeLevel,
+        String(subject.name ?? "")
+      );
+      const requestedMajor = String(item?.major ?? "").trim();
+      const major = needsMajor ? requestedMajor : null;
+
+      if (
+        needsMajor &&
+        !TECHNICAL_VOCATIONAL_MAJORS.includes(
+          requestedMajor as (typeof TECHNICAL_VOCATIONAL_MAJORS)[number]
+        )
+      ) {
+        return NextResponse.json(
+          { error: `Select a valid TVE Major for ${subject.name}.` },
+          { status: 400 }
+        );
+      }
+
+      if (teacherId && !validTeacherIds.has(teacherId)) {
+        return NextResponse.json(
+          { error: "One of the selected Subject Teachers is not an active Teacher account." },
+          { status: 400 }
+        );
+      }
+
+      const key = `${subjectId}::${major ?? ""}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      normalizedAssignments.push({ subjectId, major, teacherId });
+    }
+
+    const assignedBy = await getUserId(token);
+
+    const existingAdvisers = await getRows(
+      `section_advisers?school_year_id=eq.${encodeURIComponent(
+        activeYear.id
+      )}&section_id=eq.${encodeURIComponent(
+        sectionId
+      )}&select=id,teacher_id,is_active`,
+      token
+    ).catch(() => []);
+
+    const activeAdviser = (existingAdvisers ?? []).find(
+      (item: { is_active?: boolean }) => item.is_active === true
+    );
+
+    if (!adviserTeacherId) {
+      if (activeAdviser?.id) {
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/section_advisers?school_year_id=eq.${encodeURIComponent(
+            activeYear.id
+          )}&section_id=eq.${encodeURIComponent(sectionId)}&is_active=eq.true`,
+          {
+            method: "PATCH",
+            headers: { ...authHeaders(token), Prefer: "return=minimal" },
+            body: JSON.stringify({
+              is_active: false,
+              updated_at: new Date().toISOString(),
+            }),
+            cache: "no-store",
+          }
+        );
+        if (!response.ok) {
+          return NextResponse.json(
+            { error: "Unable to remove the current Section Adviser." },
+            { status: 400 }
+          );
+        }
+      }
+    } else if (activeAdviser?.teacher_id !== adviserTeacherId) {
+      const deactivateResponse = await fetch(
+        `${SUPABASE_URL}/rest/v1/section_advisers?school_year_id=eq.${encodeURIComponent(
+          activeYear.id
+        )}&section_id=eq.${encodeURIComponent(sectionId)}&is_active=eq.true`,
+        {
+          method: "PATCH",
+          headers: { ...authHeaders(token), Prefer: "return=minimal" },
+          body: JSON.stringify({
+            is_active: false,
+            updated_at: new Date().toISOString(),
+          }),
+          cache: "no-store",
+        }
+      );
+      if (!deactivateResponse.ok) {
+        return NextResponse.json(
+          { error: "Unable to replace the current Section Adviser." },
+          { status: 400 }
+        );
+      }
+
+      const sameTeacher = (existingAdvisers ?? []).find(
+        (item: { teacher_id?: string }) => item.teacher_id === adviserTeacherId
+      );
+
+      if (sameTeacher?.id) {
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/section_advisers?id=eq.${encodeURIComponent(
+            sameTeacher.id
+          )}`,
+          {
+            method: "PATCH",
+            headers: { ...authHeaders(token), Prefer: "return=representation" },
+            body: JSON.stringify({
+              is_active: true,
+              assigned_by: assignedBy || null,
+              updated_at: new Date().toISOString(),
+            }),
+            cache: "no-store",
+          }
+        );
+        if (!response.ok) {
+          return NextResponse.json(
+            { error: "Unable to save the Section Adviser." },
+            { status: 400 }
+          );
+        }
+      } else {
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/section_advisers`,
+          {
+            method: "POST",
+            headers: { ...authHeaders(token), Prefer: "return=representation" },
+            body: JSON.stringify({
+              teacher_id: adviserTeacherId,
+              school_year_id: activeYear.id,
+              section_id: sectionId,
+              assigned_by: assignedBy || null,
+              is_active: true,
+            }),
+            cache: "no-store",
+          }
+        );
+        if (!response.ok) {
+          return NextResponse.json(
+            { error: "Unable to save the Section Adviser." },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    const existingAssignments = await getRows(
+      `teacher_assignments?school_year_id=eq.${encodeURIComponent(
+        activeYear.id
+      )}&section_id=eq.${encodeURIComponent(
+        sectionId
+      )}&select=id,teacher_id,subject_id,major,is_active`,
+      token
+    ).catch(() => []);
+
+    for (const item of normalizedAssignments) {
+      const existing = (existingAssignments ?? []).find(
+        (assignment: { subject_id?: string; major?: string | null }) =>
+          assignment.subject_id === item.subjectId &&
+          (assignment.major ?? null) === item.major
+      );
+
+      if (!item.teacherId) {
+        if (existing?.id && existing.is_active) {
+          const response = await fetch(
+            `${SUPABASE_URL}/rest/v1/teacher_assignments?id=eq.${encodeURIComponent(
+              existing.id
+            )}`,
+            {
+              method: "PATCH",
+              headers: { ...authHeaders(token), Prefer: "return=minimal" },
+              body: JSON.stringify({
+                is_active: false,
+                updated_at: new Date().toISOString(),
+              }),
+              cache: "no-store",
+            }
+          );
+          if (!response.ok) {
+            return NextResponse.json(
+              { error: "Unable to deactivate one of the cleared Subject Teacher assignments." },
+              { status: 400 }
+            );
+          }
+        }
+        continue;
+      }
+
+      if (existing?.id) {
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/teacher_assignments?id=eq.${encodeURIComponent(
+            existing.id
+          )}`,
+          {
+            method: "PATCH",
+            headers: { ...authHeaders(token), Prefer: "return=minimal" },
+            body: JSON.stringify({
+              teacher_id: item.teacherId,
+              grade_level: gradeLevel,
+              major: item.major,
+              is_active: true,
+              assigned_by: assignedBy || null,
+              updated_at: new Date().toISOString(),
+            }),
+            cache: "no-store",
+          }
+        );
+        if (!response.ok) {
+          return NextResponse.json(
+            { error: "Unable to update one of the Subject Teacher assignments." },
+            { status: 400 }
+          );
+        }
+      } else {
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/teacher_assignments`,
+          {
+            method: "POST",
+            headers: { ...authHeaders(token), Prefer: "return=minimal" },
+            body: JSON.stringify({
+              teacher_id: item.teacherId,
+              school_year_id: activeYear.id,
+              grade_level: gradeLevel,
+              section_id: sectionId,
+              subject_id: item.subjectId,
+              major: item.major,
+              assigned_by: assignedBy || null,
+              is_active: true,
+            }),
+            cache: "no-store",
+          }
+        );
+        if (!response.ok) {
+          return NextResponse.json(
+            { error: "Unable to create one of the Subject Teacher assignments." },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    const activeRows = await getRows(
+      `teacher_assignments?school_year_id=eq.${encodeURIComponent(
+        activeYear.id
+      )}&section_id=eq.${encodeURIComponent(
+        sectionId
+      )}&is_active=eq.true&select=id`,
+      token
+    ).catch(() => []);
+
+    return NextResponse.json({
+      ok: true,
+      sectionId,
+      activeAssignments: activeRows?.length ?? 0,
+    });
+  }
+
   if (action === "assign_adviser") {
     const teacherId = String(body?.teacherId ?? "");
     const sectionId = String(body?.sectionId ?? "");
