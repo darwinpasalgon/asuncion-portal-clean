@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
+import { hasAdminPermission } from "@/lib/admin-access";
 
 async function callAdminReset(token: string, body: Record<string, unknown>) {
   return fetch(`${SUPABASE_URL}/functions/v1/password-reset-admin`, {
@@ -17,6 +18,9 @@ async function callAdminReset(token: string, body: Record<string, unknown>) {
 export async function GET(request: NextRequest) {
   const token = request.cookies.get("anhs-access-token")?.value;
   if (!token) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  if (!(await hasAdminPermission(token, "password_resets.manage"))) {
+    return NextResponse.json({ error: "Password Reset permission required." }, { status: 403 });
+  }
 
   const response = await callAdminReset(token, { action: "list" });
   const result = await response.json().catch(() => ({}));
@@ -26,6 +30,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const token = request.cookies.get("anhs-access-token")?.value;
   if (!token) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  if (!(await hasAdminPermission(token, "password_resets.manage"))) {
+    return NextResponse.json({ error: "Password Reset permission required." }, { status: 403 });
+  }
 
   const body = await request.json().catch(() => null);
   if (!body?.requestId) {
