@@ -301,6 +301,9 @@ export default function BulkAccountImportPage() {
   const [year, setYear] = useState("");
   const [selectedGrade, setSelectedGrade] = useState("");
   const [selectedSection, setSelectedSection] = useState("");
+  const [recoveryGrade, setRecoveryGrade] = useState("");
+  const [recoverySection, setRecoverySection] = useState("");
+  const [recoveryWorking, setRecoveryWorking] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<PreviewRow[]>([]);
   const [credentials, setCredentials] = useState<Credential[]>([]);
@@ -336,6 +339,16 @@ export default function BulkAccountImportPage() {
         ? sections.filter((section) => section.grade_level === Number(selectedGrade))
         : [],
     [sections, selectedGrade]
+  );
+
+  const recoverySectionOptions = useMemo(
+    () =>
+      recoveryGrade
+        ? sections.filter(
+            (section) => section.grade_level === Number(recoveryGrade)
+          )
+        : [],
+    [sections, recoveryGrade]
   );
 
   const studentClassReady =
@@ -744,6 +757,69 @@ export default function BulkAccountImportPage() {
         ])
       );
     }
+  async function recoverLearnerCredentials() {
+    if (!recoveryGrade || !recoverySection) {
+      setError("Select the Grade Level and Section for credential recovery.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Generate new temporary first-login passwords for eligible learners in Grade ${recoveryGrade} - ${recoverySection}? Existing temporary passwords for those learners will stop working.`
+    );
+    if (!confirmed) return;
+
+    setRecoveryWorking(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const formData = new FormData();
+      formData.append("grade_level", recoveryGrade);
+      formData.append("section", recoverySection);
+
+      const response = await fetch("/api/admin/reissue-section-credentials", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const detail = await response.text().catch(() => "");
+        throw new Error(detail || "Unable to recover learner credentials.");
+      }
+
+      const blob = await response.blob();
+      const disposition = response.headers.get("Content-Disposition") ?? "";
+      const filenameMatch = disposition.match(/filename="([^"]+)"/i);
+      const filename =
+        filenameMatch?.[1] ||
+        `ANHS_Grade_${recoveryGrade}_${recoverySection.replace(
+          /\s+/g,
+          "_"
+        )}_First_Login_Credentials.csv`;
+
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+
+      setMessage(
+        `New first-login credentials were generated for eligible learners in Grade ${recoveryGrade} - ${recoverySection}. The CSV was downloaded. Give each learner only their own credentials.`
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to recover learner credentials."
+      );
+    } finally {
+      setRecoveryWorking(false);
+    }
+  }
+
   }
 
   return (
@@ -769,6 +845,95 @@ export default function BulkAccountImportPage() {
 
         {error && <div className={styles.error}>{error}</div>}
         {message && <div className={styles.success}>{message}</div>}
+
+        <section className={styles.recoveryPanel}>
+          <div className={styles.recoveryHead}>
+            <div className={styles.recoveryTitle}>
+              <span className={styles.recoveryIcon}><KeyRound size={21} /></span>
+              <div>
+                <span>LEARNER ACCOUNTS</span>
+                <h2>First Login Credential Recovery</h2>
+                <p>
+                  Reissue first-login credentials by section when the original
+                  temporary-password CSV was not saved or was lost.
+                </p>
+              </div>
+            </div>
+            <span className={styles.secureBadge}>Administrator Tool</span>
+          </div>
+
+          <div className={styles.recoveryBody}>
+            <div className={styles.recoveryChooser}>
+              <label className={styles.classField}>
+                <span>Grade Level</span>
+                <select
+                  value={recoveryGrade}
+                  onChange={(event) => {
+                    setRecoveryGrade(event.target.value);
+                    setRecoverySection("");
+                    setError("");
+                    setMessage("");
+                  }}
+                >
+                  <option value="">Select Grade Level</option>
+                  {gradeOptions.map((grade) => (
+                    <option key={grade} value={grade}>Grade {grade}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className={styles.classField}>
+                <span>Section</span>
+                <select
+                  value={recoverySection}
+                  disabled={!recoveryGrade}
+                  onChange={(event) => {
+                    setRecoverySection(event.target.value);
+                    setError("");
+                    setMessage("");
+                  }}
+                >
+                  <option value="">
+                    {recoveryGrade ? "Select Section" : "Select Grade Level First"}
+                  </option>
+                  {recoverySectionOptions.map((section) => (
+                    <option key={section.id} value={section.name}>
+                      {section.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <button
+                className={styles.recoveryButton}
+                onClick={() => void recoverLearnerCredentials()}
+                disabled={
+                  recoveryWorking || !recoveryGrade || !recoverySection
+                }
+              >
+                <Download size={17} />
+                {recoveryWorking
+                  ? "Generating Credentials…"
+                  : "Generate & Download Credentials"}
+              </button>
+            </div>
+
+            <div className={styles.recoveryNotice}>
+              <strong>How this works</strong>
+              <span>
+                The portal cannot recover an old plaintext password. Instead, it
+                creates a new temporary password only for learners who are still in
+                first-login status. Learners who already completed their first login
+                and changed their password are not included.
+              </span>
+              <span>
+                The downloaded CSV contains Learner Name, LRN/Login ID, and the new
+                Temporary Password. Each included learner must change that temporary
+                password on sign-in.
+              </span>
+            </div>
+          </div>
+        </section>
 
         <section className={styles.panel}>
           <div className={styles.panelHead}>
