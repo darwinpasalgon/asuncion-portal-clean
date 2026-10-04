@@ -16,6 +16,7 @@ import {
   LayoutDashboard,
   LogOut,
   Megaphone,
+  MessageCircle,
   Settings2,
   ShieldCheck,
   UserRound,
@@ -443,6 +444,23 @@ function SideNav({
             </SidebarMenu>
           </div>
         ))}
+
+        <div className="nav-group-section">
+          <p className="nav-label">MY COMMUNITY</p>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                className="nav-button"
+                onClick={() => {
+                  window.location.href = "/portal/community";
+                }}
+              >
+                <MessageCircle size={19} />
+                <span>Community Chat</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </div>
 
         {hasPersonnelProfile && (
           <div className="nav-group-section">
