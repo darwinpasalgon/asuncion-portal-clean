@@ -147,6 +147,30 @@ function manilaDateParts() {
   return { date, isSchoolWeekday: weekday >= 1 && weekday <= 5 };
 }
 
+function manilaDateFromTimestamp(value: string) {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return formatter.format(new Date(value));
+}
+
+function weekdayDates(start: string, end: string) {
+  if (!start || !end || start > end) return [];
+  const result: string[] = [];
+  const current = new Date(`${start}T12:00:00Z`);
+  const last = new Date(`${end}T12:00:00Z`);
+  while (current <= last) {
+    const value = current.toISOString().slice(0, 10);
+    const day = current.getUTCDay();
+    if (day >= 1 && day <= 5) result.push(value);
+    current.setUTCDate(current.getUTCDate() + 1);
+  }
+  return result;
+}
+
 function missing(value: unknown) {
   return String(value ?? "").trim() === "";
 }
@@ -192,6 +216,15 @@ export async function GET(request: NextRequest) {
         (adviserRows ?? []).map((item: { section_id: string }) =>
           String(item.section_id)
         )
+      )
+    );
+
+    const adviserStartBySection = new Map(
+      (adviserRows ?? []).map(
+        (item: { section_id: string; assigned_at: string }) => [
+          String(item.section_id),
+          manilaDateFromTimestamp(item.assigned_at),
+        ]
       )
     );
 
@@ -273,7 +306,11 @@ export async function GET(request: NextRequest) {
 
     const { date: schoolDate, isSchoolWeekday } = manilaDateParts();
 
-    const [gradeRows, attendanceRows] = await Promise.all([
+    const earliestAttendanceStart = Array.from(
+      adviserStartBySection.values()
+    ).sort()[0];
+
+    const [gradeRows, attendanceRows, exclusionRows] = await Promise.all([
       assignmentIds.length
         ? getRows(
             `student_term_grades?school_year_id=eq.${encodeURIComponent(
@@ -284,22 +321,38 @@ export async function GET(request: NextRequest) {
             token
           )
         : Promise.resolve([]),
-      isSchoolWeekday && studentIds.length
+      earliestAttendanceStart && studentIds.length
         ? getRows(
             `daily_attendance?school_year_id=eq.${encodeURIComponent(
               activeYear.id
-            )}&attendance_date=eq.${schoolDate}&section_id=in.${encodeURIComponent(
+            )}&attendance_date=gte.${earliestAttendanceStart}&attendance_date=lte.${schoolDate}&section_id=in.${encodeURIComponent(
               sectionFilter
             )}&student_id=in.${encodeURIComponent(
               studentFilter
-            )}&select=student_id,section_id`,
+            )}&select=student_id,section_id,attendance_date`,
+            token
+          )
+        : Promise.resolve([]),
+      earliestAttendanceStart
+        ? getRows(
+            `attendance_day_exclusions?school_year_id=eq.${encodeURIComponent(
+              activeYear.id
+            )}&attendance_date=gte.${earliestAttendanceStart}&attendance_date=lte.${schoolDate}&section_id=in.${encodeURIComponent(
+              sectionFilter
+            )}&select=section_id,attendance_date`,
             token
           )
         : Promise.resolve([]),
     ]);
 
     const grades = (gradeRows ?? []) as GradeRow[];
-    const attendance = (attendanceRows ?? []) as AttendanceRow[];
+    const attendance = (attendanceRows ?? []) as Array<
+      AttendanceRow & { attendance_date: string }
+    >;
+    const exclusions = (exclusionRows ?? []) as Array<{
+      section_id: string;
+      attendance_date: string;
+    }>;
     const learnerInfoMap = new Map(
       learnerInformation.map((item) => [item.student_id, item] as const)
     );
@@ -482,27 +535,69 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    if (isSchoolWeekday && enrollments.length > 0) {
-      const attendedToday = new Set(
-        attendance.map((item) => item.student_id)
+    const expectedBySection = new Map<string, number>();
+    for (const enrollment of enrollments) {
+      expectedBySection.set(
+        enrollment.section_id,
+        (expectedBySection.get(enrollment.section_id) ?? 0) + 1
       );
-      const missingAttendance = enrollments.filter(
-        (enrollment) => !attendedToday.has(enrollment.student_id)
-      );
+    }
 
-      if (missingAttendance.length > 0) {
-        alerts.push({
-          id: "attendance",
-          severity: "warning",
-          title: "Attendance Not Yet Tagged Today",
-          detail:
-            "These learners do not have an attendance status for today's school date.",
-          count: missingAttendance.length,
-          href: "/portal/attendance",
-          actionLabel: "Open Attendance",
-          administratorAction: false,
-        });
+    const recordedBySectionDate = new Map<string, Set<string>>();
+    for (const row of attendance) {
+      const key = `${row.section_id}|${row.attendance_date}`;
+      if (!recordedBySectionDate.has(key)) {
+        recordedBySectionDate.set(key, new Set<string>());
       }
+      recordedBySectionDate.get(key)?.add(row.student_id);
+    }
+
+    const excludedDateKeys = new Set(
+      exclusions.map(
+        (item) => `${item.section_id}|${item.attendance_date}`
+      )
+    );
+
+    const pendingAttendanceDates: Array<{
+      sectionId: string;
+      date: string;
+    }> = [];
+
+    for (const sectionId of sectionIds) {
+      const start = adviserStartBySection.get(sectionId);
+      const expected = expectedBySection.get(sectionId) ?? 0;
+      if (!start || expected === 0) continue;
+
+      for (const attendanceDate of weekdayDates(start, schoolDate)) {
+        const key = `${sectionId}|${attendanceDate}`;
+        if (excludedDateKeys.has(key)) continue;
+        const recorded = recordedBySectionDate.get(key)?.size ?? 0;
+        if (recorded < expected) {
+          pendingAttendanceDates.push({
+            sectionId,
+            date: attendanceDate,
+          });
+        }
+      }
+    }
+
+    pendingAttendanceDates.sort((a, b) => b.date.localeCompare(a.date));
+
+    if (pendingAttendanceDates.length > 0) {
+      const latest = pendingAttendanceDates[0];
+      alerts.push({
+        id: "attendance",
+        severity: "warning",
+        title: "Attendance Needs Attention",
+        detail:
+          `${pendingAttendanceDates.length} weekday(s) still need complete attendance or a No Classes designation.`,
+        count: pendingAttendanceDates.length,
+        href: `/portal/attendance?date=${encodeURIComponent(
+          latest.date
+        )}&section=${encodeURIComponent(latest.sectionId)}`,
+        actionLabel: "Review Attendance",
+        administratorAction: false,
+      });
     }
 
     const draftGrades = grades.filter((grade) => grade.status === "draft");
