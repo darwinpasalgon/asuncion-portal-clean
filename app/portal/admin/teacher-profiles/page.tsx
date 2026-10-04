@@ -97,10 +97,6 @@ function requiredMissingFields(personal: Details) {
   if (!["GRADUATED", "ON GOING", "NONE"].includes(personal.graduate_status ?? "")) missing.push("Graduate Studies");
   const degree=String(personal.bachelors_degree??"");
   if (!bachelorDegreeOptions.some(([value])=>value===degree)) missing.push("Bachelor's Degree");
-  if ((degree==="BACHELOR OF SECONDARY EDUCATION (BSED)"||degree==="BACHELOR OF TECHNICAL-VOCATIONAL TEACHER EDUCATION (BTVTED)")) {
-    if(!String(personal.major??"").trim()) missing.push("Bachelor's Degree Major");
-    if(!String(personal.minor??"").trim()) missing.push("Bachelor's Degree Minor");
-  }
   if(degree==="OTHER BACHELOR'S DEGREE"&&!String(personal.bachelors_degree_other??"").trim()) missing.push("Other Bachelor's Degree Course");
   if (String(personal.philsys_number ?? "").replace(/\D/g, "").length !== 16) missing.push("PhilSys (National ID) Number");
   if(!String(personal.religion??"").trim()) missing.push("Religion");
@@ -542,8 +538,8 @@ export default function TeacherProfilesHrPage() {
                       </select>
                     </label>
                     {(personal.bachelors_degree==="BACHELOR OF SECONDARY EDUCATION (BSED)"||personal.bachelors_degree==="BACHELOR OF TECHNICAL-VOCATIONAL TEACHER EDUCATION (BTVTED)")&&<>
-                      <label><span>Major <b className={styles.required}>Required</b></span><input value={personal.major??""} onChange={e=>setPersonal(cur=>({...cur,major:e.target.value}))}/></label>
-                      <label><span>Minor <b className={styles.required}>Required</b></span><input value={personal.minor??""} onChange={e=>setPersonal(cur=>({...cur,minor:e.target.value}))}/></label>
+                      <label><span>Major</span><input value={personal.major??""} onChange={e=>setPersonal(cur=>({...cur,major:e.target.value}))}/></label>
+                      <label><span>Minor</span><input value={personal.minor??""} onChange={e=>setPersonal(cur=>({...cur,minor:e.target.value}))}/></label>
                     </>}
                     {personal.bachelors_degree==="OTHER BACHELOR'S DEGREE"&&
                       <label className={styles.wide}><span>Course Taken <b className={styles.required}>Required</b></span><input value={personal.bachelors_degree_other??""} onChange={e=>setPersonal(cur=>({...cur,bachelors_degree_other:e.target.value}))}/></label>}
