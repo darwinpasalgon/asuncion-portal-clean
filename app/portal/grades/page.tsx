@@ -582,6 +582,26 @@ export default function GradesPage() {
               </div>
             </section>
 
+            {selectedIsTve && classStudents.some(
+              (student) => !gradeAssignmentIdForStudent(student.id)
+            ) && (
+              <div className={styles.tveSetupNote}>
+                <strong>
+                  {
+                    classStudents.filter(
+                      (student) => !gradeAssignmentIdForStudent(student.id)
+                    ).length
+                  } learner(s) still need TVE setup
+                </strong>
+                <span>
+                  Assign each learner&apos;s TVE Major in My Students and make sure the
+                  matching TVE Subject Teacher is configured. Major names remain hidden
+                  from this Gradebook.
+                </span>
+                <a href="/portal/my-students">Open My Students</a>
+              </div>
+            )}
+
             <section className={styles.gradePanel}>
               <div className={styles.panelHeading}>
                 <div>
