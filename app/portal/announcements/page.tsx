@@ -90,7 +90,7 @@ export default function AnnouncementsPage(){
   const sectionMap=useMemo(()=>new Map(sections.map(s=>[s.id,s])),[sections]);
 
   function audienceLabel(item:Announcement){
-    if(item.audience_scope==="school")return "Entire school";
+    if(item.audience_scope==="school")return "Entire School";
     if(item.audience_scope==="grade")return "Grade "+item.target_grade;
     const section=item.target_section_id?sectionMap.get(item.target_section_id):null;
     return section?("Grade "+section.grade_level+" · "+section.name):"Section";
@@ -183,12 +183,12 @@ export default function AnnouncementsPage(){
           </label>
 
           {isAdmin&&announcementType==="memorandum"&&<>
-            <label><span>Memo number <small>optional</small></span><input name="memoNumber" maxLength={80} placeholder="e.g. Memo No. 12, s. 2026"/></label>
-            <label><span>Memo date <small>optional</small></span><input name="memoDate" type="date"/></label>
+            <label><span>Memo Number <small>optional</small></span><input name="memoNumber" maxLength={80} placeholder="e.g. Memo No. 12, s. 2026"/></label>
+            <label><span>Memo Date <small>optional</small></span><input name="memoDate" type="date"/></label>
           </>}
 
           <label className={styles.wide}>
-            <span>{announcementType==="memorandum"?"Summary / message":"Message"} <small>optional</small></span>
+            <span>{announcementType==="memorandum"?"Summary / Message":"Message"} <small>optional</small></span>
             <textarea name="body" maxLength={10000} rows={5} placeholder="Write the details here..."/>
           </label>
 
@@ -196,9 +196,9 @@ export default function AnnouncementsPage(){
             ?<label>
               <span>Audience</span>
               <select name="audienceScope" value={audienceScope} onChange={e=>setAudienceScope(e.target.value as "school"|"grade"|"section")}>
-                <option value="school">Entire school</option>
-                <option value="grade">Specific grade level</option>
-                <option value="section">Specific section</option>
+                <option value="school">Entire School</option>
+                <option value="grade">Specific Grade Level</option>
+                <option value="section">Specific Section</option>
               </select>
             </label>
             :<input type="hidden" name="audienceScope" value="section"/>}
@@ -206,7 +206,7 @@ export default function AnnouncementsPage(){
           {isAdmin&&audienceScope==="grade"&&<label>
             <span>Grade Level</span>
             <select name="targetGrade" required defaultValue="">
-              <option value="" disabled>Select grade</option>
+              <option value="" disabled>Select Grade</option>
               {grades.map(g=><option key={g.grade_level} value={g.grade_level}>{g.label}</option>)}
             </select>
           </label>}
@@ -214,7 +214,7 @@ export default function AnnouncementsPage(){
           {(audienceScope==="section"||profile?.role==="teacher")&&<label>
             <span>Section</span>
             <select name="targetSectionId" required defaultValue="">
-              <option value="" disabled>Select section</option>
+              <option value="" disabled>Select Section</option>
               {(profile?.role==="teacher"?allowedSections:sections).map(s=><option key={s.id} value={s.id}>{"Grade "+s.grade_level+" · "+s.name}</option>)}
             </select>
           </label>}
@@ -222,8 +222,8 @@ export default function AnnouncementsPage(){
           <label>
             <span>Post Status</span>
             <select name="status" defaultValue="published">
-              <option value="published">Publish now</option>
-              <option value="draft">Save as draft</option>
+              <option value="published">Publish Now</option>
+              <option value="draft">Save as Draft</option>
             </select>
           </label>
 
@@ -233,14 +233,14 @@ export default function AnnouncementsPage(){
           </label>
 
           {isAdmin&&announcementType==="memorandum"&&<label className={styles.fileField}>
-            <span>Memorandum file <small>PDF or image, up to 4 MB</small></span>
+            <span>Memorandum File <small>PDF or image, up to 4 MB</small></span>
             <input name="file" type="file" accept=".pdf,image/jpeg,image/png,image/webp"/>
           </label>}
         </div>
 
         <div className={styles.formActions}>
           <button type="submit" disabled={working==="create"}>
-            <Send size={16}/>{working==="create"?"Posting…":announcementType==="memorandum"?"Post memorandum":"Post announcement"}
+            <Send size={16}/>{working==="create"?"Posting…":announcementType==="memorandum"?"Post Memorandum":"Post Announcement"}
           </button>
         </div>
       </form>
@@ -294,7 +294,7 @@ export default function AnnouncementsPage(){
 
             {canManage&&item.status!=="archived"&&<div className={styles.cardActions}>
               {item.status==="published"
-                ?<button onClick={()=>void updateStatus(item.id,"draft")} disabled={working===item.id}>Return to draft</button>
+                ?<button onClick={()=>void updateStatus(item.id,"draft")} disabled={working===item.id}>Return to Draft</button>
                 :<button onClick={()=>void updateStatus(item.id,"publish")} disabled={working===item.id}><Send size={14}/>Publish</button>}
               <button className={styles.archiveButton} onClick={()=>void updateStatus(item.id,"archive")} disabled={working===item.id}><Archive size={14}/>Archive</button>
             </div>}
