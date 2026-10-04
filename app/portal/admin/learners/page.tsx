@@ -150,6 +150,10 @@ const statusLabels: Record<LearnerStatus, string> = {
   archived: "Archived",
 };
 
+function academicLevelLabel(gradeLevel: number) {
+  return gradeLevel === 0 ? "ALS A&E" : `Grade ${gradeLevel}`;
+}
+
 function display(value: unknown) {
   const text = String(value ?? "").trim();
   return text || "—";
@@ -616,9 +620,11 @@ export default function LearnerManagementPage() {
     const yearName = selectedYear?.name ?? "School_Year";
     const className =
       gradeFilter && sectionFilter
-        ? `Grade_${gradeFilter}_${sections.find((item) => item.id === sectionFilter)?.name ?? "Section"}`
+        ? `${Number(gradeFilter) === 0 ? "ALS_AE" : `Grade_${gradeFilter}`}_${sections.find((item) => item.id === sectionFilter)?.name ?? "Section"}`
         : gradeFilter
-          ? `Grade_${gradeFilter}`
+          ? Number(gradeFilter) === 0
+            ? "ALS_AE"
+            : `Grade_${gradeFilter}`
           : "All_Learners";
 
     downloadCsv(
@@ -731,7 +737,7 @@ export default function LearnerManagementPage() {
             >
               <option value="">All Grade Levels</option>
               {gradeOptions.map((grade) => (
-                <option key={grade} value={grade}>Grade {grade}</option>
+                <option key={grade} value={grade}>{academicLevelLabel(grade)}</option>
               ))}
             </select>
 
@@ -743,7 +749,7 @@ export default function LearnerManagementPage() {
               <option value="">All Sections</option>
               {sectionOptions.map((section) => (
                 <option key={section.id} value={section.id}>
-                  Grade {section.grade_level} · {section.name}
+                  {academicLevelLabel(section.grade_level)} · {section.name}
                 </option>
               ))}
             </select>
@@ -800,7 +806,7 @@ export default function LearnerManagementPage() {
                     return;
                   }
                   const confirmed = window.confirm(
-                    `Generate a fresh temporary-credentials CSV for Grade ${gradeFilter} - ${selectedCredentialSection.name}? Existing temporary credentials for learners who have not changed their password yet will be replaced.`
+                    `Generate a fresh temporary-credentials CSV for ${academicLevelLabel(Number(gradeFilter))} - ${selectedCredentialSection.name}? Existing temporary credentials for learners who have not changed their password yet will be replaced.`
                   );
                   if (!confirmed) event.preventDefault();
                 }}
@@ -892,7 +898,7 @@ export default function LearnerManagementPage() {
                             : "—"}
                       </td>
                       <td>
-                        <strong>Grade {enrollment.grade_level}</strong>
+                        <strong>{academicLevelLabel(enrollment.grade_level)}</strong>
                         <small className={styles.blockText}>{enrollment.section || "No section"}</small>
                       </td>
                       <td>
@@ -1032,7 +1038,7 @@ export default function LearnerManagementPage() {
                       {detailLearner.enrollments.map((enrollment) => (
                         <tr key={enrollment.id}>
                           <td>{enrollment.school_year}</td>
-                          <td>Grade {enrollment.grade_level} · {enrollment.section || "No section"}</td>
+                          <td>{academicLevelLabel(enrollment.grade_level)} · {enrollment.section || "No section"}</td>
                           <td>{statusLabels[enrollment.learner_status ?? "active"]}</td>
                           <td>{enrollment.adviser_name || "—"}</td>
                           <td>{enrollment.status_note || "—"}</td>
@@ -1056,7 +1062,7 @@ export default function LearnerManagementPage() {
                       <strong>{event.event_type.replaceAll("_", " ")}</strong>
                       <p>
                         {event.school_year || "School year"}
-                        {event.to_grade_level ? ` · Grade ${event.to_grade_level}` : ""}
+                        {event.to_grade_level !== null ? ` · ${academicLevelLabel(event.to_grade_level)}` : ""}
                         {event.to_section ? ` · ${event.to_section}` : ""}
                         {event.note ? ` · ${event.note}` : ""}
                       </p>
@@ -1088,7 +1094,7 @@ export default function LearnerManagementPage() {
               <div>
                 <span>LEARNER STATUS</span>
                 <h2>{statusTarget.learner.full_name}</h2>
-                <p>{selectedYear?.name} · Grade {statusTarget.enrollment.grade_level} · {statusTarget.enrollment.section}</p>
+                <p>{selectedYear?.name} · {academicLevelLabel(statusTarget.enrollment.grade_level)} · {statusTarget.enrollment.section}</p>
               </div>
               <button className={styles.iconButton} onClick={() => setStatusTarget(null)} aria-label="Close">
                 <X size={19} />
@@ -1144,7 +1150,7 @@ export default function LearnerManagementPage() {
               <div>
                 <span>MOVE SECTION</span>
                 <h2>{moveTarget.learner.full_name}</h2>
-                <p>Grade {moveTarget.enrollment.grade_level} · Current: {moveTarget.enrollment.section}</p>
+                <p>{academicLevelLabel(moveTarget.enrollment.grade_level)} · Current: {moveTarget.enrollment.section}</p>
               </div>
               <button className={styles.iconButton} onClick={() => setMoveTarget(null)} aria-label="Close">
                 <X size={19} />
@@ -1256,7 +1262,7 @@ export default function LearnerManagementPage() {
 
                       <label className={styles.field}>
                         <span>Target Grade Level</span>
-                        <input value={transitionTargetGrade ? `Grade ${transitionTargetGrade}` : ""} readOnly />
+                        <input value={transitionTargetGrade !== null ? academicLevelLabel(transitionTargetGrade) : ""} readOnly />
                       </label>
                     </div>
 
