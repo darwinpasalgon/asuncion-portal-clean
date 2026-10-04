@@ -55,7 +55,7 @@ export default function ForgotPasswordPage() {
     <main className={styles.pageCompact}>
       <div className={styles.authShell}>
         <button className={styles.backLink} onClick={() => router.push("/")}>
-          <ArrowLeft size={16} /> Back to sign in
+          <ArrowLeft size={16} /> Back to Sign In
         </button>
 
         <div className={styles.authHeader}>
