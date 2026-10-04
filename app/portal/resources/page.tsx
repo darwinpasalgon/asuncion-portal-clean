@@ -183,7 +183,7 @@ export default function ResourcesPage(){
 
   return <main className={styles.page}><div className={styles.shell}>
     <nav className={styles.topActions}>
-      <a href="/portal" className={styles.topLink}><ArrowLeft size={16}/>Back to portal</a>
+      <a href="/portal" className={styles.topLink}><ArrowLeft size={16}/>Back to Portal</a>
     </nav>
 
     <header className={styles.header}>
