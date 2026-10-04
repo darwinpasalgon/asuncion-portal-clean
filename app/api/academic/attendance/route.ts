@@ -506,6 +506,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (attendanceDate > manilaToday()) {
+    return NextResponse.json(
+      { error: "Future attendance dates cannot be recorded yet." },
+      { status: 400 }
+    );
+  }
+
   const adviserAllowed = await verifyAdviser(
     token,
     userId,
