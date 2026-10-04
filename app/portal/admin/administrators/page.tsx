@@ -223,7 +223,7 @@ export default function AdministratorsPage() {
           <div className={styles.credentials}>
             <KeyRound size={20} />
             <div>
-              <strong>Temporary password</strong>
+              <strong>Temporary Password</strong>
               <code>{temporaryPassword}</code>
               <span>This is shown after account creation. The user must change it on first sign-in.</span>
             </div>
@@ -270,7 +270,7 @@ export default function AdministratorsPage() {
                   </div>
                   <div className={styles.actions}>
                     {person.portal_user_id ? (
-                      <span className={styles.current}>Portal access assigned</span>
+                      <span className={styles.current}>Portal Access Assigned</span>
                     ) : (
                       <button
                         onClick={() => {
@@ -408,7 +408,7 @@ export default function AdministratorsPage() {
 
             {adminRole === "school_administrator" && (
               <div className={styles.permissionBox}>
-                <strong>Custom permissions</strong>
+                <strong>Custom Permissions</strong>
                 <p>Choose only the administrative modules this account should handle.</p>
                 <div className={styles.permissionGrid}>
                   {customPermissions.map(([permission, label]) => (
@@ -467,7 +467,7 @@ export default function AdministratorsPage() {
                   </div>
                   <div className={styles.actions}>
                     {admin.is_current_user ? (
-                      <span className={styles.current}>Your account</span>
+                      <span className={styles.current}>Your Account</span>
                     ) : (
                       <>
                         <button
