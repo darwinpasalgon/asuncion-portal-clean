@@ -449,7 +449,7 @@ export default function UsersAccountsPage() {
               }
               aria-label="Account status"
             >
-              <option value="all">All statuses</option>
+              <option value="all">All Statuses</option>
               <option value="active">Active</option>
               <option value="pending">Pending</option>
               <option value="suspended">Suspended</option>
@@ -638,7 +638,7 @@ export default function UsersAccountsPage() {
                           }
                           required
                         >
-                          <option value="">Select grade</option>
+                          <option value="">Select Grade</option>
                           {[7, 8, 9, 10, 11, 12].map((grade) => (
                             <option key={grade} value={grade}>
                               Grade {grade}
@@ -656,7 +656,7 @@ export default function UsersAccountsPage() {
                           }
                           required
                         >
-                          <option value="">Select section</option>
+                          <option value="">Select Section</option>
                           {editSections.map((section) => (
                             <option key={section.id} value={section.id}>
                               {section.name}
@@ -752,7 +752,7 @@ export default function UsersAccountsPage() {
                             })
                           }
                         >
-                          <option value="">Not specified</option>
+                          <option value="">Not Specified</option>
                           <option value="M">Male (M)</option>
                           <option value="F">Female (F)</option>
                         </select>
@@ -1056,7 +1056,7 @@ export default function UsersAccountsPage() {
                         setEditing({ ...editing, position: event.target.value })
                       }
                     >
-                      <option value="">Select teaching position</option>
+                      <option value="">Select Teaching Position</option>
                       {positionOptions(teachingPositions, editing.position).map((item) => (
                         <option key={item} value={item}>
                           {item}
