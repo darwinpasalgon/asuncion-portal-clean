@@ -187,8 +187,13 @@ export async function POST(request: NextRequest) {
     const gradeLevel = Number(body?.gradeLevel ?? 0);
     const name = String(body?.name ?? "").trim().replace(/\s+/g, " ");
 
-    if (!Number.isInteger(gradeLevel) || gradeLevel < 7 || gradeLevel > 12) {
-      return NextResponse.json({ error: "Select a valid grade level." }, { status: 400 });
+    const isAlsAe = gradeLevel === 0;
+    const isRegularGrade = gradeLevel >= 7 && gradeLevel <= 12;
+    if (!Number.isInteger(gradeLevel) || (!isAlsAe && !isRegularGrade)) {
+      return NextResponse.json(
+        { error: "Select a valid Grade Level or ALS A&E." },
+        { status: 400 }
+      );
     }
 
     if (name.length < 2 || name.length > 60) {
@@ -221,7 +226,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ ok: true, section: result?.[0] ?? null });
+    return NextResponse.json({
+      ok: true,
+      section: result?.[0] ?? null,
+      levelLabel: isAlsAe ? "ALS A&E" : `Grade ${gradeLevel}`,
+    });
   }
 
   if (action === "set_section_active") {
