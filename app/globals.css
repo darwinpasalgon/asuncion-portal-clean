@@ -879,3 +879,14 @@ img,svg,video,canvas{max-width:100%}
 .real-attention-clear>div strong{font-size:.78rem}
 .real-attention-clear>div span{margin-top:3px;color:#6e8777;font-size:.68rem}
 @media(max-width:767px){.real-attention-heading{align-items:flex-start;flex-direction:column}.real-attention-item{grid-template-columns:36px minmax(0,1fr)}.real-attention-item>a{grid-column:1/-1;justify-content:center}.real-attention-count{align-self:flex-start}}
+
+.real-attention-learners{display:grid;gap:7px;margin-top:11px;max-height:360px;overflow:auto;padding-right:3px}
+.real-attention-learner{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 11px;border:1px solid #eadfbe;border-radius:9px;background:rgba(255,255,255,.84);text-decoration:none}
+.real-attention-learner:hover{border-color:#d8bd73;background:#fffdf7}
+.real-attention-learner>div{min-width:0}
+.real-attention-learner>div strong,.real-attention-learner>div span,.real-attention-learner>div small{display:block}
+.real-attention-learner>div strong{color:#604b1f;font-size:.74rem}
+.real-attention-learner>div span{margin-top:3px;color:#827454;font-size:.62rem}
+.real-attention-learner>div small{margin-top:5px;color:#9a552d;font-size:.65rem;line-height:1.45;font-weight:700}
+.real-attention-open{flex:none;display:inline-flex;align-items:center;gap:4px;color:#765a18;font-size:.63rem;font-weight:800;white-space:nowrap}
+@media(max-width:767px){.real-attention-learner{align-items:flex-start;flex-direction:column}.real-attention-open{width:100%;justify-content:flex-end}}
