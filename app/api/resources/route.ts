@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
+import { hasAdminPermission } from "@/lib/admin-access";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
@@ -66,9 +67,19 @@ async function identity(request: NextRequest) {
   if (
     !profile ||
     profile.account_status !== "active" ||
-    !["student", "teacher", "administrator"].includes(String(profile.role))
+    !["student", "teacher", "administrator", "staff_administrator"].includes(String(profile.role))
   ) {
     return null;
+  }
+
+  if (profile.role === "staff_administrator") {
+    const allowed = await hasAdminPermission(token, "resources.manage");
+    if (!allowed) return null;
+    return {
+      token,
+      userId,
+      profile: { ...profile, role: "administrator" },
+    };
   }
 
   return { token, userId, profile };
