@@ -134,17 +134,20 @@ export async function GET(request: NextRequest) {
             : Promise.resolve([]),
         ]);
 
-      const learnerInfoMap = new Map(
-        (learnerInformation ?? []).map(
-          (item: {
-            student_id: string;
-            last_name?: string | null;
-            first_name?: string | null;
-            middle_name?: string | null;
-            name_extension?: string | null;
-            sex?: string | null;
-          }) => [item.student_id, item]
-        )
+      type LearnerInfo = {
+        student_id: string;
+        last_name?: string | null;
+        first_name?: string | null;
+        middle_name?: string | null;
+        name_extension?: string | null;
+        sex?: string | null;
+      };
+
+      const learnerInfoMap = new Map<string, LearnerInfo>(
+        ((learnerInformation ?? []) as LearnerInfo[]).map((item) => [
+          item.student_id,
+          item,
+        ])
       );
 
       const attendanceStudents = (students ?? []).map(
