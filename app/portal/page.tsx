@@ -82,6 +82,16 @@ type AdviserLearner = {
   tve_major: string | null;
 };
 
+type AdviserAttentionLearner = {
+  studentId: string;
+  fullName: string;
+  lrn: string | null;
+  gradeLevel: number;
+  section: string;
+  missingFields: string[];
+  href: string;
+};
+
 type AdviserAttentionAlert = {
   id: string;
   severity: "warning" | "info";
@@ -91,6 +101,7 @@ type AdviserAttentionAlert = {
   href: string | null;
   actionLabel: string | null;
   administratorAction: boolean;
+  learners?: AdviserAttentionLearner[];
 };
 
 type AdviserAttention = {
@@ -1013,13 +1024,41 @@ export default function PortalPage() {
                                 )}
                               </div>
                               <p>{alert.detail}</p>
+                              {alert.learners && alert.learners.length > 0 && (
+                                <div className="real-attention-learners">
+                                  {alert.learners.map((learner) => (
+                                    <a
+                                      className="real-attention-learner"
+                                      href={learner.href}
+                                      key={learner.studentId}
+                                    >
+                                      <div>
+                                        <strong>{learner.fullName}</strong>
+                                        <span>
+                                          Grade {learner.gradeLevel} · {learner.section}
+                                          {learner.lrn ? ` · LRN ${learner.lrn}` : ""}
+                                        </span>
+                                        <small>
+                                          Missing: {learner.missingFields.join(", ")}
+                                        </small>
+                                      </div>
+                                      <span className="real-attention-open">
+                                        Open Learner Record
+                                        <ChevronRight size={14} />
+                                      </span>
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                            {alert.href && alert.actionLabel && (
-                              <a href={alert.href}>
-                                {alert.actionLabel}
-                                <ChevronRight size={15} />
-                              </a>
-                            )}
+                            {alert.href &&
+                              alert.actionLabel &&
+                              (!alert.learners || alert.learners.length === 0) && (
+                                <a href={alert.href}>
+                                  {alert.actionLabel}
+                                  <ChevronRight size={15} />
+                                </a>
+                              )}
                           </article>
                         ))}
                       </div>
