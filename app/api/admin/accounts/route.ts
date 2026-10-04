@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { hasAdminPermission } from "@/lib/admin-access";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
 function authHeaders(token: string) {
@@ -10,17 +11,7 @@ function authHeaders(token: string) {
 }
 
 async function currentUserIsAdmin(token: string) {
-  const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/profiles?select=id,role,account_status&id=eq.${encodeURIComponent(
-      await getUserId(token)
-    )}&limit=1`,
-    { headers: authHeaders(token), cache: "no-store" }
-  );
-
-  if (!response.ok) return false;
-  const rows = await response.json();
-  const profile = rows?.[0];
-  return profile?.role === "administrator" && profile?.account_status === "active";
+  return hasAdminPermission(token, "accounts.manage");
 }
 
 async function getUserId(token: string) {
