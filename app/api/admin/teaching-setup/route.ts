@@ -49,6 +49,49 @@ async function getActiveSchoolYear(token: string) {
   return rows?.[0] ?? null;
 }
 
+function subjectTeacherEligible(profile: {
+  role?: string | null;
+  position?: string | null;
+}) {
+  if (profile.role === "teacher") return true;
+  return /^HEAD TEACHER\b/i.test(String(profile.position ?? "").trim());
+}
+
+async function headTeacherService(
+  token: string,
+  payload: Record<string, unknown>
+) {
+  const response = await fetch(
+    `${SUPABASE_URL}/functions/v1/admin-head-teacher-provision`,
+    {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify(payload),
+      cache: "no-store",
+    }
+  );
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(String(result?.error ?? "Unable to process Head Teacher."));
+  }
+  return result;
+}
+
+async function resolveSubjectTeacherId(
+  token: string,
+  rawTeacherId: string
+) {
+  if (!rawTeacherId.startsWith("head:")) return rawTeacherId;
+  const personnelId = rawTeacherId.slice("head:".length);
+  const result = await headTeacherService(token, {
+    action: "provision",
+    personnel_id: personnelId,
+  });
+  const userId = String(result?.user_id ?? "");
+  if (!userId) throw new Error("Unable to link the Head Teacher portal account.");
+  return userId;
+}
+
 export async function GET(request: NextRequest) {
   const token = tokenFrom(request);
   if (!token || !(await isAdmin(token))) {
@@ -57,12 +100,20 @@ export async function GET(request: NextRequest) {
 
   try {
     const activeYear = await getActiveSchoolYear(token);
-    const [grades, sections, subjects, teachers, assignments, advisers] = await Promise.all([
+    const [
+      grades,
+      sections,
+      subjects,
+      profileRows,
+      assignments,
+      advisers,
+      headTeacherResult,
+    ] = await Promise.all([
       getRows("grade_levels?select=grade_level,label,sort_order&order=sort_order.asc", token),
       getRows("sections?select=id,grade_level,name,is_active&order=grade_level.asc,name.asc", token),
       getRows("subjects?select=id,grade_level,name,is_active&order=grade_level.asc,name.asc", token),
       getRows(
-        "profiles?role=eq.teacher&account_status=eq.active&select=id,full_name,email&order=full_name.asc",
+        "profiles?account_status=eq.active&role=neq.student&select=id,full_name,email,role,position&order=full_name.asc",
         token
       ),
       activeYear
@@ -81,7 +132,39 @@ export async function GET(request: NextRequest) {
             token
           )
         : Promise.resolve([]),
+      headTeacherService(token, { action: "list" }).catch(() => ({
+        head_teachers: [],
+      })),
     ]);
+
+    const teachers = (profileRows ?? []).filter(
+      (item: { role?: string | null }) => item.role === "teacher"
+    );
+
+    const subjectTeachers: Array<Record<string, unknown>> = [
+      ...teachers.map((item: Record<string, unknown>) => ({
+        ...item,
+        is_head_teacher: /^HEAD TEACHER\b/i.test(String(item.position ?? "")),
+        linked: true,
+      })),
+    ];
+
+    const knownIds = new Set(subjectTeachers.map((item) => String(item.id)));
+    for (const head of headTeacherResult?.head_teachers ?? []) {
+      const linkedId = String(head.portal_user_id ?? "");
+      if (linkedId && knownIds.has(linkedId)) continue;
+
+      subjectTeachers.push({
+        id: linkedId || `head:${head.id}`,
+        personnel_id: head.id,
+        full_name: head.full_name,
+        email: head.email,
+        position: head.position,
+        role: linkedId ? "teacher" : "head_teacher",
+        is_head_teacher: true,
+        linked: Boolean(linkedId),
+      });
+    }
 
     return NextResponse.json({
       activeYear,
@@ -89,6 +172,7 @@ export async function GET(request: NextRequest) {
       sections,
       subjects,
       teachers,
+      subjectTeachers,
       assignments,
       advisers,
     });
@@ -303,7 +387,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const [sectionRows, subjectRows, teacherRows] = await Promise.all([
+    const [sectionRows, subjectRows, profileRows] = await Promise.all([
       getRows(
         `sections?id=eq.${encodeURIComponent(
           sectionId
@@ -315,7 +399,7 @@ export async function POST(request: NextRequest) {
         token
       ),
       getRows(
-        "profiles?role=eq.teacher&account_status=eq.active&select=id",
+        "profiles?account_status=eq.active&role=neq.student&select=id,role,position",
         token
       ),
     ]).catch(() => [[], [], []]);
@@ -337,11 +421,18 @@ export async function POST(request: NextRequest) {
         grade_level: number;
       }>).map((item) => [String(item.id), item])
     );
-    const validTeacherIds = new Set(
-      (teacherRows ?? []).map((item: { id: string }) => String(item.id))
+    const validAdviserIds = new Set(
+      (profileRows ?? [])
+        .filter((item: { role?: string | null }) => item.role === "teacher")
+        .map((item: { id: string }) => String(item.id))
+    );
+    const validSubjectTeacherIds = new Set(
+      (profileRows ?? [])
+        .filter(subjectTeacherEligible)
+        .map((item: { id: string }) => String(item.id))
     );
 
-    if (adviserTeacherId && !validTeacherIds.has(adviserTeacherId)) {
+    if (adviserTeacherId && !validAdviserIds.has(adviserTeacherId)) {
       return NextResponse.json(
         { error: "Select an active Teacher account for the Section Adviser." },
         { status: 400 }
@@ -357,7 +448,24 @@ export async function POST(request: NextRequest) {
 
     for (const item of requestedAssignments) {
       const subjectId = String(item?.subjectId ?? "");
-      const teacherId = String(item?.teacherId ?? "");
+      const requestedTeacherId = String(item?.teacherId ?? "");
+      let teacherId = requestedTeacherId;
+      if (requestedTeacherId.startsWith("head:")) {
+        try {
+          teacherId = await resolveSubjectTeacherId(token, requestedTeacherId);
+          validSubjectTeacherIds.add(teacherId);
+        } catch (error) {
+          return NextResponse.json(
+            {
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Unable to link the selected Head Teacher.",
+            },
+            { status: 400 }
+          );
+        }
+      }
       const subject = subjectById.get(subjectId);
 
       if (!subject) {
@@ -386,9 +494,9 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (teacherId && !validTeacherIds.has(teacherId)) {
+      if (teacherId && !validSubjectTeacherIds.has(teacherId)) {
         return NextResponse.json(
-          { error: "One of the selected Subject Teachers is not an active Teacher account." },
+          { error: "One of the selected Subject Teachers is not an active teaching-capable account." },
           { status: 400 }
         );
       }
@@ -651,7 +759,7 @@ export async function POST(request: NextRequest) {
       getRows(
         `profiles?id=eq.${encodeURIComponent(
           teacherId
-        )}&role=eq.teacher&account_status=eq.active&select=id&limit=1`,
+        )}&account_status=eq.active&select=id,role,position&limit=1`,
         token
       ),
       getRows(
@@ -662,8 +770,11 @@ export async function POST(request: NextRequest) {
       ),
     ]).catch(() => [[], []]);
 
-    if (!teacherRows?.[0]) {
-      return NextResponse.json({ error: "Select an active Teacher account." }, { status: 400 });
+    if (!teacherRows?.[0] || !subjectTeacherEligible(teacherRows[0])) {
+      return NextResponse.json(
+        { error: "Select an active Teacher or Head Teacher account." },
+        { status: 400 }
+      );
     }
     if (!sectionRows?.[0]) {
       return NextResponse.json({ error: "Select an active section for this grade." }, { status: 400 });
@@ -774,7 +885,24 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "assign_teacher") {
-    const teacherId = String(body?.teacherId ?? "");
+    const requestedTeacherId = String(body?.teacherId ?? "");
+    let teacherId = requestedTeacherId;
+
+    if (requestedTeacherId.startsWith("head:")) {
+      try {
+        teacherId = await resolveSubjectTeacherId(token, requestedTeacherId);
+      } catch (error) {
+        return NextResponse.json(
+          {
+            error:
+              error instanceof Error
+                ? error.message
+                : "Unable to link the selected Head Teacher.",
+          },
+          { status: 400 }
+        );
+      }
+    }
     const gradeLevel = Number(body?.gradeLevel ?? 0);
     const sectionId = String(body?.sectionId ?? "");
     const subjectId = String(body?.subjectId ?? "");
