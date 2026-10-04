@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
+import { isTechnicalVocationalEducation } from "@/lib/subject-config";
+
+function isMapeh(name?: string | null) {
+  return String(name ?? "").trim().toLowerCase() === "mapeh";
+}
+
+function wholeGrade(value: unknown) {
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 0 && number <= 100
+    ? number
+    : null;
+}
 
 function headers(token: string) {
   return {
@@ -269,18 +281,10 @@ export async function POST(request: NextRequest) {
     const assignmentId = String(body?.assignmentId ?? "");
     const studentId = String(body?.studentId ?? "");
     const termNo = Number(body?.termNo ?? 0);
-    const termGrade = Number(body?.termGrade);
 
     if (!assignmentId || !studentId || ![1, 2, 3].includes(termNo)) {
       return NextResponse.json(
         { error: "Select a class, student, and term." },
-        { status: 400 }
-      );
-    }
-
-    if (!Number.isInteger(termGrade) || termGrade < 0 || termGrade > 100) {
-      return NextResponse.json(
-        { error: "Enter a whole-number Term Grade from 0 to 100." },
         { status: 400 }
       );
     }
@@ -298,7 +302,7 @@ export async function POST(request: NextRequest) {
         assignmentId
       )}&school_year_id=eq.${encodeURIComponent(
         activeYear.id
-      )}&is_active=eq.true&select=id,section_id,major&limit=1`,
+      )}&is_active=eq.true&select=id,section_id,subject_id,grade_level,major&limit=1`,
       token
     ).catch(() => []);
 
@@ -309,11 +313,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const selectedAssignment = assignments[0];
+
     const canGrade = await teacherAdvisesSection(
       token,
       userId,
       activeYear.id,
-      assignments[0].section_id
+      selectedAssignment.section_id
     );
     if (!canGrade) {
       return NextResponse.json(
@@ -322,13 +328,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const subjectRows = await getRows(
+      `subjects?id=eq.${encodeURIComponent(
+        selectedAssignment.subject_id
+      )}&select=id,name&limit=1`,
+      token
+    ).catch(() => []);
+    const subjectName = String(subjectRows?.[0]?.name ?? "");
+    const isTveSubject = isTechnicalVocationalEducation(subjectName);
+    const isMapehSubject = isMapeh(subjectName);
+
     const enrollments = await getRows(
       `student_enrollments?student_id=eq.${encodeURIComponent(
         studentId
       )}&school_year_id=eq.${encodeURIComponent(
         activeYear.id
       )}&section_id=eq.${encodeURIComponent(
-        assignments[0].section_id
+        selectedAssignment.section_id
       )}&enrollment_status=eq.active&select=id,tve_major&limit=1`,
       token
     ).catch(() => []);
@@ -340,21 +356,94 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (
-      assignments[0].major &&
-      enrollments[0].tve_major !== assignments[0].major
-    ) {
-      return NextResponse.json(
-        { error: "This learner is assigned to a different TVE Major." },
-        { status: 400 }
-      );
+    let targetAssignment = selectedAssignment;
+
+    if (isTveSubject) {
+      const learnerMajor = String(enrollments[0].tve_major ?? "").trim();
+      if (!learnerMajor) {
+        return NextResponse.json(
+          { error: "Assign this learner's TVE Major in My Students before encoding the TVE grade." },
+          { status: 409 }
+        );
+      }
+
+      const matchingAssignments = await getRows(
+        `teacher_assignments?school_year_id=eq.${encodeURIComponent(
+          activeYear.id
+        )}&section_id=eq.${encodeURIComponent(
+          selectedAssignment.section_id
+        )}&subject_id=eq.${encodeURIComponent(
+          selectedAssignment.subject_id
+        )}&major=eq.${encodeURIComponent(
+          learnerMajor
+        )}&is_active=eq.true&select=id,section_id,subject_id,grade_level,major&limit=1`,
+        token
+      ).catch(() => []);
+
+      if (!matchingAssignments?.[0]) {
+        return NextResponse.json(
+          {
+            error:
+              "No active TVE Subject Teacher assignment matches this learner's TVE Major.",
+          },
+          { status: 409 }
+        );
+      }
+      targetAssignment = matchingAssignments[0];
+    }
+
+    let termGrade: number;
+    let componentPayload: Record<string, number | null> = {
+      music_grade: null,
+      arts_grade: null,
+      physical_education_grade: null,
+      health_grade: null,
+    };
+
+    if (isMapehSubject) {
+      const music = wholeGrade(body?.components?.music);
+      const arts = wholeGrade(body?.components?.arts);
+      const physicalEducation = wholeGrade(body?.components?.physicalEducation);
+      const health = wholeGrade(body?.components?.health);
+
+      if (
+        music === null ||
+        arts === null ||
+        physicalEducation === null ||
+        health === null
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Enter whole-number grades from 0 to 100 for Music, Arts, Physical Education, and Health.",
+          },
+          { status: 400 }
+        );
+      }
+
+      termGrade = Math.round((music + arts + physicalEducation + health) / 4);
+      componentPayload = {
+        music_grade: music,
+        arts_grade: arts,
+        physical_education_grade: physicalEducation,
+        health_grade: health,
+      };
+    } else {
+      const directGrade = wholeGrade(body?.termGrade);
+      if (directGrade === null) {
+        return NextResponse.json(
+          { error: "Enter a whole-number Term Grade from 0 to 100." },
+          { status: 400 }
+        );
+      }
+      termGrade = directGrade;
     }
 
     const existing = await getRows(
       `student_term_grades?student_id=eq.${encodeURIComponent(
         studentId
       )}&teacher_assignment_id=eq.${encodeURIComponent(
-        assignmentId
+        targetAssignment.id
       )}&term_no=eq.${termNo}&select=id,status&limit=1`,
       token
     ).catch(() => []);
@@ -368,10 +457,11 @@ export async function POST(request: NextRequest) {
 
     const payload = {
       student_id: studentId,
-      teacher_assignment_id: assignmentId,
+      teacher_assignment_id: targetAssignment.id,
       school_year_id: activeYear.id,
       term_no: termNo,
       term_grade: termGrade,
+      ...componentPayload,
       encoded_by: userId,
       updated_at: new Date().toISOString(),
     };
@@ -427,7 +517,7 @@ export async function POST(request: NextRequest) {
         assignmentId
       )}&school_year_id=eq.${encodeURIComponent(
         activeYear.id
-      )}&is_active=eq.true&select=id,section_id,major&limit=1`,
+      )}&is_active=eq.true&select=id,section_id,subject_id,grade_level,major&limit=1`,
       token
     ).catch(() => []);
 
@@ -438,11 +528,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const selectedAssignment = assignments[0];
+
     const canGrade = await teacherAdvisesSection(
       token,
       userId,
       activeYear.id,
-      assignments[0].section_id
+      selectedAssignment.section_id
     );
     if (!canGrade) {
       return NextResponse.json(
@@ -451,30 +543,56 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const subjectRows = await getRows(
+      `subjects?id=eq.${encodeURIComponent(
+        selectedAssignment.subject_id
+      )}&select=id,name&limit=1`,
+      token
+    ).catch(() => []);
+    const subjectName = String(subjectRows?.[0]?.name ?? "");
+    const isTveSubject = isTechnicalVocationalEducation(subjectName);
+    const isMapehSubject = isMapeh(subjectName);
+
+    let targetAssignments = [selectedAssignment];
+    if (isTveSubject) {
+      targetAssignments = await getRows(
+        `teacher_assignments?school_year_id=eq.${encodeURIComponent(
+          activeYear.id
+        )}&section_id=eq.${encodeURIComponent(
+          selectedAssignment.section_id
+        )}&subject_id=eq.${encodeURIComponent(
+          selectedAssignment.subject_id
+        )}&is_active=eq.true&select=id,section_id,subject_id,grade_level,major`,
+        token
+      ).catch(() => []);
+
+      if (!targetAssignments.length) {
+        return NextResponse.json(
+          { error: "No active TVE assignments are configured for this section." },
+          { status: 409 }
+        );
+      }
+    }
+
     const enrollments = await getRows(
       `student_enrollments?school_year_id=eq.${encodeURIComponent(
         activeYear.id
       )}&section_id=eq.${encodeURIComponent(
-        assignments[0].section_id
-      )}&enrollment_status=eq.active&select=student_id`,
+        selectedAssignment.section_id
+      )}&enrollment_status=eq.active&select=student_id,tve_major`,
       token
     ).catch(() => []);
 
+    const targetIds = targetAssignments.map((item: { id: string }) => item.id);
+    const inFilter = `(${targetIds.join(",")})`;
     const grades = await getRows(
-      `student_term_grades?teacher_assignment_id=eq.${encodeURIComponent(
-        assignmentId
-      )}&term_no=eq.${termNo}&select=id,student_id,status`,
+      `student_term_grades?teacher_assignment_id=in.${encodeURIComponent(
+        inFilter
+      )}&term_no=eq.${termNo}&select=id,student_id,teacher_assignment_id,status,music_grade,arts_grade,physical_education_grade,health_grade`,
       token
     ).catch(() => []);
 
     if (action === "publish_term") {
-      const gradedStudents = new Set(
-        (grades ?? []).map((item: { student_id: string }) => item.student_id)
-      );
-      const missing = (enrollments ?? []).filter(
-        (item: { student_id: string }) => !gradedStudents.has(item.student_id)
-      );
-
       if (!enrollments?.length) {
         return NextResponse.json(
           { error: "There are no active students in this section." },
@@ -482,43 +600,92 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      const assignmentByMajor = new Map(
+        targetAssignments
+          .filter((item: { major?: string | null }) => Boolean(item.major))
+          .map((item: { id: string; major?: string | null }) => [
+            String(item.major),
+            item.id,
+          ])
+      );
+
+      const missing = (enrollments ?? []).filter(
+        (enrollment: { student_id: string; tve_major?: string | null }) => {
+          const expectedAssignmentId = isTveSubject
+            ? assignmentByMajor.get(String(enrollment.tve_major ?? ""))
+            : selectedAssignment.id;
+
+          if (!expectedAssignmentId) return true;
+
+          const grade = (grades ?? []).find(
+            (item: {
+              student_id: string;
+              teacher_assignment_id: string;
+              music_grade?: number | null;
+              arts_grade?: number | null;
+              physical_education_grade?: number | null;
+              health_grade?: number | null;
+            }) =>
+              item.student_id === enrollment.student_id &&
+              item.teacher_assignment_id === expectedAssignmentId
+          );
+
+          if (!grade) return true;
+
+          if (isMapehSubject) {
+            return [
+              grade.music_grade,
+              grade.arts_grade,
+              grade.physical_education_grade,
+              grade.health_grade,
+            ].some((value) => value === null || value === undefined);
+          }
+
+          return false;
+        }
+      );
+
       if (missing.length > 0) {
         return NextResponse.json(
           {
-            error: `Complete and save Term Grades for all enrolled students before publishing. Missing: ${missing.length}.`,
+            error: `Complete and save ${isMapehSubject ? "all four MAPEH components" : "Term Grades"} for all enrolled students before publishing. Missing: ${missing.length}.`,
           },
           { status: 409 }
         );
       }
     }
 
-    const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/student_term_grades?teacher_assignment_id=eq.${encodeURIComponent(
-        assignmentId
-      )}&term_no=eq.${termNo}`,
-      {
-        method: "PATCH",
-        headers: { ...headers(token), Prefer: "return=representation" },
-        body: JSON.stringify({
-          status: action === "publish_term" ? "published" : "draft",
-          updated_at: new Date().toISOString(),
-        }),
-        cache: "no-store",
-      }
-    );
-
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: "Unable to update the term publication status." },
-        { status: 400 }
+    let updatedCount = 0;
+    for (const target of targetAssignments) {
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/student_term_grades?teacher_assignment_id=eq.${encodeURIComponent(
+          target.id
+        )}&term_no=eq.${termNo}`,
+        {
+          method: "PATCH",
+          headers: { ...headers(token), Prefer: "return=representation" },
+          body: JSON.stringify({
+            status: action === "publish_term" ? "published" : "draft",
+            updated_at: new Date().toISOString(),
+          }),
+          cache: "no-store",
+        }
       );
+
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        return NextResponse.json(
+          { error: "Unable to update the term publication status." },
+          { status: 400 }
+        );
+      }
+      updatedCount += Array.isArray(result) ? result.length : 0;
     }
 
     return NextResponse.json({
       ok: true,
       status: action === "publish_term" ? "published" : "draft",
-      count: Array.isArray(result) ? result.length : 0,
+      count: updatedCount,
     });
   }
 
