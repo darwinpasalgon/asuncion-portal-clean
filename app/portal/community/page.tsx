@@ -140,21 +140,7 @@ export default function CommunityPage() {
     }
   }, []);
 
-  const heartbeat = useCallback(async () => {
-    try {
-      await fetch("/api/community", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "heartbeat" }),
-        cache: "no-store",
-      });
-    } catch {
-      // The next refresh will reflect the connection state.
-    }
-  }, []);
-
   useEffect(() => {
-    void heartbeat();
     void loadCommunity();
 
     const poll = window.setInterval(() => {
@@ -163,15 +149,8 @@ export default function CommunityPage() {
       }
     }, 2000);
 
-    const presence = window.setInterval(() => {
-      if (document.visibilityState === "visible") {
-        void heartbeat();
-      }
-    }, 20_000);
-
     const onVisibility = () => {
       if (document.visibilityState === "visible") {
-        void heartbeat();
         void loadCommunity(true);
       }
     };
@@ -180,16 +159,9 @@ export default function CommunityPage() {
 
     return () => {
       window.clearInterval(poll);
-      window.clearInterval(presence);
       document.removeEventListener("visibilitychange", onVisibility);
-      void fetch("/api/community", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "leave" }),
-        keepalive: true,
-      });
     };
-  }, [heartbeat, loadCommunity]);
+  }, [loadCommunity]);
 
   useEffect(() => {
     if (!community?.messages.length) return;
