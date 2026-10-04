@@ -16,6 +16,7 @@ import ActionWaitOverlay from "@/app/components/action-wait-overlay";
 type Details = Record<string, string>;
 type ServiceRecord = Details;
 type Rating = Details;
+type PersonnelType = "teaching" | "non_teaching";
 
 type TeacherRecord = {
   teacher_id: string;
@@ -74,6 +75,25 @@ function sourceAppointmentDate(official: Details) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+function formatPhilSysInput(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 16);
+  return digits.match(/.{1,4}/g)?.join(" - ") ?? digits;
+}
+
+function requiredMissingFields(personal: Details) {
+  const missing: string[] = [];
+  if (!["GRADUATED", "ON GOING", "NONE"].includes(personal.graduate_status ?? "")) {
+    missing.push("Graduate Studies");
+  }
+  if (!String(personal.bachelors_degree ?? "").trim()) {
+    missing.push("Bachelor's Degree");
+  }
+  if (String(personal.philsys_number ?? "").replace(/\D/g, "").length !== 16) {
+    missing.push("PhilSys (National ID) Number");
+  }
+  return missing;
+}
+
 function formatDate(value: string) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return value || "Not yet recorded";
@@ -85,14 +105,6 @@ const nameFields = [
   ["first_name", "First Name"],
   ["middle_name", "Middle Name"],
   ["name_extension", "Name Extension"],
-] as const;
-
-const graduateFields = [
-  [
-    "graduate_units",
-    "Graduate status / units earned / CAR",
-  ],
-  ["graduate_course", "Degree"],
 ] as const;
 
 const tertiaryFields = [
@@ -117,6 +129,7 @@ export default function MyTeacherProfilePage() {
   const [teacher, setTeacher] = useState<Teacher | null>(null);
   const [record, setRecord] = useState<TeacherRecord>(emptyRecord());
   const [personal, setPersonal] = useState<Details>({});
+  const [personnelType, setPersonnelType] = useState<PersonnelType>("teaching");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -133,12 +146,13 @@ export default function MyTeacherProfilePage() {
         cache: "no-store",
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error ?? "Unable to load your Teacher Profile.");
+      if (!response.ok) throw new Error(result.error ?? "Unable to load your Personnel Profile.");
       setTeacher(result.teacher ?? null);
+      setPersonnelType(result.personnel_type === "non_teaching" ? "non_teaching" : "teaching");
       setRecord(result.record ?? emptyRecord());
       setPersonal(result.record?.personal ?? {});
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to load your Teacher Profile.");
+      setError(err instanceof Error ? err.message : "Unable to load your Personnel Profile.");
     } finally {
       setLoading(false);
     }
@@ -149,6 +163,13 @@ export default function MyTeacherProfilePage() {
   }, []);
 
   async function save() {
+    const missing = requiredMissingFields(personal);
+    if (missing.length) {
+      setError(`Complete the required profile fields: ${missing.join(", ")}.`);
+      setMessage("");
+      return;
+    }
+
     setSaving(true);
     setError("");
     setMessage("");
@@ -166,9 +187,9 @@ export default function MyTeacherProfilePage() {
       if (!response.ok) throw new Error(result.error ?? "Unable to save your Teacher Profile.");
       setRecord(result.record);
       setPersonal(result.record?.personal ?? {});
-      setMessage("Teacher Profile saved.");
+      setMessage(personnelType === "non_teaching" ? "Personnel Profile saved." : "Teacher Profile saved.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to save your Teacher Profile.");
+      setError(err instanceof Error ? err.message : "Unable to save your Personnel Profile.");
     } finally {
       setSaving(false);
     }
@@ -204,6 +225,8 @@ export default function MyTeacherProfilePage() {
   }
 
   const appointmentDate = sourceAppointmentDate(record.official ?? {});
+  const missingRequired = requiredMissingFields(personal);
+  const graduateStatus = String(personal.graduate_status ?? "");
 
   if (loading) {
     return (
@@ -225,14 +248,23 @@ export default function MyTeacherProfilePage() {
         <header className={styles.header}>
           <div className={styles.avatar}><UserRound size={30} /></div>
           <div className={styles.headerCopy}>
-            <span>MY TEACHER PROFILE</span>
-            <h1>{teacher?.full_name || "Teacher Profile"}</h1>
+            <span>{personnelType === "non_teaching" ? "MY PERSONNEL PROFILE" : "MY TEACHER PROFILE"}</span>
+            <h1>{teacher?.full_name || "Personnel Profile"}</h1>
             <p>Asuncion National High School personnel profile</p>
           </div>
         </header>
 
         {error && <div className={styles.error}>{error}</div>}
         {message && <div className={styles.success}>{message}</div>}
+        {missingRequired.length > 0 && (
+          <div className={styles.requiredNotice}>
+            <ShieldCheck size={20} />
+            <div>
+              <strong>Profile Information Needs Completion</strong>
+              <span>Required: {missingRequired.join(", ")}</span>
+            </div>
+          </div>
+        )}
 
         <section className={styles.panel}>
           <div className={styles.panelHead}>
@@ -260,8 +292,8 @@ export default function MyTeacherProfilePage() {
           <div>
             <strong>You can update the profile information below.</strong>
             <span>
-              Employment details, service records, salary information, and performance ratings
-              are maintained by Human Resources.
+              Complete the required profile fields below. Employment details, service records,
+              salary information, and performance ratings are maintained by Human Resources.
             </span>
           </div>
         </div>
@@ -279,10 +311,85 @@ export default function MyTeacherProfilePage() {
         <section className={styles.panel}>
           <div className={styles.panelHead}>
             <GraduationCap size={22} />
-            <h2>Graduate Studies</h2>
+            <div>
+              <h2>Graduate Studies</h2>
+              <p>Required. Select the status that currently applies to you.</p>
+            </div>
           </div>
           <div className={styles.grid}>
-            {graduateFields.map(([key, label]) => field(key, label, key === "graduate_units"))}
+            <label>
+              <span>Graduate Studies Status <b className={styles.required}>Required</b></span>
+              <select
+                value={graduateStatus}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setPersonal((current) => ({
+                    ...current,
+                    graduate_status: value,
+                    graduate_units_earned:
+                      value === "ON GOING" ? current.graduate_units_earned ?? "" : "",
+                    graduate_car_completed:
+                      value === "ON GOING" ? current.graduate_car_completed ?? "NO" : "NO",
+                  }));
+                }}
+              >
+                <option value="">Select Status</option>
+                <option value="GRADUATED">Graduated</option>
+                <option value="ON GOING">On Going</option>
+                <option value="NONE">None</option>
+              </select>
+            </label>
+
+            {graduateStatus !== "NONE" && graduateStatus !== "" && (
+              <label>
+                <span>Graduate Degree / Program</span>
+                <input
+                  value={personal.graduate_course ?? ""}
+                  onChange={(event) =>
+                    setPersonal((current) => ({
+                      ...current,
+                      graduate_course: event.target.value,
+                    }))
+                  }
+                  placeholder="Example: Master of Arts in Education"
+                />
+              </label>
+            )}
+
+            {graduateStatus === "ON GOING" && (
+              <>
+                <label>
+                  <span>Units Earned</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="999"
+                    step="0.5"
+                    value={personal.graduate_units_earned ?? ""}
+                    onChange={(event) =>
+                      setPersonal((current) => ({
+                        ...current,
+                        graduate_units_earned: event.target.value,
+                      }))
+                    }
+                    placeholder="Example: 30"
+                  />
+                </label>
+                <label className={styles.checkboxField}>
+                  <input
+                    type="checkbox"
+                    checked={(personal.graduate_car_completed ?? "NO") === "YES"}
+                    onChange={(event) =>
+                      setPersonal((current) => ({
+                        ...current,
+                        graduate_car_completed: event.target.checked ? "YES" : "NO",
+                      }))
+                    }
+                  />
+                  <span>Completed Academic Requirements (CAR)</span>
+                </label>
+              </>
+            )}
           </div>
         </section>
 
@@ -292,7 +399,21 @@ export default function MyTeacherProfilePage() {
             <h2>Tertiary (Bachelor&apos;s Degree)</h2>
           </div>
           <div className={styles.grid}>
-            {tertiaryFields.map(([key, label]) => field(key, label))}
+            {tertiaryFields.map(([key, label]) =>
+              key === "bachelors_degree" ? (
+                <label key={key}>
+                  <span>Bachelor&apos;s Degree <b className={styles.required}>Required</b></span>
+                  <input
+                    required
+                    value={personal[key] ?? ""}
+                    onChange={(event) =>
+                      setPersonal((current) => ({ ...current, [key]: event.target.value }))
+                    }
+                    placeholder="Example: Bachelor of Secondary Education"
+                  />
+                </label>
+              ) : field(key, label)
+            )}
           </div>
         </section>
 
@@ -313,7 +434,26 @@ export default function MyTeacherProfilePage() {
           </div>
           <div className={styles.grid}>
             {otherFields.map(([key, label]) =>
-              field(key, label, key === "skills", key === "skills")
+              key === "philsys_number" ? (
+                <label key={key}>
+                  <span>PhilSys (National ID) Number <b className={styles.required}>Required</b></span>
+                  <input
+                    required
+                    inputMode="numeric"
+                    autoComplete="off"
+                    maxLength={25}
+                    value={personal[key] ?? ""}
+                    onChange={(event) =>
+                      setPersonal((current) => ({
+                        ...current,
+                        [key]: formatPhilSysInput(event.target.value),
+                      }))
+                    }
+                    placeholder="1234 - 5678 - 9012 - 3456"
+                  />
+                  <small className={styles.fieldHint}>16 digits · xxxx - xxxx - xxxx - xxxx</small>
+                </label>
+              ) : field(key, label, key === "skills", key === "skills")
             )}
           </div>
         </section>
