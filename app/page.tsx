@@ -28,7 +28,7 @@ export default function LoginPage() {
     const password = String(form.get("password") || "");
 
     if (!identifier || !password) {
-      setError("Enter your LRN or email address and password.");
+      setError("Enter your LRN or Email Address and password.");
       return;
     }
 
@@ -103,7 +103,7 @@ export default function LoginPage() {
 
           <div className={styles.intro}>
             <span className={styles.demoPill}>PORTAL ACCESS</span>
-            <h2>Welcome back</h2>
+            <h2>Welcome Back</h2>
             <p>
               Students sign in with their LRN. Teachers and staff sign in with
               their registered email address.
@@ -112,7 +112,7 @@ export default function LoginPage() {
 
           <form className={styles.form} onSubmit={handleSubmit}>
             <label className={styles.field}>
-              <span>LRN or email address</span>
+              <span>LRN or Email Address</span>
               <div className={styles.inputWrap}>
                 <UserRound size={18} aria-hidden="true" />
                 <input
@@ -120,7 +120,7 @@ export default function LoginPage() {
                   type="text"
                   autoComplete="username"
                   placeholder="Student LRN or staff email"
-                  aria-label="LRN or email address"
+                  aria-label="LRN or Email Address"
                   disabled={loading}
                 />
               </div>
@@ -157,7 +157,7 @@ export default function LoginPage() {
                 onClick={() => router.push("/forgot-password")}
                 disabled={loading}
               >
-                Forgot password?
+                Forgot Password?
               </button>
             </div>
 
@@ -168,7 +168,7 @@ export default function LoginPage() {
               className={styles.signInButton}
               disabled={loading}
             >
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? "Signing in..." : "Sign In"}
               {!loading && <ArrowRight size={18} />}
             </button>
           </form>
@@ -178,7 +178,7 @@ export default function LoginPage() {
             <ShieldCheck size={17} />
             <p>
               Accounts are issued by the school. If you cannot sign in, use
-              Forgot password? above for account recovery.
+              Forgot Password? above for account recovery.
             </p>
           </div>
 
