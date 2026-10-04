@@ -330,6 +330,7 @@ function SideNav({
   schoolYear,
   adminPermissions,
   isAdviser,
+  hasPersonnelProfile,
 }: {
   profile: Profile;
   page: Page;
@@ -337,6 +338,7 @@ function SideNav({
   schoolYear: string;
   adminPermissions: string[];
   isAdviser: boolean;
+  hasPersonnelProfile: boolean;
 }) {
   const { setOpenMobile } = useSidebar();
   const visibleGroups = Array.from(
@@ -442,7 +444,7 @@ function SideNav({
           </div>
         ))}
 
-        {profile.role === "teacher" && (
+        {hasPersonnelProfile && (
           <div className="nav-group-section">
             <p className="nav-label">PROFILE</p>
             <SidebarMenu>
@@ -454,7 +456,7 @@ function SideNav({
                   }}
                 >
                   <UserRound size={19} />
-                  <span>My Teacher Profile</span>
+                  <span>{profile.role === "teacher" ? "My Teacher Profile" : "My Personnel Profile"}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -1026,6 +1028,9 @@ export default function PortalPage() {
         schoolYear={academicContext?.school_year ?? "2026–2027"}
         adminPermissions={adminPermissions}
         isAdviser={adviserSections.length > 0}
+        hasPersonnelProfile={
+          profile.role === "teacher" || Boolean(personnelAttention?.self)
+        }
       />
 
       <main className="workspace">
