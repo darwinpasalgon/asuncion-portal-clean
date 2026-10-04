@@ -293,7 +293,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const allowedStatuses = new Set(["present", "absent", "late", "excused"]);
+  const allowedStatuses = new Set([
+    "present",
+    "absent",
+    "absent_morning",
+    "cutting_classes",
+    "transferred_in",
+    "transferred_out",
+    "dropped",
+  ]);
   const payload: Array<{
     student_id: string;
     school_year_id: string;
