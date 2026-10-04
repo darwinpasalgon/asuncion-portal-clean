@@ -1105,3 +1105,20 @@ td[data-slot=table-cell]{color:#496574}
   color:#7f8f97;
   font-size:.62rem;
 }
+
+.community-unread-badge{
+  margin-left:auto;
+  min-width:20px;
+  height:20px;
+  padding:0 6px;
+  border-radius:999px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:#d74f45;
+  color:#fff;
+  font-size:.58rem;
+  font-weight:850;
+  line-height:1;
+  box-shadow:0 3px 9px rgba(174,61,53,.18);
+}
