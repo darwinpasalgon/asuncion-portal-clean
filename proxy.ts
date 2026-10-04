@@ -116,12 +116,54 @@ function destination(request: NextRequest, state: AccessState) {
   const onChangePage = pathname === "/change-password";
   const onAdminPage = pathname.startsWith("/portal/admin/");
 
+  const studentTeacherOnly =
+    pathname === "/portal/grades" || pathname === "/portal/attendance";
+  const teacherOnly = pathname === "/portal/teacher-profile";
+  const announcementsPage = pathname === "/portal/announcements";
+  const resourcesPage = pathname === "/portal/resources";
+
   if (state.mustChangePassword && !onChangePage) {
     return NextResponse.redirect(new URL("/change-password", request.url));
   }
 
   if (!state.mustChangePassword && onChangePage) {
     return NextResponse.redirect(new URL("/portal", request.url));
+  }
+
+  if (
+    studentTeacherOnly &&
+    state.role !== "student" &&
+    state.role !== "teacher"
+  ) {
+    const url = new URL("/portal", request.url);
+    url.searchParams.set("reason", "forbidden");
+    return NextResponse.redirect(url);
+  }
+
+  if (teacherOnly && state.role !== "teacher") {
+    const url = new URL("/portal", request.url);
+    url.searchParams.set("reason", "forbidden");
+    return NextResponse.redirect(url);
+  }
+
+  if (
+    announcementsPage &&
+    state.role === "staff_administrator" &&
+    !state.permissions.includes("announcements.manage")
+  ) {
+    const url = new URL("/portal", request.url);
+    url.searchParams.set("reason", "forbidden");
+    return NextResponse.redirect(url);
+  }
+
+  if (
+    resourcesPage &&
+    state.role === "staff_administrator" &&
+    !state.permissions.includes("resources.manage")
+  ) {
+    const url = new URL("/portal", request.url);
+    url.searchParams.set("reason", "forbidden");
+    return NextResponse.redirect(url);
   }
 
   if (onAdminPage && state.role !== "administrator") {
