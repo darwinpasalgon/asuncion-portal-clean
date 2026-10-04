@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "ph.edu.asuncionnhs.portal",
+      "sha256_cert_fingerprints": [
+        "4B:D3:D5:D2:14:BC:FB:B3:77:53:ED:1A:D1:5E:3F:A8:D8:2A:A9:87:6A:79:23:F9:56:3B:FC:7D:7B:A9:9D:72"
+      ]
+    }
+  }
+]
