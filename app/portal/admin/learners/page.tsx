@@ -669,7 +669,7 @@ export default function LearnerManagementPage() {
       />
       <div className={styles.shell}>
         <nav className={styles.topbar}>
-          <a href="/portal"><ArrowLeft size={16} />Back to portal</a>
+          <a href="/portal"><ArrowLeft size={16} />Back to Portal</a>
           <div>
             <a href="/portal/admin/masterlist">Bulk Import SF1</a>
             <a href="/portal/admin/users">Users & Accounts</a>
@@ -731,7 +731,7 @@ export default function LearnerManagementPage() {
               }}
               aria-label="Grade Level"
             >
-              <option value="">All grade levels</option>
+              <option value="">All Grade Levels</option>
               {gradeOptions.map((grade) => (
                 <option key={grade} value={grade}>Grade {grade}</option>
               ))}
@@ -742,7 +742,7 @@ export default function LearnerManagementPage() {
               onChange={(event) => setSectionFilter(event.target.value)}
               aria-label="Section"
             >
-              <option value="">All sections</option>
+              <option value="">All Sections</option>
               {sectionOptions.map((section) => (
                 <option key={section.id} value={section.id}>
                   Grade {section.grade_level} · {section.name}
@@ -755,7 +755,7 @@ export default function LearnerManagementPage() {
               onChange={(event) => setStatusFilter(event.target.value)}
               aria-label="Learner Status"
             >
-              <option value="all">All statuses</option>
+              <option value="all">All Statuses</option>
               {statusOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -769,7 +769,7 @@ export default function LearnerManagementPage() {
             <div className={styles.summaryPills}>
               <div className={styles.summaryCard}>
                 <span className={styles.summaryIcon}><Users size={16} /></span>
-                <div><small>Total learners</small><strong>{summary.total}</strong></div>
+                <div><small>Total Learners</small><strong>{summary.total}</strong></div>
               </div>
               <div className={styles.summaryCard}>
                 <span className={styles.summaryIcon}><CheckCircle2 size={16} /></span>
@@ -852,7 +852,7 @@ export default function LearnerManagementPage() {
                         type="checkbox"
                         checked={allFilteredSelected}
                         onChange={toggleAll}
-                        aria-label="Select all learners"
+                        aria-label="Select All Learners"
                       />
                     </th>
                     <th>Learner</th>
@@ -912,7 +912,7 @@ export default function LearnerManagementPage() {
                               )
                             }
                           >
-                            <option value="">Not assigned</option>
+                            <option value="">Not Assigned</option>
                             {TECHNICAL_VOCATIONAL_MAJORS.map((major) => (
                               <option key={major} value={major}>
                                 {major}
@@ -930,7 +930,7 @@ export default function LearnerManagementPage() {
                           {statusLabels[enrollment.learner_status ?? "active"]}
                         </span>
                       </td>
-                      <td>{enrollment.adviser_name || "Not assigned"}</td>
+                      <td>{enrollment.adviser_name || "Not Assigned"}</td>
                       <td>
                         <div className={styles.actions}>
                           <button onClick={() => setDetailLearner(learner)}>
@@ -1161,7 +1161,7 @@ export default function LearnerManagementPage() {
                   setMoveTarget({ ...moveTarget, targetSectionId: event.target.value })
                 }
               >
-                <option value="">Select section</option>
+                <option value="">Select Section</option>
                 {sections
                   .filter(
                     (section) =>
@@ -1233,7 +1233,7 @@ export default function LearnerManagementPage() {
                     <option value="promoted" disabled={(transitionSourceGrade ?? 12) >= 12}>
                       Promote to next Grade Level
                     </option>
-                    <option value="retained">Retain in current Grade Level</option>
+                    <option value="retained">Retain in Current Grade Level</option>
                     <option value="graduated" disabled={transitionSourceGrade !== 12}>
                       Mark Grade 12 as Graduated
                     </option>
@@ -1249,7 +1249,7 @@ export default function LearnerManagementPage() {
                           value={targetYearId}
                           onChange={(event) => setTargetYearId(event.target.value)}
                         >
-                          <option value="">Select future school year</option>
+                          <option value="">Select Future School Year</option>
                           {futureYears.map((year) => (
                             <option key={year.id} value={year.id}>{year.name}</option>
                           ))}
@@ -1275,7 +1275,7 @@ export default function LearnerManagementPage() {
                         onChange={(event) => setTargetSectionId(event.target.value)}
                         disabled={!targetYearId}
                       >
-                        <option value="">Select section</option>
+                        <option value="">Select Section</option>
                         {targetSections.map((section) => (
                           <option key={section.id} value={section.id}>{section.name}</option>
                         ))}
