@@ -5,7 +5,10 @@ export const personalFields = [
   ["mobile", "Mobile number"], ["address", "Home address"],
   ["additional_units", "Legacy/source units entry"],
   ["graduate_course", "Degree"],
-  ["graduate_units", "Indicate if graduated or units earned if not graduated or CAR for completed Academic Requirements"],
+  ["graduate_status", "Graduate Studies Status"],
+  ["graduate_units_earned", "Graduate Studies Units Earned"],
+  ["graduate_car_completed", "Completed Academic Requirements"],
+  ["graduate_units", "Legacy graduate studies entry"],
   ["bachelors_degree", "Course"], ["major", "Major"], ["minor", "Minor"],
   ["education_units_major", "BSED-Earning Units - Major"], ["education_units_minor", "BSED-Earning Units - Minor"],
   ["skills", "SKILLS / SPECIALIZATION (NC I, NC II, NC III / TRAINERS METHODOLOGY)"],
@@ -31,6 +34,66 @@ export const ratingFields = [
   ["period", "Rating Period / School Year"], ["instrument", "Rating Instrument"], ["rating", "Final Rating"],
   ["description", "Adjectival Rating"], ["rater", "Rater"], ["date", "Date"], ["remarks", "Remarks"],
 ] as const;
+
+export const requiredPersonnelProfileFields = [
+  ["graduate_status", "Graduate Studies"],
+  ["bachelors_degree", "Bachelor's Degree"],
+  ["philsys_number", "PhilSys (National ID) Number"],
+] as const;
+
+export function normalizePhilSysNumber(value: unknown) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length !== 16) {
+    throw new Error("PhilSys (National ID) Number must contain exactly 16 digits.");
+  }
+  return digits.match(/.{1,4}/g)?.join(" - ") ?? digits;
+}
+
+export function normalizeGraduateProfile(input: Record<string, string>) {
+  const result = { ...input };
+  const status = String(result.graduate_status ?? "").trim().toUpperCase();
+  if (status && !["GRADUATED", "ON GOING", "NONE"].includes(status)) {
+    throw new Error("Graduate Studies must be Graduated, On Going, or None.");
+  }
+  result.graduate_status = status;
+
+  if (status === "ON GOING") {
+    const units = String(result.graduate_units_earned ?? "").trim();
+    if (units && !/^\d{1,3}(?:\.\d{1,2})?$/.test(units)) {
+      throw new Error("Graduate Studies Units Earned must be a valid number.");
+    }
+    result.graduate_units_earned = units;
+    result.graduate_car_completed =
+      String(result.graduate_car_completed ?? "").trim().toUpperCase() === "YES"
+        ? "YES"
+        : "NO";
+  } else {
+    result.graduate_units_earned = "";
+    result.graduate_car_completed = "NO";
+  }
+
+  result.philsys_number = normalizePhilSysNumber(result.philsys_number ?? "");
+  return result;
+}
+
+export function personnelProfileMissingFields(input: Record<string, string>) {
+  const missing: string[] = [];
+  const graduateStatus = String(input.graduate_status ?? "").trim().toUpperCase();
+  if (!["GRADUATED", "ON GOING", "NONE"].includes(graduateStatus)) {
+    missing.push("Graduate Studies");
+  }
+  if (!String(input.bachelors_degree ?? "").trim()) {
+    missing.push("Bachelor's Degree");
+  }
+
+  const philsysDigits = String(input.philsys_number ?? "").replace(/\D/g, "");
+  if (philsysDigits.length !== 16) {
+    missing.push("PhilSys (National ID) Number");
+  }
+  return missing;
+}
 
 export type TeacherDetails = Record<string, string>;
 export function cleanDetails(input: unknown, fields: readonly (readonly [string, string])[]): TeacherDetails {
