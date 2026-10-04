@@ -112,12 +112,12 @@ export default function AccountApprovalsPage() {
           {loading ? (
             <div className={styles.empty}>
               <Clock3 size={28} />
-              <strong>Loading registrations…</strong>
+              <strong>Loading Registrations…</strong>
             </div>
           ) : accounts.length === 0 ? (
             <div className={styles.empty}>
               <Check size={30} />
-              <strong>No pending accounts</strong>
+              <strong>No Pending Accounts</strong>
               <span>New registrations will appear here for review.</span>
             </div>
           ) : (
