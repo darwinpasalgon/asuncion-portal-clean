@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
+import { hasAdminPermission } from "@/lib/admin-access";
 
 function functionHeaders(token: string) {
   return {
@@ -14,6 +15,9 @@ export async function POST(request: NextRequest) {
   const token = request.cookies.get("anhs-access-token")?.value ?? "";
   if (!token) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+  if (!(await hasAdminPermission(token, "bulk_import.manage"))) {
+    return NextResponse.json({ error: "Bulk Account Import permission required." }, { status: 403 });
   }
 
   const formData = await request.formData().catch(() => null);
