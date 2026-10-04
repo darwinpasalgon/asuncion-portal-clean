@@ -175,7 +175,7 @@ export default function ResourcesPage(){
   }
 
   function resourceClass(resource:Resource){
-    if(resource.resource_scope==="school")return "School-wide";
+    if(resource.resource_scope==="school")return "School-Wide";
     if(!resource.teacher_assignment_id)return "Class";
     const a=assignmentMap.get(resource.teacher_assignment_id);
     return a?assignmentLabel(a):"Assigned class";
@@ -210,15 +210,15 @@ export default function ResourcesPage(){
 
       <form className={styles.form} onSubmit={submit}>
         {isAdmin&&<div className={styles.scopeTabs}>
-          <button type="button" className={scope==="school"?styles.scopeActive:styles.scopeButton} onClick={()=>setScope("school")}>School-wide</button>
-          <button type="button" className={scope==="class"?styles.scopeActive:styles.scopeButton} onClick={()=>setScope("class")}>Specific class</button>
+          <button type="button" className={scope==="school"?styles.scopeActive:styles.scopeButton} onClick={()=>setScope("school")}>School-Wide</button>
+          <button type="button" className={scope==="class"?styles.scopeActive:styles.scopeButton} onClick={()=>setScope("class")}>Specific Class</button>
         </div>}
 
         <div className={styles.formGrid}>
           {(scope==="class"||profile?.role==="teacher")&&<label className={styles.wide}>
             <span>Assigned Class</span>
             <select name="assignmentId" required defaultValue="">
-              <option value="" disabled>Select class</option>
+              <option value="" disabled>Select Class</option>
               {assignments.map(a=><option key={a.id} value={a.id}>{assignmentLabel(a)}</option>)}
             </select>
           </label>}
@@ -226,7 +226,7 @@ export default function ResourcesPage(){
           <label>
             <span>Category</span>
             <select name="category" required defaultValue="">
-              <option value="" disabled>Select category</option>
+              <option value="" disabled>Select Category</option>
               {Object.entries(CATEGORY_LABELS).map(([value,label])=><option key={value} value={value}>{label}</option>)}
             </select>
           </label>
@@ -234,7 +234,7 @@ export default function ResourcesPage(){
           <label>
             <span>Term <small>optional</small></span>
             <select name="termNo" defaultValue="">
-              <option value="">All terms / not specified</option>
+              <option value="">All Terms / Not Specified</option>
               <option value="1">Term 1</option>
               <option value="2">Term 2</option>
               <option value="3">Term 3</option>
@@ -252,7 +252,7 @@ export default function ResourcesPage(){
           </label>
 
           <label>
-            <span>External link <small>optional</small></span>
+            <span>External Link <small>optional</small></span>
             <div className={styles.iconInput}><Link2 size={16}/><input name="externalUrl" type="url" placeholder="https://..."/></div>
           </label>
 
@@ -264,8 +264,8 @@ export default function ResourcesPage(){
           <label>
             <span>Status</span>
             <select name="status" defaultValue="published">
-              <option value="published">Publish now</option>
-              <option value="draft">Save as draft</option>
+              <option value="published">Publish Now</option>
+              <option value="draft">Save as Draft</option>
             </select>
           </label>
         </div>
@@ -273,7 +273,7 @@ export default function ResourcesPage(){
         <p className={styles.formHint}>Add at least one file or external link. You may include both.</p>
 
         <div className={styles.formActions}>
-          <button type="submit" disabled={working==="create"}><Send size={16}/>{working==="create"?"Posting…":"Post resource"}</button>
+          <button type="submit" disabled={working==="create"}><Send size={16}/>{working==="create"?"Posting…":"Post Resource"}</button>
         </div>
       </form>
     </section>}
@@ -286,18 +286,18 @@ export default function ResourcesPage(){
 
       <div className={styles.filters}>
         <select value={termFilter} onChange={e=>setTermFilter(e.target.value)}>
-          <option value="all">All terms</option>
+          <option value="all">All Terms</option>
           <option value="1">Term 1</option>
           <option value="2">Term 2</option>
           <option value="3">Term 3</option>
-          <option value="none">No term specified</option>
+          <option value="none">No Term Specified</option>
         </select>
         <select value={categoryFilter} onChange={e=>setCategoryFilter(e.target.value)}>
-          <option value="all">All categories</option>
+          <option value="all">All Categories</option>
           {Object.entries(CATEGORY_LABELS).map(([value,label])=><option key={value} value={value}>{label}</option>)}
         </select>
         <select value={subjectFilter} onChange={e=>setSubjectFilter(e.target.value)}>
-          <option value="all">All subjects</option>
+          <option value="all">All Subjects</option>
           {subjectOptions.map(s=><option key={s.id} value={s.id}>{s.name}{s.code?" ("+s.code+")":""}</option>)}
         </select>
       </div>
@@ -327,7 +327,7 @@ export default function ResourcesPage(){
                 <span>Open</span>
               </a>}
 
-              {resource.external_url&&<a href={resource.external_url} target="_blank" rel="noreferrer" className={styles.externalLink}><ExternalLink size={17}/>Open external link</a>}
+              {resource.external_url&&<a href={resource.external_url} target="_blank" rel="noreferrer" className={styles.externalLink}><ExternalLink size={17}/>Open External Link</a>}
             </div>
 
             <footer>
@@ -337,7 +337,7 @@ export default function ResourcesPage(){
 
             {canManage&&resource.status!=="archived"&&<div className={styles.manage}>
               {resource.status==="published"
-                ?<button onClick={()=>void updateStatus(resource.id,"draft")} disabled={working===resource.id}>Return to draft</button>
+                ?<button onClick={()=>void updateStatus(resource.id,"draft")} disabled={working===resource.id}>Return to Draft</button>
                 :<button onClick={()=>void updateStatus(resource.id,"publish")} disabled={working===resource.id}><Send size={14}/>Publish</button>}
               <button className={styles.archiveButton} onClick={()=>void updateStatus(resource.id,"archive")} disabled={working===resource.id}><Archive size={14}/>Archive</button>
             </div>}
