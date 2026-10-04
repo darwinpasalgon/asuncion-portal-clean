@@ -182,7 +182,9 @@ export default function SchoolSetupPage() {
         return;
       }
 
-      setSuccess(`Section ${name} added to Grade ${gradeLevel}.`);
+      setSuccess(
+        `Section ${name} added to ${gradeLevel === 0 ? "ALS A&E" : `Grade ${gradeLevel}`}.`
+      );
       form.reset();
       await load();
     } catch {
@@ -438,8 +440,8 @@ export default function SchoolSetupPage() {
             <div>
               <h2>Add a Section</h2>
               <p>
-                Use this when you are ready to add Grade 11, Grade 12, or future
-                section names.
+                Add sections for Grades 7–12 or ALS A&E. ALS A&E is treated as a
+                special non-numbered level in the portal.
               </p>
             </div>
           </div>
@@ -448,7 +450,7 @@ export default function SchoolSetupPage() {
             <label>
               <span>Grade Level</span>
               <select name="gradeLevel" required defaultValue="">
-                <option value="" disabled>Select Grade Level</option>
+                <option value="" disabled>Select Grade Level / Program</option>
                 {gradeLevels.map((grade) => (
                   <option key={grade.grade_level} value={grade.grade_level}>
                     {grade.label}
