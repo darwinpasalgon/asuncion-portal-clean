@@ -279,7 +279,7 @@ export default function GradesPage() {
     return (
       <main className={styles.loading}>
         <GraduationCap size={34} />
-        <strong>Loading grade records…</strong>
+        <strong>Loading Grade Records…</strong>
       </main>
     );
   }
@@ -335,7 +335,7 @@ export default function GradesPage() {
                   onChange={(event) => setSelectedAssignmentId(event.target.value)}
                 >
                   {assignments.length === 0 && (
-                    <option value="">No assigned classes</option>
+                    <option value="">No Assigned Classes</option>
                   )}
                   {assignments.map((assignment) => (
                     <option key={assignment.id} value={assignment.id}>
