@@ -4,8 +4,9 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 type AccessState = {
   valid: boolean;
   mustChangePassword: boolean;
-  role: "student" | "teacher" | "administrator" | null;
+  role: "student" | "teacher" | "administrator" | "staff_administrator" | null;
   accountStatus: string | null;
+  permissions: string[];
 };
 
 async function accessState(token: string): Promise<AccessState> {
@@ -18,11 +19,11 @@ async function accessState(token: string): Promise<AccessState> {
   });
 
   if (!userResponse.ok) {
-    return { valid: false, mustChangePassword: false, role: null, accountStatus: null };
+    return { valid: false, mustChangePassword: false, role: null, accountStatus: null, permissions: [] };
   }
   const user = await userResponse.json().catch(() => null);
   if (!user?.id) {
-    return { valid: false, mustChangePassword: false, role: null, accountStatus: null };
+    return { valid: false, mustChangePassword: false, role: null, accountStatus: null, permissions: [] };
   }
 
   const profileResponse = await fetch(
@@ -37,15 +38,38 @@ async function accessState(token: string): Promise<AccessState> {
   );
 
   if (!profileResponse.ok) {
-    return { valid: false, mustChangePassword: false, role: null, accountStatus: null };
+    return { valid: false, mustChangePassword: false, role: null, accountStatus: null, permissions: [] };
   }
   const profiles = await profileResponse.json().catch(() => []);
   const profile = profiles?.[0];
+  let permissions: string[] = [];
+  if (profile?.role === "staff_administrator") {
+    const permissionResponse = await fetch(
+      `${SUPABASE_URL}/rest/v1/administrator_permissions?administrator_id=eq.${encodeURIComponent(
+        user.id
+      )}&select=permission&order=permission.asc`,
+      {
+        headers: {
+          apikey: SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${token}`,
+        },
+        cache: "no-store",
+      }
+    );
+    if (permissionResponse.ok) {
+      const rows = await permissionResponse.json().catch(() => []);
+      permissions = (rows ?? [])
+        .map((item: { permission?: string }) => String(item.permission ?? ""))
+        .filter(Boolean);
+    }
+  }
+
   return {
     valid: profile?.account_status === "active" && Boolean(profile?.role),
     mustChangePassword: Boolean(profile?.must_change_password),
     role: profile?.role ?? null,
     accountStatus: profile?.account_status ?? null,
+    permissions,
   };
 }
 
@@ -67,9 +91,30 @@ async function refreshSession(refreshToken: string) {
   return response.json();
 }
 
+const adminPagePermissions: Array<[string, string]> = [
+  ["/portal/admin/accounts", "accounts.manage"],
+  ["/portal/admin/users", "users.manage"],
+  ["/portal/admin/masterlist", "bulk_import.manage"],
+  ["/portal/admin/school-setup", "school_setup.manage"],
+  ["/portal/admin/teaching", "teaching.manage"],
+  ["/portal/admin/schedules", "schedules.manage"],
+  ["/portal/admin/attendance", "attendance.manage"],
+  ["/portal/admin/reports", "reports.view"],
+  ["/portal/admin/password-resets", "password_resets.manage"],
+  ["/portal/admin/sf10", "sf10.manage"],
+  ["/portal/admin/teacher-profiles", "hr.manage"],
+];
+
+function delegatedPermissionFor(pathname: string) {
+  return adminPagePermissions.find(
+    ([prefix]) => pathname === prefix || pathname.startsWith(prefix + "/")
+  )?.[1] ?? null;
+}
+
 function destination(request: NextRequest, state: AccessState) {
-  const onChangePage = request.nextUrl.pathname === "/change-password";
-  const onAdminPage = request.nextUrl.pathname.startsWith("/portal/admin/");
+  const pathname = request.nextUrl.pathname;
+  const onChangePage = pathname === "/change-password";
+  const onAdminPage = pathname.startsWith("/portal/admin/");
 
   if (state.mustChangePassword && !onChangePage) {
     return NextResponse.redirect(new URL("/change-password", request.url));
@@ -80,9 +125,17 @@ function destination(request: NextRequest, state: AccessState) {
   }
 
   if (onAdminPage && state.role !== "administrator") {
-    const url = new URL("/portal", request.url);
-    url.searchParams.set("reason", "forbidden");
-    return NextResponse.redirect(url);
+    const requiredPermission = delegatedPermissionFor(pathname);
+    const allowed =
+      state.role === "staff_administrator" &&
+      Boolean(requiredPermission) &&
+      state.permissions.includes(String(requiredPermission));
+
+    if (!allowed) {
+      const url = new URL("/portal", request.url);
+      url.searchParams.set("reason", "forbidden");
+      return NextResponse.redirect(url);
+    }
   }
 
   return NextResponse.next();
