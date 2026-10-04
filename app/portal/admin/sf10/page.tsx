@@ -213,7 +213,7 @@ export default function Sf10Page() {
                     onClick={() => void loadStudent(item.id)}
                   >
                     <strong>{item.full_name}</strong>
-                    <span>LRN {item.lrn ?? "Not set"}</span>
+                    <span>LRN {item.lrn ?? "Not Set"}</span>
                     <small>
                       Grade {item.grade_level ?? "—"} · {item.section ?? "No section"} ·{" "}
                       {item.sf10_profile_complete ? "Profile ready" : "Needs SF10 info"}
@@ -300,7 +300,7 @@ export default function Sf10Page() {
                         <label className={styles.wide}><span>Elementary School Address</span><input name="elementary_school_address" defaultValue={record.elementary_school_address ?? ""} /></label>
                         <label><span>Elementary General Average</span><input name="elementary_general_average" type="number" min="0" max="100" step="0.01" defaultValue={record.elementary_general_average ?? ""} /></label>
                         <label><span>Citation, if any</span><input name="elementary_citation" defaultValue={record.elementary_citation ?? ""} /></label>
-                        <label><span>Eligibility rating</span><input name="eligibility_rating" defaultValue={record.eligibility_rating ?? ""} /></label>
+                        <label><span>Eligibility Rating</span><input name="eligibility_rating" defaultValue={record.eligibility_rating ?? ""} /></label>
                         <label><span>Other Credential</span><input name="eligibility_other" defaultValue={record.eligibility_other ?? ""} /></label>
                         <label><span>Assessment Date</span><input name="assessment_date" type="date" defaultValue={record.assessment_date ?? ""} /></label>
                         <label className={styles.wide}><span>Testing Center</span><input name="testing_center" defaultValue={record.testing_center ?? ""} /></label>
