@@ -202,30 +202,26 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const adviserRows = await getRows(
+    const adviserRows = (await getRows(
       `section_advisers?school_year_id=eq.${encodeURIComponent(
         activeYear.id
       )}&teacher_id=eq.${encodeURIComponent(
         userId
-      )}&is_active=eq.true&select=section_id`,
+      )}&is_active=eq.true&select=section_id,assigned_at`,
       token
-    );
+    )) as Array<{ section_id: string; assigned_at: string }>;
 
-    const sectionIds = Array.from(
-      new Set(
-        (adviserRows ?? []).map((item: { section_id: string }) =>
-          String(item.section_id)
-        )
+    const sectionIds: string[] = Array.from(
+      new Set<string>(
+        (adviserRows ?? []).map((item) => String(item.section_id))
       )
     );
 
-    const adviserStartBySection = new Map(
-      (adviserRows ?? []).map(
-        (item: { section_id: string; assigned_at: string }) => [
-          String(item.section_id),
-          manilaDateFromTimestamp(item.assigned_at),
-        ]
-      )
+    const adviserStartBySection = new Map<string, string>(
+      (adviserRows ?? []).map((item) => [
+        String(item.section_id),
+        manilaDateFromTimestamp(item.assigned_at),
+      ])
     );
 
     if (sectionIds.length === 0) {
