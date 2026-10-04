@@ -10,6 +10,7 @@ import {
   Undo2,
 } from "lucide-react";
 import styles from "./grades.module.css";
+import { isTechnicalVocationalEducation } from "@/lib/subject-config";
 
 type Role = "student" | "teacher";
 type ActiveYear = { id: string; name: string; start_year: number; end_year: number };
@@ -53,6 +54,10 @@ type Grade = {
   school_year_id: string;
   term_no: number;
   term_grade: number;
+  music_grade: number | null;
+  arts_grade: number | null;
+  physical_education_grade: number | null;
+  health_grade: number | null;
   status: "draft" | "published";
   published_at: string | null;
   updated_at: string;
@@ -71,6 +76,38 @@ function sexGroup(value: string | null) {
   if (normalized === "m" || normalized === "male") return "Male";
   if (normalized === "f" || normalized === "female") return "Female";
   return "Unspecified";
+}
+
+function isMapeh(name?: string | null) {
+  return String(name ?? "").trim().toLowerCase() === "mapeh";
+}
+
+type MapehDraft = {
+  music: string;
+  arts: string;
+  physicalEducation: string;
+  health: string;
+};
+
+function emptyMapehDraft(): MapehDraft {
+  return { music: "", arts: "", physicalEducation: "", health: "" };
+}
+
+function computedMapehAverage(draft: MapehDraft) {
+  const values = [
+    draft.music,
+    draft.arts,
+    draft.physicalEducation,
+    draft.health,
+  ].map((value) => Number(value));
+  if (
+    values.some(
+      (value) => !Number.isInteger(value) || value < 0 || value > 100
+    )
+  ) {
+    return null;
+  }
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / 4);
 }
 
 function compareStudents(a: Student, b: Student) {
@@ -116,6 +153,7 @@ export default function GradesPage() {
   const [selectedAssignmentId, setSelectedAssignmentId] = useState("");
   const [selectedTerm, setSelectedTerm] = useState(1);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [mapehDrafts, setMapehDrafts] = useState<Record<string, MapehDraft>>({});
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState("");
   const [error, setError] = useState("");
@@ -172,9 +210,75 @@ export default function GradesPage() {
     [students]
   );
 
+  const gradebookAssignments = useMemo(
+    () =>
+      assignments.filter((assignment, index, all) => {
+        const subject = subjectMap.get(assignment.subject_id);
+        if (!isTechnicalVocationalEducation(subject?.name)) return true;
+        return (
+          all.findIndex(
+            (item) =>
+              item.section_id === assignment.section_id &&
+              item.subject_id === assignment.subject_id
+          ) === index
+        );
+      }),
+    [assignments, subjectMap]
+  );
+
   const selectedAssignment = assignments.find(
     (item) => item.id === selectedAssignmentId
   );
+
+  const selectedSubject = selectedAssignment
+    ? subjectMap.get(selectedAssignment.subject_id)
+    : null;
+  const selectedIsTve = isTechnicalVocationalEducation(selectedSubject?.name);
+  const selectedIsMapeh = isMapeh(selectedSubject?.name);
+
+  const selectedAssignmentIds = useMemo(() => {
+    if (!selectedAssignment) return [];
+    if (!selectedIsTve) return [selectedAssignment.id];
+    return assignments
+      .filter(
+        (item) =>
+          item.section_id === selectedAssignment.section_id &&
+          item.subject_id === selectedAssignment.subject_id
+      )
+      .map((item) => item.id);
+  }, [assignments, selectedAssignment, selectedIsTve]);
+
+  function gradeAssignmentIdForStudent(studentId: string) {
+    if (!selectedAssignment) return "";
+    if (!selectedIsTve) return selectedAssignment.id;
+
+    const enrollment = enrollments.find(
+      (item) =>
+        item.student_id === studentId &&
+        item.section_id === selectedAssignment.section_id
+    );
+    if (!enrollment?.tve_major) return "";
+
+    return (
+      assignments.find(
+        (item) =>
+          item.section_id === selectedAssignment.section_id &&
+          item.subject_id === selectedAssignment.subject_id &&
+          item.major === enrollment.tve_major
+      )?.id ?? ""
+    );
+  }
+
+  function savedGradeForStudent(studentId: string) {
+    const targetAssignmentId = gradeAssignmentIdForStudent(studentId);
+    if (!targetAssignmentId) return undefined;
+    return grades.find(
+      (item) =>
+        item.student_id === studentId &&
+        item.teacher_assignment_id === targetAssignmentId &&
+        item.term_no === selectedTerm
+    );
+  }
 
   const classStudents = useMemo(() => {
     if (!selectedAssignment) return [];
@@ -183,12 +287,19 @@ export default function GradesPage() {
         (item) =>
           item.section_id === selectedAssignment.section_id &&
           item.grade_level === selectedAssignment.grade_level &&
-          (!selectedAssignment.major || item.tve_major === selectedAssignment.major)
+          (selectedIsTve ||
+            !selectedAssignment.major ||
+            item.tve_major === selectedAssignment.major)
       )
       .map((item) => studentMap.get(item.student_id))
       .filter((item): item is Student => Boolean(item))
       .sort(compareStudents);
-  }, [selectedAssignment, enrollments, studentMap]);
+  }, [
+    selectedAssignment,
+    selectedIsTve,
+    enrollments,
+    studentMap,
+  ]);
 
   const classStudentGroups = useMemo(
     () =>
@@ -207,21 +318,53 @@ export default function GradesPage() {
     if (role !== "teacher" || !selectedAssignmentId) return;
 
     const next: Record<string, string> = {};
+    const nextMapeh: Record<string, MapehDraft> = {};
+
     for (const student of classStudents) {
-      const grade = grades.find(
-        (item) =>
-          item.student_id === student.id &&
-          item.teacher_assignment_id === selectedAssignmentId &&
-          item.term_no === selectedTerm
-      );
+      const targetAssignmentId = gradeAssignmentIdForStudent(student.id);
+      const grade = targetAssignmentId
+        ? grades.find(
+            (item) =>
+              item.student_id === student.id &&
+              item.teacher_assignment_id === targetAssignmentId &&
+              item.term_no === selectedTerm
+          )
+        : undefined;
+
       next[student.id] = grade ? String(grade.term_grade) : "";
+      nextMapeh[student.id] = grade
+        ? {
+            music:
+              grade.music_grade === null ? "" : String(grade.music_grade),
+            arts: grade.arts_grade === null ? "" : String(grade.arts_grade),
+            physicalEducation:
+              grade.physical_education_grade === null
+                ? ""
+                : String(grade.physical_education_grade),
+            health:
+              grade.health_grade === null ? "" : String(grade.health_grade),
+          }
+        : emptyMapehDraft();
     }
+
     setDrafts(next);
-  }, [role, selectedAssignmentId, selectedTerm, classStudents, grades]);
+    setMapehDrafts(nextMapeh);
+  }, [
+    role,
+    selectedAssignmentId,
+    selectedTerm,
+    classStudents,
+    grades,
+    selectedIsTve,
+    assignments,
+    enrollments,
+  ]);
 
   function assignmentLabel(assignment: Assignment) {
     const subject = subjectMap.get(assignment.subject_id);
-    return `Grade ${assignment.grade_level} · ${sectionMap.get(assignment.section_id) ?? "Unknown"} · ${subject?.name ?? "Unknown subject"}${assignment.major ? ` · ${assignment.major}` : ""}`;
+    const showMajor =
+      assignment.major && !isTechnicalVocationalEducation(subject?.name);
+    return `Grade ${assignment.grade_level} · ${sectionMap.get(assignment.section_id) ?? "Unknown"} · ${subject?.name ?? "Unknown subject"}${showMajor ? ` · ${assignment.major}` : ""}`;
   }
 
   async function saveGrade(studentId: string) {
@@ -241,6 +384,9 @@ export default function GradesPage() {
           studentId,
           termNo: selectedTerm,
           termGrade: drafts[studentId],
+          components: selectedIsMapeh
+            ? mapehDrafts[studentId] ?? emptyMapehDraft()
+            : undefined,
         }),
       });
 
@@ -298,16 +444,14 @@ export default function GradesPage() {
 
   const selectedTermGrades = grades.filter(
     (item) =>
-      item.teacher_assignment_id === selectedAssignmentId &&
+      selectedAssignmentIds.includes(item.teacher_assignment_id) &&
       item.term_no === selectedTerm
   );
 
   const allPublished =
     classStudents.length > 0 &&
-    classStudents.every((student) =>
-      selectedTermGrades.some(
-        (grade) => grade.student_id === student.id && grade.status === "published"
-      )
+    classStudents.every(
+      (student) => savedGradeForStudent(student.id)?.status === "published"
     );
 
   const studentReport = useMemo(() => {
@@ -420,7 +564,7 @@ export default function GradesPage() {
                   {assignments.length === 0 && (
                     <option value="">No Assigned Classes</option>
                   )}
-                  {assignments.map((assignment) => (
+                  {gradebookAssignments.map((assignment) => (
                     <option key={assignment.id} value={assignment.id}>
                       {assignmentLabel(assignment)}
                     </option>
@@ -447,8 +591,11 @@ export default function GradesPage() {
                 <div>
                   <h2>Term {selectedTerm}</h2>
                   <p>
-                    Enter a whole-number Term Grade from 0–100. Grades below 75
-                    are flagged for intervention.
+                    {selectedIsMapeh
+                      ? "Enter Music, Arts, Physical Education, and Health. The MAPEH Term Grade is calculated automatically."
+                      : selectedIsTve
+                        ? "Enter one TVE Term Grade per learner. TVE majors are handled automatically and are not shown in the Gradebook."
+                        : "Enter a whole-number Term Grade from 0–100. Grades below 75 are flagged for intervention."}
                   </p>
                 </div>
                 <div className={styles.publishActions}>
@@ -637,7 +784,10 @@ export default function GradesPage() {
                         </span>
                         <strong>
                           {subject?.name ?? "Subject"}
-                          {assignment.major ? ` · ${assignment.major}` : ""}
+                          {assignment.major &&
+                          !isTechnicalVocationalEducation(subject?.name)
+                            ? ` · ${assignment.major}`
+                            : ""}
                         </strong>
                       </div>
                       {finalGrade !== null ? (
