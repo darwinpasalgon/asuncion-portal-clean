@@ -145,11 +145,11 @@ export default function AttendancePage(){
   const attended=counts.present+counts.late;
   const rate=counts.total?Math.round(attended/counts.total*100):0;
 
-  if(loading)return <main className={styles.loading}><ClipboardCheck size={34}/><strong>Loading attendance…</strong></main>;
+  if(loading)return <main className={styles.loading}><ClipboardCheck size={34}/><strong>Loading Attendance…</strong></main>;
 
   return <main className={styles.page}><div className={styles.shell}>
     <nav className={styles.topActions}>
-      <a href="/portal" className={styles.topLink}><ArrowLeft size={16}/>Back to portal</a>
+      <a href="/portal" className={styles.topLink}><ArrowLeft size={16}/>Back to Portal</a>
     </nav>
 
     <header className={styles.header}>
@@ -170,7 +170,7 @@ export default function AttendancePage(){
       {sections.length===0
         ?<section className={styles.emptyPanel}>
           <UserCheck size={30}/>
-          <strong>No adviser section assigned</strong>
+          <strong>No Adviser Section Assigned</strong>
           <p>An Administrator must assign you as the Attendance Teacher / Adviser for a section before you can record daily attendance.</p>
         </section>
         :<>
@@ -182,7 +182,7 @@ export default function AttendancePage(){
               </select>
             </label>
             <label><span>Date</span><input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
-            <button className={styles.loadButton} onClick={()=>void load(date)}><CalendarDays size={16}/>Load date</button>
+            <button className={styles.loadButton} onClick={()=>void load(date)}><CalendarDays size={16}/>Load Date</button>
           </section>
 
           <section className={styles.panel}>
@@ -192,7 +192,7 @@ export default function AttendancePage(){
                 <p>{formatDate(date)+" · "+roster.length+" enrolled student"+(roster.length===1?"":"s")}</p>
               </div>
               <div className={styles.actions}>
-                <button className={styles.markAll} onClick={markAllPresent}><CheckCircle2 size={16}/>Mark all Present</button>
+                <button className={styles.markAll} onClick={markAllPresent}><CheckCircle2 size={16}/>Mark All Present</button>
                 <button className={styles.saveAll} disabled={working||!roster.length} onClick={()=>void save()}><Save size={16}/>{working?"Saving…":"Save attendance"}</button>
               </div>
             </div>
