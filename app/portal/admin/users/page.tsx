@@ -382,12 +382,12 @@ export default function UsersAccountsPage() {
         <nav className={styles.topbar}>
           <a href="/portal">
             <ArrowLeft size={16} />
-            Back to portal
+            Back to Portal
           </a>
           <div>
-            <a href="/portal/admin/accounts">Pending approvals</a>
-            <a href="/portal/admin/masterlist">Bulk account import</a>
-            <a href="/portal/admin/password-resets">Password resets</a>
+            <a href="/portal/admin/accounts">Pending Approvals</a>
+            <a href="/portal/admin/masterlist">Bulk Account Import</a>
+            <a href="/portal/admin/password-resets">Password Resets</a>
           </div>
         </nav>
 
@@ -404,7 +404,7 @@ export default function UsersAccountsPage() {
             <ShieldCheck size={18} />
             <div>
               <small>ACTIVE SCHOOL YEAR</small>
-              <strong>{activeYear?.name ?? "Not configured"}</strong>
+              <strong>{activeYear?.name ?? "Not Configured"}</strong>
             </div>
           </div>
         </header>
