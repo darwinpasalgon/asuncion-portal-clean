@@ -53,9 +53,6 @@ type AttendanceRow=Student&{
   absent:number;
   absent_morning:number;
   cutting_classes:number;
-  transferred_in:number;
-  transferred_out:number;
-  dropped:number;
   total:number;
 };
 type Counts={
@@ -79,9 +76,6 @@ type AttendanceTotals={
   absent:number;
   absent_morning:number;
   cutting_classes:number;
-  transferred_in:number;
-  transferred_out:number;
-  dropped:number;
   total:number;
 };
 type ReportTab="overview"|"grades"|"intervention"|"attendance"|"classlist";
@@ -146,8 +140,7 @@ export default function ReportsPage(){
     advancing:0,benchmarking:0,connecting:0,developing:0,emerging:0,
   });
   const [attendanceTotals,setAttendanceTotals]=useState<AttendanceTotals>({
-    present:0,absent:0,absent_morning:0,cutting_classes:0,
-    transferred_in:0,transferred_out:0,dropped:0,total:0,
+    present:0,absent:0,absent_morning:0,cutting_classes:0,total:0,
   });
   const [grade,setGrade]=useState("");
   const [section,setSection]=useState("");
@@ -295,11 +288,10 @@ export default function ReportsPage(){
     if(tab==="attendance"){
       downloadCsv(
         prefix+"-attendance-report.csv",
-        ["LRN","Learner","Grade","Section","Recorded Days","Present","Absent","Absent in the Morning","Cutting Classes","Transferred In","Transferred Out","Dropped"],
+        ["LRN","Learner","Grade","Section","Recorded Attendance Days","Present","Absent","Absent in the Morning","Cutting Classes"],
         attendanceSorted.map(row=>[
           row.lrn,row.full_name,row.grade_level,row.section_name,row.total,
           row.present,row.absent,row.absent_morning,row.cutting_classes,
-          row.transferred_in,row.transferred_out,row.dropped,
         ])
       );
       return;
@@ -330,9 +322,6 @@ export default function ReportsPage(){
         ["Attendance Absent",attendanceTotals.absent],
         ["Attendance Absent in the Morning",attendanceTotals.absent_morning],
         ["Attendance Cutting Classes",attendanceTotals.cutting_classes],
-        ["Attendance Transferred In",attendanceTotals.transferred_in],
-        ["Attendance Transferred Out",attendanceTotals.transferred_out],
-        ["Attendance Dropped",attendanceTotals.dropped],
       ]
     );
   }
@@ -410,11 +399,8 @@ export default function ReportsPage(){
               <div><span>Absent</span><strong>{attendanceTotals.absent}</strong></div>
               <div><span>Absent in the Morning</span><strong>{attendanceTotals.absent_morning}</strong></div>
               <div><span>Cutting Classes</span><strong>{attendanceTotals.cutting_classes}</strong></div>
-              <div><span>Transferred In</span><strong>{attendanceTotals.transferred_in}</strong></div>
-              <div><span>Transferred Out</span><strong>{attendanceTotals.transferred_out}</strong></div>
-              <div><span>Dropped</span><strong>{attendanceTotals.dropped}</strong></div>
             </div>
-            <p className={styles.note}>{attendanceTotals.total} total recorded student-day attendance entries in this date range.</p>
+            <p className={styles.note}>{attendanceTotals.total} recorded daily attendance entries in this date range. Transfer and Dropped records are treated as learner movement and are excluded from attendance totals.</p>
           </section>
         </div>
       </div>}
@@ -458,16 +444,16 @@ export default function ReportsPage(){
       </section>}
 
       {tab==="attendance"&&<section className={styles.panel}>
-        <div className={styles.panelHead}><div><h2>Attendance Summary</h2><p>Counts use the same attendance statuses available to Section Advisers.</p></div></div>
+        <div className={styles.panelHead}><div><h2>Attendance Summary</h2><p>Daily attendance includes Present, Absent, Absent in the Morning, and Cutting Classes only. Learner movement records are excluded.</p></div></div>
         <div className={styles.tableWrap}>
           <table>
-            <thead><tr><th>LRN</th><th>Learner</th><th>Class</th><th>Recorded</th><th>Present</th><th>Absent</th><th>Absent AM</th><th>Cutting Classes</th><th>Transferred In</th><th>Transferred Out</th><th>Dropped</th></tr></thead>
+            <thead><tr><th>LRN</th><th>Learner</th><th>Class</th><th>Recorded Attendance Days</th><th>Present</th><th>Absent</th><th>Absent AM</th><th>Cutting Classes</th></tr></thead>
             <tbody>
               {attendanceSorted.map(row=><tr key={row.student_id}>
                 <td>{row.lrn||"—"}</td><td><strong>{row.full_name}</strong></td><td>Grade {row.grade_level} · {row.section_name}</td>
-                <td>{row.total}</td><td>{row.present}</td><td>{row.absent}</td><td>{row.absent_morning}</td><td>{row.cutting_classes}</td><td>{row.transferred_in}</td><td>{row.transferred_out}</td><td>{row.dropped}</td>
+                <td>{row.total}</td><td>{row.present}</td><td>{row.absent}</td><td>{row.absent_morning}</td><td>{row.cutting_classes}</td>
               </tr>)}
-              {attendanceSorted.length===0&&<tr><td colSpan={11} className={styles.emptyCell}>No enrolled students match these filters.</td></tr>}
+              {attendanceSorted.length===0&&<tr><td colSpan={8} className={styles.emptyCell}>No enrolled students match these filters.</td></tr>}
             </tbody>
           </table>
         </div>
