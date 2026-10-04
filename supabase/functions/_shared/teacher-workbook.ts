@@ -14,6 +14,38 @@ const months: Record<string, number> = {
   dec: 12, december: 12,
 };
 
+function bachelorDegreeFields(value: unknown, majorValue: unknown, minorValue: unknown) {
+  const raw = text(value).toUpperCase();
+  let bachelors_degree = "";
+  let bachelors_degree_other = "";
+
+  if (["BACHELOR OF ELEMENTARY EDUCATION","BEED","BACHELOR OF ELEMENTARY EDUCATION (BEED)"].includes(raw)) {
+    bachelors_degree = "BACHELOR OF ELEMENTARY EDUCATION (BEED)";
+  } else if (["BACHELOR OF SECONDARY EDUCATION","BACHELOR IN SECONDARY EDUCATION","BACHELOR OF SCIENCE IN SECONDARY EDUCATION","BACHELOR IN SCIENCE SECONDARY EDUCATION","BSED","BSE","BACHELOR OF SECONDARY EDUCATION (BSED)"].includes(raw)) {
+    bachelors_degree = "BACHELOR OF SECONDARY EDUCATION (BSED)";
+  } else if (["BACHELOR OF EARLY CHILDHOOD EDUCATION","BECED","BACHELOR OF EARLY CHILDHOOD EDUCATION (BECED)"].includes(raw)) {
+    bachelors_degree = "BACHELOR OF EARLY CHILDHOOD EDUCATION (BECED)";
+  } else if (["BACHELOR OF SPECIAL NEEDS EDUCATION","BSNED","BACHELOR OF SPECIAL NEEDS EDUCATION (BSNED)"].includes(raw)) {
+    bachelors_degree = "BACHELOR OF SPECIAL NEEDS EDUCATION (BSNED)";
+  } else if (["BACHELOR OF PHYSICAL EDUCATION","BPED","BACHELOR OF PHYSICAL EDUCATION (BPED)"].includes(raw)) {
+    bachelors_degree = "BACHELOR OF PHYSICAL EDUCATION (BPED)";
+  } else if (["BACHELOR OF TECHNOLOGY AND LIVELIHOOD EDUCATION","BTLED","BACHELOR OF TECHNOLOGY AND LIVELIHOOD EDUCATION (BTLED)"].includes(raw)) {
+    bachelors_degree = "BACHELOR OF TECHNOLOGY AND LIVELIHOOD EDUCATION (BTLED)";
+  } else if (["BACHELOR OF TECHNICAL-VOCATIONAL TEACHER EDUCATION","BACHELOR OF TECHNICAL TEACHER EDUCATION","BTVTED","BACHELOR OF TECHNICAL-VOCATIONAL TEACHER EDUCATION (BTVTED)"].includes(raw)) {
+    bachelors_degree = "BACHELOR OF TECHNICAL-VOCATIONAL TEACHER EDUCATION (BTVTED)";
+  } else if (raw) {
+    bachelors_degree = "OTHER BACHELOR'S DEGREE";
+    bachelors_degree_other = raw;
+  }
+
+  return {
+    bachelors_degree,
+    bachelors_degree_other,
+    major: text(majorValue).toUpperCase(),
+    minor: text(minorValue).toUpperCase(),
+  };
+}
+
 function legacyGraduateFields(value: unknown) {
   const raw = text(value).toUpperCase();
   if (!raw) {
@@ -102,6 +134,9 @@ export function parseTeacherWorkbook(bytes: Uint8Array) {
       const map: Record<number, string> = { 1: "last_name", 2: "first_name", 3: "middle_name", 7: "additional_units", 8: "graduate_course", 9: "graduate_units", 10: "bachelors_degree", 11: "major", 12: "minor", 13: "education_units_major", 14: "education_units_minor", 15: "skills", 16: "philsys_number", 17: "religion", 18: "ethnic_group" };
       for (const [col, key] of Object.entries(map)) personal[key] = text(row[Number(col)]).toUpperCase();
       Object.assign(personal, legacyGraduateFields(row[9]));
+      Object.assign(personal, bachelorDegreeFields(row[10], row[11], row[12]));
+      personal.bsed_earning_units =
+        text(row[13]) || text(row[14]) ? "YES" : "NO";
       const normalizedPersonal = normalizeTeacherNameFields(personal);
       const official = {
         appointment_day_month_source: text(row[5]),
