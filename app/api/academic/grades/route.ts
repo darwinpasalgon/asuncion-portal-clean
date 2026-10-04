@@ -159,6 +159,13 @@ export async function GET(request: NextRequest) {
           ) ?? null
         : null;
 
+    const adviserSectionDetails =
+      profile.role === "teacher"
+        ? (sections ?? []).filter((item: { id: string }) =>
+            advisedSections.has(item.id)
+          )
+        : [];
+
     const gradeAssignments =
       profile.role === "teacher"
         ? (assignments ?? []).filter(
@@ -177,6 +184,7 @@ export async function GET(request: NextRequest) {
       profile,
       activeYear,
       isSectionAdviser: profile.role === "teacher" && advisedSections.size > 0,
+      adviserSections: adviserSectionDetails,
       assignments: gradeAssignments,
       sections,
       subjects,
