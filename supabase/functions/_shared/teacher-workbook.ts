@@ -14,6 +14,37 @@ const months: Record<string, number> = {
   dec: 12, december: 12,
 };
 
+function legacyGraduateFields(value: unknown) {
+  const raw = text(value).toUpperCase();
+  if (!raw) {
+    return {
+      graduate_status: "",
+      graduate_units_earned: "",
+      graduate_car_completed: "NO",
+    };
+  }
+  if (["GRADUATED", "GRADUATE", "GRAD"].includes(raw)) {
+    return {
+      graduate_status: "GRADUATED",
+      graduate_units_earned: "",
+      graduate_car_completed: "NO",
+    };
+  }
+  if (["N/A", "NA", "NONE", "NOT APPLICABLE"].includes(raw)) {
+    return {
+      graduate_status: "NONE",
+      graduate_units_earned: "",
+      graduate_car_completed: "NO",
+    };
+  }
+  const units = raw.match(/(\d+(?:\.\d+)?)/)?.[1] ?? "";
+  return {
+    graduate_status: "ON GOING",
+    graduate_units_earned: units,
+    graduate_car_completed: raw.includes("CAR") ? "YES" : "NO",
+  };
+}
+
 function appointmentDate(dayMonthValue: unknown, yearValue: unknown) {
   const dayMonth = text(dayMonthValue);
   const year = Number(text(yearValue));
@@ -70,6 +101,7 @@ export function parseTeacherWorkbook(bytes: Uint8Array) {
       const personal: Record<string, string> = {};
       const map: Record<number, string> = { 1: "last_name", 2: "first_name", 3: "middle_name", 7: "additional_units", 8: "graduate_course", 9: "graduate_units", 10: "bachelors_degree", 11: "major", 12: "minor", 13: "education_units_major", 14: "education_units_minor", 15: "skills", 16: "philsys_number", 17: "religion", 18: "ethnic_group" };
       for (const [col, key] of Object.entries(map)) personal[key] = text(row[Number(col)]).toUpperCase();
+      Object.assign(personal, legacyGraduateFields(row[9]));
       const normalizedPersonal = normalizeTeacherNameFields(personal);
       const official = {
         appointment_day_month_source: text(row[5]),
