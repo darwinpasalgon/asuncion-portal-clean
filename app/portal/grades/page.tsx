@@ -60,6 +60,7 @@ function descriptor(grade: number) {
 export default function GradesPage() {
   const [role, setRole] = useState<Role | null>(null);
   const [isSectionAdviser, setIsSectionAdviser] = useState(false);
+  const [adviserSections, setAdviserSections] = useState<Section[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeYear, setActiveYear] = useState<ActiveYear | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -90,6 +91,7 @@ export default function GradesPage() {
 
       setRole(result.role ?? null);
       setIsSectionAdviser(Boolean(result.isSectionAdviser));
+      setAdviserSections(result.adviserSections ?? []);
       setProfile(result.profile ?? null);
       setActiveYear(result.activeYear ?? null);
       setAssignments(result.assignments ?? []);
@@ -289,7 +291,7 @@ export default function GradesPage() {
       <div className={styles.shell}>
         <nav className={styles.topActions}>
           <a href="/portal" className={styles.topLink}>
-            <ArrowLeft size={16} /> Back to portal
+            <ArrowLeft size={16} /> Back to Portal
           </a>
         </nav>
 
@@ -327,11 +329,35 @@ export default function GradesPage() {
 
         {role === "teacher" && isSectionAdviser && (
           <>
+            {assignments.length === 0 && adviserSections.length > 0 && (
+              <section className={styles.gradePanel}>
+                <div className={styles.panelHeading}>
+                  <div>
+                    <h2>
+                      {adviserSections
+                        .map((section) => `Grade ${section.grade_level} · ${section.name}`)
+                        .join(", ")}
+                    </h2>
+                    <p>Your Section Adviser assignment is active for the current school year.</p>
+                  </div>
+                </div>
+                <div className={styles.empty}>
+                  <strong>Subjects & Teachers Not Yet Configured</strong>
+                  <span>
+                    This section is correctly assigned to you as Adviser, but it does not have
+                    active Subject/Teacher assignments yet. Once the Administrator configures the
+                    subjects for this section, they will appear here for grade encoding.
+                  </span>
+                </div>
+              </section>
+            )}
+
             <section className={styles.controls}>
               <label>
                 <span>Assigned Class</span>
                 <select
                   value={selectedAssignmentId}
+                  disabled={assignments.length === 0}
                   onChange={(event) => setSelectedAssignmentId(event.target.value)}
                 >
                   {assignments.length === 0 && (
