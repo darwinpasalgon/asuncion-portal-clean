@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
@@ -18,6 +18,42 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    async function restoreExistingSession() {
+      try {
+        const response = await fetch("/api/auth/me", {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        const result = await response.json().catch(() => ({}));
+
+        if (!active) return;
+
+        if (response.ok && result.profile) {
+          if (result.profile.must_change_password) {
+            router.replace("/change-password");
+          } else {
+            router.replace("/portal");
+          }
+          return;
+        }
+      } catch {
+        // If there is no reusable session, show the normal sign-in form.
+      } finally {
+        if (active) setCheckingSession(false);
+      }
+    }
+
+    restoreExistingSession();
+
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -59,6 +95,26 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (checkingSession) {
+    return (
+      <main className={styles.pageCompact}>
+        <div className={styles.authShell}>
+          <div className={styles.authHeader}>
+            <img src="/school-logo.png" alt="" />
+            <div>
+              <strong>ASUNCION NHS</strong>
+              <span>Academic Portal</span>
+            </div>
+          </div>
+          <div className={styles.authCard}>
+            <h1>Opening Your Portal...</h1>
+            <p>Checking your saved sign-in securely.</p>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   return (
