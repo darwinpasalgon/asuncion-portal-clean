@@ -136,6 +136,31 @@ type AdviserAttention = {
   totalAlertTypes: number;
 };
 
+type PersonnelAttentionPerson = {
+  id: string;
+  portal_user_id?: string | null;
+  full_name: string;
+  email?: string | null;
+  position?: string | null;
+  personnel_type: "teaching" | "non_teaching";
+  missing_fields: string[];
+};
+
+type PersonnelProfileAttention = {
+  self: {
+    personnel_type: "teaching" | "non_teaching";
+    full_name?: string;
+    missing_fields: string[];
+    complete: boolean;
+  } | null;
+  can_manage: boolean;
+  incomplete_teaching: PersonnelAttentionPerson[];
+  incomplete_non_teaching: PersonnelAttentionPerson[];
+  teaching_count: number;
+  non_teaching_count: number;
+  total_incomplete: number;
+};
+
 type ClassScheduleEntry = {
   id: string;
   day_of_week: number;
@@ -774,6 +799,8 @@ export default function PortalPage() {
     totalAlertTypes: 0,
   });
   const [adviserAttentionLoading, setAdviserAttentionLoading] = useState(false);
+  const [personnelAttention, setPersonnelAttention] = useState<PersonnelProfileAttention | null>(null);
+  const [personnelAttentionLoading, setPersonnelAttentionLoading] = useState(false);
   const [majorSaving, setMajorSaving] = useState("");
   const [classSchedules, setClassSchedules] = useState<ClassScheduleEntry[]>([]);
   const [classSchedulesLoading, setClassSchedulesLoading] = useState(false);
@@ -801,6 +828,24 @@ export default function PortalPage() {
           setProfile(loadedProfile);
           setAcademicContext((result.academicContext ?? null) as AcademicContext | null);
           setAdminPermissions((result.adminPermissions ?? []) as string[]);
+
+          if (loadedProfile.role !== "student") {
+            setPersonnelAttentionLoading(true);
+            try {
+              const attentionResponse = await fetch("/api/teacher-profiles", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "profile_attention" }),
+                cache: "no-store",
+              });
+              const attentionResult = await attentionResponse.json().catch(() => ({}));
+              if (active && attentionResponse.ok) {
+                setPersonnelAttention(attentionResult as PersonnelProfileAttention);
+              }
+            } finally {
+              if (active) setPersonnelAttentionLoading(false);
+            }
+          }
 
           if (loadedProfile.role === "teacher") {
             setTeacherAssignmentsLoading(true);
@@ -1046,6 +1091,138 @@ export default function PortalPage() {
 
           {page === "Overview" && (
             <div className="real-overview-grid">
+              {profile.role !== "student" &&
+                (personnelAttentionLoading ||
+                  Boolean(personnelAttention?.self?.missing_fields?.length) ||
+                  Boolean(personnelAttention?.can_manage && personnelAttention.total_incomplete > 0)) && (
+                  <section className="panel real-adviser-attention real-personnel-attention">
+                    <div className="real-attention-heading">
+                      <div className="real-attention-title">
+                        <span className="real-attention-icon">
+                          <UserRound size={19} />
+                        </span>
+                        <div>
+                          <h2>Personnel Profile Attention</h2>
+                          <p>Required personnel information that still needs completion.</p>
+                        </div>
+                      </div>
+                      {!personnelAttentionLoading && personnelAttention && (
+                        <span className="real-attention-count">
+                          {personnelAttention.can_manage
+                            ? `${personnelAttention.total_incomplete} incomplete`
+                            : `${personnelAttention.self?.missing_fields.length ?? 0} required`}
+                        </span>
+                      )}
+                    </div>
+
+                    {personnelAttentionLoading ? (
+                      <div className="real-attention-loading">
+                        Checking required personnel profile information…
+                      </div>
+                    ) : personnelAttention?.self &&
+                      personnelAttention.self.missing_fields.length > 0 ? (
+                      <div className="real-attention-list">
+                        <article className="real-attention-item warning">
+                          <span className="real-attention-item-icon">
+                            <CircleAlert size={18} />
+                          </span>
+                          <div className="real-attention-copy">
+                            <div>
+                              <strong>Complete Your Personnel Profile</strong>
+                              <span className="real-attention-badge">
+                                {personnelAttention.self.missing_fields.length}
+                              </span>
+                            </div>
+                            <p>
+                              Missing: {personnelAttention.self.missing_fields.join(", ")}
+                            </p>
+                          </div>
+                          <a href="/portal/teacher-profile">
+                            Complete My Profile
+                            <ChevronRight size={15} />
+                          </a>
+                        </article>
+                      </div>
+                    ) : null}
+
+                    {!personnelAttentionLoading &&
+                      personnelAttention?.can_manage &&
+                      personnelAttention.total_incomplete > 0 && (
+                        <div className="real-attention-list">
+                          {personnelAttention.teaching_count > 0 && (
+                            <article className="real-attention-item warning">
+                              <span className="real-attention-item-icon">
+                                <CircleAlert size={18} />
+                              </span>
+                              <div className="real-attention-copy">
+                                <div>
+                                  <strong>Teaching Personnel Profiles Incomplete</strong>
+                                  <span className="real-attention-badge">
+                                    {personnelAttention.teaching_count}
+                                  </span>
+                                </div>
+                                <p>
+                                  Required profile information is still missing for these Teaching Personnel.
+                                </p>
+                                <div className="real-personnel-list">
+                                  {personnelAttention.incomplete_teaching.slice(0, 8).map((person) => (
+                                    <div key={person.id}>
+                                      <strong>{person.full_name}</strong>
+                                      <span>{person.position || "Teaching Personnel"}</span>
+                                      <small>Missing: {person.missing_fields.join(", ")}</small>
+                                    </div>
+                                  ))}
+                                  {personnelAttention.teaching_count > 8 && (
+                                    <small className="real-personnel-more">
+                                      +{personnelAttention.teaching_count - 8} more Teaching Personnel
+                                    </small>
+                                  )}
+                                </div>
+                              </div>
+                              <a href="/portal/admin/teacher-profiles">
+                                Open HR Profiles
+                                <ChevronRight size={15} />
+                              </a>
+                            </article>
+                          )}
+
+                          {personnelAttention.non_teaching_count > 0 && (
+                            <article className="real-attention-item warning">
+                              <span className="real-attention-item-icon">
+                                <CircleAlert size={18} />
+                              </span>
+                              <div className="real-attention-copy">
+                                <div>
+                                  <strong>Non-Teaching Personnel Profiles Incomplete</strong>
+                                  <span className="real-attention-badge">
+                                    {personnelAttention.non_teaching_count}
+                                  </span>
+                                </div>
+                                <p>
+                                  Required profile information is still missing for these Non-Teaching Personnel.
+                                </p>
+                                <div className="real-personnel-list">
+                                  {personnelAttention.incomplete_non_teaching.slice(0, 8).map((person) => (
+                                    <div key={person.id}>
+                                      <strong>{person.full_name}</strong>
+                                      <span>{person.position || "Non-Teaching Personnel"}</span>
+                                      <small>Missing: {person.missing_fields.join(", ")}</small>
+                                    </div>
+                                  ))}
+                                  {personnelAttention.non_teaching_count > 8 && (
+                                    <small className="real-personnel-more">
+                                      +{personnelAttention.non_teaching_count - 8} more Non-Teaching Personnel
+                                    </small>
+                                  )}
+                                </div>
+                              </div>
+                            </article>
+                          )}
+                        </div>
+                      )}
+                  </section>
+                )}
+
               {profile.role === "teacher" &&
                 (adviserAttentionLoading || adviserSections.length > 0) && (
                   <section className="panel real-adviser-attention">
