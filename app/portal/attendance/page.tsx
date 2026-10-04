@@ -20,8 +20,16 @@ type Adviser={id:string;section_id:string;teacher_id:string};
 type Section={id:string;grade_level:number;name:string};
 type Enrollment={id:string;student_id:string;grade_level:number;section_id:string|null};
 type Student={id:string;full_name:string;lrn:string|null;last_name:string|null;first_name:string|null;middle_name:string|null;name_extension:string|null;sex:string|null};
-type RecordRow={id?:string;student_id:string;section_id:string;attendance_date:string;status:"present"|"absent"|"late"|"excused";note:string|null};
-type Draft={status:"present"|"absent"|"late"|"excused";note:string};
+type AttendanceStatus =
+  | "present"
+  | "absent"
+  | "absent_morning"
+  | "cutting_classes"
+  | "transferred_in"
+  | "transferred_out"
+  | "dropped";
+type RecordRow={id?:string;student_id:string;section_id:string;attendance_date:string;status:AttendanceStatus;note:string|null};
+type Draft={status:AttendanceStatus;note:string};
 
 function localDate(){
   const d=new Date();
@@ -33,6 +41,16 @@ function formatDate(value:string){
   const d=new Date(value+"T00:00:00");
   return d.toLocaleDateString([], {year:"numeric",month:"short",day:"numeric",weekday:"short"});
 }
+
+const ATTENDANCE_LABELS:Record<AttendanceStatus,string>={
+  present:"Present",
+  absent:"Absent",
+  absent_morning:"Absent in the Morning",
+  cutting_classes:"Cutting Classes",
+  transferred_in:"Transferred In",
+  transferred_out:"Transferred Out",
+  dropped:"Dropped",
+};
 
 function sexGroup(value:string|null){
   const normalized=(value??"").trim().toLowerCase();
@@ -168,14 +186,14 @@ export default function AttendancePage(){
     return {
       total:rows.length,
       present:rows.filter(a=>a.status==="present").length,
-      late:rows.filter(a=>a.status==="late").length,
       absent:rows.filter(a=>a.status==="absent").length,
-      excused:rows.filter(a=>a.status==="excused").length,
+      absentMorning:rows.filter(a=>a.status==="absent_morning").length,
+      cutting:rows.filter(a=>a.status==="cutting_classes").length,
+      transferredIn:rows.filter(a=>a.status==="transferred_in").length,
+      transferredOut:rows.filter(a=>a.status==="transferred_out").length,
+      dropped:rows.filter(a=>a.status==="dropped").length,
     };
   },[role,attendance,sectionId]);
-
-  const attended=counts.present+counts.late;
-  const rate=counts.total?Math.round(attended/counts.total*100):0;
 
   if(loading)return <main className={styles.loading}><ClipboardCheck size={34}/><strong>Loading Attendance…</strong></main>;
 
@@ -259,8 +277,11 @@ export default function AttendancePage(){
                         <select className={styles[d.status]} value={d.status} onChange={e=>update(student.id,"status",e.target.value)}>
                           <option value="present">Present</option>
                           <option value="absent">Absent</option>
-                          <option value="late">Late</option>
-                          <option value="excused">Excused</option>
+                          <option value="absent_morning">Absent in the Morning</option>
+                          <option value="cutting_classes">Cutting Classes</option>
+                          <option value="transferred_in">Transferred In</option>
+                          <option value="transferred_out">Transferred Out</option>
+                          <option value="dropped">Dropped</option>
                         </select>
                         <input maxLength={300} placeholder="Optional note" value={d.note} onChange={e=>update(student.id,"note",e.target.value)}/>
                       </article>;
@@ -276,9 +297,10 @@ export default function AttendancePage(){
       <div className={styles.summary}>
         <article><ClipboardCheck size={22}/><span>Recorded Days</span><strong>{counts.total}</strong></article>
         <article><CheckCircle2 size={22}/><span>Present</span><strong>{counts.present}</strong></article>
-        <article><Clock3 size={22}/><span>Late</span><strong>{counts.late}</strong></article>
-        <article><XCircle size={22}/><span>Absent / Excused</span><strong>{counts.absent+" / "+counts.excused}</strong></article>
-        <article><UserCheck size={22}/><span>Attendance Rate</span><strong>{rate+"%"}</strong><small>Present + Late ÷ recorded days</small></article>
+        <article><XCircle size={22}/><span>Absent</span><strong>{counts.absent}</strong></article>
+        <article><Clock3 size={22}/><span>Absent in the Morning</span><strong>{counts.absentMorning}</strong></article>
+        <article><XCircle size={22}/><span>Cutting Classes</span><strong>{counts.cutting}</strong></article>
+        <article><UserCheck size={22}/><span>Movement</span><strong>{counts.transferredIn+" / "+counts.transferredOut+" / "+counts.dropped}</strong><small>Transferred In / Out / Dropped</small></article>
       </div>
 
       <section className={styles.panel}>
@@ -288,7 +310,7 @@ export default function AttendancePage(){
           :<div className={styles.history}>
             {attendance.map((a,i)=><article key={a.id??i}>
               <div><strong>{formatDate(a.attendance_date)}</strong><small>{a.note||"No note"}</small></div>
-              <span className={styles[a.status]}>{a.status[0].toUpperCase()+a.status.slice(1)}</span>
+              <span className={styles[a.status]}>{ATTENDANCE_LABELS[a.status]}</span>
             </article>)}
           </div>}
       </section>
