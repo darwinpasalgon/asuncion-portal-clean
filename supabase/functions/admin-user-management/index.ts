@@ -15,6 +15,7 @@ const json = (body: Record<string, unknown>, status = 200) =>
 const teachingPositions = new Set([
   "TEACHER I", "TEACHER II", "TEACHER III", "TEACHER IV", "TEACHER V", "TEACHER VI", "TEACHER VII",
   "MASTER TEACHER I", "MASTER TEACHER II", "MASTER TEACHER III", "MASTER TEACHER IV", "MASTER TEACHER V",
+  "HEAD TEACHER I", "HEAD TEACHER II", "HEAD TEACHER III", "HEAD TEACHER IV", "HEAD TEACHER V", "HEAD TEACHER VI",
 ]);
 
 const normalizePhone = (input: string) => {
