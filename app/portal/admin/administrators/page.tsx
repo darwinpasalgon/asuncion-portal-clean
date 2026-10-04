@@ -38,19 +38,19 @@ type NonTeachingPersonnel = {
 };
 
 const customPermissions = [
-  ["accounts.manage", "Account approvals"],
-  ["users.manage", "Users & accounts"],
-  ["bulk_import.manage", "Bulk account import"],
-  ["school_setup.manage", "School setup"],
-  ["teaching.manage", "Subjects & teachers"],
-  ["schedules.manage", "Class schedules"],
+  ["accounts.manage", "Account Approvals"],
+  ["users.manage", "Users & Accounts"],
+  ["bulk_import.manage", "Bulk Account Import"],
+  ["school_setup.manage", "School Setup"],
+  ["teaching.manage", "Subjects & Teachers"],
+  ["schedules.manage", "Class Schedules"],
   ["attendance.manage", "Attendance"],
-  ["reports.view", "Reports & analytics"],
+  ["reports.view", "Reports & Analytics"],
   ["announcements.manage", "Announcements"],
-  ["resources.manage", "Learning resources"],
-  ["password_resets.manage", "Password resets"],
-  ["sf10.manage", "SF10 learner records"],
-  ["hr.manage", "Human Resources / Personnel profiles"],
+  ["resources.manage", "Learning Resources"],
+  ["password_resets.manage", "Password Resets"],
+  ["sf10.manage", "SF10 Learner Records"],
+  ["hr.manage", "Human Resources / Personnel Profiles"],
 ] as const;
 
 function roleName(admin: Administrator) {
@@ -213,7 +213,7 @@ export default function AdministratorsPage() {
               Registrar access is limited to SF10 records. Additional administrative permissions can be assigned later.
             </p>
           </div>
-          <div className={styles.superBadge}><ShieldCheck size={20} />Super Administrator only</div>
+          <div className={styles.superBadge}><ShieldCheck size={20} />Super Administrator Only</div>
         </header>
 
         {error && <div className={styles.error}>{error}</div>}
@@ -288,7 +288,7 @@ export default function AdministratorsPage() {
                           }, 0);
                         }}
                       >
-                        <UserPlus size={15} />Set up access
+                        <UserPlus size={15} />Set Up Access
                       </button>
                     )}
                   </div>
@@ -326,7 +326,7 @@ export default function AdministratorsPage() {
                     setPermissions([]);
                   }}
                 >
-                  Clear selection
+                  Clear Selection
                 </button>
               </div>
             )}
