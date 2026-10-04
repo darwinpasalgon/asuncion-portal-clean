@@ -44,6 +44,7 @@ type Page =
   | "Learning resources"
   | "Students"
   | "Teaching assignments"
+  | "School forms"
   | "School setup";
 
 type AcademicContext = {
@@ -188,6 +189,12 @@ const commonItems = {
     icon: Users,
     group: "ADVISER TOOLS",
   },
+  schoolForms: {
+    name: "School forms" as Page,
+    label: "School Forms",
+    icon: FileSpreadsheet,
+    group: "ADVISER TOOLS",
+  },
   teachingAssignments: {
     name: "Teaching assignments" as Page,
     label: "My Teaching Assignments",
@@ -210,6 +217,7 @@ const navigation: Record<Role, NavigationItem[]> = {
     commonItems.students,
     { ...commonItems.grades, group: "ADVISER TOOLS" },
     { ...commonItems.attendance, group: "ADVISER TOOLS" },
+    commonItems.schoolForms,
     commonItems.teachingAssignments,
     { ...commonItems.schedule, group: "TEACHING" },
     { ...commonItems.resources, group: "TEACHING" },
@@ -231,6 +239,7 @@ function pageDisplayTitle(page: Page, role: Role) {
     return role === "teacher" ? "My Students" : "Learner Management";
   }
   if (page === "Teaching assignments") return "My Teaching Assignments";
+  if (page === "School forms") return "School Forms";
   if (page === "Class schedule") return "Class Schedule";
   if (page === "Learning resources") return "Learning Resources";
   if (page === "School setup") return "School Setup";
@@ -659,6 +668,7 @@ function EmptySection({ page, role }: { page: Page; role: Role }) {
       ? "Student enrollment records will appear here after the academic database is configured."
       : "Your advisory students will appear here after a Section Adviser assignment is configured.",
     "Teaching assignments": "Your active Subject Teacher assignments will appear here.",
+    "School forms": "School Forms are not available yet. This module is still under development.",
     "School setup": "School year, grade levels, sections, subjects, and assignments will be configured in the next phase.",
   };
 
@@ -671,6 +681,7 @@ function EmptySection({ page, role }: { page: Page; role: Role }) {
     "Learning resources": FolderOpen,
     Students: Users,
     "Teaching assignments": BookOpen,
+    "School forms": FileSpreadsheet,
     "School setup": Settings2,
   };
 
@@ -1182,9 +1193,90 @@ export default function PortalPage() {
 
           {page !== "Overview" &&
             !(profile.role === "teacher" && page === "Teaching assignments") &&
+            !(profile.role === "teacher" && page === "School forms") &&
             !((profile.role === "teacher" || profile.role === "student") && page === "Class schedule") && (
               <EmptySection page={page} role={profile.role} />
             )}
+
+          {profile.role === "teacher" && page === "School forms" && (
+            <section className="panel real-school-forms-unavailable">
+              <div className="real-school-forms-warning">
+                <span className="real-school-forms-icon">
+                  <CircleAlert size={22} />
+                </span>
+                <div>
+                  <span className="real-school-forms-kicker">MODULE STATUS</span>
+                  <h2>School Forms are not available yet.</h2>
+                  <p>
+                    This module is still under development. The forms below are
+                    planned for future Adviser access in the Academic Portal.
+                  </p>
+                </div>
+                <span className="real-school-forms-status">Coming Soon</span>
+              </div>
+
+              <div className="real-school-forms-list">
+                <article>
+                  <strong>SF1 · School Register</strong>
+                  <p>
+                    Official master list of enrolled learners in the section,
+                    including demographic and background information.
+                  </p>
+                </article>
+                <article>
+                  <strong>SF2 · Learner&apos;s Daily Class Attendance</strong>
+                  <p>
+                    Daily record of learner attendance, including presence and
+                    absence information.
+                  </p>
+                </article>
+                <article>
+                  <strong>SF3 · Books Issued and Returned</strong>
+                  <p>
+                    Record of textbooks and instructional materials issued to and
+                    returned by learners.
+                  </p>
+                </article>
+                <article>
+                  <strong>SF5 · Report on Promotion and Level of Proficiency</strong>
+                  <p>
+                    End-of-school-year report showing learner promotion, retention,
+                    and proficiency status. Senior High School uses SF5A/SF5B
+                    variants.
+                  </p>
+                </article>
+                <article>
+                  <strong>SF8 · Learner&apos;s Basic Health and Nutrition Profile</strong>
+                  <p>
+                    Learner health and nutrition record, including height, weight,
+                    and BMI-related information.
+                  </p>
+                </article>
+                <article>
+                  <strong>SF9 · Learner&apos;s Progress Report Card</strong>
+                  <p>
+                    Learner report card showing academic performance and other
+                    official progress information.
+                  </p>
+                </article>
+                <article>
+                  <strong>SF10 · Learner&apos;s Permanent Academic Record</strong>
+                  <p>
+                    Comprehensive cumulative academic record of the learner across
+                    school years.
+                  </p>
+                </article>
+              </div>
+
+              <div className="real-school-forms-note">
+                <FileSpreadsheet size={18} />
+                <span>
+                  No School Form can be generated or printed from the Adviser
+                  account yet.
+                </span>
+              </div>
+            </section>
+          )}
 
           {profile.role === "teacher" && page === "Teaching assignments" && (
             <section className="panel real-teacher-class-page">
