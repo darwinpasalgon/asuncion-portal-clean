@@ -334,7 +334,7 @@ export default function ReportsPage(){
 
   return <main className={styles.page}><div className={styles.shell}>
     <nav className={styles.topActions}>
-      <a href="/portal" className={styles.topLink}><ArrowLeft size={16}/>Back to portal</a>
+      <a href="/portal" className={styles.topLink}><ArrowLeft size={16}/>Back to Portal</a>
     </nav>
 
     <header className={styles.header}>
@@ -364,7 +364,7 @@ export default function ReportsPage(){
         <button className={tab==="grades"?styles.tabActive:styles.tab} onClick={()=>setTab("grades")}><GraduationCap size={15}/>Grades</button>
         <button className={tab==="intervention"?styles.tabActive:styles.tab} onClick={()=>setTab("intervention")}><TriangleAlert size={15}/>Intervention</button>
         <button className={tab==="attendance"?styles.tabActive:styles.tab} onClick={()=>setTab("attendance")}><CalendarDays size={15}/>Attendance</button>
-        <button className={tab==="classlist"?styles.tabActive:styles.tab} onClick={()=>setTab("classlist")}><Users size={15}/>Class lists</button>
+        <button className={tab==="classlist"?styles.tabActive:styles.tab} onClick={()=>setTab("classlist")}><Users size={15}/>Class Lists</button>
       </div>
       <div className={styles.outputActions}>
         <button onClick={exportCurrent}><Download size={15}/>Export CSV</button>
@@ -372,7 +372,7 @@ export default function ReportsPage(){
       </div>
     </div>
 
-    {loading?<section className={styles.loading}><BarChart3 size={30}/><strong>Building report…</strong></section>:<>
+    {loading?<section className={styles.loading}><BarChart3 size={30}/><strong>Building Report…</strong></section>:<>
       {tab==="overview"&&<div className={styles.overview}>
         <div className={styles.metrics}>
           <article><Users size={22}/><span>Enrolled Students</span><strong>{counts.enrolled_students}</strong></article>
