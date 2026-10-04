@@ -327,11 +327,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const subjectById = new Map(
-      (subjectRows ?? []).map((item: { id: string; name: string; grade_level: number }) => [
-        String(item.id),
-        item,
-      ])
+    const subjectById = new Map<
+      string,
+      { id: string; name: string; grade_level: number }
+    >(
+      ((subjectRows ?? []) as Array<{
+        id: string;
+        name: string;
+        grade_level: number;
+      }>).map((item) => [String(item.id), item])
     );
     const validTeacherIds = new Set(
       (teacherRows ?? []).map((item: { id: string }) => String(item.id))
