@@ -895,3 +895,247 @@
   .signInButton{min-height:48px}
   .demoNote{margin-top:11px}
 }
+
+
+/* APK v1 ultra-compact mobile login fit */
+@media(max-width:520px){
+  .page{
+    display:block;
+    min-height:100svh;
+    min-height:100dvh;
+    background:
+      radial-gradient(circle at 80% 8%,rgba(42,125,181,.12),transparent 26%),
+      radial-gradient(circle at 10% 92%,rgba(28,145,96,.10),transparent 25%),
+      #f4f8fb;
+  }
+
+  .formPanel{
+    display:block;
+    min-height:100svh;
+    min-height:100dvh;
+    width:100%;
+    padding:
+      max(8px,env(safe-area-inset-top))
+      max(10px,env(safe-area-inset-right))
+      max(10px,env(safe-area-inset-bottom))
+      max(10px,env(safe-area-inset-left));
+    overflow-x:hidden;
+    overflow-y:auto;
+  }
+
+  .formWrap{
+    width:100%;
+    max-width:420px;
+    min-height:auto;
+    margin:0 auto;
+    padding:14px 14px 16px;
+    border-radius:14px;
+    box-shadow:0 10px 30px rgba(24,72,103,.08);
+  }
+
+  .mobileBrand{
+    margin:0 0 12px;
+    gap:9px;
+  }
+
+  .mobileBrand img{
+    width:38px;
+    height:38px;
+  }
+
+  .mobileBrand strong{
+    font-size:.74rem;
+    letter-spacing:.05em;
+  }
+
+  .mobileBrand span{
+    margin-top:2px;
+    font-size:.66rem;
+  }
+
+  .intro{
+    margin-bottom:14px;
+  }
+
+  .demoPill{
+    margin-bottom:7px;
+    padding:4px 7px;
+    font-size:.58rem;
+    line-height:1.2;
+  }
+
+  .intro h2{
+    margin-bottom:5px;
+    font-size:1.42rem;
+    line-height:1.05;
+  }
+
+  .intro p{
+    font-size:.74rem;
+    line-height:1.35;
+  }
+
+  .form{
+    gap:10px;
+  }
+
+  .field{
+    gap:5px;
+    font-size:.72rem;
+  }
+
+  .inputWrap{
+    min-height:44px;
+    padding:0 11px;
+    border-radius:10px;
+    gap:9px;
+  }
+
+  .inputWrap svg{
+    width:16px;
+    height:16px;
+  }
+
+  .inputWrap input,
+  .inputWrap select{
+    min-height:42px;
+    font-size:16px;
+  }
+
+  .passwordToggle{
+    padding:5px;
+  }
+
+  .formOptions{
+    min-height:18px;
+    margin-top:-1px;
+    font-size:.72rem;
+  }
+
+  .textButton{
+    font-size:.72rem;
+  }
+
+  .error{
+    margin:0;
+    padding:8px 10px;
+    font-size:.72rem;
+  }
+
+  .signInButton{
+    min-height:44px;
+    border-radius:10px;
+    font-size:.84rem;
+  }
+
+  .demoNote{
+    margin-top:10px;
+    padding:9px 10px;
+    gap:8px;
+    border-radius:9px;
+  }
+
+  .demoNote svg{
+    width:15px;
+    height:15px;
+  }
+
+  .demoNote p{
+    font-size:.64rem;
+    line-height:1.35;
+  }
+}
+
+@media(max-width:520px) and (max-height:680px){
+  .formWrap{
+    padding-top:11px;
+    padding-bottom:12px;
+  }
+
+  .mobileBrand{
+    margin-bottom:8px;
+  }
+
+  .mobileBrand img{
+    width:34px;
+    height:34px;
+  }
+
+  .intro{
+    margin-bottom:10px;
+  }
+
+  .demoPill{
+    margin-bottom:5px;
+  }
+
+  .intro h2{
+    font-size:1.28rem;
+  }
+
+  .intro p{
+    font-size:.7rem;
+    line-height:1.3;
+  }
+
+  .form{
+    gap:8px;
+  }
+
+  .field{
+    gap:4px;
+  }
+
+  .inputWrap{
+    min-height:42px;
+  }
+
+  .inputWrap input,
+  .inputWrap select{
+    min-height:40px;
+  }
+
+  .signInButton{
+    min-height:42px;
+  }
+
+  .demoNote{
+    margin-top:8px;
+    padding:8px 9px;
+  }
+}
+
+@media(max-width:380px){
+  .formPanel{
+    padding-left:max(7px,env(safe-area-inset-left));
+    padding-right:max(7px,env(safe-area-inset-right));
+  }
+
+  .formWrap{
+    padding-left:12px;
+    padding-right:12px;
+  }
+
+  .intro h2{
+    font-size:1.32rem;
+  }
+}
+
+@media(max-width:520px) and (max-height:590px){
+  .mobileBrand{
+    margin-bottom:6px;
+  }
+
+  .intro p,
+  .demoNote{
+    display:none;
+  }
+
+  .intro{
+    margin-bottom:8px;
+  }
+
+  .form{
+    gap:7px;
+  }
+}
