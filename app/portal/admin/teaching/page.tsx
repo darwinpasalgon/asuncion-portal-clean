@@ -212,7 +212,11 @@ export default function TeachingSetupPage() {
     );
   }
 
-  function subjectTeacherLabel(teacher: Teacher) {
+  function academicLevelLabel(gradeLevel: number) {
+  return gradeLevel === 0 ? "ALS A&E" : `Grade ${gradeLevel}`;
+}
+
+function subjectTeacherLabel(teacher: Teacher) {
     return teacher.is_head_teacher && teacher.position
       ? `${teacher.full_name} · ${teacher.position}`
       : teacher.full_name;
@@ -296,7 +300,7 @@ export default function TeachingSetupPage() {
       }
 
       setSuccess(
-        `Grade ${setupSection.grade_level} ${setupSection.name} setup saved. ${result.activeAssignments ?? 0} active subject assignment(s).`
+        `${academicLevelLabel(setupSection.grade_level)} ${setupSection.name} setup saved. ${result.activeAssignments ?? 0} active subject assignment(s).`
       );
       await load();
     } catch {
@@ -668,7 +672,7 @@ export default function TeachingSetupPage() {
 
           <div className={styles.setupPicker}>
             <label>
-              <span>Grade Level</span>
+              <span>Grade Level / Program</span>
               <select
                 value={setupGrade}
                 onChange={(event) => {
@@ -678,7 +682,7 @@ export default function TeachingSetupPage() {
                   setSetupTeachers({});
                 }}
               >
-                <option value="">Select Grade Level</option>
+                <option value="">Select Grade Level / Program</option>
                 {grades.map((grade) => (
                   <option key={grade.grade_level} value={grade.grade_level}>
                     {grade.label}
@@ -694,7 +698,7 @@ export default function TeachingSetupPage() {
                 onChange={(event) => prepareSectionSetup(event.target.value)}
               >
                 <option value="">
-                  {setupGrade ? "Select Section" : "Select Grade Level First"}
+                  {setupGrade ? "Select Section" : "Select Grade Level / Program First"}
                 </option>
                 {sectionsForSetup.map((section) => {
                   const adviser = adviserForSection(section.id);
@@ -723,7 +727,7 @@ export default function TeachingSetupPage() {
               <div className={styles.setupHeader}>
                 <div>
                   <span>SECTION</span>
-                  <h3>Grade {setupSection.grade_level} · {setupSection.name}</h3>
+                  <h3>{academicLevelLabel(setupSection.grade_level)} · {setupSection.name}</h3>
                 </div>
                 <label>
                   <span>Section Adviser</span>
@@ -852,14 +856,14 @@ export default function TeachingSetupPage() {
 
           <form className={styles.adviserForm} onSubmit={saveAdviser}>
             <label>
-              <span>Grade Level</span>
+              <span>Grade Level / Program</span>
               <select
                 name="gradeLevel"
                 required
                 value={adviserGrade}
                 onChange={(event) => setAdviserGrade(event.target.value)}
               >
-                <option value="">Select Grade Level</option>
+                <option value="">Select Grade Level / Program</option>
                 {grades.map((grade) => (
                   <option key={grade.grade_level} value={grade.grade_level}>
                     {grade.label}
@@ -877,7 +881,7 @@ export default function TeachingSetupPage() {
                 disabled={!adviserGrade}
               >
                 <option value="" disabled>
-                  {adviserGrade ? "Select section" : "Select grade first"}
+                  {adviserGrade ? "Select section" : "Select Grade Level / Program first"}
                 </option>
                 {sectionsForAdviser.map((section) => {
                   const current = adviserForSection(section.id);
@@ -911,7 +915,7 @@ export default function TeachingSetupPage() {
               return (
                 <div className={styles.adviserRow} key={section.id}>
                   <div>
-                    <span>Grade {section.grade_level}</span>
+                    <span>{academicLevelLabel(section.grade_level)}</span>
                     <strong>{section.name}</strong>
                   </div>
                   <div>
@@ -940,12 +944,12 @@ export default function TeachingSetupPage() {
             <div className={styles.panelHeading}>
               <div>
                 <h2>Add a Subject</h2>
-                <p>Subjects are created for a specific grade level.</p>
+                <p>Subjects are created for a specific Grade Level or ALS A&E program.</p>
               </div>
             </div>
             <form className={styles.form} onSubmit={addSubject}>
               <label>
-                <span>Grade Level</span>
+                <span>Grade Level / Program</span>
                 <select name="gradeLevel" required defaultValue="">
                   <option value="" disabled>Select Grade Level</option>
                   {grades.map((grade) => (
@@ -977,7 +981,7 @@ export default function TeachingSetupPage() {
             </div>
             <form className={styles.form} onSubmit={saveAssignment}>
               <label>
-                <span>Grade Level</span>
+                <span>Grade Level / Program</span>
                 <select
                   name="gradeLevel"
                   required
@@ -988,7 +992,7 @@ export default function TeachingSetupPage() {
                     setAssignmentMajor("");
                   }}
                 >
-                  <option value="">Select Grade Level</option>
+                  <option value="">Select Grade Level / Program</option>
                   {grades.map((grade) => (
                     <option key={grade.grade_level} value={grade.grade_level}>
                       {grade.label}
@@ -1000,7 +1004,7 @@ export default function TeachingSetupPage() {
                 <span>Section</span>
                 <select name="sectionId" required defaultValue="" key={`section-${assignmentGrade}`} disabled={!assignmentGrade}>
                   <option value="" disabled>
-                    {assignmentGrade ? "Select section" : "Select grade first"}
+                    {assignmentGrade ? "Select section" : "Select Grade Level / Program first"}
                   </option>
                   {sectionsForAssignment.map((section) => (
                     <option key={section.id} value={section.id}>{section.name}</option>
@@ -1032,7 +1036,7 @@ export default function TeachingSetupPage() {
                 >
                   <option value="">
                     {!assignmentGrade
-                      ? "Select grade first"
+                      ? "Select Grade Level / Program first"
                       : subjectsForAssignment.length
                         ? "Select subject"
                         : "Add a subject first"}
