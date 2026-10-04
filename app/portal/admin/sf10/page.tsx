@@ -183,7 +183,7 @@ export default function Sf10Page() {
               Print actions are recorded for accountability.
             </p>
           </div>
-          <div className={styles.badge}><ShieldCheck size={18} />Restricted record access</div>
+          <div className={styles.badge}><ShieldCheck size={18} />Restricted Record Access</div>
         </header>
 
         {error && <div className={styles.error}>{error}</div>}
@@ -216,7 +216,7 @@ export default function Sf10Page() {
                     <span>LRN {item.lrn ?? "Not Set"}</span>
                     <small>
                       Grade {item.grade_level ?? "—"} · {item.section ?? "No section"} ·{" "}
-                      {item.sf10_profile_complete ? "Profile ready" : "Needs SF10 info"}
+                      {item.sf10_profile_complete ? "Profile Ready" : "Needs SF10 Info"}
                     </small>
                   </button>
                 ))
@@ -257,7 +257,7 @@ export default function Sf10Page() {
                     disabled={working === "print" || !profileComplete}
                     onClick={() => void printRecord()}
                   >
-                    <Printer size={16} />Print record
+                    <Printer size={16} />Print Record
                   </button>
                 </section>
 
@@ -266,8 +266,8 @@ export default function Sf10Page() {
                     <h2>Learner Permanent-Record Information</h2>
                     <p>
                       {isShs
-                        ? "Complete the SHS eligibility and program fields once; published grades are pulled automatically."
-                        : "Complete the official identity and JHS eligibility fields once; published grades are pulled automatically."}
+                        ? "Identity fields were initialized from SF1. Review them, then complete only the JHS/SHS history and program fields supported by official records. Published grades are pulled automatically."
+                        : "Identity fields were initialized from SF1. Review them, then complete only the JHS eligibility and historical fields supported by official records. Published grades are pulled automatically."}
                     </p>
                   </div>
                   <form onSubmit={saveProfile} className={styles.form}>
@@ -321,7 +321,7 @@ export default function Sf10Page() {
                       </>
                     )}
                     <button className={styles.saveButton} type="submit" disabled={working === "save"}>
-                      <Save size={16} />{working === "save" ? "Saving…" : "Save permanent record"}
+                      <Save size={16} />{working === "save" ? "Saving…" : "Save Permanent Record"}
                     </button>
                   </form>
                 </section>
