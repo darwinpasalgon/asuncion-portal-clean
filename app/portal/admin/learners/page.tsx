@@ -671,8 +671,8 @@ export default function LearnerManagementPage() {
         <nav className={styles.topbar}>
           <a href="/portal"><ArrowLeft size={16} />Back to portal</a>
           <div>
-            <a href="/portal/admin/masterlist">Bulk import SF1</a>
-            <a href="/portal/admin/users">Users & accounts</a>
+            <a href="/portal/admin/masterlist">Bulk Import SF1</a>
+            <a href="/portal/admin/users">Users & Accounts</a>
           </div>
         </nav>
 
@@ -714,7 +714,7 @@ export default function LearnerManagementPage() {
             <select
               value={selectedYearId}
               onChange={(event) => setSelectedYearId(event.target.value)}
-              aria-label="School year"
+              aria-label="School Year"
             >
               {schoolYears.map((year) => (
                 <option key={year.id} value={year.id}>
@@ -729,7 +729,7 @@ export default function LearnerManagementPage() {
                 setGradeFilter(event.target.value);
                 setSectionFilter("");
               }}
-              aria-label="Grade level"
+              aria-label="Grade Level"
             >
               <option value="">All grade levels</option>
               {gradeOptions.map((grade) => (
@@ -753,7 +753,7 @@ export default function LearnerManagementPage() {
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value)}
-              aria-label="Learner status"
+              aria-label="Learner Status"
             >
               <option value="all">All statuses</option>
               {statusOptions.map((option) => (
@@ -978,7 +978,7 @@ export default function LearnerManagementPage() {
               <div>
                 <span>LEARNER PROFILE</span>
                 <h2>{detailLearner.full_name}</h2>
-                <p>LRN {detailLearner.lrn || "Not recorded"}</p>
+                <p>LRN {detailLearner.lrn || "Not Recorded"}</p>
               </div>
               <button className={styles.iconButton} onClick={() => setDetailLearner(null)} aria-label="Close">
                 <X size={19} />
