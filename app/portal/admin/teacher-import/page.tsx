@@ -575,8 +575,8 @@ export default function TeacherProfileImportPage() {
     <main className={styles.page}>
       <div className={styles.shell}>
         <nav className={styles.topbar}>
-          <a href="/portal"><ArrowLeft size={16} />Back to portal</a>
-          <a href="/portal/admin/masterlist"><Users size={16} />Bulk account import</a>
+          <a href="/portal"><ArrowLeft size={16} />Back to Portal</a>
+          <a href="/portal/admin/masterlist"><Users size={16} />Bulk Account Import</a>
         </nav>
 
         <header className={styles.header}>
@@ -668,12 +668,12 @@ export default function TeacherProfileImportPage() {
             </div>
 
             <div className={styles.summary}>
-              <span>Total personnel <strong>{summary.total}</strong></span>
+              <span>Total Personnel <strong>{summary.total}</strong></span>
               <span>Teaching Personnel <strong>{summary.teaching}</strong></span>
               <span>Non-Teaching Personnel <strong>{summary.nonTeaching}</strong></span>
-              <span>New accounts <strong>{summary.newAccounts}</strong></span>
-              <span>Existing profiles <strong>{summary.updates}</strong></span>
-              <span>Temporary emails <strong>{summary.temporary}</strong></span>
+              <span>New Accounts <strong>{summary.newAccounts}</strong></span>
+              <span>Existing Profiles <strong>{summary.updates}</strong></span>
+              <span>Temporary Emails <strong>{summary.temporary}</strong></span>
 
             </div>
 
