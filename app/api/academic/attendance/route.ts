@@ -208,8 +208,8 @@ export async function GET(request: NextRequest) {
         token
       )) as AdviserRow[];
 
-      const sectionIds = Array.from(
-        new Set((advisers ?? []).map((item) => String(item.section_id)))
+      const sectionIds: string[] = Array.from(
+        new Set<string>((advisers ?? []).map((item) => String(item.section_id)))
       );
 
       if (!sectionIds.length) {
@@ -231,7 +231,7 @@ export async function GET(request: NextRequest) {
 
       const filter = sectionFilter(sectionIds);
       const today = manilaToday();
-      const adviserStartBySection = new Map(
+      const adviserStartBySection = new Map<string, string>(
         advisers.map((item) => [
           String(item.section_id),
           manilaDateFromTimestamp(item.assigned_at),
@@ -369,13 +369,15 @@ export async function GET(request: NextRequest) {
         )
       );
 
-      const sectionNameMap = new Map(
-        (sections ?? []).map(
-          (item: { id: string; grade_level: number; name: string }) => [
-            String(item.id),
-            item,
-          ]
-        )
+      const sectionNameMap = new Map<
+        string,
+        { id: string; grade_level: number; name: string }
+      >(
+        ((sections ?? []) as Array<{
+          id: string;
+          grade_level: number;
+          name: string;
+        }>).map((item) => [String(item.id), item])
       );
 
       const pendingDates: Array<{
