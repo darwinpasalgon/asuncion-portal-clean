@@ -44,14 +44,6 @@ const nameFields = [
   ["name_extension", "Name Extension"],
 ] as const;
 
-const graduateFields = [
-  [
-    "graduate_units",
-    "Graduate status / units earned / CAR",
-  ],
-  ["graduate_course", "Degree"],
-] as const;
-
 const tertiaryFields = [
   ["bachelors_degree", "Course"],
   ["major", "Major"],
@@ -94,6 +86,25 @@ const ratingFields = [
 const emptyRecord = (): RecordData => ({
   teacher_id: "", personal: {}, official: {}, service_records: [], ratings: [], version: 0,
 });
+
+function formatPhilSysInput(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 16);
+  return digits.match(/.{1,4}/g)?.join(" - ") ?? digits;
+}
+
+function requiredMissingFields(personal: Details) {
+  const missing: string[] = [];
+  if (!["GRADUATED", "ON GOING", "NONE"].includes(personal.graduate_status ?? "")) {
+    missing.push("Graduate Studies");
+  }
+  if (!String(personal.bachelors_degree ?? "").trim()) {
+    missing.push("Bachelor's Degree");
+  }
+  if (String(personal.philsys_number ?? "").replace(/\D/g, "").length !== 16) {
+    missing.push("PhilSys (National ID) Number");
+  }
+  return missing;
+}
 
 function sourceAppointmentDate(official: Details) {
   const verified = String(official.appointment_date ?? "").trim();
@@ -262,6 +273,12 @@ export default function TeacherProfilesHrPage() {
 
   async function saveRecord() {
     if (!selectedId) return;
+    const missing = requiredMissingFields(personal);
+    if (missing.length) {
+      setError(`Complete the required profile fields: ${missing.join(", ")}.`);
+      setMessage("");
+      return;
+    }
     setSaving(true);
     setError("");
     setMessage("");
@@ -322,6 +339,15 @@ export default function TeacherProfilesHrPage() {
 
         {error && <div className={styles.error}>{error}</div>}
         {message && <div className={styles.success}>{message}</div>}
+        {selectedId && !loadingRecord && requiredMissingFields(personal).length > 0 && (
+          <div className={styles.requiredNotice}>
+            <ShieldCheck size={19} />
+            <div>
+              <strong>Profile Information Needs Completion</strong>
+              <span>Missing: {requiredMissingFields(personal).join(", ")}</span>
+            </div>
+          </div>
+        )}
 
         <div className={styles.layout}>
           <aside className={styles.directory}>
@@ -414,10 +440,84 @@ export default function TeacherProfilesHrPage() {
                 </section>
 
                 <section className={styles.panel}>
-                  <div className={styles.panelHead}><GraduationCap size={20} /><h3>Graduate Studies</h3></div>
+                  <div className={styles.panelHead}>
+                    <GraduationCap size={20} />
+                    <div>
+                      <h3>Graduate Studies</h3>
+                      <p>Required personnel profile information.</p>
+                    </div>
+                  </div>
                   <div className={styles.grid}>
-                    {graduateFields.map(([key, label]) =>
-                      personalField(key, label, key === "graduate_units")
+                    <label>
+                      <span>Graduate Studies Status <b className={styles.required}>Required</b></span>
+                      <select
+                        value={personal.graduate_status ?? ""}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setPersonal((current) => ({
+                            ...current,
+                            graduate_status: value,
+                            graduate_units_earned:
+                              value === "ON GOING" ? current.graduate_units_earned ?? "" : "",
+                            graduate_car_completed:
+                              value === "ON GOING" ? current.graduate_car_completed ?? "NO" : "NO",
+                          }));
+                        }}
+                      >
+                        <option value="">Select Status</option>
+                        <option value="GRADUATED">Graduated</option>
+                        <option value="ON GOING">On Going</option>
+                        <option value="NONE">None</option>
+                      </select>
+                    </label>
+
+                    {(personal.graduate_status === "GRADUATED" || personal.graduate_status === "ON GOING") && (
+                      <label>
+                        <span>Graduate Degree / Program</span>
+                        <input
+                          value={personal.graduate_course ?? ""}
+                          onChange={(event) =>
+                            setPersonal((current) => ({
+                              ...current,
+                              graduate_course: event.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                    )}
+
+                    {personal.graduate_status === "ON GOING" && (
+                      <>
+                        <label>
+                          <span>Units Earned</span>
+                          <input
+                            type="number"
+                            min="0"
+                            max="999"
+                            step="0.5"
+                            value={personal.graduate_units_earned ?? ""}
+                            onChange={(event) =>
+                              setPersonal((current) => ({
+                                ...current,
+                                graduate_units_earned: event.target.value,
+                              }))
+                            }
+                          />
+                        </label>
+                        <label className={styles.checkboxField}>
+                          <input
+                            type="checkbox"
+                            checked={(personal.graduate_car_completed ?? "NO") === "YES"}
+                            onChange={(event) =>
+                              setPersonal((current) => ({
+                                ...current,
+                                graduate_car_completed: event.target.checked ? "YES" : "NO",
+                              }))
+                            }
+                          />
+                          <span>Completed Academic Requirements (CAR)</span>
+                        </label>
+                      </>
                     )}
                   </div>
                 </section>
@@ -425,7 +525,20 @@ export default function TeacherProfilesHrPage() {
                 <section className={styles.panel}>
                   <div className={styles.panelHead}><GraduationCap size={20} /><h3>Tertiary (Bachelor&apos;s Degree)</h3></div>
                   <div className={styles.grid}>
-                    {tertiaryFields.map(([key, label]) => personalField(key, label))}
+                    {tertiaryFields.map(([key, label]) =>
+                      key === "bachelors_degree" ? (
+                        <label key={key}>
+                          <span>Bachelor&apos;s Degree <b className={styles.required}>Required</b></span>
+                          <input
+                            required
+                            value={personal[key] ?? ""}
+                            onChange={(event) =>
+                              setPersonal((current) => ({ ...current, [key]: event.target.value }))
+                            }
+                          />
+                        </label>
+                      ) : personalField(key, label)
+                    )}
                   </div>
                 </section>
 
@@ -440,7 +553,25 @@ export default function TeacherProfilesHrPage() {
                   <div className={styles.panelHead}><BookOpenCheck size={20} /><h3>Other Profile Information</h3></div>
                   <div className={styles.grid}>
                     {otherProfileFields.map(([key, label]) =>
-                      personalField(key, label, key === "skills", key === "skills")
+                      key === "philsys_number" ? (
+                        <label key={key}>
+                          <span>PhilSys (National ID) Number <b className={styles.required}>Required</b></span>
+                          <input
+                            required
+                            inputMode="numeric"
+                            maxLength={25}
+                            value={personal[key] ?? ""}
+                            onChange={(event) =>
+                              setPersonal((current) => ({
+                                ...current,
+                                [key]: formatPhilSysInput(event.target.value),
+                              }))
+                            }
+                            placeholder="1234 - 5678 - 9012 - 3456"
+                          />
+                          <small className={styles.fieldHint}>16 digits · xxxx - xxxx - xxxx - xxxx</small>
+                        </label>
+                      ) : personalField(key, label, key === "skills", key === "skills")
                     )}
                   </div>
                 </section>
