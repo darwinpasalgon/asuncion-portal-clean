@@ -1376,3 +1376,25 @@
     padding-right:max(4px,env(safe-area-inset-right))!important;
   }
 }
+
+
+/* APK v1 center login card vertically */
+@media screen and (max-device-width:600px){
+  .formPanel{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    min-height:100dvh!important;
+    padding:
+      max(10px,env(safe-area-inset-top))
+      max(6px,env(safe-area-inset-right))
+      max(10px,env(safe-area-inset-bottom))
+      max(6px,env(safe-area-inset-left))!important;
+  }
+
+  .formWrap{
+    margin:auto -9.5238095%!important;
+    transform:scale(.84)!important;
+    transform-origin:center center!important;
+  }
+}
