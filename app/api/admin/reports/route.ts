@@ -221,9 +221,6 @@ export async function GET(request: NextRequest) {
           absent: 0,
           absent_morning: 0,
           cutting_classes: 0,
-          transferred_in: 0,
-          transferred_out: 0,
-          dropped: 0,
           total: 0,
         },
       });
@@ -462,9 +459,6 @@ export async function GET(request: NextRequest) {
       absent: number;
       absent_morning: number;
       cutting_classes: number;
-      transferred_in: number;
-      transferred_out: number;
-      dropped: number;
       total: number;
     };
 
@@ -473,15 +467,23 @@ export async function GET(request: NextRequest) {
       absent: 0,
       absent_morning: 0,
       cutting_classes: 0,
-      transferred_in: 0,
-      transferred_out: 0,
-      dropped: 0,
       total: 0,
     });
 
+    const dailyAttendanceStatuses = new Set<AttendanceStatus>([
+      "present",
+      "absent",
+      "absent_morning",
+      "cutting_classes",
+    ]);
+
+    const dailyAttendance = filteredAttendance.filter((row) =>
+      dailyAttendanceStatuses.has(row.status)
+    );
+
     const attendanceByStudent = new Map<string, AttendanceSummary>();
 
-    for (const row of filteredAttendance) {
+    for (const row of dailyAttendance) {
       if (!attendanceByStudent.has(row.student_id)) {
         attendanceByStudent.set(row.student_id, emptyAttendanceSummary());
       }
@@ -510,10 +512,13 @@ export async function GET(request: NextRequest) {
       emerging: publishedGrades.filter((item) => item.term_grade <= 64).length,
     };
 
-    const attendanceTotals = filteredAttendance.reduce(
+    const attendanceTotals = dailyAttendance.reduce(
       (acc, row) => {
         acc.total += 1;
-        acc[row.status] += 1;
+        if (row.status === "present") acc.present += 1;
+        if (row.status === "absent") acc.absent += 1;
+        if (row.status === "absent_morning") acc.absent_morning += 1;
+        if (row.status === "cutting_classes") acc.cutting_classes += 1;
         return acc;
       },
       {
@@ -521,9 +526,6 @@ export async function GET(request: NextRequest) {
         absent: 0,
         absent_morning: 0,
         cutting_classes: 0,
-        transferred_in: 0,
-        transferred_out: 0,
-        dropped: 0,
         total: 0,
       }
     );
