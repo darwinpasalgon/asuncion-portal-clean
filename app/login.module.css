@@ -831,3 +831,67 @@
 @media(max-width:520px){
   .formOptions{align-items:center;flex-direction:row}
 }
+
+
+/* APK v1 compact mobile login */
+@media(max-width:900px){
+  .page,.formPanel{min-height:100dvh}
+  .formPanel{
+    width:100%;
+    max-width:100%;
+    padding:max(20px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));
+  }
+  .formWrap{
+    width:100%;
+    max-width:480px;
+    margin:auto;
+  }
+}
+
+@media(max-width:520px){
+  .formPanel{
+    place-items:start center;
+    padding-top:max(14px,env(safe-area-inset-top));
+    padding-right:max(12px,env(safe-area-inset-right));
+    padding-bottom:max(16px,env(safe-area-inset-bottom));
+    padding-left:max(12px,env(safe-area-inset-left));
+  }
+  .formWrap{
+    width:100%;
+    max-width:100%;
+    padding:20px 16px;
+    border-radius:14px;
+  }
+  .mobileBrand{margin-bottom:22px;gap:10px}
+  .mobileBrand img{width:46px;height:46px}
+  .mobileBrand strong{font-size:.8rem}
+  .mobileBrand span{font-size:.72rem}
+  .intro{margin-bottom:20px}
+  .demoPill{margin-bottom:11px}
+  .intro h2{font-size:1.72rem;line-height:1.08}
+  .intro p{font-size:.84rem;line-height:1.5}
+  .form{gap:15px}
+  .field{gap:7px}
+  .inputWrap{min-height:50px;padding:0 13px}
+  .inputWrap input,.inputWrap select{font-size:16px}
+  .signInButton{min-height:50px}
+  .demoNote{margin-top:14px;padding:11px 12px}
+  .demoNote p{font-size:.7rem;line-height:1.5}
+}
+
+@media(max-width:520px) and (max-height:700px){
+  .formPanel{
+    padding-top:max(10px,env(safe-area-inset-top));
+    padding-bottom:max(10px,env(safe-area-inset-bottom));
+  }
+  .formWrap{padding-top:16px;padding-bottom:16px}
+  .mobileBrand{margin-bottom:15px}
+  .intro{margin-bottom:15px}
+  .demoPill{margin-bottom:8px}
+  .intro h2{font-size:1.55rem}
+  .intro p{font-size:.8rem;line-height:1.4}
+  .form{gap:12px}
+  .inputWrap{min-height:48px}
+  .signInButton{min-height:48px}
+  .demoNote{margin-top:11px}
+}
