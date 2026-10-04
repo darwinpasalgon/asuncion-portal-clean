@@ -310,8 +310,6 @@ export default function LearnerManagementPage() {
       return [{ learner, enrollment }];
     });
 
-    if (!sectionFilter) return rows;
-
     const sexRank = (sex: string | null | undefined) => {
       const normalized = String(sex ?? "").trim().toUpperCase();
       if (normalized === "M") return 0;
