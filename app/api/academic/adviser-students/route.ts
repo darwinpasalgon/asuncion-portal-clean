@@ -115,14 +115,13 @@ export async function GET(request: NextRequest) {
         auth.token
       ),
       getRows(
-        "learner_information?select=student_id,last_name,first_name,sex&order=last_name.asc,first_name.asc",
+        "learner_information?select=student_id,last_name,first_name,middle_name,name_extension,sex,birth_date,mother_tongue,ethnic_group,religion,address_house_street_purok,address_barangay,address_municipality_city,address_province,father_name,mother_maiden_name,guardian_name,guardian_relationship,guardian_contact_number,learning_modality,remarks&order=last_name.asc,first_name.asc",
         auth.token
       ),
     ]);
 
     const eligibleSections = (sections ?? []).filter(
-      (section: { id: string; grade_level: number }) =>
-        advisedIds.has(section.id) && [8, 9, 10].includes(section.grade_level)
+      (section: { id: string }) => advisedIds.has(section.id)
     );
     const eligibleSectionIds = new Set(
       eligibleSections.map((section: { id: string }) => section.id)
@@ -155,8 +154,7 @@ export async function GET(request: NextRequest) {
       .filter(
         (enrollment: { section_id: string | null; grade_level: number }) =>
           Boolean(enrollment.section_id) &&
-          eligibleSectionIds.has(String(enrollment.section_id)) &&
-          [8, 9, 10].includes(enrollment.grade_level)
+          eligibleSectionIds.has(String(enrollment.section_id))
       )
       .map(
         (enrollment: {
@@ -175,7 +173,24 @@ export async function GET(request: NextRequest) {
                 student_id: string;
                 last_name: string | null;
                 first_name: string | null;
+                middle_name: string | null;
+                name_extension: string | null;
                 sex: string | null;
+                birth_date: string | null;
+                mother_tongue: string | null;
+                ethnic_group: string | null;
+                religion: string | null;
+                address_house_street_purok: string | null;
+                address_barangay: string | null;
+                address_municipality_city: string | null;
+                address_province: string | null;
+                father_name: string | null;
+                mother_maiden_name: string | null;
+                guardian_name: string | null;
+                guardian_relationship: string | null;
+                guardian_contact_number: string | null;
+                learning_modality: string | null;
+                remarks: string | null;
               }
             | undefined;
           return {
@@ -185,7 +200,24 @@ export async function GET(request: NextRequest) {
             lrn: profile?.lrn ?? null,
             last_name: info?.last_name ?? null,
             first_name: info?.first_name ?? null,
+            middle_name: info?.middle_name ?? null,
+            name_extension: info?.name_extension ?? null,
             sex: info?.sex ?? null,
+            birth_date: info?.birth_date ?? null,
+            mother_tongue: info?.mother_tongue ?? null,
+            ethnic_group: info?.ethnic_group ?? null,
+            religion: info?.religion ?? null,
+            address_house_street_purok: info?.address_house_street_purok ?? null,
+            address_barangay: info?.address_barangay ?? null,
+            address_municipality_city: info?.address_municipality_city ?? null,
+            address_province: info?.address_province ?? null,
+            father_name: info?.father_name ?? null,
+            mother_maiden_name: info?.mother_maiden_name ?? null,
+            guardian_name: info?.guardian_name ?? null,
+            guardian_relationship: info?.guardian_relationship ?? null,
+            guardian_contact_number: info?.guardian_contact_number ?? null,
+            learning_modality: info?.learning_modality ?? null,
+            remarks: info?.remarks ?? null,
             grade_level: enrollment.grade_level,
             section_id: enrollment.section_id,
             section: sectionMap.get(enrollment.section_id) ?? "Unknown section",
@@ -256,6 +288,80 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => null);
   const action = String(body?.action ?? "");
+
+  if (action === "update_learner_info") {
+    const studentId = String(body?.studentId ?? "");
+    const data =
+      body?.data && typeof body.data === "object" && !Array.isArray(body.data)
+        ? body.data
+        : null;
+
+    if (!studentId || !data) {
+      return NextResponse.json(
+        { error: "Learner and updated information are required." },
+        { status: 400 }
+      );
+    }
+
+    const allowedFields = new Set([
+      "last_name",
+      "first_name",
+      "middle_name",
+      "name_extension",
+      "sex",
+      "birth_date",
+      "mother_tongue",
+      "ethnic_group",
+      "religion",
+      "address_house_street_purok",
+      "address_barangay",
+      "address_municipality_city",
+      "address_province",
+      "father_name",
+      "mother_maiden_name",
+      "guardian_name",
+      "guardian_relationship",
+      "guardian_contact_number",
+      "learning_modality",
+      "remarks",
+    ]);
+
+    const safeData = Object.fromEntries(
+      Object.entries(data as Record<string, unknown>).filter(([key]) =>
+        allowedFields.has(key)
+      )
+    );
+
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/rpc/update_adviser_student_information`,
+      {
+        method: "POST",
+        headers: {
+          ...authHeaders(auth.token),
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify({
+          p_student_id: studentId,
+          p_data: safeData,
+        }),
+        cache: "no-store",
+      }
+    );
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const message = String(result?.message ?? "").trim();
+      return NextResponse.json(
+        { error: message || "Unable to update learner information." },
+        { status: response.status || 400 }
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      learnerInformation: Array.isArray(result) ? result[0] ?? null : result,
+    });
+  }
 
   if (action !== "set_tve_major") {
     return NextResponse.json({ error: "Invalid action." }, { status: 400 });
