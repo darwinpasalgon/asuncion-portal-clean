@@ -9,8 +9,8 @@ export const personalFields = [
   ["graduate_units_earned", "Graduate Studies Units Earned"],
   ["graduate_car_completed", "Completed Academic Requirements"],
   ["graduate_units", "Legacy graduate studies entry"],
-  ["bachelors_degree", "Course"], ["major", "Major"], ["minor", "Minor"],
-  ["education_units_major", "BSED-Earning Units - Major"], ["education_units_minor", "BSED-Earning Units - Minor"],
+  ["bachelors_degree", "Course"], ["bachelors_degree_other", "Other Bachelor's Degree"], ["major", "Major"], ["minor", "Minor"],
+  ["bsed_earning_units", "BSEd-Earning Units"], ["education_units_major", "BSEd-Earning Units - Major"], ["education_units_minor", "BSEd-Earning Units - Minor"],
   ["skills", "SKILLS / SPECIALIZATION (NC I, NC II, NC III / TRAINERS METHODOLOGY)"],
   ["philsys_number", "Philsys (National ID) Number"], ["religion", "Religion"], ["ethnic_group", "Ethnic Group"],
 ] as const;
@@ -35,10 +35,23 @@ export const ratingFields = [
   ["description", "Adjectival Rating"], ["rater", "Rater"], ["date", "Date"], ["remarks", "Remarks"],
 ] as const;
 
+export const bachelorDegreeOptions = [
+  "BACHELOR OF ELEMENTARY EDUCATION (BEED)",
+  "BACHELOR OF SECONDARY EDUCATION (BSED)",
+  "BACHELOR OF EARLY CHILDHOOD EDUCATION (BECED)",
+  "BACHELOR OF SPECIAL NEEDS EDUCATION (BSNED)",
+  "BACHELOR OF PHYSICAL EDUCATION (BPED)",
+  "BACHELOR OF TECHNOLOGY AND LIVELIHOOD EDUCATION (BTLED)",
+  "BACHELOR OF TECHNICAL-VOCATIONAL TEACHER EDUCATION (BTVTED)",
+  "OTHER BACHELOR'S DEGREE",
+] as const;
+
 export const requiredPersonnelProfileFields = [
   ["graduate_status", "Graduate Studies"],
   ["bachelors_degree", "Bachelor's Degree"],
   ["philsys_number", "PhilSys (National ID) Number"],
+  ["religion", "Religion"],
+  ["ethnic_group", "Ethnic Group"],
 ] as const;
 
 export function normalizePhilSysNumber(value: unknown) {
@@ -74,6 +87,34 @@ export function normalizeGraduateProfile(input: Record<string, string>) {
     result.graduate_car_completed = "NO";
   }
 
+  const bachelorDegree = String(result.bachelors_degree ?? "").trim().toUpperCase();
+  if (bachelorDegree && !bachelorDegreeOptions.includes(bachelorDegree as (typeof bachelorDegreeOptions)[number])) {
+    throw new Error("Select a valid Bachelor's Degree option.");
+  }
+  result.bachelors_degree = bachelorDegree;
+
+  const needsMajorMinor =
+    bachelorDegree === "BACHELOR OF SECONDARY EDUCATION (BSED)" ||
+    bachelorDegree === "BACHELOR OF TECHNICAL-VOCATIONAL TEACHER EDUCATION (BTVTED)";
+
+  if (!needsMajorMinor) {
+    result.major = "";
+    result.minor = "";
+  }
+
+  if (bachelorDegree === "OTHER BACHELOR'S DEGREE") {
+    result.bachelors_degree_other = String(result.bachelors_degree_other ?? "").trim().toUpperCase();
+  } else {
+    result.bachelors_degree_other = "";
+  }
+
+  result.bsed_earning_units =
+    String(result.bsed_earning_units ?? "").trim().toUpperCase() === "YES" ? "YES" : "NO";
+  if (result.bsed_earning_units !== "YES") {
+    result.education_units_major = "";
+    result.education_units_minor = "";
+  }
+
   result.philsys_number = normalizePhilSysNumber(result.philsys_number ?? "");
   return result;
 }
@@ -84,13 +125,35 @@ export function personnelProfileMissingFields(input: Record<string, string>) {
   if (!["GRADUATED", "ON GOING", "NONE"].includes(graduateStatus)) {
     missing.push("Graduate Studies");
   }
-  if (!String(input.bachelors_degree ?? "").trim()) {
+
+  const bachelorDegree = String(input.bachelors_degree ?? "").trim().toUpperCase();
+  if (!bachelorDegreeOptions.includes(bachelorDegree as (typeof bachelorDegreeOptions)[number])) {
     missing.push("Bachelor's Degree");
+  } else {
+    if (
+      bachelorDegree === "BACHELOR OF SECONDARY EDUCATION (BSED)" ||
+      bachelorDegree === "BACHELOR OF TECHNICAL-VOCATIONAL TEACHER EDUCATION (BTVTED)"
+    ) {
+      if (!String(input.major ?? "").trim()) missing.push("Bachelor's Degree Major");
+      if (!String(input.minor ?? "").trim()) missing.push("Bachelor's Degree Minor");
+    }
+    if (
+      bachelorDegree === "OTHER BACHELOR'S DEGREE" &&
+      !String(input.bachelors_degree_other ?? "").trim()
+    ) {
+      missing.push("Other Bachelor's Degree Course");
+    }
   }
 
   const philsysDigits = String(input.philsys_number ?? "").replace(/\D/g, "");
   if (philsysDigits.length !== 16) {
     missing.push("PhilSys (National ID) Number");
+  }
+  if (!String(input.religion ?? "").trim()) {
+    missing.push("Religion");
+  }
+  if (!String(input.ethnic_group ?? "").trim()) {
+    missing.push("Ethnic Group");
   }
   return missing;
 }
