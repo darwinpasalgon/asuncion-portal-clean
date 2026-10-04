@@ -209,7 +209,7 @@ export default function MyTeacherProfilePage() {
     return (
       <main className={styles.loading}>
         <UserRound size={34} />
-        <strong>Opening your Teacher Profile…</strong>
+        <strong>Opening Your Teacher Profile…</strong>
       </main>
     );
   }
@@ -219,7 +219,7 @@ export default function MyTeacherProfilePage() {
       <ActionWaitOverlay visible={saving} message="Please wait…" />
       <div className={styles.shell}>
         <nav className={styles.topbar}>
-          <a href="/portal"><ArrowLeft size={16} />Back to portal</a>
+          <a href="/portal"><ArrowLeft size={16} />Back to Portal</a>
         </nav>
 
         <header className={styles.header}>
