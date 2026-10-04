@@ -3,8 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
+  BellRing,
   BookOpen,
   CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  CircleAlert,
   ClipboardCheck,
   FileSpreadsheet,
   FolderOpen,
@@ -76,6 +80,24 @@ type AdviserLearner = {
   section_id: string;
   section: string;
   tve_major: string | null;
+};
+
+type AdviserAttentionAlert = {
+  id: string;
+  severity: "warning" | "info";
+  title: string;
+  detail: string;
+  count: number;
+  href: string | null;
+  actionLabel: string | null;
+  administratorAction: boolean;
+};
+
+type AdviserAttention = {
+  schoolDate?: string;
+  isSchoolWeekday?: boolean;
+  alerts: AdviserAttentionAlert[];
+  totalAlertTypes: number;
 };
 
 type ClassScheduleEntry = {
@@ -663,6 +685,11 @@ export default function PortalPage() {
   const [adviserLearners, setAdviserLearners] = useState<AdviserLearner[]>([]);
   const [adviserMajors, setAdviserMajors] = useState<string[]>([]);
   const [adviserLearnersLoading, setAdviserLearnersLoading] = useState(false);
+  const [adviserAttention, setAdviserAttention] = useState<AdviserAttention>({
+    alerts: [],
+    totalAlertTypes: 0,
+  });
+  const [adviserAttentionLoading, setAdviserAttentionLoading] = useState(false);
   const [majorSaving, setMajorSaving] = useState("");
   const [classSchedules, setClassSchedules] = useState<ClassScheduleEntry[]>([]);
   const [classSchedulesLoading, setClassSchedulesLoading] = useState(false);
@@ -694,15 +721,20 @@ export default function PortalPage() {
           if (loadedProfile.role === "teacher") {
             setTeacherAssignmentsLoading(true);
             setAdviserLearnersLoading(true);
+            setAdviserAttentionLoading(true);
             try {
-              const [assignmentResponse, adviserResponse] = await Promise.all([
-                fetch("/api/academic/my-assignments", { cache: "no-store" }),
-                fetch("/api/academic/adviser-students", { cache: "no-store" }),
-              ]);
-              const [assignmentResult, adviserResult] = await Promise.all([
-                assignmentResponse.json().catch(() => ({})),
-                adviserResponse.json().catch(() => ({})),
-              ]);
+              const [assignmentResponse, adviserResponse, attentionResponse] =
+                await Promise.all([
+                  fetch("/api/academic/my-assignments", { cache: "no-store" }),
+                  fetch("/api/academic/adviser-students", { cache: "no-store" }),
+                  fetch("/api/academic/adviser-attention", { cache: "no-store" }),
+                ]);
+              const [assignmentResult, adviserResult, attentionResult] =
+                await Promise.all([
+                  assignmentResponse.json().catch(() => ({})),
+                  adviserResponse.json().catch(() => ({})),
+                  attentionResponse.json().catch(() => ({})),
+                ]);
 
               if (active && assignmentResponse.ok) {
                 setTeacherAssignments(
@@ -720,10 +752,19 @@ export default function PortalPage() {
                   (adviserResult.majors ?? []) as string[]
                 );
               }
+              if (active && attentionResponse.ok) {
+                setAdviserAttention({
+                  schoolDate: attentionResult.schoolDate,
+                  isSchoolWeekday: attentionResult.isSchoolWeekday,
+                  alerts: (attentionResult.alerts ?? []) as AdviserAttentionAlert[],
+                  totalAlertTypes: Number(attentionResult.totalAlertTypes ?? 0),
+                });
+              }
             } finally {
               if (active) {
                 setTeacherAssignmentsLoading(false);
                 setAdviserLearnersLoading(false);
+                setAdviserAttentionLoading(false);
               }
             }
           }
@@ -903,6 +944,89 @@ export default function PortalPage() {
 
           {page === "Overview" && (
             <div className="real-overview-grid">
+              {profile.role === "teacher" &&
+                (adviserAttentionLoading || adviserSections.length > 0) && (
+                  <section className="panel real-adviser-attention">
+                    <div className="real-attention-heading">
+                      <div className="real-attention-title">
+                        <span className="real-attention-icon">
+                          <BellRing size={19} />
+                        </span>
+                        <div>
+                          <h2>Adviser Attention</h2>
+                          <p>
+                            Important records that may need your action for your advisory
+                            section.
+                          </p>
+                        </div>
+                      </div>
+                      {!adviserAttentionLoading && (
+                        <span
+                          className={
+                            adviserAttention.totalAlertTypes > 0
+                              ? "real-attention-count"
+                              : "real-attention-count clear"
+                          }
+                        >
+                          {adviserAttention.totalAlertTypes > 0
+                            ? `${adviserAttention.totalAlertTypes} to review`
+                            : "All Clear"}
+                        </span>
+                      )}
+                    </div>
+
+                    {adviserAttentionLoading ? (
+                      <div className="real-attention-loading">
+                        Checking learner records, attendance, and grades…
+                      </div>
+                    ) : adviserAttention.alerts.length === 0 ? (
+                      <div className="real-attention-clear">
+                        <CheckCircle2 size={22} />
+                        <div>
+                          <strong>No Missing Adviser Data Detected</strong>
+                          <span>
+                            Your currently checked learner records and Adviser tasks look
+                            complete.
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="real-attention-list">
+                        {adviserAttention.alerts.map((alert) => (
+                          <article
+                            className={`real-attention-item ${alert.severity}`}
+                            key={alert.id}
+                          >
+                            <span className="real-attention-item-icon">
+                              <CircleAlert size={18} />
+                            </span>
+                            <div className="real-attention-copy">
+                              <div>
+                                <strong>{alert.title}</strong>
+                                <span className="real-attention-badge">
+                                  {alert.count}
+                                </span>
+                                {alert.administratorAction && (
+                                  <span className="real-attention-admin">
+                                    Administrator Action
+                                  </span>
+                                )}
+                              </div>
+                              <p>{alert.detail}</p>
+                            </div>
+                            {alert.href && alert.actionLabel && (
+                              <a href={alert.href}>
+                                {alert.actionLabel}
+                                <ChevronRight size={15} />
+                              </a>
+                            )}
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                )}
+
               <section className="welcome-card real-welcome">
                 <div className="real-welcome-copy">
                   <h2>Your school workspace,<br />ready when you are.</h2>
