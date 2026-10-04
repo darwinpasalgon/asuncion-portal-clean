@@ -105,8 +105,16 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const [assignments, sections, subjects, enrollments, students, grades, advisers] =
-      await Promise.all([
+    const [
+      assignments,
+      sections,
+      subjects,
+      enrollments,
+      students,
+      learnerInformation,
+      grades,
+      advisers,
+    ] = await Promise.all([
         getRows(
           `teacher_assignments?school_year_id=eq.${encodeURIComponent(
             activeYear.id
@@ -128,7 +136,11 @@ export async function GET(request: NextRequest) {
           token
         ),
         getRows(
-          "profiles?select=id,full_name,lrn,role,account_status&order=full_name.asc",
+          "profiles?select=id,full_name,lrn,role,account_status",
+          token
+        ),
+        getRows(
+          "learner_information?select=student_id,last_name,first_name,middle_name,name_extension,sex",
           token
         ),
         getRows(
@@ -152,6 +164,49 @@ export async function GET(request: NextRequest) {
     const advisedSections = new Set(
       (advisers ?? []).map((item: { section_id: string }) => item.section_id)
     );
+    type LearnerInfo = {
+      student_id: string;
+      last_name?: string | null;
+      first_name?: string | null;
+      middle_name?: string | null;
+      name_extension?: string | null;
+      sex?: string | null;
+    };
+
+    const learnerInfoMap = new Map<string, LearnerInfo>(
+      ((learnerInformation ?? []) as LearnerInfo[]).map((item) => [
+        item.student_id,
+        item,
+      ])
+    );
+
+    const gradeStudents = (students ?? [])
+      .filter(
+        (item: { role?: string; account_status?: string }) =>
+          item.role === "student" && item.account_status === "active"
+      )
+      .map(
+        (student: {
+          id: string;
+          full_name: string;
+          lrn?: string | null;
+          role?: string;
+          account_status?: string;
+        }) => {
+          const info = learnerInfoMap.get(student.id);
+          return {
+            id: student.id,
+            full_name: student.full_name,
+            lrn: student.lrn ?? null,
+            last_name: info?.last_name ?? null,
+            first_name: info?.first_name ?? null,
+            middle_name: info?.middle_name ?? null,
+            name_extension: info?.name_extension ?? null,
+            sex: info?.sex ?? null,
+          };
+        }
+      );
+
     const ownEnrollment =
       profile.role === "student"
         ? (enrollments ?? []).find(
@@ -189,10 +244,7 @@ export async function GET(request: NextRequest) {
       sections,
       subjects,
       enrollments,
-      students: (students ?? []).filter(
-        (item: { role?: string; account_status?: string }) =>
-          item.role === "student" && item.account_status === "active"
-      ),
+      students: gradeStudents,
       grades,
     });
   } catch {
