@@ -39,6 +39,7 @@ type Page =
   | "Announcements"
   | "Learning resources"
   | "Students"
+  | "Teaching assignments"
   | "School setup";
 
 type AcademicContext = {
@@ -150,8 +151,14 @@ const commonItems = {
   },
   students: {
     name: "Students" as Page,
-    label: "My Teaching Assignments",
+    label: "My Students",
     icon: Users,
+    group: "ADVISER TOOLS",
+  },
+  teachingAssignments: {
+    name: "Teaching assignments" as Page,
+    label: "My Teaching Assignments",
+    icon: BookOpen,
     group: "TEACHING",
   },
 };
@@ -168,11 +175,12 @@ const navigation: Record<Role, NavigationItem[]> = {
   teacher: [
     commonItems.overview,
     commonItems.students,
-    commonItems.grades,
-    commonItems.attendance,
-    commonItems.schedule,
+    { ...commonItems.grades, group: "ADVISER TOOLS" },
+    { ...commonItems.attendance, group: "ADVISER TOOLS" },
+    commonItems.teachingAssignments,
+    { ...commonItems.schedule, group: "TEACHING" },
+    { ...commonItems.resources, group: "TEACHING" },
     commonItems.announcements,
-    commonItems.resources,
   ],
   administrator: [commonItems.overview],
   staff_administrator: [commonItems.overview],
@@ -187,8 +195,9 @@ const roleLabel: Record<Role, string> = {
 
 function pageDisplayTitle(page: Page, role: Role) {
   if (page === "Students") {
-    return role === "teacher" ? "My Teaching Assignments" : "Learner Management";
+    return role === "teacher" ? "My Students" : "Learner Management";
   }
+  if (page === "Teaching assignments") return "My Teaching Assignments";
   if (page === "Class schedule") return "Class Schedule";
   if (page === "Learning resources") return "Learning Resources";
   if (page === "School setup") return "School Setup";
@@ -251,6 +260,11 @@ function SideNav({
 
     if (pageName === "Learning resources") {
       window.location.href = "/portal/resources";
+      return;
+    }
+
+    if (pageName === "Students" && profile.role === "teacher") {
+      window.location.href = "/portal/my-students";
       return;
     }
 
@@ -610,7 +624,8 @@ function EmptySection({ page, role }: { page: Page; role: Role }) {
     "Learning resources": "No learning resources have been uploaded to the live portal yet.",
     Students: role === "administrator"
       ? "Student enrollment records will appear here after the academic database is configured."
-      : "Your assigned students will appear here after teaching assignments are configured.",
+      : "Your advisory students will appear here after a Section Adviser assignment is configured.",
+    "Teaching assignments": "Your active Subject Teacher assignments will appear here.",
     "School setup": "School year, grade levels, sections, subjects, and assignments will be configured in the next phase.",
   };
 
@@ -622,6 +637,7 @@ function EmptySection({ page, role }: { page: Page; role: Role }) {
     Announcements: Megaphone,
     "Learning resources": FolderOpen,
     Students: Users,
+    "Teaching assignments": BookOpen,
     "School setup": Settings2,
   };
 
@@ -1002,13 +1018,12 @@ export default function PortalPage() {
           )}
 
           {page !== "Overview" &&
-            !(profile.role === "teacher" && page === "Students") &&
+            !(profile.role === "teacher" && page === "Teaching assignments") &&
             !((profile.role === "teacher" || profile.role === "student") && page === "Class schedule") && (
               <EmptySection page={page} role={profile.role} />
             )}
 
-          {profile.role === "teacher" && page === "Students" && (
-            <>
+          {profile.role === "teacher" && page === "Teaching assignments" && (
             <section className="panel real-teacher-class-page">
               <div className="real-assignment-heading">
                 <div>
@@ -1047,66 +1062,7 @@ export default function PortalPage() {
               )}
             </section>
 
-            {(adviserLearnersLoading || adviserSections.length > 0) && (
-              <section className="panel real-adviser-major-panel">
-                <div className="real-assignment-heading">
-                  <div>
-                    <h2>Adviser TVE Major Assignment</h2>
-                    <p>
-                      Set the Technical Vocational Education major for learners in your
-                      Grade 8–10 advisory section.
-                    </p>
-                  </div>
-                  <span className="tag blue">
-                    {adviserLearners.filter((learner) => learner.tve_major).length}/
-                    {adviserLearners.length} assigned
-                  </span>
-                </div>
 
-                {adviserLearnersLoading ? (
-                  <p className="real-assignment-empty">Loading adviser class…</p>
-                ) : adviserLearners.length === 0 ? (
-                  <p className="real-assignment-empty">
-                    No active Grade 8–10 learners are enrolled in your advisory section.
-                  </p>
-                ) : (
-                  <>
-                    <div className="real-adviser-major-note">
-                      Only the active Section Adviser can change these learner majors.
-                      TVE teacher student counts update automatically from this selection.
-                    </div>
-                    <div className="real-adviser-major-list">
-                      {adviserLearners.map((learner) => (
-                        <div className="real-adviser-major-row" key={learner.enrollment_id}>
-                          <div>
-                            <span>
-                              Grade {learner.grade_level} · {learner.section}
-                            </span>
-                            <strong>{learner.full_name}</strong>
-                            <small>{learner.lrn ? `LRN ${learner.lrn}` : "LRN not recorded"}</small>
-                          </div>
-                          <label>
-                            <span>TVE Major</span>
-                            <select
-                              value={learner.tve_major ?? ""}
-                              disabled={majorSaving === learner.enrollment_id}
-                              onChange={(event) =>
-                                void saveLearnerMajor(
-                                  learner.enrollment_id,
-                                  event.target.value
-                                )
-                              }
-                            >
-                              <option value="">Not Assigned</option>
-                              {adviserMajors.map((major) => (
-                                <option key={major} value={major}>{major}</option>
-                              ))}
-                            </select>
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </>
                 )}
               </section>
             )}
