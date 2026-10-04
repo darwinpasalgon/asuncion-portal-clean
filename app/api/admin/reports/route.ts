@@ -490,7 +490,10 @@ export async function GET(request: NextRequest) {
 
       const summary = attendanceByStudent.get(row.student_id)!;
       summary.total += 1;
-      summary[row.status] += 1;
+      if (row.status === "present") summary.present += 1;
+      if (row.status === "absent") summary.absent += 1;
+      if (row.status === "absent_morning") summary.absent_morning += 1;
+      if (row.status === "cutting_classes") summary.cutting_classes += 1;
     }
 
     const attendanceRows = students.map((student) => ({
