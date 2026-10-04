@@ -17,19 +17,107 @@ async function getRows(url: string, token: string) {
   return response.json().catch(() => []);
 }
 
-export async function GET(request: NextRequest) {
-  const token = request.cookies.get("anhs-access-token")?.value ?? "";
-  if (!token) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+type RefreshedSession = {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+};
+
+async function refreshSession(refreshToken: string): Promise<RefreshedSession | null> {
+  if (!refreshToken) return null;
+
+  const response = await fetch(
+    `${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`,
+    {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+      cache: "no-store",
+    }
+  );
+
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || !result.access_token || !result.refresh_token) {
+    return null;
   }
 
-  const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-    headers: authHeaders(token),
-    cache: "no-store",
+  return {
+    access_token: String(result.access_token),
+    refresh_token: String(result.refresh_token),
+    expires_in: Number(result.expires_in ?? 3600),
+  };
+}
+
+function setSessionCookies(
+  response: NextResponse,
+  session: RefreshedSession
+) {
+  const secure = process.env.NODE_ENV === "production";
+
+  response.cookies.set("anhs-access-token", session.access_token, {
+    httpOnly: true,
+    secure,
+    sameSite: "lax",
+    path: "/",
+    maxAge: session.expires_in,
   });
 
-  if (!userResponse.ok) {
-    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  response.cookies.set("anhs-refresh-token", session.refresh_token, {
+    httpOnly: true,
+    secure,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 60,
+  });
+}
+
+function clearSessionCookies(response: NextResponse) {
+  const secure = process.env.NODE_ENV === "production";
+
+  for (const name of ["anhs-access-token", "anhs-refresh-token"]) {
+    response.cookies.set(name, "", {
+      httpOnly: true,
+      secure,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
+    });
+  }
+}
+
+export async function GET(request: NextRequest) {
+  let token = request.cookies.get("anhs-access-token")?.value ?? "";
+  const refreshToken = request.cookies.get("anhs-refresh-token")?.value ?? "";
+  let refreshedSession: RefreshedSession | null = null;
+
+  let userResponse = token
+    ? await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: authHeaders(token),
+        cache: "no-store",
+      })
+    : null;
+
+  if (!userResponse?.ok && refreshToken) {
+    refreshedSession = await refreshSession(refreshToken);
+    if (refreshedSession) {
+      token = refreshedSession.access_token;
+      userResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        headers: authHeaders(token),
+        cache: "no-store",
+      });
+    }
+  }
+
+  if (!userResponse?.ok || !token) {
+    const response = NextResponse.json(
+      { error: "Unauthorized." },
+      { status: 401 }
+    );
+    clearSessionCookies(response);
+    return response;
   }
 
   const user = await userResponse.json().catch(() => null);
@@ -134,5 +222,15 @@ export async function GET(request: NextRequest) {
     ).filter(Boolean);
   }
 
-  return NextResponse.json({ profile, academicContext, adminPermissions });
+  const response = NextResponse.json({
+    profile,
+    academicContext,
+    adminPermissions,
+  });
+
+  if (refreshedSession) {
+    setSessionCookies(response, refreshedSession);
+  }
+
+  return response;
 }
