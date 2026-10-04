@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
           userId
         )}&school_year_id=eq.${encodeURIComponent(
           activeYear.id
-        )}&select=grade_level,section_id,enrollment_status&limit=1`,
+        )}&select=grade_level,section_id,enrollment_status,tve_major&limit=1`,
         token
       );
 
