@@ -19,7 +19,7 @@ type Profile={id:string;full_name:string;lrn:string|null;role:Role};
 type Adviser={id:string;section_id:string;teacher_id:string};
 type Section={id:string;grade_level:number;name:string};
 type Enrollment={id:string;student_id:string;grade_level:number;section_id:string|null};
-type Student={id:string;full_name:string;lrn:string|null};
+type Student={id:string;full_name:string;lrn:string|null;last_name:string|null;first_name:string|null;middle_name:string|null;name_extension:string|null;sex:string|null};
 type RecordRow={id?:string;student_id:string;section_id:string;attendance_date:string;status:"present"|"absent"|"late"|"excused";note:string|null};
 type Draft={status:"present"|"absent"|"late"|"excused";note:string};
 
@@ -32,6 +32,30 @@ function localDate(){
 function formatDate(value:string){
   const d=new Date(value+"T00:00:00");
   return d.toLocaleDateString([], {year:"numeric",month:"short",day:"numeric",weekday:"short"});
+}
+
+function sexGroup(value:string|null){
+  const normalized=(value??"").trim().toLowerCase();
+  if(normalized==="m"||normalized==="male")return "Male";
+  if(normalized==="f"||normalized==="female")return "Female";
+  return "Unspecified";
+}
+
+function compareStudents(a:Student,b:Student){
+  const rank=(value:string|null)=>{
+    const group=sexGroup(value);
+    return group==="Male"?0:group==="Female"?1:2;
+  };
+  const bySex=rank(a.sex)-rank(b.sex);
+  if(bySex!==0)return bySex;
+
+  const byLast=(a.last_name??"").localeCompare(b.last_name??"",undefined,{sensitivity:"base"});
+  if(byLast!==0)return byLast;
+
+  const byFirst=(a.first_name??"").localeCompare(b.first_name??"",undefined,{sensitivity:"base"});
+  if(byFirst!==0)return byFirst;
+
+  return a.full_name.localeCompare(b.full_name,undefined,{sensitivity:"base"});
 }
 
 export default function AttendancePage(){
@@ -75,8 +99,16 @@ export default function AttendancePage(){
       .filter(e=>e.section_id===sectionId)
       .map(e=>studentMap.get(e.student_id))
       .filter((s):s is Student=>Boolean(s))
-      .sort((a,b)=>a.full_name.localeCompare(b.full_name));
+      .sort(compareStudents);
   },[role,sectionId,enrollments,studentMap]);
+
+  const rosterGroups=useMemo(
+    ()=>["Male","Female","Unspecified"].map(group=>({
+      group,
+      students:roster.filter(student=>sexGroup(student.sex)===group),
+    })).filter(item=>item.students.length>0),
+    [roster]
+  );
 
   useEffect(()=>{
     if(role!=="teacher"||!sectionId)return;
@@ -193,28 +225,47 @@ export default function AttendancePage(){
               </div>
               <div className={styles.actions}>
                 <button className={styles.markAll} onClick={markAllPresent}><CheckCircle2 size={16}/>Mark All Present</button>
-                <button className={styles.saveAll} disabled={working||!roster.length} onClick={()=>void save()}><Save size={16}/>{working?"Saving…":"Save attendance"}</button>
+                <button className={styles.saveAll} disabled={working||!roster.length} onClick={()=>void save()}><Save size={16}/>{working?"Saving…":"Save Attendance"}</button>
               </div>
             </div>
 
             {roster.length===0
               ?<div className={styles.empty}>No active students are enrolled in this section.</div>
               :<div className={styles.roster}>
-                {roster.map((student,index)=>{
-                  const d=drafts[student.id]??{status:"present",note:""};
-                  return <article key={student.id}>
-                    <div className={styles.student}>
-                      <span>{index+1}</span>
-                      <div><strong>{student.full_name}</strong><small>{student.lrn?("LRN "+student.lrn):"Student"}</small></div>
+                {rosterGroups.map(({group,students:groupStudents})=>{
+                  const startIndex=roster.findIndex(student=>student.id===groupStudents[0]?.id);
+                  return <section className={styles.sexGroup} key={group}>
+                    <div className={styles.sexGroupHeading}>
+                      <strong>{group}</strong>
+                      <span>{groupStudents.length} learner{groupStudents.length===1?"":"s"}</span>
                     </div>
-                    <select className={styles[d.status]} value={d.status} onChange={e=>update(student.id,"status",e.target.value)}>
-                      <option value="present">Present</option>
-                      <option value="absent">Absent</option>
-                      <option value="late">Late</option>
-                      <option value="excused">Excused</option>
-                    </select>
-                    <input maxLength={300} placeholder="Optional note" value={d.note} onChange={e=>update(student.id,"note",e.target.value)}/>
-                  </article>;
+                    {groupStudents.map((student,index)=>{
+                      const d=drafts[student.id]??{status:"present",note:""};
+                      return <article key={student.id}>
+                        <div className={styles.student}>
+                          <span>{startIndex+index+1}</span>
+                          <div>
+                            <strong>{student.full_name}</strong>
+                            <small>
+                              {(student.last_name&&student.first_name
+                                ? student.last_name+", "+student.first_name+
+                                  (student.middle_name?(" "+student.middle_name):"")+
+                                  (student.name_extension?(" "+student.name_extension):"")
+                                : student.full_name)}
+                              {student.lrn?(" · LRN "+student.lrn):""}
+                            </small>
+                          </div>
+                        </div>
+                        <select className={styles[d.status]} value={d.status} onChange={e=>update(student.id,"status",e.target.value)}>
+                          <option value="present">Present</option>
+                          <option value="absent">Absent</option>
+                          <option value="late">Late</option>
+                          <option value="excused">Excused</option>
+                        </select>
+                        <input maxLength={300} placeholder="Optional note" value={d.note} onChange={e=>update(student.id,"note",e.target.value)}/>
+                      </article>;
+                    })}
+                  </section>;
                 })}
               </div>}
           </section>
