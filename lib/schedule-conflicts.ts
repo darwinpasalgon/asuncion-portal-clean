@@ -65,7 +65,15 @@ export function findScheduleConflicts(
       if (schedule.id === period.id || schedule.day_of_week !== period.day_of_week ||
           schedule.start_time.slice(0, 5) >= period.end_time.slice(0, 5) ||
           schedule.end_time.slice(0, 5) <= period.start_time.slice(0, 5)) continue;
-      if (other.teacher_id === assignment.teacher_id) kinds.add("teacher");
+      const combinedClass =
+        other.teacher_id === assignment.teacher_id &&
+        other.section_id !== assignment.section_id &&
+        other.subject_id === assignment.subject_id &&
+        schedule.start_time.slice(0, 5) === period.start_time.slice(0, 5) &&
+        schedule.end_time.slice(0, 5) === period.end_time.slice(0, 5);
+      if (other.teacher_id === assignment.teacher_id && !combinedClass) {
+        kinds.add("teacher");
+      }
       const separateMajors = assignment.major !== null && other.major !== null &&
         assignment.subject_id === other.subject_id && assignment.major !== other.major;
       if (other.section_id === assignment.section_id && !separateMajors) kinds.add("section");
