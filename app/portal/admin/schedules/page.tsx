@@ -87,6 +87,8 @@ export default function ClassSchedulesPage() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
 
+  const [scheduleView, setScheduleView] = useState<"section" | "teacher">("section");
+  const [quickTeacher, setQuickTeacher] = useState("");
   const [quickGrade, setQuickGrade] = useState("");
   const [quickSection, setQuickSection] = useState("");
   const [quickDrafts, setQuickDrafts] = useState<Record<string, QuickDraft>>({});
@@ -106,9 +108,9 @@ export default function ClassSchedulesPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  async function load() {
+  async function load(clearError = true) {
     setLoading(true);
-    setError("");
+    if (clearError) setError("");
     try {
       const response = await fetch("/api/admin/class-schedules", {
         cache: "no-store",
@@ -132,8 +134,27 @@ export default function ClassSchedulesPage() {
   }
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("view") === "teacher") {
+      setScheduleView("teacher");
+    }
     void load();
   }, []);
+
+  function changeView(view: "section" | "teacher") {
+    setScheduleView(view);
+    setError("");
+    setSuccess("");
+    const url = new URL(window.location.href);
+    url.searchParams.set("view", view);
+    window.history.replaceState(null, "", url);
+  }
+
+  const teacherView = scheduleView === "teacher";
+  const hasSelection = Boolean(teacherView ? quickTeacher : quickSection);
+  const teacherOptions = useMemo(
+    () => [...teachers].sort((a, b) => a.full_name.localeCompare(b.full_name)),
+    [teachers]
+  );
 
   const lookup = useMemo(() => {
     const sectionsById = new Map(sections.map((item) => [item.id, item.name]));
@@ -177,22 +198,35 @@ export default function ClassSchedulesPage() {
   const quickAssignments = useMemo(
     () =>
       assignments
-        .filter((item) => item.section_id === quickSection)
+        .filter((item) => teacherView
+          ? item.teacher_id === quickTeacher
+          : item.section_id === quickSection)
         .sort((a, b) => {
           const subjectA = lookup.subjectsById.get(a.subject_id)?.name ?? "";
           const subjectB = lookup.subjectsById.get(b.subject_id)?.name ?? "";
           const bySubject = subjectA.localeCompare(subjectB);
           if (bySubject !== 0) return bySubject;
-          return String(a.major ?? "").localeCompare(String(b.major ?? ""));
+          const byMajor = String(a.major ?? "").localeCompare(String(b.major ?? ""));
+          if (byMajor !== 0) return byMajor;
+          return a.grade_level - b.grade_level ||
+            (lookup.sectionsById.get(a.section_id) ?? "").localeCompare(
+              lookup.sectionsById.get(b.section_id) ?? ""
+            );
         }),
-    [assignments, quickSection, lookup.subjectsById]
+    [assignments, teacherView, quickTeacher, quickSection, lookup]
   );
 
-  const quickSectionScheduleCount = useMemo(() => {
+  const quickSummary = useMemo(() => {
     const ids = new Set(quickAssignments.map((item) => item.id));
-    return schedules.filter(
+    const active = schedules.filter(
       (item) => item.is_active && ids.has(item.teacher_assignment_id)
-    ).length;
+    );
+    const scheduledLoads = new Set(active.map((item) => item.teacher_assignment_id)).size;
+    const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+    const weeklyMinutes = active.reduce(
+      (total, item) => total + minutes(item.end_time) - minutes(item.start_time), 0
+    );
+    return { entries: active.length, scheduledLoads, weeklyHours: Number((weeklyMinutes / 60).toFixed(2)) };
   }, [quickAssignments, schedules]);
 
   function assignmentLabel(assignment: Assignment) {
@@ -270,6 +304,7 @@ export default function ClassSchedulesPage() {
   }
 
   async function saveQuickAssignment(assignment: Assignment) {
+    if (working || loading) return;
     const draft = quickDrafts[assignment.id] ?? emptyQuickDraft();
 
     if (!draft.days.length) {
@@ -285,8 +320,12 @@ export default function ClassSchedulesPage() {
     setError("");
     setSuccess("");
 
+    let savedDays = 0;
     try {
       const existing = schedulesForAssignment(assignment.id);
+      if (draft.days.some((day) => existing.filter((item) => item.day_of_week === day).length > 1)) {
+        throw new Error("This assignment has multiple periods on a selected day. Click the specific Current entry to edit it in Advanced Schedule Entry.");
+      }
       const existingByDay = new Map(
         existing.map((schedule) => [schedule.day_of_week, schedule])
       );
@@ -320,6 +359,7 @@ export default function ClassSchedulesPage() {
               `Unable to update the ${DAYS.find((item) => item.value === day)?.label ?? "selected day"} schedule.`
           );
         }
+        savedDays += 1;
       }
 
       if (newDays.length) {
@@ -341,6 +381,7 @@ export default function ClassSchedulesPage() {
         if (!response.ok) {
           throw new Error(result.error ?? "Unable to save the selected days.");
         }
+        savedDays += newDays.length;
       }
 
       const subject =
@@ -351,10 +392,11 @@ export default function ClassSchedulesPage() {
       clearQuickDraft(assignment.id);
       await load();
     } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to save this subject schedule.";
       setError(
-        err instanceof Error ? err.message : "Unable to save this subject schedule."
+        savedDays > 0 ? `${savedDays} day(s) saved before this issue: ${message} Review the current entries before retrying.` : message
       );
-      await load();
+      await load(false);
     } finally {
       setWorking("");
     }
@@ -526,14 +568,16 @@ export default function ClassSchedulesPage() {
     return a.start_time.localeCompare(b.start_time);
   });
 
-  const visibleSchedules = quickSection
+  const visibleSchedules = hasSelection
     ? orderedSchedules.filter((schedule) => {
         const assignment = lookup.assignmentsById.get(
           schedule.teacher_assignment_id
         );
-        return assignment?.section_id === quickSection;
+        return teacherView
+          ? assignment?.teacher_id === quickTeacher
+          : assignment?.section_id === quickSection;
       })
-    : orderedSchedules;
+    : teacherView ? [] : orderedSchedules;
 
   return (
     <main className={styles.page}>
@@ -552,8 +596,8 @@ export default function ClassSchedulesPage() {
             <span className={styles.eyebrow}>ADMINISTRATION</span>
             <h1>Class Schedules</h1>
             <p>
-              Build schedules by section. Subject and Teacher assignments are already
-              filled in for you, while Teacher, Section, and room conflicts remain
+              Build schedules by section or one teacher at a time. Both views update
+              the same class schedules. Teacher, section, and room conflicts remain
               blocked automatically.
             </p>
           </div>
@@ -568,8 +612,17 @@ export default function ClassSchedulesPage() {
           )}
         </header>
 
-        {error && <div className={styles.error}>{error}</div>}
-        {success && <div className={styles.success}>{success}</div>}
+        {error && <div className={styles.error} role="alert">{error}</div>}
+        {success && <div className={styles.success} role="status">{success}</div>}
+
+        <div className={styles.viewSwitcher} role="group" aria-label="Schedule View">
+          <button type="button" aria-pressed={!teacherView} disabled={Boolean(working)} onClick={() => changeView("section")}>
+            By Section
+          </button>
+          <button type="button" aria-pressed={teacherView} disabled={Boolean(working)} onClick={() => changeView("teacher")}>
+            By Teacher
+          </button>
+        </div>
 
         <section className={`${styles.panel} ${styles.quickPanel}`}>
           <div className={styles.panelHeading}>
@@ -578,23 +631,39 @@ export default function ClassSchedulesPage() {
                 <WandSparkles size={18} />
                 <span>RECOMMENDED</span>
               </div>
-              <h2>Quick Section Schedule</h2>
+              <h2>{teacherView ? "Quick Teacher Schedule" : "Quick Section Schedule"}</h2>
               <p>
-                Choose a section once, then schedule each assigned subject directly
-                from the list below.
+                {teacherView
+                  ? "Choose a teacher to schedule their assigned subjects and sections. Select multiple days to apply the same time and room."
+                  : "Choose a section once, then schedule each assigned subject directly from the list below."}
               </p>
             </div>
           </div>
 
           <div className={styles.quickPicker}>
+            {teacherView ? (
+              <label className={styles.teacherPicker}>
+                <span>Teacher</span>
+                <select value={quickTeacher} disabled={loading || Boolean(working)} onChange={(event) => {
+                  setQuickTeacher(event.target.value);
+                  setError("");
+                  setSuccess("");
+                }}>
+                  <option value="">Select Teacher</option>
+                  {teacherOptions.map((teacher) => (
+                    <option key={teacher.id} value={teacher.id}>{teacher.full_name}</option>
+                  ))}
+                </select>
+              </label>
+            ) : <>
             <label>
               <span>Grade Level</span>
               <select
                 value={quickGrade}
+                disabled={loading || Boolean(working)}
                 onChange={(event) => {
                   setQuickGrade(event.target.value);
                   setQuickSection("");
-                  setQuickDrafts({});
                   setError("");
                   setSuccess("");
                 }}
@@ -612,10 +681,9 @@ export default function ClassSchedulesPage() {
               <span>Section</span>
               <select
                 value={quickSection}
-                disabled={!quickGrade}
+                disabled={!quickGrade || loading || Boolean(working)}
                 onChange={(event) => {
                   setQuickSection(event.target.value);
-                  setQuickDrafts({});
                   setError("");
                   setSuccess("");
                 }}
@@ -630,31 +698,32 @@ export default function ClassSchedulesPage() {
                 ))}
               </select>
             </label>
+            </>}
 
-            {quickSection && (
+            {hasSelection && (
               <div className={styles.quickSummary}>
                 <strong>{quickAssignments.length}</strong>
-                <span>Subject Assignment{quickAssignments.length === 1 ? "" : "s"}</span>
+                <span>Teaching Load{quickAssignments.length === 1 ? "" : "s"}</span>
                 <small>
-                  {quickSectionScheduleCount} active schedule entr
-                  {quickSectionScheduleCount === 1 ? "y" : "ies"}
+                  {quickSummary.scheduledLoads} scheduled · {quickAssignments.length - quickSummary.scheduledLoads} unscheduled
+                  <br />{quickSummary.entries} active periods · {quickSummary.weeklyHours} hours/week
                 </small>
               </div>
             )}
           </div>
 
-          {!quickSection ? (
+          {loading ? <div className={styles.quickEmpty}>Loading teaching loads…</div> : !hasSelection ? (
             <div className={styles.quickEmpty}>
               <CalendarDays size={26} />
-              <strong>Select a Grade Level and Section</strong>
-              <span>The assigned Subjects and Teachers will appear automatically.</span>
+              <strong>{teacherView ? "Select a Teacher" : "Select a Grade Level and Section"}</strong>
+              <span>{teacherView ? "All assigned subjects and sections will appear automatically." : "The assigned Subjects and Teachers will appear automatically."}</span>
             </div>
           ) : quickAssignments.length === 0 ? (
             <div className={styles.quickEmpty}>
               <CalendarDays size={26} />
               <strong>No Subject Teacher Assignments Yet</strong>
               <span>
-                Configure the section first in Subjects & Teachers, then return here.
+                {teacherView ? "Assign this teacher's subjects and sections in Subjects & Teachers, then return here." : "Configure the section first in Subjects & Teachers, then return here."}
               </span>
             </div>
           ) : (
@@ -677,7 +746,8 @@ export default function ClassSchedulesPage() {
                       <span>SUBJECT</span>
                       <strong>{subject}</strong>
                       {assignment.major && <small>{assignment.major}</small>}
-                      <p>{teacher}</p>
+                      {teacherView && <small>Grade {assignment.grade_level} · {lookup.sectionsById.get(assignment.section_id) ?? "Unknown Section"}</small>}
+                      <p>{teacherView ? (existing.length ? "Scheduled" : "Not Scheduled Yet") : teacher}</p>
                     </div>
 
                     <div className={styles.quickDays}>
@@ -764,7 +834,7 @@ export default function ClassSchedulesPage() {
                       <button
                         type="button"
                         disabled={
-                          quickWorking ||
+                          Boolean(working) || loading ||
                           !draft.days.length ||
                           !draft.startTime ||
                           !draft.endTime
@@ -1035,7 +1105,7 @@ export default function ClassSchedulesPage() {
                 <button
                   type="submit"
                   disabled={
-                    working === "save" ||
+                    Boolean(working) || loading ||
                     assignments.length === 0 ||
                     (!editId && selectedDays.length === 0)
                   }
@@ -1058,7 +1128,7 @@ export default function ClassSchedulesPage() {
           <div className={styles.panelHeading}>
             <div>
               <h2>
-                {quickSection ? "Selected Section Schedule" : "Published Class Schedule"}
+                {teacherView ? "Selected Teacher Schedule" : quickSection ? "Selected Section Schedule" : "Published Class Schedule"}
               </h2>
               <p>
                 Active entries appear automatically in Student and Teacher
@@ -1068,7 +1138,7 @@ export default function ClassSchedulesPage() {
             <button
               className={styles.secondary}
               onClick={() => void load()}
-              disabled={loading}
+              disabled={loading || Boolean(working)}
             >
               <RefreshCw size={16} /> Refresh
             </button>
@@ -1081,9 +1151,10 @@ export default function ClassSchedulesPage() {
               <CalendarDays size={30} />
               <strong>No Class Schedules Yet</strong>
               <span>
-                {quickSection
-                  ? "Use Quick Section Schedule above to add this section."
-                  : "Choose a section above to start building schedules."}
+                {teacherView
+                  ? "Choose a teacher above and schedule their assigned teaching loads."
+                  : quickSection ? "Use Quick Section Schedule above to add this section."
+                    : "Choose a section above to start building schedules."}
               </span>
             </div>
           ) : (
@@ -1151,6 +1222,7 @@ export default function ClassSchedulesPage() {
                     <div className={styles.actions}>
                       <button
                         className={styles.edit}
+                        disabled={Boolean(working)}
                         onClick={() => startEdit(schedule)}
                       >
                         <Pencil size={15} /> Edit
@@ -1159,7 +1231,7 @@ export default function ClassSchedulesPage() {
                         className={
                           schedule.is_active ? styles.active : styles.inactive
                         }
-                        disabled={working === schedule.id}
+                        disabled={Boolean(working) || loading}
                         onClick={() =>
                           void setScheduleActive(
                             schedule,

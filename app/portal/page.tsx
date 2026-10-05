@@ -491,7 +491,7 @@ function SideNav({
         {(profile.role === "administrator" || profile.role === "staff_administrator") && (
           <>
             {(profile.role === "administrator" ||
-              ["sf10.manage", "teaching.manage", "schedules.manage", "attendance.manage"].some((permission) =>
+              ["sf10.manage", "teaching.manage", "attendance.manage"].some((permission) =>
                 adminPermissions.includes(permission)
               )) && (
               <div className="nav-group-section">
@@ -536,19 +536,6 @@ function SideNav({
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
-                  {(profile.role === "administrator" || adminPermissions.includes("schedules.manage")) && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        className="nav-button"
-                        onClick={() => {
-                          window.location.href = "/portal/admin/schedules";
-                        }}
-                      >
-                        <CalendarDays size={19} />
-                        <span>Class Schedules</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
                   {(profile.role === "administrator" || adminPermissions.includes("attendance.manage")) && (
                     <SidebarMenuItem>
                       <SidebarMenuButton
@@ -562,6 +549,30 @@ function SideNav({
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
+                </SidebarMenu>
+              </div>
+            )}
+
+            {(profile.role === "administrator" || adminPermissions.includes("schedules.manage")) && (
+              <div className="nav-group-section">
+                <p className="nav-label">SCHEDULING</p>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton className="nav-button" onClick={() => {
+                      window.location.href = "/portal/admin/schedules";
+                    }}>
+                      <CalendarDays size={19} />
+                      <span>Class Schedules</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton className="nav-button" onClick={() => {
+                      window.location.href = "/portal/admin/schedules?view=teacher";
+                    }}>
+                      <CalendarDays size={19} />
+                      <span>Teacher Schedule</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 </SidebarMenu>
               </div>
             )}
