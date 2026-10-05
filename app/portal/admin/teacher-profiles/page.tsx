@@ -92,6 +92,18 @@ const bachelorDegreeOptions = [
   ["OTHER BACHELOR'S DEGREE", "Other Bachelor's Degree"],
 ] as const;
 
+function personnelAttentionControlId(label: string) {
+  const ids: Record<string, string> = {
+    "Graduate Studies": "profile-graduate-status",
+    "Bachelor's Degree": "profile-bachelors-degree",
+    "Other Bachelor's Degree Course": "profile-bachelors-degree-other",
+    "PhilSys (National ID) Number": "profile-philsys-number",
+    "Religion": "profile-religion",
+    "Ethnic Group": "profile-ethnic-group",
+  };
+  return ids[label] ?? "";
+}
+
 function requiredMissingFields(personal: Details) {
   const missing: string[] = [];
   if (!["GRADUATED", "ON GOING", "NONE"].includes(personal.graduate_status ?? "")) missing.push("Graduate Studies");
@@ -150,6 +162,7 @@ export default function TeacherProfilesHrPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [focusField, setFocusField] = useState("");
 
   async function loadTeachers() {
     setLoading(true);
@@ -165,7 +178,14 @@ export default function TeacherProfilesHrPage() {
       if (!response.ok) throw new Error(result.error ?? "Unable to load Teacher profiles.");
       const loaded = (result.teachers ?? []) as Teacher[];
       setTeachers(loaded);
-      if (!selectedId && loaded[0]?.id) setSelectedId(loaded[0].id);
+      const params = new URLSearchParams(window.location.search);
+      const requestedTeacher = params.get("teacher") ?? "";
+      setFocusField(params.get("field") ?? "");
+      if (requestedTeacher && loaded.some((item) => item.id === requestedTeacher)) {
+        setSelectedId(requestedTeacher);
+      } else if (!selectedId && loaded[0]?.id) {
+        setSelectedId(loaded[0].id);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load Teacher profiles.");
     } finally {
@@ -216,6 +236,18 @@ export default function TeacherProfilesHrPage() {
     void loadRecord();
     return () => { active = false; };
   }, [selectedId]);
+
+  useEffect(() => {
+    if (loadingRecord || !selectedId || !focusField) return;
+    const controlId = personnelAttentionControlId(focusField);
+    if (!controlId) return;
+    const timer = window.setTimeout(() => {
+      const control = document.getElementById(controlId) as HTMLElement | null;
+      control?.scrollIntoView({ behavior: "smooth", block: "center" });
+      control?.focus({ preventScroll: true });
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [loadingRecord, selectedId, focusField, personal.bachelors_degree]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -449,6 +481,8 @@ export default function TeacherProfilesHrPage() {
                     <label>
                       <span>Graduate Studies Status <b className={styles.required}>Required</b></span>
                       <select
+                        id="profile-graduate-status"
+                        data-attention={focusField === "Graduate Studies" ? "true" : undefined}
                         value={personal.graduate_status ?? ""}
                         onChange={(event) => {
                           const value = event.target.value;
@@ -525,7 +559,11 @@ export default function TeacherProfilesHrPage() {
                   <div className={styles.grid}>
                     <label className={styles.wide}>
                       <span>Bachelor&apos;s Degree <b className={styles.required}>Required</b></span>
-                      <select value={personal.bachelors_degree ?? ""} onChange={(event)=>{
+                      <select
+                        id="profile-bachelors-degree"
+                        data-attention={focusField === "Bachelor's Degree" ? "true" : undefined}
+                        value={personal.bachelors_degree ?? ""}
+                        onChange={(event)=>{
                         const value=event.target.value;
                         setPersonal(current=>({...current,bachelors_degree:value,
                           major:(value==="BACHELOR OF SECONDARY EDUCATION (BSED)"||value==="BACHELOR OF TECHNICAL-VOCATIONAL TEACHER EDUCATION (BTVTED)")?current.major??"":"",
@@ -542,7 +580,7 @@ export default function TeacherProfilesHrPage() {
                       <label><span>Minor</span><input value={personal.minor??""} onChange={e=>setPersonal(cur=>({...cur,minor:e.target.value}))}/></label>
                     </>}
                     {personal.bachelors_degree==="OTHER BACHELOR'S DEGREE"&&
-                      <label className={styles.wide}><span>Course Taken <b className={styles.required}>Required</b></span><input value={personal.bachelors_degree_other??""} onChange={e=>setPersonal(cur=>({...cur,bachelors_degree_other:e.target.value}))}/></label>}
+                      <label className={styles.wide}><span>Course Taken <b className={styles.required}>Required</b></span><input id="profile-bachelors-degree-other" data-attention={focusField === "Other Bachelor's Degree Course" ? "true" : undefined} value={personal.bachelors_degree_other??""} onChange={e=>setPersonal(cur=>({...cur,bachelors_degree_other:e.target.value}))}/></label>}
                     <label className={styles.checkboxField}>
                       <input type="checkbox" checked={(personal.bsed_earning_units??"NO")==="YES"} onChange={e=>setPersonal(cur=>({...cur,bsed_earning_units:e.target.checked?"YES":"NO",education_units_major:e.target.checked?cur.education_units_major??"":"",education_units_minor:e.target.checked?cur.education_units_minor??"":""}))}/>
                       <span>Took BSEd-Earning Units</span>
@@ -562,6 +600,8 @@ export default function TeacherProfilesHrPage() {
                         <label key={key}>
                           <span>PhilSys (National ID) Number <b className={styles.required}>Required</b></span>
                           <input
+                            id="profile-philsys-number"
+                            data-attention={focusField === "PhilSys (National ID) Number" ? "true" : undefined}
                             required
                             inputMode="numeric"
                             maxLength={25}
@@ -579,7 +619,13 @@ export default function TeacherProfilesHrPage() {
                       ) : key === "religion" || key === "ethnic_group" ? (
                         <label key={key}>
                           <span>{label} <b className={styles.required}>Required</b></span>
-                          <input required value={personal[key] ?? ""} onChange={e=>setPersonal(cur=>({...cur,[key]:e.target.value}))}/>
+                          <input
+                            id={key === "religion" ? "profile-religion" : "profile-ethnic-group"}
+                            data-attention={focusField === label ? "true" : undefined}
+                            required
+                            value={personal[key] ?? ""}
+                            onChange={e=>setPersonal(cur=>({...cur,[key]:e.target.value}))}
+                          />
                         </label>
                       ) : personalField(key, label, key === "skills", key === "skills")
                     )}
