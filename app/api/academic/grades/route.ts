@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
           token
         ),
         getRows(
-          "subjects?select=id,grade_level,name,is_active&order=grade_level.asc,name.asc",
+          "subjects?select=id,grade_level,name,is_active,is_graded,include_in_school_forms&order=grade_level.asc,name.asc",
           token
         ),
         getRows(
@@ -233,13 +233,29 @@ export async function GET(request: NextRequest) {
           )
         : [];
 
+    const gradedSubjectIds = new Set(
+      (subjects ?? [])
+        .filter((item: { id: string; is_graded?: boolean }) => item.is_graded !== false)
+        .map((item: { id: string }) => item.id)
+    );
+    const gradedAssignments = (assignments ?? []).filter(
+      (item: { subject_id: string }) => gradedSubjectIds.has(item.subject_id)
+    );
+    const gradedAssignmentIds = new Set(
+      gradedAssignments.map((item: { id: string }) => item.id)
+    );
+    const visibleGrades = (grades ?? []).filter(
+      (item: { teacher_assignment_id: string }) =>
+        gradedAssignmentIds.has(item.teacher_assignment_id)
+    );
+
     const gradeAssignments =
       profile.role === "teacher"
-        ? (assignments ?? []).filter(
+        ? gradedAssignments.filter(
             (item: { section_id: string }) => advisedSections.has(item.section_id)
           )
         : profile.role === "student" && ownEnrollment
-          ? (assignments ?? []).filter(
+          ? gradedAssignments.filter(
               (item: { section_id: string; major?: string | null }) =>
                 item.section_id === ownEnrollment.section_id &&
                 (!item.major || item.major === ownEnrollment.tve_major)
@@ -254,10 +270,12 @@ export async function GET(request: NextRequest) {
       adviserSections: adviserSectionDetails,
       assignments: gradeAssignments,
       sections,
-      subjects,
+      subjects: (subjects ?? []).filter(
+        (item: { is_graded?: boolean }) => item.is_graded !== false
+      ),
       enrollments,
       students: gradeStudents,
-      grades,
+      grades: visibleGrades,
     });
   } catch {
     return NextResponse.json(
@@ -331,10 +349,16 @@ export async function POST(request: NextRequest) {
     const subjectRows = await getRows(
       `subjects?id=eq.${encodeURIComponent(
         selectedAssignment.subject_id
-      )}&select=id,name&limit=1`,
+      )}&select=id,name,is_graded&limit=1`,
       token
     ).catch(() => []);
     const subjectName = String(subjectRows?.[0]?.name ?? "");
+    if (subjectRows?.[0]?.is_graded === false) {
+      return NextResponse.json(
+        { error: "This subject is for schedule/teaching load only and does not accept grades." },
+        { status: 409 }
+      );
+    }
     const isTveSubject = isTechnicalVocationalEducation(subjectName);
     const isMapehSubject = isMapeh(subjectName);
 
@@ -546,10 +570,16 @@ export async function POST(request: NextRequest) {
     const subjectRows = await getRows(
       `subjects?id=eq.${encodeURIComponent(
         selectedAssignment.subject_id
-      )}&select=id,name&limit=1`,
+      )}&select=id,name,is_graded&limit=1`,
       token
     ).catch(() => []);
     const subjectName = String(subjectRows?.[0]?.name ?? "");
+    if (subjectRows?.[0]?.is_graded === false) {
+      return NextResponse.json(
+        { error: "This subject is for schedule/teaching load only and does not accept grades." },
+        { status: 409 }
+      );
+    }
     const isTveSubject = isTechnicalVocationalEducation(subjectName);
     const isMapehSubject = isMapeh(subjectName);
 
