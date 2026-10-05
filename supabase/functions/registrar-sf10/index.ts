@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
         .select("id,teacher_id,school_year_id,grade_level,section_id,subject_id,is_active"),
       admin
         .from("subjects")
-        .select("id,grade_level,name,code")
+        .select("id,grade_level,name,code,include_in_school_forms")
         .order("grade_level")
         .order("name"),
       admin
@@ -207,12 +207,15 @@ Deno.serve(async (req) => {
         ? teachers.find((item) => item.id === adviserAssignment.teacher_id)
         : null;
 
-      const classAssignments = assignments.filter(
-        (assignment) =>
+      const classAssignments = assignments.filter((assignment) => {
+        const subject = subjects.find((item) => item.id === assignment.subject_id);
+        return (
           assignment.school_year_id === enrollment.school_year_id &&
           assignment.section_id === enrollment.section_id &&
-          assignment.is_active === true
-      );
+          assignment.is_active === true &&
+          subject?.include_in_school_forms !== false
+        );
+      });
 
       const subjectRecords = classAssignments.map((assignment) => {
         const subject = subjects.find(
