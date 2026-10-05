@@ -770,6 +770,27 @@ export default function ClassSchedulesPage() {
       ? scheduleBlocks.filter((block) => block.section_id === quickSection && block.is_active)
       : scheduleBlocks.filter((block) => block.is_active);
 
+  const visibleScheduleItems = [
+    ...visibleSchedules.map((item) => ({
+      kind: "schedule" as const,
+      id: item.id,
+      day_of_week: item.day_of_week,
+      start_time: item.start_time,
+      item,
+    })),
+    ...visibleScheduleBlocks.map((item) => ({
+      kind: "block" as const,
+      id: item.id,
+      day_of_week: item.day_of_week,
+      start_time: item.start_time,
+      item,
+    })),
+  ].sort(
+    (a, b) =>
+      a.day_of_week - b.day_of_week ||
+      a.start_time.localeCompare(b.start_time)
+  );
+
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
@@ -1355,7 +1376,7 @@ export default function ClassSchedulesPage() {
 
           {loading ? (
             <div className={styles.empty}>Loading schedules…</div>
-          ) : visibleSchedules.length === 0 && visibleScheduleBlocks.length === 0 ? (
+          ) : visibleScheduleItems.length === 0 ? (
             <div className={styles.empty}>
               <CalendarDays size={30} />
               <strong>No Class Schedules Yet</strong>
@@ -1368,45 +1389,50 @@ export default function ClassSchedulesPage() {
             </div>
           ) : (
             <div className={styles.scheduleList}>
-              {visibleScheduleBlocks.map((block) => (
-                <article key={`block-${block.id}`} className={`${styles.scheduleRow} ${styles.scheduleBlockRow}`}>
-                  <div className={styles.dayBox}>
-                    <CalendarDays size={18} />
-                    <strong>{DAYS.find((day) => day.value === block.day_of_week)?.label}</strong>
-                  </div>
+              {visibleScheduleItems.map((entry) => {
+                if (entry.kind === "block") {
+                  const block = entry.item;
+                  return (
+                    <article key={`block-${block.id}`} className={`${styles.scheduleRow} ${styles.scheduleBlockRow}`}>
+                      <div className={styles.dayBox}>
+                        <CalendarDays size={18} />
+                        <strong>{DAYS.find((day) => day.value === block.day_of_week)?.label}</strong>
+                      </div>
 
-                  <div>
-                    <span>CLASS</span>
-                    <strong>
-                      Grade {block.grade_level} · {lookup.sectionsById.get(block.section_id) ?? "Unknown"}
-                    </strong>
-                    <small>{block.label}</small>
-                  </div>
+                      <div>
+                        <span>CLASS</span>
+                        <strong>
+                          Grade {block.grade_level} · {lookup.sectionsById.get(block.section_id) ?? "Unknown"}
+                        </strong>
+                        <small>{block.label}</small>
+                      </div>
 
-                  <div>
-                    <span>TYPE</span>
-                    <strong>Non-Instructional</strong>
-                    <small>{block.purpose || "Reserved period"}</small>
-                  </div>
+                      <div>
+                        <span>TYPE</span>
+                        <strong>Non-Instructional</strong>
+                        <small>{block.purpose || "Reserved period"}</small>
+                      </div>
 
-                  <div>
-                    <span>TIME</span>
-                    <strong className={styles.inline}>
-                      <Clock3 size={15} />
-                      {timeLabel(block.start_time)} – {timeLabel(block.end_time)}
-                    </strong>
-                    <small className={styles.inline}>
-                      <MapPin size={14} />
-                      Section cleaning / upkeep
-                    </small>
-                  </div>
+                      <div>
+                        <span>TIME</span>
+                        <strong className={styles.inline}>
+                          <Clock3 size={15} />
+                          {timeLabel(block.start_time)} – {timeLabel(block.end_time)}
+                        </strong>
+                        <small className={styles.inline}>
+                          <MapPin size={14} />
+                          Section cleaning / upkeep
+                        </small>
+                      </div>
 
-                  <div className={styles.blockStatus}>
-                    <span>RESERVED</span>
-                  </div>
-                </article>
-              ))}
-              {visibleSchedules.map((schedule) => {
+                      <div className={styles.blockStatus}>
+                        <span>RESERVED</span>
+                      </div>
+                    </article>
+                  );
+                }
+
+                const schedule = entry.item;
                 const assignment = lookup.assignmentsById.get(
                   schedule.teacher_assignment_id
                 );
@@ -1419,11 +1445,7 @@ export default function ClassSchedulesPage() {
                     <div className={styles.dayBox}>
                       <CalendarDays size={18} />
                       <strong>
-                        {
-                          DAYS.find(
-                            (day) => day.value === schedule.day_of_week
-                          )?.label
-                        }
+                        {DAYS.find((day) => day.value === schedule.day_of_week)?.label}
                       </strong>
                     </div>
 
@@ -1458,8 +1480,7 @@ export default function ClassSchedulesPage() {
                       <span>TIME & ROOM</span>
                       <strong className={styles.inline}>
                         <Clock3 size={15} />
-                        {timeLabel(schedule.start_time)} –{" "}
-                        {timeLabel(schedule.end_time)}
+                        {timeLabel(schedule.start_time)} – {timeLabel(schedule.end_time)}
                       </strong>
                       <small className={styles.inline}>
                         <MapPin size={14} />
