@@ -694,3 +694,14 @@
   font-size:.63rem;
   line-height:1.35;
 }
+
+
+/* Dashboard deep-link focus */
+.grid input[data-attention="true"],
+.grid select[data-attention="true"],
+.grid textarea[data-attention="true"]{
+  border-color:#d39321!important;
+  background:#fffdf7!important;
+  box-shadow:0 0 0 4px rgba(211,147,33,.16)!important;
+  outline:0!important;
+}
