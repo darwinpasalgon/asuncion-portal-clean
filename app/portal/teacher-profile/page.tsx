@@ -91,6 +91,18 @@ const bachelorDegreeOptions = [
   ["OTHER BACHELOR'S DEGREE", "Other Bachelor's Degree"],
 ] as const;
 
+function personnelAttentionControlId(label: string) {
+  const ids: Record<string, string> = {
+    "Graduate Studies": "profile-graduate-status",
+    "Bachelor's Degree": "profile-bachelors-degree",
+    "Other Bachelor's Degree Course": "profile-bachelors-degree-other",
+    "PhilSys (National ID) Number": "profile-philsys-number",
+    "Religion": "profile-religion",
+    "Ethnic Group": "profile-ethnic-group",
+  };
+  return ids[label] ?? "";
+}
+
 function requiredMissingFields(personal: Details) {
   const missing: string[] = [];
   if (!["GRADUATED", "ON GOING", "NONE"].includes(personal.graduate_status ?? "")) missing.push("Graduate Studies");
@@ -132,6 +144,7 @@ export default function MyTeacherProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [focusField, setFocusField] = useState("");
 
   async function loadProfile() {
     setLoading(true);
@@ -157,8 +170,21 @@ export default function MyTeacherProfilePage() {
   }
 
   useEffect(() => {
+    setFocusField(new URLSearchParams(window.location.search).get("field") ?? "");
     void loadProfile();
   }, []);
+
+  useEffect(() => {
+    if (loading || !focusField) return;
+    const controlId = personnelAttentionControlId(focusField);
+    if (!controlId) return;
+    const timer = window.setTimeout(() => {
+      const control = document.getElementById(controlId) as HTMLElement | null;
+      control?.scrollIntoView({ behavior: "smooth", block: "center" });
+      control?.focus({ preventScroll: true });
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [loading, focusField, personal.bachelors_degree]);
 
   async function save() {
     const missing = requiredMissingFields(personal);
@@ -318,6 +344,8 @@ export default function MyTeacherProfilePage() {
             <label>
               <span>Graduate Studies Status <b className={styles.required}>Required</b></span>
               <select
+                id="profile-graduate-status"
+                data-attention={focusField === "Graduate Studies" ? "true" : undefined}
                 value={graduateStatus}
                 onChange={(event) => {
                   const value = event.target.value;
@@ -399,7 +427,11 @@ export default function MyTeacherProfilePage() {
           <div className={styles.grid}>
             <label className={styles.wide}>
               <span>Bachelor&apos;s Degree <b className={styles.required}>Required</b></span>
-              <select value={personal.bachelors_degree ?? ""} onChange={(event)=>{
+              <select
+                id="profile-bachelors-degree"
+                data-attention={focusField === "Bachelor's Degree" ? "true" : undefined}
+                value={personal.bachelors_degree ?? ""}
+                onChange={(event)=>{
                 const value=event.target.value;
                 setPersonal(current=>({...current,bachelors_degree:value,
                   major:(value==="BACHELOR OF SECONDARY EDUCATION (BSED)"||value==="BACHELOR OF TECHNICAL-VOCATIONAL TEACHER EDUCATION (BTVTED)")?current.major??"":"",
@@ -416,7 +448,7 @@ export default function MyTeacherProfilePage() {
               <label><span>Minor</span><input value={personal.minor??""} onChange={e=>setPersonal(cur=>({...cur,minor:e.target.value}))}/></label>
             </>}
             {personal.bachelors_degree==="OTHER BACHELOR'S DEGREE"&&
-              <label className={styles.wide}><span>Course Taken <b className={styles.required}>Required</b></span><input value={personal.bachelors_degree_other??""} onChange={e=>setPersonal(cur=>({...cur,bachelors_degree_other:e.target.value}))} placeholder="Enter bachelor's degree/course"/></label>}
+              <label className={styles.wide}><span>Course Taken <b className={styles.required}>Required</b></span><input id="profile-bachelors-degree-other" data-attention={focusField === "Other Bachelor's Degree Course" ? "true" : undefined} value={personal.bachelors_degree_other??""} onChange={e=>setPersonal(cur=>({...cur,bachelors_degree_other:e.target.value}))} placeholder="Enter bachelor's degree/course"/></label>}
             <label className={styles.checkboxField}>
               <input type="checkbox" checked={(personal.bsed_earning_units??"NO")==="YES"} onChange={e=>setPersonal(cur=>({...cur,bsed_earning_units:e.target.checked?"YES":"NO",education_units_major:e.target.checked?cur.education_units_major??"":"",education_units_minor:e.target.checked?cur.education_units_minor??"":""}))}/>
               <span>Took BSEd-Earning Units</span>
@@ -439,6 +471,8 @@ export default function MyTeacherProfilePage() {
                 <label key={key}>
                   <span>PhilSys (National ID) Number <b className={styles.required}>Required</b></span>
                   <input
+                    id="profile-philsys-number"
+                    data-attention={focusField === "PhilSys (National ID) Number" ? "true" : undefined}
                     required
                     inputMode="numeric"
                     autoComplete="off"
@@ -457,7 +491,13 @@ export default function MyTeacherProfilePage() {
               ) : key === "religion" || key === "ethnic_group" ? (
                 <label key={key}>
                   <span>{label} <b className={styles.required}>Required</b></span>
-                  <input required value={personal[key] ?? ""} onChange={e=>setPersonal(cur=>({...cur,[key]:e.target.value}))}/>
+                  <input
+                    id={key === "religion" ? "profile-religion" : "profile-ethnic-group"}
+                    data-attention={focusField === label ? "true" : undefined}
+                    required
+                    value={personal[key] ?? ""}
+                    onChange={e=>setPersonal(cur=>({...cur,[key]:e.target.value}))}
+                  />
                 </label>
               ) : field(key, label, key === "skills", key === "skills")
             )}
