@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hasAdminPermission } from "@/lib/admin-access";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
+import { findScheduleConflicts, type ProposedPeriod } from "@/lib/schedule-conflicts";
 
 function authHeaders(token: string) {
   return {
@@ -47,6 +48,31 @@ async function activeYear(token: string) {
 
 function validTime(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+async function conflictResponse(token: string, assignmentId: string, periods: ProposedPeriod[]) {
+  const error = "Schedule conflict: an existing class overlaps with the requested schedule.";
+  try {
+    const [assignment] = await getRows(
+      `teacher_assignments?id=eq.${encodeURIComponent(assignmentId)}&select=id,school_year_id&limit=1`, token
+    );
+    if (!assignment) throw new Error("Assignment unavailable");
+    const [assignments, schedules, teachers, sections, subjects] = await Promise.all([
+      getRows(`teacher_assignments?school_year_id=eq.${encodeURIComponent(assignment.school_year_id)}&is_active=eq.true&select=id,teacher_id,section_id,subject_id,grade_level,major`, token),
+      getRows(`class_schedules?is_active=eq.true&day_of_week=in.(${[...new Set(periods.map((item) => item.day_of_week))].join(",")})&select=id,teacher_assignment_id,day_of_week,start_time,end_time,room,is_active`, token),
+      getRows("profiles?role=eq.teacher&select=id,full_name", token),
+      getRows("sections?select=id,name", token),
+      getRows("subjects?select=id,name", token),
+    ]);
+    const target = assignments.find((item: { id: string }) => item.id === assignmentId);
+    const conflicts = target ? findScheduleConflicts(target, periods, { assignments, schedules, teachers, sections, subjects }) : [];
+    return NextResponse.json({ error, code: "schedule_conflict", conflicts }, { status: 409 });
+  } catch {
+    return NextResponse.json({
+      error: `${error} Refresh the schedules to review the latest entries.`,
+      code: "schedule_conflict", conflicts: [],
+    }, { status: 409 });
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -235,6 +261,9 @@ export async function POST(request: NextRequest) {
       const detail = String(
         result?.message ?? result?.details ?? result?.hint ?? ""
       ).toLowerCase();
+      if (detail.includes("schedule conflicts")) {
+        return conflictResponse(token, assignmentId, payloads.map((item) => ({ ...item, id: id || undefined })));
+      }
       let message = "Unable to save the schedule.";
       if (detail.includes("teacher or section")) {
         message =
@@ -279,6 +308,12 @@ export async function POST(request: NextRequest) {
     const result = await response.json().catch(() => ({}));
     if (!response.ok || !result?.[0]) {
       const detail = String(result?.message ?? result?.details ?? "").toLowerCase();
+      if (isActive && detail.includes("conflict")) {
+        const [schedule] = await getRows(
+          `class_schedules?id=eq.${encodeURIComponent(id)}&select=id,teacher_assignment_id,day_of_week,start_time,end_time,room&limit=1`, token
+        ).catch(() => []);
+        if (schedule) return conflictResponse(token, schedule.teacher_assignment_id, [schedule]);
+      }
       return NextResponse.json(
         {
           error:

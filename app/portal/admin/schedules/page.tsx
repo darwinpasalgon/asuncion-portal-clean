@@ -1,8 +1,10 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { findScheduleConflicts, normalizedRoom, type ProposedPeriod, type ScheduleConflict } from "@/lib/schedule-conflicts";
 import {
   ArrowLeft,
+  AlertTriangle,
   CalendarDays,
   CheckCircle2,
   Clock3,
@@ -53,6 +55,25 @@ type QuickDraft = {
   startTime: string;
   endTime: string;
   room: string;
+};
+
+type ReviewOrigin = {
+  scheduleView: "section" | "teacher";
+  quickGrade: string;
+  quickSection: string;
+  quickTeacher: string;
+  roomFilter: string;
+  advancedOpen: boolean;
+  editId: string;
+  editAssignment: string;
+  editDay: string;
+  editStart: string;
+  editEnd: string;
+  editRoom: string;
+  selectedDays: number[];
+  dayDrafts: Record<number, DayDraft>;
+  quickDrafts: Record<string, QuickDraft>;
+  scrollY: number;
 };
 
 const DAYS = [
@@ -107,6 +128,100 @@ export default function ClassSchedulesPage() {
   const [working, setWorking] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [conflictDialog, setConflictDialog] = useState<{ message: string; conflicts: ScheduleConflict[] } | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [roomFilter, setRoomFilter] = useState("");
+  const [highlightId, setHighlightId] = useState("");
+  const [reviewOrigin, setReviewOrigin] = useState<ReviewOrigin | null>(null);
+
+  useEffect(() => {
+    if (conflictDialog && dialogRef.current && !dialogRef.current.open) {
+      dialogRef.current.showModal();
+      dialogRef.current.querySelector<HTMLElement>("h2")?.focus();
+    }
+  }, [conflictDialog]);
+
+  useEffect(() => {
+    if (!highlightId || loading || conflictDialog) return;
+    const row = document.getElementById(`schedule-${highlightId}`);
+    row?.scrollIntoView({ behavior: "smooth", block: "center" });
+    row?.focus({ preventScroll: true });
+  }, [highlightId, loading, conflictDialog]);
+
+  function closeConflictDialog() {
+    dialogRef.current?.close();
+    setConflictDialog(null);
+  }
+
+  function showServerConflict(result: { code?: string; error?: string; conflicts?: ScheduleConflict[] }, prefix = "") {
+    if (result.code !== "schedule_conflict" && !result.error?.startsWith("Schedule conflict:")) return;
+    setConflictDialog({
+      message: prefix + (result.error ?? "This schedule overlaps with an existing class."),
+      conflicts: result.conflicts ?? [],
+    });
+  }
+
+  function checkLocalConflicts(assignment: Assignment, periods: ProposedPeriod[]) {
+    const conflicts = findScheduleConflicts(assignment, periods, { assignments, schedules, teachers, sections, subjects });
+    if (!conflicts.length) return false;
+    const message = "This schedule overlaps with an existing class. Your requested change has not been saved.";
+    setError(message);
+    setSuccess("");
+    setConflictDialog({ message, conflicts });
+    return true;
+  }
+
+  function reviewConflict(conflict: ScheduleConflict, kind: "teacher" | "section" | "room") {
+    if (!reviewOrigin) setReviewOrigin({
+      scheduleView, quickGrade, quickSection, quickTeacher, roomFilter, advancedOpen,
+      editId, editAssignment, editDay, editStart, editEnd, editRoom, selectedDays, dayDrafts, quickDrafts,
+      scrollY: window.scrollY,
+    });
+    closeConflictDialog();
+    setRoomFilter(kind === "room" ? conflict.schedule.room ?? "" : "");
+    if (kind === "teacher") {
+      changeView("teacher");
+      setQuickTeacher(conflict.assignment.teacher_id);
+    } else {
+      changeView("section");
+      setQuickGrade(kind === "section" ? String(conflict.assignment.grade_level) : "");
+      setQuickSection(kind === "section" ? conflict.assignment.section_id : "");
+    }
+    // Keep a current snapshot visible even if the page was loaded before this entry existed.
+    setSchedules((current) => [...current.filter((item) => item.id !== conflict.schedule.id), conflict.schedule]);
+    setAssignments((current) => [...current.filter((item) => item.id !== conflict.assignment.id), conflict.assignment]);
+    setTeachers((current) => current.some((item) => item.id === conflict.assignment.teacher_id) ? current :
+      [...current, { id: conflict.assignment.teacher_id, full_name: conflict.teacherName }]);
+    setSections((current) => current.some((item) => item.id === conflict.assignment.section_id) ? current :
+      [...current, { id: conflict.assignment.section_id, name: conflict.sectionName, grade_level: conflict.assignment.grade_level }]);
+    setSubjects((current) => current.some((item) => item.id === conflict.assignment.subject_id) ? current :
+      [...current, { id: conflict.assignment.subject_id, name: conflict.subjectName, grade_level: conflict.assignment.grade_level }]);
+    setHighlightId(conflict.schedule.id);
+    setAdvancedOpen(false);
+  }
+
+  function returnToDraft() {
+    if (!reviewOrigin) return;
+    const origin = reviewOrigin;
+    changeView(origin.scheduleView);
+    setQuickGrade(origin.quickGrade);
+    setQuickSection(origin.quickSection);
+    setQuickTeacher(origin.quickTeacher);
+    setRoomFilter(origin.roomFilter);
+    setAdvancedOpen(origin.advancedOpen);
+    setEditId(origin.editId);
+    setEditAssignment(origin.editAssignment);
+    setEditDay(origin.editDay);
+    setEditStart(origin.editStart);
+    setEditEnd(origin.editEnd);
+    setEditRoom(origin.editRoom);
+    setSelectedDays(origin.selectedDays);
+    setDayDrafts(origin.dayDrafts);
+    setQuickDrafts((current) => ({ ...current, ...origin.quickDrafts }));
+    setHighlightId("");
+    setReviewOrigin(null);
+    window.requestAnimationFrame(() => window.scrollTo({ top: origin.scrollY, behavior: "smooth" }));
+  }
 
   async function load(clearError = true) {
     setLoading(true);
@@ -330,6 +445,12 @@ export default function ClassSchedulesPage() {
         existing.map((schedule) => [schedule.day_of_week, schedule])
       );
 
+      if (checkLocalConflicts(assignment, draft.days.map((day) => ({
+        id: existingByDay.get(day)?.id, day_of_week: day,
+        start_time: draft.startTime, end_time: draft.endTime,
+        room: draft.room.trim().replace(/\s+/g, " ") || null,
+      })))) return;
+
       const newDays: number[] = [];
 
       for (const day of draft.days) {
@@ -354,6 +475,7 @@ export default function ClassSchedulesPage() {
         });
         const result = await response.json().catch(() => ({}));
         if (!response.ok) {
+          showServerConflict(result, savedDays ? `${savedDays} day(s) saved before this conflict. ` : "");
           throw new Error(
             result.error ??
               `Unable to update the ${DAYS.find((item) => item.value === day)?.label ?? "selected day"} schedule.`
@@ -379,6 +501,7 @@ export default function ClassSchedulesPage() {
         });
         const result = await response.json().catch(() => ({}));
         if (!response.ok) {
+          showServerConflict(result, savedDays ? `${savedDays} day(s) saved before this conflict. ` : "");
           throw new Error(result.error ?? "Unable to save the selected days.");
         }
         savedDays += newDays.length;
@@ -478,6 +601,15 @@ export default function ClassSchedulesPage() {
 
   async function saveSchedule(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (working || loading) return;
+    const assignment = lookup.assignmentsById.get(editAssignment);
+    const periods = editId ? [{ id: editId, day_of_week: Number(editDay), start_time: editStart, end_time: editEnd, room: editRoom.trim().replace(/\s+/g, " ") || null }] :
+      selectedDays.map((day) => ({ day_of_week: day, start_time: dayDrafts[day]?.startTime ?? "", end_time: dayDrafts[day]?.endTime ?? "", room: dayDrafts[day]?.room.trim().replace(/\s+/g, " ") || null }));
+    if (periods.some((period) => !period.start_time || !period.end_time || period.start_time >= period.end_time)) {
+      setError("Enter a valid start and end time for every selected day.");
+      return;
+    }
+    if (assignment && checkLocalConflicts(assignment, periods)) return;
     setWorking("save");
     setError("");
     setSuccess("");
@@ -511,6 +643,7 @@ export default function ClassSchedulesPage() {
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
+        showServerConflict(result);
         setError(result.error ?? "Unable to save the schedule.");
         return;
       }
@@ -532,6 +665,9 @@ export default function ClassSchedulesPage() {
   }
 
   async function setScheduleActive(schedule: Schedule, isActive: boolean) {
+    if (working || loading) return;
+    const assignment = lookup.assignmentsById.get(schedule.teacher_assignment_id);
+    if (isActive && assignment && checkLocalConflicts(assignment, [schedule])) return;
     setWorking(schedule.id);
     setError("");
     setSuccess("");
@@ -548,6 +684,7 @@ export default function ClassSchedulesPage() {
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
+        showServerConflict(result);
         setError(result.error ?? "Unable to update the schedule.");
         return;
       }
@@ -568,7 +705,9 @@ export default function ClassSchedulesPage() {
     return a.start_time.localeCompare(b.start_time);
   });
 
-  const visibleSchedules = hasSelection
+  const visibleSchedules = roomFilter
+    ? orderedSchedules.filter((schedule) => normalizedRoom(schedule.room) === normalizedRoom(roomFilter))
+    : hasSelection
     ? orderedSchedules.filter((schedule) => {
         const assignment = lookup.assignmentsById.get(
           schedule.teacher_assignment_id
@@ -615,11 +754,18 @@ export default function ClassSchedulesPage() {
         {error && <div className={styles.error} role="alert">{error}</div>}
         {success && <div className={styles.success} role="status">{success}</div>}
 
+        {reviewOrigin && (
+          <div className={styles.reviewBanner} role="status">
+            <div><strong>Reviewing a Schedule Conflict</strong><p>The overlapping entry is highlighted below. Your unfinished entry is kept while you review.</p></div>
+            <button type="button" className={styles.secondary} disabled={Boolean(working)} onClick={returnToDraft}>Return to My Entry</button>
+          </div>
+        )}
+
         <div className={styles.viewSwitcher} role="group" aria-label="Schedule View">
-          <button type="button" aria-pressed={!teacherView} disabled={Boolean(working)} onClick={() => changeView("section")}>
+          <button type="button" aria-pressed={!teacherView} disabled={Boolean(working)} onClick={() => { setRoomFilter(""); changeView("section"); }}>
             By Section
           </button>
-          <button type="button" aria-pressed={teacherView} disabled={Boolean(working)} onClick={() => changeView("teacher")}>
+          <button type="button" aria-pressed={teacherView} disabled={Boolean(working)} onClick={() => { setRoomFilter(""); changeView("teacher"); }}>
             By Teacher
           </button>
         </div>
@@ -646,6 +792,7 @@ export default function ClassSchedulesPage() {
                 <span>Teacher</span>
                 <select value={quickTeacher} disabled={loading || Boolean(working)} onChange={(event) => {
                   setQuickTeacher(event.target.value);
+                  setRoomFilter("");
                   setError("");
                   setSuccess("");
                 }}>
@@ -663,6 +810,7 @@ export default function ClassSchedulesPage() {
                 disabled={loading || Boolean(working)}
                 onChange={(event) => {
                   setQuickGrade(event.target.value);
+                  setRoomFilter("");
                   setQuickSection("");
                   setError("");
                   setSuccess("");
@@ -684,6 +832,7 @@ export default function ClassSchedulesPage() {
                 disabled={!quickGrade || loading || Boolean(working)}
                 onChange={(event) => {
                   setQuickSection(event.target.value);
+                  setRoomFilter("");
                   setError("");
                   setSuccess("");
                 }}
@@ -1128,7 +1277,7 @@ export default function ClassSchedulesPage() {
           <div className={styles.panelHeading}>
             <div>
               <h2>
-                {teacherView ? "Selected Teacher Schedule" : quickSection ? "Selected Section Schedule" : "Published Class Schedule"}
+                {roomFilter ? `Room Schedule: ${roomFilter}` : teacherView ? "Selected Teacher Schedule" : quickSection ? "Selected Section Schedule" : "Published Class Schedule"}
               </h2>
               <p>
                 Active entries appear automatically in Student and Teacher
@@ -1168,7 +1317,7 @@ export default function ClassSchedulesPage() {
                   : null;
 
                 return (
-                  <article key={schedule.id} className={styles.scheduleRow}>
+                  <article key={schedule.id} id={`schedule-${schedule.id}`} tabIndex={-1} className={`${styles.scheduleRow} ${highlightId === schedule.id ? styles.conflictHighlight : ""}`}>
                     <div className={styles.dayBox}>
                       <CalendarDays size={18} />
                       <strong>
@@ -1194,6 +1343,7 @@ export default function ClassSchedulesPage() {
                         {subject?.name ?? "Unknown subject"}
                         {assignment?.major ? ` · ${assignment.major}` : ""}
                       </small>
+                      {highlightId === schedule.id && <small className={styles.conflictLabel}>Overlapping Entry</small>}
                     </div>
 
                     <div>
@@ -1248,6 +1398,38 @@ export default function ClassSchedulesPage() {
             </div>
           )}
         </section>
+        {conflictDialog && (
+          <dialog ref={dialogRef} className={styles.conflictDialog} aria-labelledby="schedule-conflict-title" aria-describedby="schedule-conflict-description" onCancel={closeConflictDialog}>
+            <div className={styles.conflictDialogHeading}>
+              <AlertTriangle size={25} aria-hidden="true" />
+              <h2 id="schedule-conflict-title" tabIndex={-1}>Schedule Conflict</h2>
+            </div>
+            <p id="schedule-conflict-description">{conflictDialog.message}</p>
+            <div className={styles.conflictDetails}>
+              {conflictDialog.conflicts.map((conflict) => (
+                <article key={conflict.schedule.id}>
+                  <span>{conflict.kinds.map((kind) => kind[0].toUpperCase() + kind.slice(1)).join(" / ")} Conflict</span>
+                  <h3>{conflict.teacherName}</h3>
+                  <p>{conflict.subjectName}{conflict.assignment.major ? ` · ${conflict.assignment.major}` : ""}</p>
+                  <p>Grade {conflict.assignment.grade_level} · {conflict.sectionName}</p>
+                  <strong>{DAYS.find((day) => day.value === conflict.schedule.day_of_week)?.label}, {timeLabel(conflict.schedule.start_time)}–{timeLabel(conflict.schedule.end_time)}</strong>
+                  <p>Room: {conflict.schedule.room || "Not Specified"}</p>
+                  <div className={styles.conflictButtons}>
+                    {conflict.kinds.map((kind) => (
+                      <button key={kind} type="button" className={styles.secondary} disabled={loading || Boolean(working)} onClick={() => reviewConflict(conflict, kind)}>
+                        View {kind === "teacher" ? "Teacher’s" : kind === "section" ? "Section" : "Room"} Schedule
+                      </button>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+            <div className={styles.conflictDialogFooter}>
+              <small>Your unfinished input stays on this page.</small>
+              <button type="button" className={styles.secondary} onClick={closeConflictDialog}>Change Time / Close</button>
+            </div>
+          </dialog>
+        )}
       </div>
     </main>
   );
