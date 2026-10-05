@@ -162,6 +162,27 @@ type PersonnelProfileAttention = {
   total_incomplete: number;
 };
 
+type AcademicSetupAttentionItem = {
+  key: string;
+  grade_level: number;
+  section_id: string;
+  section: string;
+  subject_id: string;
+  subject: string;
+  major: string | null;
+  teacher_id?: string;
+  teacher_name?: string;
+};
+
+type AcademicSetupAttention = {
+  unassigned: AcademicSetupAttentionItem[];
+  unscheduled: AcademicSetupAttentionItem[];
+  unassigned_count: number;
+  unscheduled_count: number;
+  can_teach: boolean;
+  can_schedule: boolean;
+};
+
 type ClassScheduleEntry = {
   id: string;
   day_of_week: number;
@@ -839,6 +860,8 @@ export default function PortalPage() {
   const [adviserAttentionLoading, setAdviserAttentionLoading] = useState(false);
   const [personnelAttention, setPersonnelAttention] = useState<PersonnelProfileAttention | null>(null);
   const [personnelAttentionLoading, setPersonnelAttentionLoading] = useState(false);
+  const [academicSetupAttention, setAcademicSetupAttention] = useState<AcademicSetupAttention | null>(null);
+  const [academicSetupAttentionLoading, setAcademicSetupAttentionLoading] = useState(false);
   const [communityUnread, setCommunityUnread] = useState(0);
   const [majorSaving, setMajorSaving] = useState("");
   const [classSchedules, setClassSchedules] = useState<ClassScheduleEntry[]>([]);
@@ -883,6 +906,24 @@ export default function PortalPage() {
               }
             } finally {
               if (active) setPersonnelAttentionLoading(false);
+            }
+          }
+
+          if (
+            loadedProfile.role === "administrator" ||
+            loadedProfile.role === "staff_administrator"
+          ) {
+            setAcademicSetupAttentionLoading(true);
+            try {
+              const setupResponse = await fetch("/api/admin/academic-setup-attention", {
+                cache: "no-store",
+              });
+              const setupResult = await setupResponse.json().catch(() => ({}));
+              if (active && setupResponse.ok) {
+                setAcademicSetupAttention(setupResult as AcademicSetupAttention);
+              }
+            } finally {
+              if (active) setAcademicSetupAttentionLoading(false);
             }
           }
 
@@ -1302,6 +1343,136 @@ export default function PortalPage() {
                           )}
                         </div>
                       )}
+                  </section>
+                )}
+
+              {(profile.role === "administrator" ||
+                profile.role === "staff_administrator") &&
+                (academicSetupAttentionLoading ||
+                  Boolean(
+                    academicSetupAttention &&
+                      (academicSetupAttention.unassigned_count > 0 ||
+                        academicSetupAttention.unscheduled_count > 0)
+                  )) && (
+                  <section className="panel real-adviser-attention real-academic-setup-attention">
+                    <div className="real-attention-heading">
+                      <div className="real-attention-title">
+                        <span className="real-attention-icon">
+                          <Settings2 size={19} />
+                        </span>
+                        <div>
+                          <h2>Academic Setup Attention</h2>
+                          <p>
+                            Subject Teacher assignments and class schedules that still
+                            need Administrator action.
+                          </p>
+                        </div>
+                      </div>
+                      {!academicSetupAttentionLoading && academicSetupAttention && (
+                        <span className="real-attention-count">
+                          {academicSetupAttention.unassigned_count +
+                            academicSetupAttention.unscheduled_count}{" "}
+                          to review
+                        </span>
+                      )}
+                    </div>
+
+                    {academicSetupAttentionLoading ? (
+                      <div className="real-attention-loading">
+                        Checking Subject Teacher assignments and schedules…
+                      </div>
+                    ) : academicSetupAttention ? (
+                      <div className="real-attention-list">
+                        {academicSetupAttention.unassigned_count > 0 && (
+                          <article className="real-attention-item warning">
+                            <span className="real-attention-item-icon">
+                              <CircleAlert size={18} />
+                            </span>
+                            <div className="real-attention-copy">
+                              <div>
+                                <strong>Subject Teachers Not Assigned</strong>
+                                <span className="real-attention-badge">
+                                  {academicSetupAttention.unassigned_count}
+                                </span>
+                              </div>
+                              <p>
+                                Active classes below still have a subject or TVE major
+                                without an assigned Subject Teacher.
+                              </p>
+                              <div className="real-personnel-list">
+                                {academicSetupAttention.unassigned.slice(0, 10).map((item) => (
+                                  <div key={item.key}>
+                                    <strong>
+                                      Grade {item.grade_level} · {item.section}
+                                    </strong>
+                                    <span>
+                                      {item.subject}
+                                      {item.major ? " · " + item.major : ""}
+                                    </span>
+                                  </div>
+                                ))}
+                                {academicSetupAttention.unassigned_count > 10 && (
+                                  <small className="real-personnel-more">
+                                    +{academicSetupAttention.unassigned_count - 10} more
+                                  </small>
+                                )}
+                              </div>
+                            </div>
+                            {academicSetupAttention.can_teach && (
+                              <a href="/portal/admin/teaching">
+                                Assign Teachers
+                                <ChevronRight size={15} />
+                              </a>
+                            )}
+                          </article>
+                        )}
+
+                        {academicSetupAttention.unscheduled_count > 0 && (
+                          <article className="real-attention-item warning">
+                            <span className="real-attention-item-icon">
+                              <CalendarDays size={18} />
+                            </span>
+                            <div className="real-attention-copy">
+                              <div>
+                                <strong>Assigned Subjects Not Scheduled</strong>
+                                <span className="real-attention-badge">
+                                  {academicSetupAttention.unscheduled_count}
+                                </span>
+                              </div>
+                              <p>
+                                These Subject Teacher assignments are active but do not
+                                yet have any active Class Schedule entry.
+                              </p>
+                              <div className="real-personnel-list">
+                                {academicSetupAttention.unscheduled.slice(0, 10).map((item) => (
+                                  <div key={item.key}>
+                                    <strong>
+                                      Grade {item.grade_level} · {item.section}
+                                    </strong>
+                                    <span>
+                                      {item.subject}
+                                      {item.major ? " · " + item.major : ""}
+                                    </span>
+                                    <small>{item.teacher_name ?? "Assigned Teacher"}</small>
+                                  </div>
+                                ))}
+                                {academicSetupAttention.unscheduled_count > 10 && (
+                                  <small className="real-personnel-more">
+                                    +{academicSetupAttention.unscheduled_count - 10} more
+                                  </small>
+                                )}
+                              </div>
+                            </div>
+                            {academicSetupAttention.can_schedule && (
+                              <a href="/portal/admin/class-schedules">
+                                Open Class Schedules
+                                <ChevronRight size={15} />
+                              </a>
+                            )}
+                          </article>
+                        )}
+                      </div>
+                    ) : null}
                   </section>
                 )}
 
