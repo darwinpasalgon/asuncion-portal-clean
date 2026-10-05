@@ -31,6 +31,8 @@ type Subject = {
   grade_level: number;
   name: string;
   is_active: boolean;
+  is_graded?: boolean;
+  include_in_school_forms?: boolean;
 };
 type Teacher = {
   id: string;
@@ -767,6 +769,9 @@ function subjectTeacherLabel(teacher: Teacher) {
                         <tr key={row.key}>
                           <td>
                             <strong>{row.subject.name}</strong>
+                            {row.subject.is_graded === false && (
+                              <small>Schedule / Teaching Load Only · No Grades</small>
+                            )}
                             {row.subject.grade_level === 7 &&
                               isTechnicalVocationalEducation(row.subject.name) && (
                                 <small>Exploratory</small>
@@ -1154,15 +1159,17 @@ function subjectTeacherLabel(teacher: Teacher) {
                         <div>
                           <strong>{subject.name}</strong>
                           <span>
-                            {isTechnicalVocationalEducation(subject.name)
-                              ? subject.grade_level === 7
-                                ? "Exploratory"
-                                : [8, 9, 10].includes(subject.grade_level)
-                                  ? "Major selected during teacher assignment"
-                                  : "Subject"
-                              : subject.is_active
-                                ? "Active subject"
-                                : "Inactive subject"}
+                            {subject.is_graded === false
+                              ? "Schedule / Teaching Load Only · Excluded from Grades and School Forms"
+                              : isTechnicalVocationalEducation(subject.name)
+                                ? subject.grade_level === 7
+                                  ? "Exploratory"
+                                  : [8, 9, 10].includes(subject.grade_level)
+                                    ? "Major selected during teacher assignment"
+                                    : "Subject"
+                                : subject.is_active
+                                  ? "Active subject"
+                                  : "Inactive subject"}
                           </span>
                         </div>
                         <div className={styles.subjectActions}>
