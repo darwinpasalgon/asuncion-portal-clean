@@ -279,7 +279,7 @@ export async function POST(request: NextRequest) {
       const block = blocked[0] as { label?: string; purpose?: string | null };
       return NextResponse.json(
         {
-          error: `This period is reserved as ${block.label || "VACANT"}${block.purpose ? ` – ${block.purpose}` : ""}. Choose another time or update the reserved schedule block first.`,
+          error: `This period is reserved as ${block.label || "VACANT"}${block.purpose ? ` – ${block.purpose}` : ""}. Choose another class time.`,
           code: "schedule_block_conflict",
         },
         { status: 409 }
