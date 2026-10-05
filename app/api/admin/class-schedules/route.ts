@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const year = await activeYear(token);
-    const [assignments, sections, subjects, teachers, schedules] = await Promise.all([
+    const [assignments, sections, subjects, teachers, schedules, scheduleBlocks] = await Promise.all([
       year
         ? getRows(
             `teacher_assignments?school_year_id=eq.${encodeURIComponent(
@@ -102,6 +102,14 @@ export async function GET(request: NextRequest) {
         "class_schedules?select=id,teacher_assignment_id,day_of_week,start_time,end_time,room,is_active,created_at&order=day_of_week.asc,start_time.asc",
         token
       ),
+      year
+        ? getRows(
+            `schedule_blocks?school_year_id=eq.${encodeURIComponent(
+              year.id
+            )}&is_active=eq.true&select=id,school_year_id,grade_level,section_id,day_of_week,start_time,end_time,label,purpose,block_type,is_active&order=day_of_week.asc,start_time.asc`,
+            token
+          )
+        : Promise.resolve([]),
     ]);
 
     const activeAssignmentIds = new Set(
@@ -117,6 +125,7 @@ export async function GET(request: NextRequest) {
       schedules: (schedules ?? []).filter((item: { teacher_assignment_id: string }) =>
         activeAssignmentIds.has(item.teacher_assignment_id)
       ),
+      scheduleBlocks: scheduleBlocks ?? [],
     });
   } catch {
     return NextResponse.json(
@@ -156,7 +165,7 @@ export async function POST(request: NextRequest) {
         assignmentId
       )}&school_year_id=eq.${encodeURIComponent(
         year.id
-      )}&is_active=eq.true&select=id&limit=1`,
+      )}&is_active=eq.true&select=id,section_id&limit=1`,
       token
     ).catch(() => []);
 
@@ -242,6 +251,39 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString(),
         ...(id ? {} : { created_by: createdBy }),
       });
+    }
+
+    const activeBlocks = await getRows(
+      `schedule_blocks?school_year_id=eq.${encodeURIComponent(
+        year.id
+      )}&section_id=eq.${encodeURIComponent(
+        assignmentRows[0].section_id
+      )}&is_active=eq.true&select=id,day_of_week,start_time,end_time,label,purpose`,
+      token
+    ).catch(() => []);
+
+    const blocked = payloads.flatMap((period) =>
+      (activeBlocks ?? []).filter(
+        (block: {
+          day_of_week: number;
+          start_time: string;
+          end_time: string;
+        }) =>
+          Number(block.day_of_week) === period.day_of_week &&
+          String(block.start_time).slice(0, 5) < period.end_time.slice(0, 5) &&
+          String(block.end_time).slice(0, 5) > period.start_time.slice(0, 5)
+      )
+    );
+
+    if (blocked.length) {
+      const block = blocked[0] as { label?: string; purpose?: string | null };
+      return NextResponse.json(
+        {
+          error: `This period is reserved as ${block.label || "VACANT"}${block.purpose ? ` – ${block.purpose}` : ""}. Choose another time or update the reserved schedule block first.`,
+          code: "schedule_block_conflict",
+        },
+        { status: 409 }
+      );
     }
 
     const response = await fetch(
