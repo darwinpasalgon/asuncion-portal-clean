@@ -310,6 +310,24 @@ export async function GET(request: NextRequest) {
           String(a.major ?? "").localeCompare(String(b.major ?? ""))
       );
 
+    for (const item of unassigned) {
+      if (
+        item.grade_level === 8 &&
+        ["Yakal", "Gemelina"].includes(item.section) &&
+        item.subject === "Araling Panlipunan"
+      ) {
+        item.teacher_name = "LEAH ENRIQUEZ ALUMBRO";
+      }
+      if (
+        item.grade_level === 8 &&
+        item.section === "Dao" &&
+        item.subject === "Technical Vocational Education" &&
+        item.major === "Agriculture Crop Production"
+      ) {
+        item.teacher_name = "JO-ANN DARUNDAY VILA";
+      }
+    }
+
     unassigned.sort(
       (a, b) =>
         a.grade_level - b.grade_level ||
