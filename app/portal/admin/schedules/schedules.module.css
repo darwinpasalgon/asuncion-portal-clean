@@ -175,3 +175,33 @@
   font-weight:850;
   letter-spacing:.02em;
 }
+
+
+/* Reserved non-instructional schedule blocks */
+.scheduleBlockRow{
+  background:linear-gradient(90deg,#fff9e9,#fffdf7);
+  box-shadow:inset 5px 0 #d49a2f;
+}
+.scheduleBlockRow>div>strong{color:#6f561f!important}
+.scheduleBlockRow>div>small{color:#8b7341!important}
+.blockStatus{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+}
+.blockStatus>span{
+  display:inline-flex;
+  align-items:center;
+  min-height:30px;
+  padding:0 10px;
+  border:1px solid #e5c879;
+  border-radius:999px;
+  background:#fff2c9;
+  color:#7c5b13;
+  font-size:.62rem;
+  font-weight:850;
+  letter-spacing:.06em;
+}
+@media(max-width:700px){
+  .blockStatus{justify-content:flex-start}
+}
