@@ -1409,6 +1409,9 @@ export default function PortalPage() {
                                       {item.subject}
                                       {item.major ? " · " + item.major : ""}
                                     </span>
+                                    {item.teacher_name && (
+                                      <small>Expected Teacher: {item.teacher_name}</small>
+                                    )}
                                   </div>
                                 ))}
                                 {academicSetupAttention.unassigned_count > 10 && (
