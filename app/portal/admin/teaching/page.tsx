@@ -117,37 +117,6 @@ export default function TeachingSetupPage() {
     void load();
   }, []);
 
-  useEffect(() => {
-    if (loading || attentionInitialized.current) return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("focus") !== "subject-teacher") return;
-
-    const sectionId = params.get("section") ?? "";
-    const subjectId = params.get("subject") ?? "";
-    const major = params.get("major") ?? "";
-    const section = activeSections.find((item) => item.id === sectionId);
-    if (!section || !subjectId) return;
-
-    attentionInitialized.current = true;
-    setSetupGrade(String(section.grade_level));
-    prepareSectionSetup(section.id);
-    setAttentionKey(`${subjectId}::${major}`);
-  }, [loading, activeSections]);
-
-  useEffect(() => {
-    if (!attentionKey || !setupSectionId || setupRows.length === 0) return;
-    const control = document.getElementById(
-      `setup-teacher-${encodeURIComponent(attentionKey)}`
-    ) as HTMLSelectElement | null;
-    if (!control) return;
-
-    const timer = window.setTimeout(() => {
-      control.scrollIntoView({ behavior: "smooth", block: "center" });
-      control.focus({ preventScroll: true });
-    }, 120);
-    return () => window.clearTimeout(timer);
-  }, [attentionKey, setupSectionId, setupRows]);
-
   const activeSubjects = subjects.filter((item) => item.is_active);
   const activeSections = sections.filter((item) => item.is_active);
   const activeAssignments = assignments.filter((item) => item.is_active);
@@ -212,6 +181,37 @@ export default function TeachingSetupPage() {
       }),
     [subjectsForSetup]
   );
+
+  useEffect(() => {
+    if (loading || attentionInitialized.current) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("focus") !== "subject-teacher") return;
+
+    const sectionId = params.get("section") ?? "";
+    const subjectId = params.get("subject") ?? "";
+    const major = params.get("major") ?? "";
+    const section = activeSections.find((item) => item.id === sectionId);
+    if (!section || !subjectId) return;
+
+    attentionInitialized.current = true;
+    setSetupGrade(String(section.grade_level));
+    prepareSectionSetup(section.id);
+    setAttentionKey(`${subjectId}::${major}`);
+  }, [loading, activeSections]);
+
+  useEffect(() => {
+    if (!attentionKey || !setupSectionId || setupRows.length === 0) return;
+    const control = document.getElementById(
+      `setup-teacher-${encodeURIComponent(attentionKey)}`
+    ) as HTMLSelectElement | null;
+    if (!control) return;
+
+    const timer = window.setTimeout(() => {
+      control.scrollIntoView({ behavior: "smooth", block: "center" });
+      control.focus({ preventScroll: true });
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [attentionKey, setupSectionId, setupRows]);
 
   const groupedAssignments = useMemo(() => {
     return grades
