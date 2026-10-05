@@ -47,6 +47,7 @@ type Subject = {
   id: string;
   grade_level: number;
   name: string;
+  is_graded: boolean;
 };
 
 type Assignment = {
@@ -249,7 +250,7 @@ export async function GET(request: NextRequest) {
         token
       ),
       getRows(
-        "subjects?is_active=eq.true&select=id,grade_level,name",
+        "subjects?is_active=eq.true&select=id,grade_level,name,is_graded",
         token
       ),
       getRows(
@@ -268,12 +269,18 @@ export async function GET(request: NextRequest) {
     const studentProfiles = (studentProfileRows ?? []) as StudentProfile[];
     const subjects = (subjectRows ?? []) as Subject[];
     const assignments = (assignmentRows ?? []) as Assignment[];
+    const gradedSubjectIds = new Set(
+      subjects.filter((subject) => subject.is_graded !== false).map((subject) => subject.id)
+    );
+    const gradedAssignments = assignments.filter((assignment) =>
+      gradedSubjectIds.has(assignment.subject_id)
+    );
 
     const studentIds = Array.from(
       new Set(enrollments.map((item) => item.student_id))
     );
     const assignmentIds = Array.from(
-      new Set(assignments.map((item) => item.id))
+      new Set(gradedAssignments.map((item) => item.id))
     );
 
     const studentFilter = studentIds.length
@@ -462,7 +469,7 @@ export async function GET(request: NextRequest) {
         id: "subject-setup",
         severity: "warning",
         title: "Subjects Still Need Teacher Setup",
-        detail: `Administrator action is needed before these subjects can appear in Grades. ${examples}${
+        detail: `Administrator action is needed to complete the section's teaching and schedule setup. ${examples}${
           missingSubjectSetup.length > 3 ? "; and more." : "."
         }`,
         count: missingSubjectSetup.length,
@@ -591,7 +598,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    if (assignments.length > 0 && enrollments.length > 0) {
+    if (gradedAssignments.length > 0 && enrollments.length > 0) {
       const publishedStudents = new Set(
         grades
           .filter((grade) => grade.status === "published")
