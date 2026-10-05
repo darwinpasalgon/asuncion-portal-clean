@@ -185,6 +185,7 @@ type AcademicSetupAttention = {
 
 type ClassScheduleEntry = {
   id: string;
+  entry_type?: "class" | "block";
   day_of_week: number;
   start_time: string;
   end_time: string;
@@ -193,6 +194,7 @@ type ClassScheduleEntry = {
   section: string;
   subject: string;
   major: string | null;
+  purpose?: string | null;
 };
 
 type Profile = {
@@ -1962,7 +1964,10 @@ export default function PortalPage() {
                           <h3>{dayNames[day]}</h3>
                           <div>
                             {dayEntries.map((entry) => (
-                              <article key={entry.id}>
+                              <article
+                                key={entry.id}
+                                className={entry.entry_type === "block" ? "real-schedule-block" : undefined}
+                              >
                                 <div className="real-schedule-time">
                                   <strong>
                                     {new Date(`1970-01-01T${entry.start_time}`).toLocaleTimeString([], {
@@ -1986,7 +1991,11 @@ export default function PortalPage() {
                                     {entry.subject}
                                     {entry.major ? ` · ${entry.major}` : ""}
                                   </strong>
-                                  <small>{entry.room || "Room not specified"}</small>
+                                  <small>
+                                    {entry.entry_type === "block"
+                                      ? `${entry.purpose || "Non-instructional period"} · No class`
+                                      : entry.room || "Room not specified"}
+                                  </small>
                                 </div>
                               </article>
                             ))}
