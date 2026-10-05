@@ -1260,7 +1260,7 @@ export default function PortalPage() {
                               Missing: {personnelAttention.self.missing_fields.join(", ")}
                             </p>
                           </div>
-                          <a href="/portal/teacher-profile">
+                          <a href={`/portal/teacher-profile?field=${encodeURIComponent(personnelAttention.self.missing_fields[0] ?? "")}`}>
                             Complete My Profile
                             <ChevronRight size={15} />
                           </a>
@@ -1289,11 +1289,16 @@ export default function PortalPage() {
                                 </p>
                                 <div className="real-personnel-list">
                                   {personnelAttention.incomplete_teaching.slice(0, 8).map((person) => (
-                                    <div key={person.id}>
+                                    <a
+                                      key={person.id}
+                                      className="real-personnel-action"
+                                      href={`/portal/admin/teacher-profiles?teacher=${encodeURIComponent(person.id)}&field=${encodeURIComponent(person.missing_fields[0] ?? "")}`}
+                                    >
                                       <strong>{person.full_name}</strong>
                                       <span>{person.position || "Teaching Personnel"}</span>
                                       <small>Missing: {person.missing_fields.join(", ")}</small>
-                                    </div>
+                                      <span className="real-personnel-open">Open Required Field <ChevronRight size={13} /></span>
+                                    </a>
                                   ))}
                                   {personnelAttention.teaching_count > 8 && (
                                     <small className="real-personnel-more">
@@ -1401,7 +1406,11 @@ export default function PortalPage() {
                               </p>
                               <div className="real-personnel-list">
                                 {academicSetupAttention.unassigned.slice(0, 10).map((item) => (
-                                  <div key={item.key}>
+                                  <a
+                                    key={item.key}
+                                    className="real-personnel-action"
+                                    href={`/portal/admin/teaching?focus=subject-teacher&grade=${item.grade_level}&section=${encodeURIComponent(item.section_id)}&subject=${encodeURIComponent(item.subject_id)}${item.major ? `&major=${encodeURIComponent(item.major)}` : ""}`}
+                                  >
                                     <strong>
                                       Grade {item.grade_level} · {item.section}
                                     </strong>
@@ -1412,7 +1421,8 @@ export default function PortalPage() {
                                     {item.teacher_name && (
                                       <small>Expected Teacher: {item.teacher_name}</small>
                                     )}
-                                  </div>
+                                    <span className="real-personnel-open">Assign Teacher <ChevronRight size={13} /></span>
+                                  </a>
                                 ))}
                                 {academicSetupAttention.unassigned_count > 10 && (
                                   <small className="real-personnel-more">
@@ -1448,7 +1458,11 @@ export default function PortalPage() {
                               </p>
                               <div className="real-personnel-list">
                                 {academicSetupAttention.unscheduled.slice(0, 10).map((item) => (
-                                  <div key={item.key}>
+                                  <a
+                                    key={item.key}
+                                    className="real-personnel-action"
+                                    href={`/portal/admin/schedules?view=section&grade=${item.grade_level}&section=${encodeURIComponent(item.section_id)}&assignment=${encodeURIComponent(item.key)}`}
+                                  >
                                     <strong>
                                       Grade {item.grade_level} · {item.section}
                                     </strong>
@@ -1457,7 +1471,8 @@ export default function PortalPage() {
                                       {item.major ? " · " + item.major : ""}
                                     </span>
                                     <small>{item.teacher_name ?? "Assigned Teacher"}</small>
-                                  </div>
+                                    <span className="real-personnel-open">Add Schedule <ChevronRight size={13} /></span>
+                                  </a>
                                 ))}
                                 {academicSetupAttention.unscheduled_count > 10 && (
                                   <small className="real-personnel-more">

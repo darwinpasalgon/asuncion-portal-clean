@@ -152,3 +152,16 @@
 .editSubject:hover,.assignmentSectionHeading button:hover,.refresh:hover{background:#f2f8fb}
 .removeSubject:hover,.removeAdviser:hover{background:#fff1f1}
 @media(max-width:520px){.page{padding:21px 11px 42px}.header h1{font-size:1.72rem}.panel{border-radius:12px}.summary{gap:9px}.summary article{padding:15px}}
+
+
+/* Dashboard deep-link focus */
+.attentionRow{
+  background:#fff8e8!important;
+  box-shadow:inset 4px 0 #d39321;
+}
+.attentionRow select[data-attention="true"]{
+  border-color:#d39321!important;
+  background:#fffdf7!important;
+  box-shadow:0 0 0 3px rgba(211,147,33,.16)!important;
+  outline:0;
+}

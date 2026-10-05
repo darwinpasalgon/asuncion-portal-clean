@@ -132,6 +132,8 @@ export default function ClassSchedulesPage() {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [roomFilter, setRoomFilter] = useState("");
   const [highlightId, setHighlightId] = useState("");
+  const [attentionAssignmentId, setAttentionAssignmentId] = useState("");
+  const attentionInitialized = useRef(false);
   const [reviewOrigin, setReviewOrigin] = useState<ReviewOrigin | null>(null);
 
   useEffect(() => {
@@ -254,6 +256,34 @@ export default function ClassSchedulesPage() {
     }
     void load();
   }, []);
+
+  useEffect(() => {
+    if (loading || attentionInitialized.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const assignmentId = params.get("assignment") ?? "";
+    if (!assignmentId) return;
+
+    const assignment = assignments.find((item) => item.id === assignmentId);
+    if (!assignment) return;
+
+    attentionInitialized.current = true;
+    setScheduleView("section");
+    setQuickGrade(String(assignment.grade_level));
+    setQuickSection(params.get("section") || assignment.section_id);
+    setAttentionAssignmentId(assignment.id);
+    setRoomFilter("");
+  }, [loading, assignments]);
+
+  useEffect(() => {
+    if (!attentionAssignmentId || loading || !quickSection) return;
+    const timer = window.setTimeout(() => {
+      const row = document.getElementById(`quick-assignment-${attentionAssignmentId}`);
+      row?.scrollIntoView({ behavior: "smooth", block: "center" });
+      row?.focus({ preventScroll: true });
+      row?.querySelector<HTMLButtonElement>('button[aria-pressed]')?.focus({ preventScroll: true });
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [attentionAssignmentId, quickSection, loading]);
 
   function changeView(view: "section" | "teacher") {
     setScheduleView(view);
@@ -890,13 +920,21 @@ export default function ClassSchedulesPage() {
                 const quickWorking = working === `quick:${assignment.id}`;
 
                 return (
-                  <article className={styles.quickRow} key={assignment.id}>
+                  <article
+                    id={`quick-assignment-${assignment.id}`}
+                    tabIndex={-1}
+                    className={`${styles.quickRow} ${attentionAssignmentId === assignment.id ? styles.attentionRow : ""}`}
+                    key={assignment.id}
+                  >
                     <div className={styles.quickSubject}>
                       <span>SUBJECT</span>
                       <strong>{subject}</strong>
                       {assignment.major && <small>{assignment.major}</small>}
                       {teacherView && <small>Grade {assignment.grade_level} · {lookup.sectionsById.get(assignment.section_id) ?? "Unknown Section"}</small>}
                       <p>{teacherView ? (existing.length ? "Scheduled" : "Not Scheduled Yet") : teacher}</p>
+                      {attentionAssignmentId === assignment.id && (
+                        <small className={styles.attentionLabel}>Needs Class Schedule</small>
+                      )}
                     </div>
 
                     <div className={styles.quickDays}>

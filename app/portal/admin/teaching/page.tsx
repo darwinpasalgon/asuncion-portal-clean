@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   BookOpen,
@@ -83,6 +83,8 @@ export default function TeachingSetupPage() {
   const [working, setWorking] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [attentionKey, setAttentionKey] = useState("");
+  const attentionInitialized = useRef(false);
 
   async function load() {
     setLoading(true);
@@ -179,6 +181,37 @@ export default function TeachingSetupPage() {
       }),
     [subjectsForSetup]
   );
+
+  useEffect(() => {
+    if (loading || attentionInitialized.current) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("focus") !== "subject-teacher") return;
+
+    const sectionId = params.get("section") ?? "";
+    const subjectId = params.get("subject") ?? "";
+    const major = params.get("major") ?? "";
+    const section = activeSections.find((item) => item.id === sectionId);
+    if (!section || !subjectId) return;
+
+    attentionInitialized.current = true;
+    setSetupGrade(String(section.grade_level));
+    prepareSectionSetup(section.id);
+    setAttentionKey(`${subjectId}::${major}`);
+  }, [loading, activeSections]);
+
+  useEffect(() => {
+    if (!attentionKey || !setupSectionId || setupRows.length === 0) return;
+    const control = document.getElementById(
+      `setup-teacher-${encodeURIComponent(attentionKey)}`
+    ) as HTMLSelectElement | null;
+    if (!control) return;
+
+    const timer = window.setTimeout(() => {
+      control.scrollIntoView({ behavior: "smooth", block: "center" });
+      control.focus({ preventScroll: true });
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [attentionKey, setupSectionId, setupRows]);
 
   const groupedAssignments = useMemo(() => {
     return grades
@@ -766,7 +799,11 @@ function subjectTeacherLabel(teacher: Teacher) {
                       );
                       const selectedTeacher = setupTeachers[row.key] ?? "";
                       return (
-                        <tr key={row.key}>
+                        <tr
+                          key={row.key}
+                          id={`setup-row-${encodeURIComponent(row.key)}`}
+                          className={attentionKey === row.key ? styles.attentionRow : ""}
+                        >
                           <td>
                             <strong>{row.subject.name}</strong>
                             {row.subject.is_graded === false && (
@@ -780,6 +817,8 @@ function subjectTeacherLabel(teacher: Teacher) {
                           <td>{row.major ?? "—"}</td>
                           <td>
                             <select
+                              id={`setup-teacher-${encodeURIComponent(row.key)}`}
+                              data-attention={attentionKey === row.key ? "true" : undefined}
                               value={selectedTeacher}
                               onChange={(event) =>
                                 setSetupTeachers((currentTeachers) => ({
