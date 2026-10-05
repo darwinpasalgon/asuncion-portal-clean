@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       getRows("grade_levels?select=grade_level,label,sort_order&order=sort_order.asc", token),
       getRows("sections?select=id,grade_level,name,is_active&order=grade_level.asc,name.asc", token),
-      getRows("subjects?select=id,grade_level,name,is_active&order=grade_level.asc,name.asc", token),
+      getRows("subjects?select=id,grade_level,name,is_active,is_graded,include_in_school_forms&order=grade_level.asc,name.asc", token),
       getRows(
         "profiles?account_status=eq.active&role=neq.student&select=id,full_name,email,role,position&order=full_name.asc",
         token
