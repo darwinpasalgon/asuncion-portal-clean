@@ -1467,7 +1467,7 @@ export default function PortalPage() {
                               </div>
                             </div>
                             {academicSetupAttention.can_schedule && (
-                              <a href="/portal/admin/class-schedules">
+                              <a href="/portal/admin/schedules">
                                 Open Class Schedules
                                 <ChevronRight size={15} />
                               </a>

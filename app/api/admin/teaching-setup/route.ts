@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hasAdminPermission } from "@/lib/admin-access";
+import { teachingAssignmentError } from "@/lib/teaching-assignment-error";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 import {
   TECHNICAL_VOCATIONAL_MAJORS,
@@ -30,6 +31,18 @@ async function getUserId(token: string) {
 
 async function isAdmin(token: string) {
   return hasAdminPermission(token, "teaching.manage");
+}
+
+async function assignmentFailure(response: Response, subject: string, major: string | null, partial = false) {
+  const result = await response.json().catch(() => ({}));
+  const failure = teachingAssignmentError(result, subject, major);
+  console.error("Teacher assignment save failed", {
+    status: response.status,
+    code: String(result?.code ?? "unknown"),
+  });
+  return NextResponse.json({
+    error: failure.error + (partial ? " Earlier changes may already be saved. Refresh before retrying." : ""),
+  }, { status: failure.status });
 }
 
 function isSupportedAcademicLevel(gradeLevel: number) {
@@ -518,6 +531,14 @@ export async function POST(request: NextRequest) {
 
     const assignedBy = await getUserId(token);
 
+    const existingAssignments = await getRows(
+      `teacher_assignments?school_year_id=eq.${encodeURIComponent(activeYear.id)}&section_id=eq.${encodeURIComponent(sectionId)}&select=id,teacher_id,subject_id,major,is_active`,
+      token
+    ).catch(() => null);
+    if (!existingAssignments) {
+      return NextResponse.json({ error: "Unable to check existing Subject Teacher assignments. No section changes were saved. Please refresh and try again." }, { status: 503 });
+    }
+
     const existingAdvisers = await getRows(
       `section_advisers?school_year_id=eq.${encodeURIComponent(
         activeYear.id
@@ -525,7 +546,11 @@ export async function POST(request: NextRequest) {
         sectionId
       )}&select=id,teacher_id,is_active`,
       token
-    ).catch(() => []);
+    ).catch(() => null);
+
+    if (!existingAdvisers) {
+      return NextResponse.json({ error: "Unable to check the current Section Adviser. No section changes were saved. Please refresh and try again." }, { status: 503 });
+    }
 
     const activeAdviser = (existingAdvisers ?? []).find(
       (item: { is_active?: boolean }) => item.is_active === true
@@ -627,16 +652,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const existingAssignments = await getRows(
-      `teacher_assignments?school_year_id=eq.${encodeURIComponent(
-        activeYear.id
-      )}&section_id=eq.${encodeURIComponent(
-        sectionId
-      )}&select=id,teacher_id,subject_id,major,is_active`,
-      token
-    ).catch(() => []);
-
     for (const item of normalizedAssignments) {
+      const subjectName = subjectById.get(item.subjectId)?.name ?? "Subject Teacher assignment";
       const existing = (existingAssignments ?? []).find(
         (assignment: { subject_id?: string; major?: string | null }) =>
           assignment.subject_id === item.subjectId &&
@@ -660,10 +677,7 @@ export async function POST(request: NextRequest) {
             }
           );
           if (!response.ok) {
-            return NextResponse.json(
-              { error: "Unable to deactivate one of the cleared Subject Teacher assignments." },
-              { status: 400 }
-            );
+            return assignmentFailure(response, subjectName, item.major, true);
           }
         }
         continue;
@@ -689,10 +703,7 @@ export async function POST(request: NextRequest) {
           }
         );
         if (!response.ok) {
-          return NextResponse.json(
-            { error: "Unable to update one of the Subject Teacher assignments." },
-            { status: 400 }
-          );
+          return assignmentFailure(response, subjectName, item.major, true);
         }
       } else {
         const response = await fetch(
@@ -714,10 +725,7 @@ export async function POST(request: NextRequest) {
           }
         );
         if (!response.ok) {
-          return NextResponse.json(
-            { error: "Unable to create one of the Subject Teacher assignments." },
-            { status: 400 }
-          );
+          return assignmentFailure(response, subjectName, item.major, true);
         }
       }
     }
@@ -997,7 +1005,11 @@ export async function POST(request: NextRequest) {
         sectionId
       )}&subject_id=eq.${encodeURIComponent(subjectId)}&${majorFilter}&select=id&limit=1`,
       token
-    ).catch(() => []);
+    ).catch(() => null);
+
+    if (!existing) {
+      return NextResponse.json({ error: "Unable to check existing Subject Teacher assignments. Please refresh and try again." }, { status: 503 });
+    }
 
     if (existing?.[0]?.id) {
       const response = await fetch(
@@ -1017,6 +1029,7 @@ export async function POST(request: NextRequest) {
           cache: "no-store",
         }
       );
+      if (!response.ok) return assignmentFailure(response, subjectRows[0].name, major);
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result?.[0]) {
         return NextResponse.json({ error: "Unable to update the teacher assignment." }, { status: 400 });
@@ -1040,14 +1053,8 @@ export async function POST(request: NextRequest) {
       }),
       cache: "no-store",
     });
+    if (!response.ok) return assignmentFailure(response, subjectRows[0].name, major);
     const result = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: "Unable to create the teacher assignment." },
-        { status: response.status || 400 }
-      );
-    }
 
     return NextResponse.json({ ok: true, assignment: result?.[0] ?? null });
   }
