@@ -69,6 +69,8 @@ export function findScheduleConflicts(
         other.teacher_id === assignment.teacher_id &&
         other.section_id !== assignment.section_id &&
         other.subject_id === assignment.subject_id &&
+        assignment.major !== null &&
+        other.major === assignment.major &&
         schedule.start_time.slice(0, 5) === period.start_time.slice(0, 5) &&
         schedule.end_time.slice(0, 5) === period.end_time.slice(0, 5);
       if (other.teacher_id === assignment.teacher_id && !combinedClass) {
