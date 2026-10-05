@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hasAdminPermission } from "@/lib/admin-access";
 import {
+  TECHNICAL_VOCATIONAL_MAJORS,
   isTechnicalVocationalEducation,
   requiresTechnicalVocationalMajor,
 } from "@/lib/subject-config";
@@ -203,10 +204,6 @@ export async function GET(request: NextRequest) {
       const sectionAssignments = assignments.filter(
         (assignment) => assignment.section_id === section.id
       );
-      const sectionEnrollments = enrollments.filter(
-        (enrollment) => enrollment.section_id === section.id
-      );
-
       for (const subject of gradeSubjects) {
         const needsMajor = requiresTechnicalVocationalMajor(
           section.grade_level,
@@ -214,47 +211,23 @@ export async function GET(request: NextRequest) {
         );
 
         if (needsMajor && isTechnicalVocationalEducation(subject.name)) {
-          const usedMajors = Array.from(
-            new Set(
-              sectionEnrollments
-                .map((item) => String(item.tve_major ?? "").trim())
-                .filter(Boolean)
-            )
-          );
-
-          if (usedMajors.length > 0) {
-            for (const major of usedMajors) {
-              const found = sectionAssignments.some(
-                (assignment) =>
-                  assignment.subject_id === subject.id &&
-                  String(assignment.major ?? "") === major
-              );
-              if (!found) {
-                unassigned.push({
-                  key: `${section.id}:${subject.id}:${major}`,
-                  grade_level: section.grade_level,
-                  section_id: section.id,
-                  section: section.name,
-                  subject_id: subject.id,
-                  subject: subject.name,
-                  major,
-                });
-              }
+          for (const major of TECHNICAL_VOCATIONAL_MAJORS) {
+            const found = sectionAssignments.some(
+              (assignment) =>
+                assignment.subject_id === subject.id &&
+                String(assignment.major ?? "") === major
+            );
+            if (!found) {
+              unassigned.push({
+                key: `${section.id}:${subject.id}:${major}`,
+                grade_level: section.grade_level,
+                section_id: section.id,
+                section: section.name,
+                subject_id: subject.id,
+                subject: subject.name,
+                major,
+              });
             }
-          } else if (
-            !sectionAssignments.some(
-              (assignment) => assignment.subject_id === subject.id
-            )
-          ) {
-            unassigned.push({
-              key: `${section.id}:${subject.id}:no-major`,
-              grade_level: section.grade_level,
-              section_id: section.id,
-              section: section.name,
-              subject_id: subject.id,
-              subject: subject.name,
-              major: null,
-            });
           }
           continue;
         }
