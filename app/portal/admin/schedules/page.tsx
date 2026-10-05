@@ -24,7 +24,12 @@ type Assignment = {
   subject_id: string;
   major: string | null;
 };
-type Section = { id: string; name: string; grade_level: number };
+type Section = {
+  id: string;
+  name: string;
+  grade_level: number;
+  is_active?: boolean;
+};
 type Subject = { id: string; name: string; grade_level: number };
 type Teacher = { id: string; full_name: string };
 type Schedule = {
@@ -148,30 +153,26 @@ export default function ClassSchedulesPage() {
     () =>
       Array.from(
         new Set(
-          assignments
-            .map((item) => item.grade_level)
-            .filter((value) => Number.isInteger(value))
+          sections
+            .filter((section) => section.is_active !== false)
+            .map((section) => section.grade_level)
+            .filter((value) => Number.isInteger(value) && value >= 7 && value <= 12)
         )
       ).sort((a, b) => a - b),
-    [assignments]
+    [sections]
   );
 
   const quickSectionOptions = useMemo(() => {
     if (!quickGrade) return [];
     const grade = Number(quickGrade);
-    const assignedSectionIds = new Set(
-      assignments
-        .filter((item) => item.grade_level === grade)
-        .map((item) => item.section_id)
-    );
 
     return sections
       .filter(
         (section) =>
-          section.grade_level === grade && assignedSectionIds.has(section.id)
+          section.grade_level === grade && section.is_active !== false
       )
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [assignments, sections, quickGrade]);
+  }, [sections, quickGrade]);
 
   const quickAssignments = useMemo(
     () =>
