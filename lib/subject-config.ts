@@ -4,7 +4,8 @@ export const TECHNICAL_VOCATIONAL_MAJORS = [
   "Computer Systems Servicing",
   "Electrical Installation and Maintenance",
   "Food Processing",
-  "Animal Production",
+  "Animal Production - Poultry",
+  "Animal Production - Swine",
   "Agriculture Crop Production",
 ] as const;
 
