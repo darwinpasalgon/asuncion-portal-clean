@@ -77,6 +77,7 @@ export async function GET(request: NextRequest) {
   }
 
   let visibleAssignments = assignments;
+  let studentSectionId = "";
   if (profile.role === "teacher") {
     visibleAssignments = assignments.filter(
       (item: { teacher_id: string }) => item.teacher_id === userId
@@ -91,6 +92,7 @@ export async function GET(request: NextRequest) {
       token
     );
     const enrollment = enrollmentRows?.[0] ?? null;
+    studentSectionId = String(enrollment?.section_id ?? "");
     visibleAssignments = enrollment
       ? assignments.filter(
           (item: { section_id: string; major?: string | null }) =>
@@ -104,13 +106,23 @@ export async function GET(request: NextRequest) {
     visibleAssignments.map((item: { id: string }) => item.id)
   );
 
-  const [schedules, sections, subjects] = await Promise.all([
+  const [schedules, sections, subjects, scheduleBlocks] = await Promise.all([
     getRows(
       "class_schedules?is_active=eq.true&select=id,teacher_assignment_id,day_of_week,start_time,end_time,room&order=day_of_week.asc,start_time.asc",
       token
     ),
     getRows("sections?select=id,name,grade_level", token),
     getRows("subjects?select=id,name,grade_level", token),
+    profile.role === "student" && studentSectionId
+      ? getRows(
+          `schedule_blocks?school_year_id=eq.${encodeURIComponent(
+            activeYear.id
+          )}&section_id=eq.${encodeURIComponent(
+            studentSectionId
+          )}&is_active=eq.true&select=id,grade_level,section_id,day_of_week,start_time,end_time,label,purpose,block_type&order=day_of_week.asc,start_time.asc`,
+          token
+        )
+      : Promise.resolve([]),
   ]);
 
   const assignmentMap = new Map<
@@ -187,6 +199,7 @@ export async function GET(request: NextRequest) {
 
         return {
           id: schedule.id,
+          entry_type: "class",
           day_of_week: schedule.day_of_week,
           start_time: schedule.start_time,
           end_time: schedule.end_time,
@@ -197,13 +210,45 @@ export async function GET(request: NextRequest) {
             : "Unknown section",
           subject: subject?.name ?? "Unknown subject",
           major: assignment?.major ?? null,
+          purpose: null,
         };
       }
     );
 
+  const blocks = (scheduleBlocks ?? []).map(
+    (block: {
+      id: string;
+      grade_level: number;
+      section_id: string;
+      day_of_week: number;
+      start_time: string;
+      end_time: string;
+      label: string;
+      purpose: string | null;
+      block_type: string;
+    }) => ({
+      id: `block-${block.id}`,
+      entry_type: "block",
+      day_of_week: block.day_of_week,
+      start_time: block.start_time,
+      end_time: block.end_time,
+      room: null,
+      grade_level: block.grade_level,
+      section: sectionMap.get(block.section_id) ?? "Unknown section",
+      subject: block.label,
+      major: null,
+      purpose: block.purpose,
+      block_type: block.block_type,
+    })
+  );
+
   return NextResponse.json({
     activeYear,
     role: profile.role,
-    schedules: result,
+    schedules: [...result, ...blocks].sort(
+      (a, b) =>
+        a.day_of_week - b.day_of_week ||
+        String(a.start_time).localeCompare(String(b.start_time))
+    ),
   });
 }

@@ -44,6 +44,20 @@ type Schedule = {
   is_active: boolean;
 };
 
+type ScheduleBlock = {
+  id: string;
+  school_year_id: string;
+  grade_level: number;
+  section_id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  label: string;
+  purpose: string | null;
+  block_type: "non_instructional";
+  is_active: boolean;
+};
+
 type DayDraft = {
   startTime: string;
   endTime: string;
@@ -107,6 +121,7 @@ export default function ClassSchedulesPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([]);
 
   const [scheduleView, setScheduleView] = useState<"section" | "teacher">("section");
   const [quickTeacher, setQuickTeacher] = useState("");
@@ -243,6 +258,7 @@ export default function ClassSchedulesPage() {
       setSubjects(result.subjects ?? []);
       setTeachers(result.teachers ?? []);
       setSchedules(result.schedules ?? []);
+      setScheduleBlocks(result.scheduleBlocks ?? []);
     } catch {
       setError("Unable to reach the class schedule service.");
     } finally {
@@ -747,6 +763,33 @@ export default function ClassSchedulesPage() {
           : assignment?.section_id === quickSection;
       })
     : teacherView ? [] : orderedSchedules;
+
+  const visibleScheduleBlocks = roomFilter || teacherView
+    ? []
+    : quickSection
+      ? scheduleBlocks.filter((block) => block.section_id === quickSection && block.is_active)
+      : scheduleBlocks.filter((block) => block.is_active);
+
+  const visibleScheduleItems = [
+    ...visibleSchedules.map((item) => ({
+      kind: "schedule" as const,
+      id: item.id,
+      day_of_week: item.day_of_week,
+      start_time: item.start_time,
+      item,
+    })),
+    ...visibleScheduleBlocks.map((item) => ({
+      kind: "block" as const,
+      id: item.id,
+      day_of_week: item.day_of_week,
+      start_time: item.start_time,
+      item,
+    })),
+  ].sort(
+    (a, b) =>
+      a.day_of_week - b.day_of_week ||
+      a.start_time.localeCompare(b.start_time)
+  );
 
   return (
     <main className={styles.page}>
@@ -1333,7 +1376,7 @@ export default function ClassSchedulesPage() {
 
           {loading ? (
             <div className={styles.empty}>Loading schedules…</div>
-          ) : visibleSchedules.length === 0 ? (
+          ) : visibleScheduleItems.length === 0 ? (
             <div className={styles.empty}>
               <CalendarDays size={30} />
               <strong>No Class Schedules Yet</strong>
@@ -1346,7 +1389,50 @@ export default function ClassSchedulesPage() {
             </div>
           ) : (
             <div className={styles.scheduleList}>
-              {visibleSchedules.map((schedule) => {
+              {visibleScheduleItems.map((entry) => {
+                if (entry.kind === "block") {
+                  const block = entry.item;
+                  return (
+                    <article key={`block-${block.id}`} className={`${styles.scheduleRow} ${styles.scheduleBlockRow}`}>
+                      <div className={styles.dayBox}>
+                        <CalendarDays size={18} />
+                        <strong>{DAYS.find((day) => day.value === block.day_of_week)?.label}</strong>
+                      </div>
+
+                      <div>
+                        <span>CLASS</span>
+                        <strong>
+                          Grade {block.grade_level} · {lookup.sectionsById.get(block.section_id) ?? "Unknown"}
+                        </strong>
+                        <small>{block.label}</small>
+                      </div>
+
+                      <div>
+                        <span>TYPE</span>
+                        <strong>Non-Instructional</strong>
+                        <small>{block.purpose || "Reserved period"}</small>
+                      </div>
+
+                      <div>
+                        <span>TIME</span>
+                        <strong className={styles.inline}>
+                          <Clock3 size={15} />
+                          {timeLabel(block.start_time)} – {timeLabel(block.end_time)}
+                        </strong>
+                        <small className={styles.inline}>
+                          <MapPin size={14} />
+                          Section cleaning / upkeep
+                        </small>
+                      </div>
+
+                      <div className={styles.blockStatus}>
+                        <span>RESERVED</span>
+                      </div>
+                    </article>
+                  );
+                }
+
+                const schedule = entry.item;
                 const assignment = lookup.assignmentsById.get(
                   schedule.teacher_assignment_id
                 );
@@ -1359,11 +1445,7 @@ export default function ClassSchedulesPage() {
                     <div className={styles.dayBox}>
                       <CalendarDays size={18} />
                       <strong>
-                        {
-                          DAYS.find(
-                            (day) => day.value === schedule.day_of_week
-                          )?.label
-                        }
+                        {DAYS.find((day) => day.value === schedule.day_of_week)?.label}
                       </strong>
                     </div>
 
@@ -1398,8 +1480,7 @@ export default function ClassSchedulesPage() {
                       <span>TIME & ROOM</span>
                       <strong className={styles.inline}>
                         <Clock3 size={15} />
-                        {timeLabel(schedule.start_time)} –{" "}
-                        {timeLabel(schedule.end_time)}
+                        {timeLabel(schedule.start_time)} – {timeLabel(schedule.end_time)}
                       </strong>
                       <small className={styles.inline}>
                         <MapPin size={14} />
