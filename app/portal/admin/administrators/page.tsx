@@ -14,6 +14,7 @@ import {
 import styles from "./administrators.module.css";
 import ActionWaitOverlay from "@/app/components/action-wait-overlay";
 import { nonTeachingPositions, positionOptions } from "@/lib/deped-positions";
+import { captureRefreshScroll, restoreRefreshScroll } from "@/lib/background-refresh";
 
 type StoredAdminRole = "super_administrator" | "registrar" | "content_administrator" | "school_administrator";
 type AdminRole = StoredAdminRole | "human_resources";
@@ -79,8 +80,9 @@ export default function AdministratorsPage() {
   const [success, setSuccess] = useState("");
   const [temporaryPassword, setTemporaryPassword] = useState("");
 
-  async function load() {
-    setLoading(true);
+  async function load(background = false) {
+    const scrollY = captureRefreshScroll(background);
+    if (!background) setLoading(true);
     setError("");
     try {
       const response = await fetch("/api/admin/administrators", { cache: "no-store" });
@@ -94,7 +96,8 @@ export default function AdministratorsPage() {
     } catch {
       setError("Unable to reach the administrator management service.");
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
+      restoreRefreshScroll(scrollY);
     }
   }
 
@@ -147,7 +150,7 @@ export default function AdministratorsPage() {
       setSelectedPersonnel(null);
       setAdminRole("registrar");
       setPermissions([]);
-      await load();
+      await load(true);
     } catch {
       setError("Unable to reach the administrator management service.");
     } finally {
@@ -185,7 +188,7 @@ export default function AdministratorsPage() {
           ? "Delegated Administrator deleted."
           : `${admin.full_name} is now ${action === "suspend" ? "suspended" : "active"}.`
       );
-      await load();
+      await load(true);
     } catch {
       setError("Unable to reach the administrator management service.");
     } finally {
