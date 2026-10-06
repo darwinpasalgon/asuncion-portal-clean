@@ -47,6 +47,27 @@ async function getRows(path: string, token: string) {
   return response.json();
 }
 
+async function getAllRows<T>(path: string, token: string): Promise<T[]> {
+  const pageSize = 1000;
+  const rows: T[] = [];
+  let offset = 0;
+
+  while (true) {
+    const separator = path.includes("?") ? "&" : "?";
+    const page = (await getRows(
+      `${path}${separator}limit=${pageSize}&offset=${offset}`,
+      token
+    )) as T[];
+
+    rows.push(...page);
+
+    if (page.length < pageSize) break;
+    offset += pageSize;
+  }
+
+  return rows;
+}
+
 async function activeYear(token: string) {
   const rows = await getRows(
     "school_years?is_active=eq.true&select=id,name&limit=1",
@@ -108,8 +129,17 @@ export async function GET(request: NextRequest) {
         "profiles?role=eq.teacher&account_status=eq.active&select=id,full_name",
         token
       ),
-      getRows(
-        "class_schedules?select=id,teacher_assignment_id,day_of_week,start_time,end_time,room,is_active,created_at&order=day_of_week.asc,start_time.asc",
+      getAllRows<{
+        id: string;
+        teacher_assignment_id: string;
+        day_of_week: number;
+        start_time: string;
+        end_time: string;
+        room: string | null;
+        is_active: boolean;
+        created_at: string;
+      }>(
+        "class_schedules?select=id,teacher_assignment_id,day_of_week,start_time,end_time,room,is_active,created_at&order=day_of_week.asc,start_time.asc,id.asc",
         token
       ),
       year
