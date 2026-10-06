@@ -339,6 +339,367 @@ function administratorLabel(profile: Profile, adminPermissions: string[] = []) {
   return "School Administrator";
 }
 
+type DashboardAction = {
+  label: string;
+  description: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+  badge?: string;
+};
+
+function DashboardHome({
+  profile,
+  displayRole,
+  academicContext,
+  adminPermissions,
+  teacherAssignments,
+  teacherLearnerSections,
+  adviserSections,
+  personnelAttention,
+  academicSetupAttention,
+  communityUnread,
+}: {
+  profile: Profile;
+  displayRole: string;
+  academicContext: AcademicContext | null;
+  adminPermissions: string[];
+  teacherAssignments: TeacherAssignment[];
+  teacherLearnerSections: TeacherLearnerSection[];
+  adviserSections: AdviserSection[];
+  personnelAttention: PersonnelProfileAttention | null;
+  academicSetupAttention: AcademicSetupAttention | null;
+  communityUnread: number;
+}) {
+  const isSuperAdmin = profile.role === "administrator";
+  const can = (permission: string) =>
+    isSuperAdmin || adminPermissions.includes(permission);
+
+  let actions: DashboardAction[] = [];
+
+  if (profile.role === "student") {
+    actions = [
+      {
+        label: "Grades",
+        description: "View your published term grades.",
+        href: "/portal/grades",
+        icon: GraduationCap,
+      },
+      {
+        label: "Attendance",
+        description: "Check your attendance record.",
+        href: "/portal/attendance",
+        icon: ClipboardCheck,
+      },
+      {
+        label: "Class Schedule",
+        description: "See your weekly class timetable.",
+        href: "/portal?open=schedule",
+        icon: CalendarDays,
+      },
+      {
+        label: "Announcements",
+        description: "Read the latest school updates.",
+        href: "/portal/announcements",
+        icon: Megaphone,
+      },
+      {
+        label: "Learning Resources",
+        description: "Open files and learning materials.",
+        href: "/portal/resources",
+        icon: FolderOpen,
+      },
+      {
+        label: "Community Chat",
+        description: "Connect with the ANHS community.",
+        href: "/portal/community",
+        icon: MessageCircle,
+        badge: communityUnread > 0 ? `${communityUnread > 99 ? "99+" : communityUnread} new` : undefined,
+      },
+    ];
+  } else if (profile.role === "teacher") {
+    actions = [
+      ...(adviserSections.length > 0
+        ? [
+            {
+              label: "My Students",
+              description: "Manage your advisory class learners.",
+              href: "/portal/my-students",
+              icon: Users,
+            },
+            {
+              label: "Grades",
+              description: "Encode and publish adviser grades.",
+              href: "/portal/grades",
+              icon: GraduationCap,
+            },
+            {
+              label: "Attendance",
+              description: "Record and review class attendance.",
+              href: "/portal/attendance",
+              icon: ClipboardCheck,
+            },
+          ]
+        : []),
+      {
+        label: "My Learners",
+        description: "View learners in your assigned subjects.",
+        href: "/portal/my-learners",
+        icon: Users,
+      },
+      {
+        label: "Teaching Assignments",
+        description: "Review your subjects and sections.",
+        href: "/portal?open=assignments",
+        icon: BookOpen,
+      },
+      {
+        label: "Class Schedule",
+        description: "View your current teaching timetable.",
+        href: "/portal?open=schedule",
+        icon: CalendarDays,
+      },
+      {
+        label: "Learning Resources",
+        description: "Open or manage class materials.",
+        href: "/portal/resources",
+        icon: FolderOpen,
+      },
+      {
+        label: "Announcements",
+        description: "Read school announcements.",
+        href: "/portal/announcements",
+        icon: Megaphone,
+      },
+      {
+        label: "Community Chat",
+        description: "Connect with colleagues and learners.",
+        href: "/portal/community",
+        icon: MessageCircle,
+        badge: communityUnread > 0 ? `${communityUnread > 99 ? "99+" : communityUnread} new` : undefined,
+      },
+    ];
+  } else {
+    actions = [
+      ...(isSuperAdmin
+        ? [
+            {
+              label: "Learner Management",
+              description: "Manage learner records and enrollment.",
+              href: "/portal/admin/learners",
+              icon: GraduationCap,
+            },
+          ]
+        : []),
+      ...(can("teaching.manage")
+        ? [
+            {
+              label: "Subjects & Teachers",
+              description: "Manage subjects and teaching assignments.",
+              href: "/portal/admin/teaching",
+              icon: BookOpen,
+            },
+          ]
+        : []),
+      ...(can("schedules.manage")
+        ? [
+            {
+              label: "Class Schedules",
+              description: "Manage section and teacher schedules.",
+              href: "/portal/admin/schedules",
+              icon: CalendarDays,
+            },
+          ]
+        : []),
+      ...(can("attendance.manage")
+        ? [
+            {
+              label: "Attendance",
+              description: "Review attendance administration.",
+              href: "/portal/admin/attendance",
+              icon: ClipboardCheck,
+            },
+          ]
+        : []),
+      ...(can("sf10.manage")
+        ? [
+            {
+              label: "SF10 Records",
+              description: "Open permanent learner records.",
+              href: "/portal/admin/sf10",
+              icon: FileSpreadsheet,
+            },
+          ]
+        : []),
+      ...(can("users.manage")
+        ? [
+            {
+              label: "Users & Accounts",
+              description: "Manage Student and Personnel accounts.",
+              href: "/portal/admin/users",
+              icon: Users,
+            },
+          ]
+        : []),
+      ...(can("hr.manage")
+        ? [
+            {
+              label: "Personnel Profiles",
+              description: "Review HR and personnel information.",
+              href: "/portal/admin/teacher-profiles",
+              icon: UserRound,
+            },
+          ]
+        : []),
+      ...(can("announcements.manage")
+        ? [
+            {
+              label: "Announcements",
+              description: "Publish and manage school updates.",
+              href: "/portal/announcements",
+              icon: Megaphone,
+            },
+          ]
+        : []),
+      ...(can("reports.view")
+        ? [
+            {
+              label: "Reports & Analytics",
+              description: "Review school data and summaries.",
+              href: "/portal/admin/reports",
+              icon: BarChart3,
+            },
+          ]
+        : []),
+      ...(can("school_setup.manage")
+        ? [
+            {
+              label: "School Setup",
+              description: "Manage school years and sections.",
+              href: "/portal/admin/school-setup",
+              icon: Settings2,
+            },
+          ]
+        : []),
+      ...(can("resources.manage")
+        ? [
+            {
+              label: "Learning Resources",
+              description: "Manage shared learning materials.",
+              href: "/portal/resources",
+              icon: FolderOpen,
+            },
+          ]
+        : []),
+      {
+        label: "Community Chat",
+        description: "Open the school community chatroom.",
+        href: "/portal/community",
+        icon: MessageCircle,
+        badge: communityUnread > 0 ? `${communityUnread > 99 ? "99+" : communityUnread} new` : undefined,
+      },
+    ];
+  }
+
+  const teacherSections = new Set(
+    teacherAssignments.map((assignment) => `${assignment.grade_level}:${assignment.section}`)
+  ).size;
+  const rosterSections = teacherLearnerSections.length;
+
+  const setupAttention =
+    (academicSetupAttention?.unassigned_count ?? 0) +
+    (academicSetupAttention?.unscheduled_count ?? 0);
+
+  const personnelReview = personnelAttention?.can_manage
+    ? personnelAttention.total_incomplete
+    : personnelAttention?.self?.missing_fields.length ?? 0;
+
+  return (
+    <section className="panel real-dashboard-home">
+      <div className="real-dashboard-heading">
+        <div>
+          <span className="real-dashboard-kicker">QUICK ACCESS</span>
+          <h2>{profile.role === "student" ? "My School Day" : profile.role === "teacher" ? "My Teaching Workspace" : "Administration Workspace"}</h2>
+          <p>The tools you use most are grouped here for faster access.</p>
+        </div>
+        <span className="real-dashboard-role">{displayRole}</span>
+      </div>
+
+      <div className="real-dashboard-summary">
+        {profile.role === "student" ? (
+          <>
+            <div>
+              <span>School Year</span>
+              <strong>{academicContext?.school_year ?? "Current"}</strong>
+            </div>
+            <div>
+              <span>Grade & Section</span>
+              <strong>
+                {academicContext?.grade_level
+                  ? `Grade ${academicContext.grade_level}${academicContext.section ? ` · ${academicContext.section}` : ""}`
+                  : "Not Assigned"}
+              </strong>
+            </div>
+            <div>
+              <span>{academicContext?.grade_level && [8, 9, 10].includes(academicContext.grade_level) ? "TVE Major" : "Account"}</span>
+              <strong>
+                {academicContext?.grade_level && [8, 9, 10].includes(academicContext.grade_level)
+                  ? academicContext.tve_major || "Not Assigned Yet"
+                  : "Active Student"}
+              </strong>
+            </div>
+          </>
+        ) : profile.role === "teacher" ? (
+          <>
+            <div>
+              <span>Teaching Classes</span>
+              <strong>{teacherAssignments.length}</strong>
+            </div>
+            <div>
+              <span>Assigned Sections</span>
+              <strong>{rosterSections || teacherSections}</strong>
+            </div>
+            <div>
+              <span>Adviser Sections</span>
+              <strong>{adviserSections.length}</strong>
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <span>Setup Items</span>
+              <strong>{setupAttention}</strong>
+            </div>
+            <div>
+              <span>Personnel To Review</span>
+              <strong>{personnelReview}</strong>
+            </div>
+            <div>
+              <span>School Year</span>
+              <strong>{academicContext?.school_year ?? "Current"}</strong>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="real-dashboard-actions">
+        {actions.map((action) => (
+          <a key={action.label} href={action.href} className="real-dashboard-action">
+            <span className="real-dashboard-action-icon">
+              <action.icon size={19} />
+            </span>
+            <span className="real-dashboard-action-copy">
+              <strong>{action.label}</strong>
+              <small>{action.description}</small>
+            </span>
+            {action.badge && <span className="real-dashboard-action-badge">{action.badge}</span>}
+            <ChevronRight className="real-dashboard-action-arrow" size={16} />
+          </a>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function initials(name: string) {
   return name
     .split(/\s+/)
@@ -1629,6 +1990,19 @@ export default function PortalPage() {
                   <small>Academic Portal</small>
                 </div>
               </section>
+
+              <DashboardHome
+                profile={profile}
+                displayRole={displayRole}
+                academicContext={academicContext}
+                adminPermissions={adminPermissions}
+                teacherAssignments={teacherAssignments}
+                teacherLearnerSections={teacherLearnerSections}
+                adviserSections={adviserSections}
+                personnelAttention={personnelAttention}
+                academicSetupAttention={academicSetupAttention}
+                communityUnread={communityUnread}
+              />
 
               <section className="panel real-profile-card">
                 <div className="real-card-title">
