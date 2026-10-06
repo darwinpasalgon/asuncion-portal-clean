@@ -38,7 +38,8 @@ export function normalizedRoom(room: string | null) {
   return (room ?? "").trim().toLowerCase();
 }
 
-// Match private.validate_class_schedule, including its distinct TVE-major exception.
+// Match private.validate_class_schedule, including the TVE multi-section exception.
+// The same TVE teacher and major may serve multiple sections during overlapping periods.
 // The database remains authoritative for writes and concurrent changes.
 export function findScheduleConflicts(
   assignment: ConflictAssignment,
@@ -65,21 +66,23 @@ export function findScheduleConflicts(
       if (schedule.id === period.id || schedule.day_of_week !== period.day_of_week ||
           schedule.start_time.slice(0, 5) >= period.end_time.slice(0, 5) ||
           schedule.end_time.slice(0, 5) <= period.start_time.slice(0, 5)) continue;
-      const combinedClass =
+      const combinedTveClass =
         other.teacher_id === assignment.teacher_id &&
         other.section_id !== assignment.section_id &&
         other.subject_id === assignment.subject_id &&
         assignment.major !== null &&
-        other.major === assignment.major &&
-        schedule.start_time.slice(0, 5) === period.start_time.slice(0, 5) &&
-        schedule.end_time.slice(0, 5) === period.end_time.slice(0, 5);
-      if (other.teacher_id === assignment.teacher_id && !combinedClass) {
+        other.major === assignment.major;
+      if (other.teacher_id === assignment.teacher_id && !combinedTveClass) {
         kinds.add("teacher");
       }
       const separateMajors = assignment.major !== null && other.major !== null &&
         assignment.subject_id === other.subject_id && assignment.major !== other.major;
       if (other.section_id === assignment.section_id && !separateMajors) kinds.add("section");
-      if (normalizedRoom(period.room) && normalizedRoom(schedule.room) === normalizedRoom(period.room)) {
+      if (
+        normalizedRoom(period.room) &&
+        normalizedRoom(schedule.room) === normalizedRoom(period.room) &&
+        !combinedTveClass
+      ) {
         kinds.add("room");
       }
     }
