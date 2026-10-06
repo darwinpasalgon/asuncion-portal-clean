@@ -142,6 +142,7 @@ export async function GET(request: NextRequest) {
       assignmentsRaw,
       schedulesRaw,
       teachersRaw,
+      grade7TveRotationsRaw,
     ] = await Promise.all([
       getRows(
         "sections?is_active=eq.true&select=id,grade_level,name,is_active&order=grade_level.asc,name.asc",
@@ -171,6 +172,12 @@ export async function GET(request: NextRequest) {
         "profiles?account_status=eq.active&role=neq.student&select=id,full_name",
         token
       ),
+      getAllRows(
+        `grade7_tve_rotations?school_year_id=eq.${encodeURIComponent(
+          activeYear.id
+        )}&is_active=eq.true&section_id=not.is.null&select=section_id,phase_no,major_code`,
+        token
+      ).catch(() => []),
     ]);
 
     const sections = sectionsRaw as Section[];
@@ -179,6 +186,11 @@ export async function GET(request: NextRequest) {
     const assignments = assignmentsRaw as Assignment[];
     const schedules = schedulesRaw as Schedule[];
     const teachers = teachersRaw as Teacher[];
+    const grade7TveRotations = grade7TveRotationsRaw as Array<{
+      section_id: string;
+      phase_no: number;
+      major_code: string;
+    }>;
 
     const enrollmentSectionIds = new Set(
       enrollments.map((item) => item.section_id)
@@ -208,6 +220,29 @@ export async function GET(request: NextRequest) {
           section.grade_level,
           subject.name
         );
+
+        if (
+          section.grade_level === 7 &&
+          isTechnicalVocationalEducation(subject.name)
+        ) {
+          const sectionRotations = grade7TveRotations.filter(
+            (rotation) => rotation.section_id === section.id
+          );
+          const phases = new Set(sectionRotations.map((rotation) => rotation.phase_no));
+          const majors = new Set(sectionRotations.map((rotation) => rotation.major_code));
+          if (phases.size < 5 || majors.size < 5) {
+            unassigned.push({
+              key: `${section.id}:${subject.id}:exploratory-tve`,
+              grade_level: section.grade_level,
+              section_id: section.id,
+              section: section.name,
+              subject_id: subject.id,
+              subject: subject.name,
+              major: "Exploratory TVE Rotation",
+            });
+          }
+          continue;
+        }
 
         if (needsMajor && isTechnicalVocationalEducation(subject.name)) {
           const sectionEnrollments = enrollments.filter(
