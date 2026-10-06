@@ -3,6 +3,15 @@ import { hasAdminPermission } from "@/lib/admin-access";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 import { findScheduleConflicts, type ProposedPeriod } from "@/lib/schedule-conflicts";
 
+function manilaDate() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 function authHeaders(token: string) {
   return {
     apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -83,7 +92,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const year = await activeYear(token);
-    const [assignments, sections, subjects, teachers, schedules, scheduleBlocks] = await Promise.all([
+    const today = manilaDate();
+    const [assignments, sections, subjects, teachers, schedules, scheduleBlocks, grade7TveRotations] = await Promise.all([
       year
         ? getRows(
             `teacher_assignments?school_year_id=eq.${encodeURIComponent(
@@ -110,6 +120,18 @@ export async function GET(request: NextRequest) {
             token
           )
         : Promise.resolve([]),
+      year
+        ? getRows(
+            `grade7_tve_rotations?school_year_id=eq.${encodeURIComponent(
+              year.id
+            )}&is_active=eq.true&starts_on=lte.${encodeURIComponent(
+              today
+            )}&ends_on=gte.${encodeURIComponent(
+              today
+            )}&select=id,rotation_block,group_label,section_id,phase_no,starts_on,ends_on,major_code,instructor_name,days_of_week,start_time,end_time&order=start_time.asc`,
+            token
+          )
+        : Promise.resolve([]),
     ]);
 
     const activeAssignmentIds = new Set(
@@ -126,6 +148,7 @@ export async function GET(request: NextRequest) {
         activeAssignmentIds.has(item.teacher_assignment_id)
       ),
       scheduleBlocks: scheduleBlocks ?? [],
+      grade7TveRotations: grade7TveRotations ?? [],
     });
   } catch {
     return NextResponse.json(
@@ -165,7 +188,7 @@ export async function POST(request: NextRequest) {
         assignmentId
       )}&school_year_id=eq.${encodeURIComponent(
         year.id
-      )}&is_active=eq.true&select=id,section_id&limit=1`,
+      )}&is_active=eq.true&select=id,section_id,grade_level&limit=1`,
       token
     ).catch(() => []);
 
@@ -274,6 +297,45 @@ export async function POST(request: NextRequest) {
           String(block.end_time).slice(0, 5) > period.start_time.slice(0, 5)
       )
     );
+
+    const grade7TveRotations =
+      Number(assignmentRows[0].grade_level) === 7
+        ? await getRows(
+            `grade7_tve_rotations?school_year_id=eq.${encodeURIComponent(
+              year.id
+            )}&section_id=eq.${encodeURIComponent(
+              assignmentRows[0].section_id
+            )}&is_active=eq.true&select=id,days_of_week,start_time,end_time,major_code,instructor_name`,
+            token
+          ).catch(() => [])
+        : [];
+
+    const tveBlocked = payloads.flatMap((period) =>
+      (grade7TveRotations ?? []).filter(
+        (rotation: {
+          days_of_week: number[];
+          start_time: string;
+          end_time: string;
+        }) =>
+          (rotation.days_of_week ?? []).map(Number).includes(period.day_of_week) &&
+          String(rotation.start_time).slice(0, 5) < period.end_time.slice(0, 5) &&
+          String(rotation.end_time).slice(0, 5) > period.start_time.slice(0, 5)
+      )
+    );
+
+    if (tveBlocked.length) {
+      const rotation = tveBlocked[0] as {
+        major_code?: string;
+        instructor_name?: string;
+      };
+      return NextResponse.json(
+        {
+          error: `This period is reserved for Grade 7 Exploratory TVE${rotation.major_code ? ` (${rotation.major_code})` : ""}${rotation.instructor_name ? ` with ${rotation.instructor_name}` : ""}. Choose another class time.`,
+          code: "grade7_tve_rotation_conflict",
+        },
+        { status: 409 }
+      );
+    }
 
     if (blocked.length) {
       const block = blocked[0] as { label?: string; purpose?: string | null };
