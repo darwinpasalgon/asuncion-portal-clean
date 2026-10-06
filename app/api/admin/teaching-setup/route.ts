@@ -132,6 +132,7 @@ export async function GET(request: NextRequest) {
       assignments,
       advisers,
       headTeacherResult,
+      grade7TveRotations,
     ] = await Promise.all([
       getRows("grade_levels?select=grade_level,label,sort_order&order=sort_order.asc", token),
       getRows("sections?select=id,grade_level,name,is_active&order=grade_level.asc,name.asc", token),
@@ -159,6 +160,14 @@ export async function GET(request: NextRequest) {
       headTeacherService(token, { action: "list" }).catch(() => ({
         head_teachers: [],
       })),
+      activeYear
+        ? getRows(
+            `grade7_tve_rotations?school_year_id=eq.${encodeURIComponent(
+              activeYear.id
+            )}&is_active=eq.true&section_id=not.is.null&select=id,section_id,phase_no,starts_on,ends_on,major_code,instructor_name,rotation_block&order=starts_on.asc`,
+            token
+          ).catch(() => [])
+        : Promise.resolve([]),
     ]);
 
     const teachers = (profileRows ?? []).filter(
@@ -199,6 +208,7 @@ export async function GET(request: NextRequest) {
       subjectTeachers,
       assignments,
       advisers,
+      grade7TveRotations,
     });
   } catch {
     return NextResponse.json(
