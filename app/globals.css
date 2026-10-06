@@ -1164,3 +1164,11 @@ td[data-slot=table-cell]{color:#496574}
   line-height:1;
   box-shadow:0 3px 9px rgba(174,61,53,.18);
 }
+
+.real-schedule-day article.real-schedule-rotation{
+  background:linear-gradient(90deg,#eef8ff,#f8fcff);
+  box-shadow:inset 4px 0 #3b82f6;
+}
+.real-schedule-day article.real-schedule-rotation .real-schedule-time strong,
+.real-schedule-day article.real-schedule-rotation>div:last-child>strong{color:#1f5f99}
+.real-schedule-day article.real-schedule-rotation>div:last-child>small{color:#537a9a;font-weight:700}
