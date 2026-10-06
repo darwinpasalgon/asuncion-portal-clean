@@ -16,6 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import styles from "./teaching.module.css";
+import { captureRefreshScroll, restoreRefreshScroll } from "@/lib/background-refresh";
 import ActionWaitOverlay from "@/app/components/action-wait-overlay";
 import {
   TECHNICAL_VOCATIONAL_MAJORS,
@@ -98,8 +99,9 @@ export default function TeachingSetupPage() {
   const [attentionKey, setAttentionKey] = useState("");
   const attentionInitialized = useRef(false);
 
-  async function load() {
-    setLoading(true);
+  async function load(background = false) {
+    const scrollY = captureRefreshScroll(background);
+    if (!background) setLoading(true);
     setError("");
     try {
       const response = await fetch("/api/admin/teaching-setup", { cache: "no-store" });
@@ -122,7 +124,8 @@ export default function TeachingSetupPage() {
     } catch {
       setError("Unable to reach the teaching setup service.");
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
+      restoreRefreshScroll(scrollY);
     }
   }
 
@@ -378,7 +381,7 @@ function subjectTeacherLabel(teacher: Teacher) {
       setSuccess(
         `${academicLevelLabel(setupSection.grade_level)} ${setupSection.name} setup saved. ${result.activeAssignments ?? 0} active subject assignment(s).`
       );
-      await load();
+      await load(true);
     } catch {
       setError("Unable to reach the teaching setup service.");
     } finally {
@@ -416,7 +419,7 @@ function subjectTeacherLabel(teacher: Teacher) {
       setSuccess("Section Adviser assigned. This teacher now has grading authority for the section.");
       form.reset();
       setAdviserGrade("");
-      await load();
+      await load(true);
     } catch {
       setError("Unable to reach the teaching setup service.");
     } finally {
@@ -446,7 +449,7 @@ function subjectTeacherLabel(teacher: Teacher) {
       }
 
       setSuccess("Section Adviser removed. Grade encoding is disabled for that section until a new adviser is assigned.");
-      await load();
+      await load(true);
     } catch {
       setError("Unable to reach the teaching setup service.");
     } finally {
@@ -482,7 +485,7 @@ function subjectTeacherLabel(teacher: Teacher) {
 
       setSuccess("Subject added successfully.");
       form.reset();
-      await load();
+      await load(true);
     } catch {
       setError("Unable to reach the teaching setup service.");
     } finally {
@@ -516,7 +519,7 @@ function subjectTeacherLabel(teacher: Teacher) {
       }
 
       setSuccess("Subject updated successfully.");
-      await load();
+      await load(true);
     } catch {
       setError("Unable to reach the teaching setup service.");
     } finally {
@@ -559,7 +562,7 @@ function subjectTeacherLabel(teacher: Teacher) {
             ? "Subject removed permanently."
             : "Subject removed from active use.")
       );
-      await load();
+      await load(true);
     } catch {
       setError("Unable to reach the teaching setup service.");
     } finally {
@@ -601,7 +604,7 @@ function subjectTeacherLabel(teacher: Teacher) {
       setAssignmentGrade("");
       setAssignmentSubject("");
       setAssignmentMajor("");
-      await load();
+      await load(true);
     } catch {
       setError("Unable to reach the teaching setup service.");
     } finally {
@@ -632,7 +635,7 @@ function subjectTeacherLabel(teacher: Teacher) {
       }
 
       setSuccess(`${subject.name} is now ${isActive ? "active" : "inactive"}.`);
-      await load();
+      await load(true);
     } catch {
       setError("Unable to reach the teaching setup service.");
     } finally {
@@ -663,7 +666,7 @@ function subjectTeacherLabel(teacher: Teacher) {
       }
 
       setSuccess(`Assignment ${isActive ? "reactivated" : "deactivated"}.`);
-      await load();
+      await load(true);
     } catch {
       setError("Unable to reach the teaching setup service.");
     } finally {

@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import styles from "./learners.module.css";
+import { captureRefreshScroll, restoreRefreshScroll } from "@/lib/background-refresh";
 import ActionWaitOverlay from "@/app/components/action-wait-overlay";
 import { TECHNICAL_VOCATIONAL_MAJORS } from "@/lib/subject-config";
 
@@ -228,8 +229,9 @@ export default function LearnerManagementPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  async function loadData() {
-    setLoading(true);
+  async function loadData(background = false) {
+    const scrollY = captureRefreshScroll(background);
+    if (!background) setLoading(true);
     setError("");
     try {
       const response = await fetch("/api/admin/learners", { cache: "no-store" });
@@ -246,7 +248,8 @@ export default function LearnerManagementPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load learners.");
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
+      restoreRefreshScroll(scrollY);
     }
   }
 
@@ -518,7 +521,7 @@ export default function LearnerManagementPage() {
       });
       setStatusTarget(null);
       setSuccess("Learner status updated.");
-      await loadData();
+      await loadData(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to update learner status.");
     }
@@ -535,7 +538,7 @@ export default function LearnerManagementPage() {
       });
       setMoveTarget(null);
       setSuccess("Learner section updated.");
-      await loadData();
+      await loadData(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to move learner.");
     }
@@ -596,7 +599,7 @@ export default function LearnerManagementPage() {
               : "Selected Grade 12 learners were marked Graduated."
         );
       }
-      await loadData();
+      await loadData(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Bulk transition failed.");
     }

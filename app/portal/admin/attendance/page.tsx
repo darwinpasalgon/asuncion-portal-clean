@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import styles from "./attendance.module.css";
+import { captureRefreshScroll, restoreRefreshScroll } from "@/lib/background-refresh";
 
 type Year={id:string;name:string};
 type Grade={grade_level:number;label:string};
@@ -62,8 +63,9 @@ export default function AdminAttendancePage(){
   const [error,setError]=useState("");
   const [success,setSuccess]=useState("");
 
-  async function load(targetDate=date){
-    setLoading(true); setError("");
+  async function load(targetDate=date, background=false){
+    const scrollY=captureRefreshScroll(background);
+    if(!background) setLoading(true); setError("");
     try{
       const r=await fetch(`/api/admin/attendance?date=${encodeURIComponent(targetDate)}`,{cache:"no-store"});
       const x=await r.json().catch(()=>({}));
@@ -72,7 +74,10 @@ export default function AdminAttendancePage(){
       setTeachers(x.teachers??[]); setAdvisers(x.advisers??[]); setEnrollments(x.enrollments??[]);
       setStudents(x.students??[]); setAttendance(x.attendance??[]); setExclusions(x.exclusions??[]);
     }catch{setError("Unable to reach the attendance service.");}
-    finally{setLoading(false);}
+    finally{
+      if(!background) setLoading(false);
+      restoreRefreshScroll(scrollY);
+    }
   }
 
   useEffect(()=>{void load(date);},[]);
@@ -110,7 +115,7 @@ export default function AdminAttendancePage(){
       const x=await r.json().catch(()=>({}));
       if(!r.ok){setError(x.error??"Unable to assign adviser.");return;}
       setSuccess("Attendance Teacher / Adviser updated.");
-      await load(date);
+      await load(date,true);
     }catch{setError("Unable to reach the attendance service.");}
     finally{setWorking("");}
   }

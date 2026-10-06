@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import styles from "./users.module.css";
+import { captureRefreshScroll, restoreRefreshScroll } from "@/lib/background-refresh";
 import ActionWaitOverlay from "@/app/components/action-wait-overlay";
 import { positionOptions, teachingPositions } from "@/lib/deped-positions";
 
@@ -152,8 +153,9 @@ export default function UsersAccountsPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  async function loadUsers() {
-    setLoading(true);
+  async function loadUsers(background = false) {
+    const scrollY = captureRefreshScroll(background);
+    if (!background) setLoading(true);
     setError("");
     try {
       const response = await fetch("/api/admin/users", { cache: "no-store" });
@@ -168,7 +170,8 @@ export default function UsersAccountsPage() {
     } catch {
       setError("Unable to reach the user-management service.");
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
+      restoreRefreshScroll(scrollY);
     }
   }
 
@@ -290,7 +293,7 @@ export default function UsersAccountsPage() {
 
       setEditing(null);
       setSuccess("Account information updated successfully.");
-      await loadUsers();
+      await loadUsers(true);
     } catch {
       setError("Unable to reach the user-management service.");
     } finally {
@@ -326,7 +329,7 @@ export default function UsersAccountsPage() {
           ? "Account suspended. The user can no longer access the portal."
           : "Account reactivated successfully."
       );
-      await loadUsers();
+      await loadUsers(true);
     } catch {
       setError("Unable to reach the user-management service.");
     } finally {
@@ -403,7 +406,7 @@ export default function UsersAccountsPage() {
       setDeleteTarget(null);
       setDeleteText("");
       setSuccess("Account permanently deleted.");
-      await loadUsers();
+      await loadUsers(true);
     } catch {
       setError("Unable to reach the user-management service.");
     } finally {
