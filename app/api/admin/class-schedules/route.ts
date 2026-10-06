@@ -76,8 +76,21 @@ async function activeYear(token: string) {
   return rows?.[0] ?? null;
 }
 
+const SCHOOL_DAY_START = "07:30";
+const SCHOOL_DAY_END = "16:30";
+
 function validTime(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+function validSchoolTimeRange(startTime: string, endTime: string) {
+  return (
+    validTime(startTime) &&
+    validTime(endTime) &&
+    startTime >= SCHOOL_DAY_START &&
+    endTime <= SCHOOL_DAY_END &&
+    startTime < endTime
+  );
 }
 
 async function conflictResponse(token: string, assignmentId: string, periods: ProposedPeriod[]) {
@@ -281,9 +294,9 @@ export async function POST(request: NextRequest) {
       }
       seenDays.add(dayOfWeek);
 
-      if (!validTime(startTime) || !validTime(endTime) || startTime >= endTime) {
+      if (!validSchoolTimeRange(startTime, endTime)) {
         return NextResponse.json(
-          { error: "Enter a valid start and end time for every selected day." },
+          { error: "Class schedules must be between 7:30 AM and 4:30 PM." },
           { status: 400 }
         );
       }
