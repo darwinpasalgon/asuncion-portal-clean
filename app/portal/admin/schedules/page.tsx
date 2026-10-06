@@ -119,6 +119,18 @@ const DAYS = [
 ];
 
 const WEEKDAYS = DAYS.slice(0, 5);
+const SCHOOL_DAY_START = "07:30";
+const SCHOOL_DAY_END = "16:30";
+
+function validSchoolTimeRange(startTime: string, endTime: string) {
+  return (
+    Boolean(startTime) &&
+    Boolean(endTime) &&
+    startTime >= SCHOOL_DAY_START &&
+    endTime <= SCHOOL_DAY_END &&
+    startTime < endTime
+  );
+}
 
 function grade7TveMajorLabel(code: Grade7TveRotation["major_code"]) {
   switch (code) {
@@ -511,8 +523,8 @@ export default function ClassSchedulesPage() {
       setError("Select at least one day for this subject.");
       return;
     }
-    if (!draft.startTime || !draft.endTime || draft.startTime >= draft.endTime) {
-      setError("Enter a valid start and end time for this subject.");
+    if (!validSchoolTimeRange(draft.startTime, draft.endTime)) {
+      setError("Class schedules must be between 7:30 AM and 4:30 PM.");
       return;
     }
 
@@ -690,8 +702,8 @@ export default function ClassSchedulesPage() {
     const assignment = lookup.assignmentsById.get(editAssignment);
     const periods = editId ? [{ id: editId, day_of_week: Number(editDay), start_time: editStart, end_time: editEnd, room: editRoom.trim().replace(/\s+/g, " ") || null }] :
       selectedDays.map((day) => ({ day_of_week: day, start_time: dayDrafts[day]?.startTime ?? "", end_time: dayDrafts[day]?.endTime ?? "", room: dayDrafts[day]?.room.trim().replace(/\s+/g, " ") || null }));
-    if (periods.some((period) => !period.start_time || !period.end_time || period.start_time >= period.end_time)) {
-      setError("Enter a valid start and end time for every selected day.");
+    if (periods.some((period) => !validSchoolTimeRange(period.start_time, period.end_time))) {
+      setError("Class schedules must be between 7:30 AM and 4:30 PM.");
       return;
     }
     if (assignment && checkLocalConflicts(assignment, periods)) return;
@@ -1133,6 +1145,8 @@ export default function ClassSchedulesPage() {
                       <span>Start</span>
                       <input
                         type="time"
+                        min={SCHOOL_DAY_START}
+                        max={SCHOOL_DAY_END}
                         value={draft.startTime}
                         onChange={(event) =>
                           updateQuickDraft(
@@ -1148,6 +1162,8 @@ export default function ClassSchedulesPage() {
                       <span>End</span>
                       <input
                         type="time"
+                        min={SCHOOL_DAY_START}
+                        max={SCHOOL_DAY_END}
                         value={draft.endTime}
                         onChange={(event) =>
                           updateQuickDraft(
@@ -1315,6 +1331,8 @@ export default function ClassSchedulesPage() {
                     <input
                       required
                       type="time"
+                      min={SCHOOL_DAY_START}
+                      max={SCHOOL_DAY_END}
                       value={editStart}
                       onChange={(event) => setEditStart(event.target.value)}
                     />
@@ -1325,6 +1343,8 @@ export default function ClassSchedulesPage() {
                     <input
                       required
                       type="time"
+                      min={SCHOOL_DAY_START}
+                      max={SCHOOL_DAY_END}
                       value={editEnd}
                       onChange={(event) => setEditEnd(event.target.value)}
                     />
@@ -1418,6 +1438,8 @@ export default function ClassSchedulesPage() {
                             <input
                               required
                               type="time"
+                              min={SCHOOL_DAY_START}
+                              max={SCHOOL_DAY_END}
                               aria-label={`${dayInfo?.label} start time`}
                               value={draft.startTime}
                               onChange={(event) =>
@@ -1431,6 +1453,8 @@ export default function ClassSchedulesPage() {
                             <input
                               required
                               type="time"
+                              min={SCHOOL_DAY_START}
+                              max={SCHOOL_DAY_END}
                               aria-label={`${dayInfo?.label} end time`}
                               value={draft.endTime}
                               onChange={(event) =>
