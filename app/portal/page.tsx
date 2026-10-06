@@ -1209,6 +1209,12 @@ export default function PortalPage() {
   const [academicContext, setAcademicContext] = useState<AcademicContext | null>(null);
   const [adminPermissions, setAdminPermissions] = useState<string[]>([]);
   const [page, setPage] = useState<Page>("Overview");
+
+  useEffect(() => {
+    const open = new URLSearchParams(window.location.search).get("open");
+    if (open === "schedule") setPage("Class schedule");
+    if (open === "assignments") setPage("Teaching assignments");
+  }, []);
   const [teacherAssignments, setTeacherAssignments] = useState<TeacherAssignment[]>([]);
   const [teacherAssignmentsLoading, setTeacherAssignmentsLoading] = useState(false);
   const [teacherLearnerSections, setTeacherLearnerSections] = useState<TeacherLearnerSection[]>([]);
