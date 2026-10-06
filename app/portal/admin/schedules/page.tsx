@@ -13,6 +13,7 @@ import {
   Plus,
   RefreshCw,
   Save,
+  Trash2,
   WandSparkles,
 } from "lucide-react";
 import styles from "./schedules.module.css";
@@ -773,6 +774,63 @@ export default function ClassSchedulesPage() {
     }
   }
 
+  async function deleteSchedule(schedule: Schedule) {
+    if (working || loading) return;
+
+    const assignment = lookup.assignmentsById.get(schedule.teacher_assignment_id);
+    const subject = assignment
+      ? lookup.subjectsById.get(assignment.subject_id)?.name ?? "Subject"
+      : "Subject";
+    const section = assignment
+      ? lookup.sectionsById.get(assignment.section_id) ?? "Unknown Section"
+      : "Unknown Section";
+    const teacher = assignment
+      ? lookup.teachersById.get(assignment.teacher_id) ?? "Unknown Teacher"
+      : "Unknown Teacher";
+    const day = DAYS.find((item) => item.value === schedule.day_of_week)?.label ?? "Selected Day";
+
+    const confirmed = window.confirm(
+      `Delete this schedule entry?\n\n${subject}\n${teacher}\nGrade ${assignment?.grade_level ?? ""} · ${section}\n${day}, ${timeLabel(schedule.start_time)}–${timeLabel(schedule.end_time)}\n\nThis removes only this day/time schedule. The Subject Teacher assignment will remain.`
+    );
+    if (!confirmed) return;
+
+    setWorking(`delete:${schedule.id}`);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch("/api/admin/class-schedules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "delete_schedule",
+          id: schedule.id,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(result.error ?? "Unable to delete the schedule entry.");
+        return;
+      }
+
+      if (editId === schedule.id) {
+        resetForm();
+        setAdvancedOpen(false);
+      }
+      if (highlightId === schedule.id) setHighlightId("");
+
+      setSchedules((current) =>
+        current.filter((item) => item.id !== schedule.id)
+      );
+      setSuccess(`${subject} schedule deleted for ${day}.`);
+      await load(false);
+    } catch {
+      setError("Unable to reach the class schedule service.");
+    } finally {
+      setWorking("");
+    }
+  }
+
   const orderedSchedules = [...schedules].sort((a, b) => {
     if (a.day_of_week !== b.day_of_week) {
       return a.day_of_week - b.day_of_week;
@@ -1128,21 +1186,33 @@ export default function ClassSchedulesPage() {
                       <div className={styles.quickExisting}>
                         <span>Current:</span>
                         {existing.map((schedule) => (
-                          <button
-                            type="button"
-                            key={schedule.id}
-                            onClick={() => startEdit(schedule)}
-                            title="Edit this schedule entry"
-                          >
-                            <strong>
-                              {DAYS.find(
-                                (day) => day.value === schedule.day_of_week
-                              )?.short}
-                            </strong>
-                            {timeLabel(schedule.start_time)}–
-                            {timeLabel(schedule.end_time)}
-                            {schedule.room ? ` · ${schedule.room}` : ""}
-                          </button>
+                          <span className={styles.quickExistingEntry} key={schedule.id}>
+                            <button
+                              type="button"
+                              className={styles.quickExistingEdit}
+                              onClick={() => startEdit(schedule)}
+                              title="Edit this schedule entry"
+                            >
+                              <strong>
+                                {DAYS.find(
+                                  (day) => day.value === schedule.day_of_week
+                                )?.short}
+                              </strong>
+                              {timeLabel(schedule.start_time)}–
+                              {timeLabel(schedule.end_time)}
+                              {schedule.room ? ` · ${schedule.room}` : ""}
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.quickExistingDelete}
+                              disabled={Boolean(working) || loading}
+                              onClick={() => void deleteSchedule(schedule)}
+                              title="Delete this schedule entry"
+                              aria-label={`Delete ${DAYS.find((day) => day.value === schedule.day_of_week)?.label ?? "schedule"} entry`}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </span>
                         ))}
                       </div>
                     )}
@@ -1584,6 +1654,14 @@ export default function ClassSchedulesPage() {
                         onClick={() => startEdit(schedule)}
                       >
                         <Pencil size={15} /> Edit
+                      </button>
+                      <button
+                        className={styles.delete}
+                        disabled={Boolean(working) || loading}
+                        onClick={() => void deleteSchedule(schedule)}
+                      >
+                        <Trash2 size={15} />
+                        {working === `delete:${schedule.id}` ? "Deleting…" : "Delete"}
                       </button>
                       <button
                         className={

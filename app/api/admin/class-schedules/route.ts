@@ -419,6 +419,70 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  if (action === "delete_schedule") {
+    const id = String(body?.id ?? "");
+    if (!id) {
+      return NextResponse.json({ error: "Schedule is required." }, { status: 400 });
+    }
+
+    const year = await activeYear(token).catch(() => null);
+    if (!year) {
+      return NextResponse.json(
+        { error: "No active school year is configured." },
+        { status: 409 }
+      );
+    }
+
+    const [schedule] = await getRows(
+      `class_schedules?id=eq.${encodeURIComponent(
+        id
+      )}&select=id,teacher_assignment_id,day_of_week,start_time,end_time&limit=1`,
+      token
+    ).catch(() => []);
+
+    if (!schedule) {
+      return NextResponse.json(
+        { error: "Schedule entry was not found. Refresh the page and try again." },
+        { status: 404 }
+      );
+    }
+
+    const [assignment] = await getRows(
+      `teacher_assignments?id=eq.${encodeURIComponent(
+        schedule.teacher_assignment_id
+      )}&school_year_id=eq.${encodeURIComponent(
+        year.id
+      )}&select=id&limit=1`,
+      token
+    ).catch(() => []);
+
+    if (!assignment) {
+      return NextResponse.json(
+        { error: "This schedule does not belong to the active school year." },
+        { status: 409 }
+      );
+    }
+
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/class_schedules?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: "DELETE",
+        headers: { ...authHeaders(token), Prefer: "return=representation" },
+        cache: "no-store",
+      }
+    );
+
+    const result = await response.json().catch(() => []);
+    if (!response.ok || !result?.[0]) {
+      return NextResponse.json(
+        { error: "Unable to delete the schedule entry." },
+        { status: 409 }
+      );
+    }
+
+    return NextResponse.json({ ok: true, schedule: result[0] });
+  }
+
   if (action === "set_schedule_active") {
     const id = String(body?.id ?? "");
     const isActive = Boolean(body?.isActive);
