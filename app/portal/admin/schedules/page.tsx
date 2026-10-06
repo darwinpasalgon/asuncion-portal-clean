@@ -269,8 +269,9 @@ export default function ClassSchedulesPage() {
     window.requestAnimationFrame(() => window.scrollTo({ top: origin.scrollY, behavior: "smooth" }));
   }
 
-  async function load(clearError = true) {
-    setLoading(true);
+  async function load(clearError = true, background = false) {
+    const scrollY = background ? window.scrollY : 0;
+    if (!background) setLoading(true);
     if (clearError) setError("");
     try {
       const response = await fetch("/api/admin/class-schedules", {
@@ -292,7 +293,15 @@ export default function ClassSchedulesPage() {
     } catch {
       setError("Unable to reach the class schedule service.");
     } finally {
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      } else {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => {
+            window.scrollTo({ top: scrollY, behavior: "auto" });
+          });
+        });
+      }
     }
   }
 
@@ -589,13 +598,13 @@ export default function ClassSchedulesPage() {
         `${subject} schedule saved for ${draft.days.length} day${draft.days.length === 1 ? "" : "s"}.`
       );
       clearQuickDraft(assignment.id);
-      await load();
+      await load(false, true);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to save this subject schedule.";
       setError(
         savedDays > 0 ? `${savedDays} day(s) saved before this issue: ${message} Review the current entries before retrying.` : message
       );
-      await load(false);
+      await load(false, true);
     } finally {
       setWorking("");
     }
@@ -732,7 +741,7 @@ export default function ClassSchedulesPage() {
             } added.`
       );
       resetForm();
-      await load();
+      await load(false, true);
     } catch {
       setError("Unable to reach the class schedule service.");
     } finally {
@@ -766,7 +775,7 @@ export default function ClassSchedulesPage() {
       }
 
       setSuccess(`Schedule ${isActive ? "reactivated" : "deactivated"}.`);
-      await load();
+      await load(false, true);
     } catch {
       setError("Unable to reach the class schedule service.");
     } finally {
@@ -823,7 +832,7 @@ export default function ClassSchedulesPage() {
         current.filter((item) => item.id !== schedule.id)
       );
       setSuccess(`${subject} schedule deleted for ${day}.`);
-      await load(false);
+      await load(false, true);
     } catch {
       setError("Unable to reach the class schedule service.");
     } finally {
