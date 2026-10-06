@@ -12,6 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import styles from "./school-setup.module.css";
+import { captureRefreshScroll, restoreRefreshScroll } from "@/lib/background-refresh";
 
 type SchoolYear = {
   id: string;
@@ -53,8 +54,9 @@ export default function SchoolSetupPage() {
   const [success, setSuccess] = useState("");
   const [newSchoolYearStart, setNewSchoolYearStart] = useState("");
 
-  async function load() {
-    setLoading(true);
+  async function load(background = false) {
+    const scrollY = captureRefreshScroll(background);
+    if (!background) setLoading(true);
     setError("");
     try {
       const response = await fetch("/api/admin/academic-structure", { cache: "no-store" });
@@ -71,7 +73,8 @@ export default function SchoolSetupPage() {
     } catch {
       setError("Unable to reach the school setup service.");
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
+      restoreRefreshScroll(scrollY);
     }
   }
 
@@ -115,7 +118,7 @@ export default function SchoolSetupPage() {
 
       setNewSchoolYearStart("");
       setSuccess(`School Year ${startYear}–${startYear + 1} created. It remains inactive until you activate it.`);
-      await load();
+      await load(true);
     } catch {
       setError("Unable to reach the school setup service.");
     } finally {
@@ -151,7 +154,7 @@ export default function SchoolSetupPage() {
       setSuccess(
         `School Year ${year.name} is now active. ${Number(result.synced_profiles ?? 0)} learner profile(s) synchronized.`
       );
-      await load();
+      await load(true);
     } catch {
       setError("Unable to reach the school setup service.");
     } finally {
@@ -186,7 +189,7 @@ export default function SchoolSetupPage() {
         `Section ${name} added to ${gradeLevel === 0 ? "ALS A&E" : `Grade ${gradeLevel}`}.`
       );
       form.reset();
-      await load();
+      await load(true);
     } catch {
       setError("Unable to reach the school setup service.");
     } finally {
