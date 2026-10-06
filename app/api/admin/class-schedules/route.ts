@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
               today
             )}&ends_on=gte.${encodeURIComponent(
               today
-            )}&select=id,rotation_block,group_label,section_id,phase_no,starts_on,ends_on,major_code,instructor_name,days_of_week,start_time,end_time&order=start_time.asc`,
+            )}&select=id,rotation_block,group_label,section_id,phase_no,starts_on,ends_on,major_code,teacher_id,non_teaching_personnel_id,instructor_name,days_of_week,start_time,end_time&order=start_time.asc`,
             token
           )
         : Promise.resolve([]),
