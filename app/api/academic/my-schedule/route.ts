@@ -1,6 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
+function manilaDate() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function grade7TveMajorLabel(code?: string | null) {
+  switch (String(code ?? "")) {
+    case "AGRI-CROP":
+      return "Agriculture Crop Production";
+    case "ANIMAL":
+      return "Animal Production";
+    case "CSS":
+      return "Computer Systems Servicing";
+    case "EIM":
+      return "Electrical Installation and Maintenance";
+    case "FOOD":
+      return "Food Processing";
+    default:
+      return String(code ?? "");
+  }
+}
+
 function authHeaders(token: string) {
   return {
     apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -106,7 +132,9 @@ export async function GET(request: NextRequest) {
     visibleAssignments.map((item: { id: string }) => item.id)
   );
 
-  const [schedules, sections, subjects, scheduleBlocks] = await Promise.all([
+  const today = manilaDate();
+
+  const [schedules, sections, subjects, scheduleBlocks, grade7TveRotations] = await Promise.all([
     getRows(
       "class_schedules?is_active=eq.true&select=id,teacher_assignment_id,day_of_week,start_time,end_time,room&order=day_of_week.asc,start_time.asc",
       token
@@ -123,6 +151,16 @@ export async function GET(request: NextRequest) {
           token
         )
       : Promise.resolve([]),
+    getRows(
+      `grade7_tve_rotations?school_year_id=eq.${encodeURIComponent(
+        activeYear.id
+      )}&is_active=eq.true&starts_on=lte.${encodeURIComponent(
+        today
+      )}&ends_on=gte.${encodeURIComponent(
+        today
+      )}&select=id,rotation_block,group_label,section_id,phase_no,starts_on,ends_on,major_code,instructor_name,days_of_week,start_time,end_time&order=start_time.asc`,
+      token
+    ).catch(() => []),
   ]);
 
   const assignmentMap = new Map<
@@ -215,6 +253,38 @@ export async function GET(request: NextRequest) {
       }
     );
 
+  const grade7TveEntries = (grade7TveRotations ?? []).flatMap(
+    (rotation: {
+      id: string;
+      group_label: string;
+      section_id: string | null;
+      major_code: string;
+      instructor_name: string;
+      days_of_week: number[];
+      start_time: string;
+      end_time: string;
+      starts_on: string;
+      ends_on: string;
+    }) =>
+      (rotation.days_of_week ?? []).map((day) => ({
+        id: `g7-tve-${rotation.id}-${day}`,
+        entry_type: "rotation",
+        day_of_week: Number(day),
+        start_time: rotation.start_time,
+        end_time: rotation.end_time,
+        room: null,
+        grade_level: 7,
+        section:
+          rotation.section_id
+            ? sectionMap.get(rotation.section_id) ?? rotation.group_label
+            : rotation.group_label,
+        subject: "Technical Vocational Education",
+        major: grade7TveMajorLabel(rotation.major_code),
+        purpose: `Exploratory rotation · ${rotation.starts_on} to ${rotation.ends_on}`,
+        instructor: rotation.instructor_name,
+      }))
+  );
+
   const blocks = (scheduleBlocks ?? []).map(
     (block: {
       id: string;
@@ -245,7 +315,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     activeYear,
     role: profile.role,
-    schedules: [...result, ...blocks].sort(
+    schedules: [...result, ...grade7TveEntries, ...blocks].sort(
       (a, b) =>
         a.day_of_week - b.day_of_week ||
         String(a.start_time).localeCompare(String(b.start_time))

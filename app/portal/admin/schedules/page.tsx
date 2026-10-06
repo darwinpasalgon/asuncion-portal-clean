@@ -44,6 +44,23 @@ type Schedule = {
   is_active: boolean;
 };
 
+type Grade7TveRotation = {
+  id: string;
+  rotation_block: "MORNING" | "MIDDAY" | "AFTERNOON";
+  group_label: string;
+  section_id: string | null;
+  phase_no: number;
+  starts_on: string;
+  ends_on: string;
+  major_code: "AGRI-CROP" | "ANIMAL" | "CSS" | "EIM" | "FOOD";
+  teacher_id: string | null;
+  non_teaching_personnel_id: string | null;
+  instructor_name: string;
+  days_of_week: number[];
+  start_time: string;
+  end_time: string;
+};
+
 type ScheduleBlock = {
   id: string;
   school_year_id: string;
@@ -102,6 +119,16 @@ const DAYS = [
 
 const WEEKDAYS = DAYS.slice(0, 5);
 
+function grade7TveMajorLabel(code: Grade7TveRotation["major_code"]) {
+  switch (code) {
+    case "AGRI-CROP": return "Agriculture Crop Production";
+    case "ANIMAL": return "Animal Production";
+    case "CSS": return "Computer Systems Servicing";
+    case "EIM": return "Electrical Installation and Maintenance";
+    case "FOOD": return "Food Processing";
+  }
+}
+
 function timeLabel(value: string) {
   const [hourText, minute] = value.slice(0, 5).split(":");
   const hour = Number(hourText);
@@ -122,6 +149,7 @@ export default function ClassSchedulesPage() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [scheduleBlocks, setScheduleBlocks] = useState<ScheduleBlock[]>([]);
+  const [grade7TveRotations, setGrade7TveRotations] = useState<Grade7TveRotation[]>([]);
 
   const [scheduleView, setScheduleView] = useState<"section" | "teacher">("section");
   const [quickTeacher, setQuickTeacher] = useState("");
@@ -259,6 +287,7 @@ export default function ClassSchedulesPage() {
       setTeachers(result.teachers ?? []);
       setSchedules(result.schedules ?? []);
       setScheduleBlocks(result.scheduleBlocks ?? []);
+      setGrade7TveRotations(result.grade7TveRotations ?? []);
     } catch {
       setError("Unable to reach the class schedule service.");
     } finally {
@@ -770,6 +799,16 @@ export default function ClassSchedulesPage() {
       ? scheduleBlocks.filter((block) => block.section_id === quickSection && block.is_active)
       : scheduleBlocks.filter((block) => block.is_active);
 
+  const visibleGrade7TveRotations = roomFilter
+    ? []
+    : teacherView
+      ? quickTeacher
+        ? grade7TveRotations.filter((rotation) => rotation.teacher_id === quickTeacher)
+        : []
+      : quickSection
+        ? grade7TveRotations.filter((rotation) => rotation.section_id === quickSection)
+        : grade7TveRotations;
+
   const visibleScheduleItems = [
     ...visibleSchedules.map((item) => ({
       kind: "schedule" as const,
@@ -785,6 +824,15 @@ export default function ClassSchedulesPage() {
       start_time: item.start_time,
       item,
     })),
+    ...visibleGrade7TveRotations.flatMap((item) =>
+      (item.days_of_week ?? []).map((day) => ({
+        kind: "grade7tve" as const,
+        id: `${item.id}-${day}`,
+        day_of_week: Number(day),
+        start_time: item.start_time,
+        item,
+      }))
+    ),
   ].sort(
     (a, b) =>
       a.day_of_week - b.day_of_week ||
@@ -1390,6 +1438,47 @@ export default function ClassSchedulesPage() {
           ) : (
             <div className={styles.scheduleList}>
               {visibleScheduleItems.map((entry) => {
+                if (entry.kind === "grade7tve") {
+                  const rotation = entry.item;
+                  return (
+                    <article key={`g7-tve-${entry.id}`} className={`${styles.scheduleRow} ${styles.scheduleTveRow}`}>
+                      <div className={styles.dayBox}>
+                        <CalendarDays size={18} />
+                        <strong>{DAYS.find((day) => day.value === entry.day_of_week)?.label}</strong>
+                      </div>
+
+                      <div>
+                        <span>CLASS</span>
+                        <strong>
+                          Grade 7 · {rotation.section_id
+                            ? lookup.sectionsById.get(rotation.section_id) ?? rotation.group_label
+                            : `${rotation.group_label} Group`}
+                        </strong>
+                        <small>Technical Vocational Education · {grade7TveMajorLabel(rotation.major_code)}</small>
+                      </div>
+
+                      <div>
+                        <span>INSTRUCTOR</span>
+                        <strong>{rotation.instructor_name}</strong>
+                        <small>Exploratory TVE · Rotation {rotation.phase_no}</small>
+                      </div>
+
+                      <div>
+                        <span>TIME & PERIOD</span>
+                        <strong className={styles.inline}>
+                          <Clock3 size={15} />
+                          {timeLabel(rotation.start_time)} – {timeLabel(rotation.end_time)}
+                        </strong>
+                        <small>{rotation.starts_on} to {rotation.ends_on}</small>
+                      </div>
+
+                      <div className={styles.blockStatus}>
+                        <span>ROTATION</span>
+                      </div>
+                    </article>
+                  );
+                }
+
                 if (entry.kind === "block") {
                   const block = entry.item;
                   return (

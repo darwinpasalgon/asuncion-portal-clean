@@ -165,3 +165,15 @@
   box-shadow:0 0 0 3px rgba(211,147,33,.16)!important;
   outline:0;
 }
+
+.exploratoryTeachers{
+  display:grid;
+  gap:4px;
+  min-width:260px;
+}
+.exploratoryTeachers small{
+  display:block;
+  color:#496b7f;
+  font-size:.72rem;
+  line-height:1.25;
+}

@@ -205,3 +205,10 @@
 @media(max-width:700px){
   .blockStatus{justify-content:flex-start}
 }
+
+.scheduleTveRow{
+  background:linear-gradient(90deg,#eef8ff,#fbfdff);
+  box-shadow:inset 5px 0 #3b82f6;
+}
+.scheduleTveRow>div>strong{color:#1f5f99!important}
+.scheduleTveRow>div>small{color:#587b98!important}

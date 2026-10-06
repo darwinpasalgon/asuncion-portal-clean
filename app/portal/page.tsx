@@ -185,7 +185,7 @@ type AcademicSetupAttention = {
 
 type ClassScheduleEntry = {
   id: string;
-  entry_type?: "class" | "block";
+  entry_type?: "class" | "block" | "rotation";
   day_of_week: number;
   start_time: string;
   end_time: string;
@@ -195,6 +195,7 @@ type ClassScheduleEntry = {
   subject: string;
   major: string | null;
   purpose?: string | null;
+  instructor?: string | null;
 };
 
 type Profile = {
@@ -1966,7 +1967,13 @@ export default function PortalPage() {
                             {dayEntries.map((entry) => (
                               <article
                                 key={entry.id}
-                                className={entry.entry_type === "block" ? "real-schedule-block" : undefined}
+                                className={
+                                  entry.entry_type === "block"
+                                    ? "real-schedule-block"
+                                    : entry.entry_type === "rotation"
+                                      ? "real-schedule-rotation"
+                                      : undefined
+                                }
                               >
                                 <div className="real-schedule-time">
                                   <strong>
@@ -1994,7 +2001,9 @@ export default function PortalPage() {
                                   <small>
                                     {entry.entry_type === "block"
                                       ? `${entry.purpose || "Non-instructional period"} · No class`
-                                      : entry.room || "Room not specified"}
+                                      : entry.entry_type === "rotation"
+                                        ? `${entry.instructor || "TVE Instructor"} · ${entry.purpose || "Exploratory rotation"}`
+                                        : entry.room || "Room not specified"}
                                   </small>
                                 </div>
                               </article>
