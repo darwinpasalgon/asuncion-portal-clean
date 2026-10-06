@@ -134,7 +134,7 @@ resolved as (
  left join public.profiles p on instructor_kind='teacher' and upper(p.full_name)=upper(instructor_name) and p.role='teacher' and p.account_status='active'
  left join public.non_teaching_personnel nt on instructor_kind='non_teaching' and upper(nt.full_name)=upper(instructor_name) and nt.is_active=true
 )
-insert into public.grade7_tve_rotations(school_year_id,rotation_block,group_label,section_id,phase_no,starts_on,ends_on,major_code,teacher_id,non_teaching_personnel_id,days_of_week,start_time,end_time,is_active)
-select school_year_id,rotation_block,group_label,section_id,phase_no,starts_on,ends_on,major_code,teacher_id,non_teaching_personnel_id,days_of_week,start_time,end_time,true
+insert into public.grade7_tve_rotations(school_year_id,rotation_block,group_label,section_id,phase_no,starts_on,ends_on,major_code,teacher_id,non_teaching_personnel_id,instructor_name,days_of_week,start_time,end_time,is_active)
+select school_year_id,rotation_block,group_label,section_id,phase_no,starts_on,ends_on,major_code,teacher_id,non_teaching_personnel_id,instructor_name,days_of_week,start_time,end_time,true
 from resolved where (group_label='MIX' or section_id is not null)
 and ((instructor_kind='teacher' and teacher_id is not null) or (instructor_kind='non_teaching' and non_teaching_personnel_id is not null));
