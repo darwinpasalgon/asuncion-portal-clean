@@ -1172,3 +1172,199 @@ td[data-slot=table-cell]{color:#496574}
 .real-schedule-day article.real-schedule-rotation .real-schedule-time strong,
 .real-schedule-day article.real-schedule-rotation>div:last-child>strong{color:#1f5f99}
 .real-schedule-day article.real-schedule-rotation>div:last-child>small{color:#537a9a;font-weight:700}
+
+
+/* Role dashboard organization */
+.real-overview-grid{
+  grid-template-columns:repeat(12,minmax(0,1fr));
+  align-items:start;
+}
+.real-overview-grid>.real-welcome{
+  grid-column:1/-1;
+  grid-row:auto;
+  order:1;
+  min-height:230px;
+}
+.real-overview-grid>.real-dashboard-home{
+  grid-column:1/-1;
+  order:2;
+}
+.real-overview-grid>.real-adviser-attention,
+.real-overview-grid>.real-personnel-attention,
+.real-overview-grid>.real-academic-setup-attention{
+  grid-column:1/-1;
+  order:3;
+}
+.real-overview-grid>.real-my-learners-dashboard{
+  grid-column:span 8;
+  order:4;
+}
+.real-overview-grid>.real-teacher-assignments{
+  grid-column:span 4;
+  order:4;
+}
+.real-overview-grid>.real-profile-card,
+.real-overview-grid>.real-profile-card:last-child{
+  grid-column:1/-1;
+  order:8;
+}
+
+.real-dashboard-home{
+  padding:0;
+  overflow:hidden;
+}
+.real-dashboard-heading{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:18px;
+  padding:22px 24px 18px;
+  border-bottom:1px solid rgba(216,229,222,.82);
+}
+.real-dashboard-heading h2{
+  margin:3px 0 5px;
+  color:#315746;
+  font-size:1.08rem;
+}
+.real-dashboard-heading p{
+  margin:0;
+  color:#728478;
+  font-size:.82rem;
+  line-height:1.5;
+}
+.real-dashboard-kicker{
+  color:#247b5a;
+  font-size:.64rem;
+  font-weight:800;
+  letter-spacing:.12em;
+}
+.real-dashboard-role{
+  flex:none;
+  padding:7px 10px;
+  border:1px solid rgba(37,116,86,.14);
+  border-radius:999px;
+  background:rgba(233,246,239,.76);
+  color:#356a52;
+  font-size:.7rem;
+  font-weight:700;
+}
+.real-dashboard-summary{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:1px;
+  background:rgba(216,229,222,.7);
+  border-bottom:1px solid rgba(216,229,222,.72);
+}
+.real-dashboard-summary>div{
+  min-width:0;
+  padding:15px 20px;
+  background:rgba(250,253,251,.78);
+}
+.real-dashboard-summary span,
+.real-dashboard-summary strong{
+  display:block;
+}
+.real-dashboard-summary span{
+  margin-bottom:5px;
+  color:#809086;
+  font-size:.65rem;
+  font-weight:700;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+.real-dashboard-summary strong{
+  overflow:hidden;
+  color:#355b49;
+  font-size:.9rem;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.real-dashboard-actions{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+  padding:18px;
+}
+.real-dashboard-action{
+  position:relative;
+  display:grid;
+  grid-template-columns:38px minmax(0,1fr) auto;
+  gap:11px;
+  align-items:center;
+  min-height:82px;
+  padding:13px 12px;
+  border:1px solid rgba(210,225,217,.82);
+  border-radius:14px;
+  background:rgba(255,255,255,.58);
+  color:inherit;
+  text-decoration:none;
+  box-shadow:0 7px 22px rgba(36,77,58,.04),inset 0 1px 0 rgba(255,255,255,.68);
+  transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease,background .16s ease;
+}
+.real-dashboard-action:hover{
+  transform:translateY(-2px);
+  border-color:rgba(53,127,94,.28);
+  background:rgba(255,255,255,.82);
+  box-shadow:0 12px 28px rgba(31,84,61,.08),inset 0 1px 0 rgba(255,255,255,.76);
+}
+.real-dashboard-action-icon{
+  display:grid;
+  width:38px;
+  height:38px;
+  place-items:center;
+  border:1px solid rgba(44,112,79,.12);
+  border-radius:11px;
+  background:linear-gradient(145deg,rgba(231,244,251,.9),rgba(235,248,240,.9));
+  color:#28745a;
+}
+.real-dashboard-action-copy{
+  min-width:0;
+}
+.real-dashboard-action-copy strong,
+.real-dashboard-action-copy small{
+  display:block;
+}
+.real-dashboard-action-copy strong{
+  margin-bottom:4px;
+  color:#365847;
+  font-size:.82rem;
+}
+.real-dashboard-action-copy small{
+  color:#7b8b81;
+  font-size:.7rem;
+  line-height:1.35;
+}
+.real-dashboard-action-badge{
+  position:absolute;
+  top:9px;
+  right:9px;
+  padding:3px 6px;
+  border-radius:999px;
+  background:#eaf6ee;
+  color:#2d7451;
+  font-size:.61rem;
+  font-weight:800;
+}
+.real-dashboard-action-arrow{
+  color:#90a398;
+}
+
+@media(max-width:1180px){
+  .real-dashboard-actions{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .real-overview-grid>.real-my-learners-dashboard,
+  .real-overview-grid>.real-teacher-assignments{grid-column:1/-1}
+}
+@media(max-width:900px){
+  .real-dashboard-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:767px){
+  .real-overview-grid{display:grid;grid-template-columns:1fr;gap:16px}
+  .real-overview-grid>*{grid-column:1!important}
+  .real-overview-grid>.real-welcome{min-height:auto}
+  .real-dashboard-heading{padding:18px;align-items:center}
+  .real-dashboard-role{display:none}
+  .real-dashboard-summary{grid-template-columns:1fr}
+  .real-dashboard-summary>div{padding:12px 17px}
+  .real-dashboard-actions{grid-template-columns:1fr;padding:14px;gap:9px}
+  .real-dashboard-action{min-height:72px}
+}
