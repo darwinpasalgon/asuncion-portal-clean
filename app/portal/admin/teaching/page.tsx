@@ -53,6 +53,17 @@ type Assignment = {
   is_active: boolean;
   assigned_at: string;
 };
+type Grade7TveRotation = {
+  id: string;
+  section_id: string;
+  phase_no: number;
+  starts_on: string;
+  ends_on: string;
+  major_code: string;
+  instructor_name: string;
+  rotation_block: string;
+};
+
 type Adviser = {
   id: string;
   teacher_id: string;
@@ -71,6 +82,7 @@ export default function TeachingSetupPage() {
   const [subjectTeachers, setSubjectTeachers] = useState<Teacher[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [advisers, setAdvisers] = useState<Adviser[]>([]);
+  const [grade7TveRotations, setGrade7TveRotations] = useState<Grade7TveRotation[]>([]);
   const [assignmentGrade, setAssignmentGrade] = useState("");
   const [assignmentSubject, setAssignmentSubject] = useState("");
   const [assignmentMajor, setAssignmentMajor] = useState("");
@@ -106,6 +118,7 @@ export default function TeachingSetupPage() {
       setSubjectTeachers(result.subjectTeachers ?? result.teachers ?? []);
       setAssignments(result.assignments ?? []);
       setAdvisers(result.advisers ?? []);
+      setGrade7TveRotations(result.grade7TveRotations ?? []);
     } catch {
       setError("Unable to reach the teaching setup service.");
     } finally {
@@ -261,6 +274,32 @@ function subjectTeacherLabel(teacher: Teacher) {
     return activeAdvisers.find((item) => item.section_id === sectionId) ?? null;
   }
 
+  function isGrade7ExploratoryTve(subject: Subject) {
+    return subject.grade_level === 7 &&
+      isTechnicalVocationalEducation(subject.name);
+  }
+
+  function grade7TveForSection(sectionId: string) {
+    return grade7TveRotations.filter((item) => item.section_id === sectionId);
+  }
+
+  function grade7TveComplete(sectionId: string) {
+    const rows = grade7TveForSection(sectionId);
+    return new Set(rows.map((item) => item.phase_no)).size === 5 &&
+      new Set(rows.map((item) => item.major_code)).size === 5;
+  }
+
+  function grade7TveLabel(code: string) {
+    switch (code) {
+      case "AGRI-CROP": return "Agri-Crop";
+      case "ANIMAL": return "Animal Production";
+      case "CSS": return "CSS";
+      case "EIM": return "EIM";
+      case "FOOD": return "Food Processing";
+      default: return code;
+    }
+  }
+
   function assignmentFor(
     sectionId: string,
     subjectId: string,
@@ -320,11 +359,13 @@ function subjectTeacherLabel(teacher: Teacher) {
           gradeLevel: Number(setupGrade),
           sectionId: setupSection.id,
           adviserTeacherId: setupAdviserId,
-          assignments: setupRows.map((row) => ({
-            subjectId: row.subject.id,
-            major: row.major,
-            teacherId: setupTeachers[row.key] ?? "",
-          })),
+          assignments: setupRows
+            .filter((row) => !isGrade7ExploratoryTve(row.subject))
+            .map((row) => ({
+              subjectId: row.subject.id,
+              major: row.major,
+              teacherId: setupTeachers[row.key] ?? "",
+            })),
         }),
       });
       const result = await response.json().catch(() => ({}));
@@ -740,9 +781,11 @@ function subjectTeacherLabel(teacher: Teacher) {
                   const activeCount = activeAssignments.filter(
                     (assignment) => assignment.section_id === section.id
                   ).length;
+                  const exploratoryTveCount =
+                    section.grade_level === 7 && grade7TveComplete(section.id) ? 1 : 0;
                   return (
                     <option key={section.id} value={section.id}>
-                      {section.name} · {activeCount}/{activeSubjects.filter(
+                      {section.name} · {activeCount + exploratoryTveCount}/{activeSubjects.filter(
                         (subject) => subject.grade_level === section.grade_level &&
                           !requiresTechnicalVocationalMajor(subject.grade_level, subject.name)
                       ).length + activeSubjects.filter(
@@ -798,6 +841,10 @@ function subjectTeacherLabel(teacher: Teacher) {
                         row.major
                       );
                       const selectedTeacher = setupTeachers[row.key] ?? "";
+                      const exploratoryTve = isGrade7ExploratoryTve(row.subject);
+                      const exploratoryRows = exploratoryTve
+                        ? grade7TveForSection(setupSection.id)
+                        : [];
                       return (
                         <tr
                           key={row.key}
@@ -814,8 +861,21 @@ function subjectTeacherLabel(teacher: Teacher) {
                                 <small>Exploratory</small>
                               )}
                           </td>
-                          <td>{row.major ?? "—"}</td>
                           <td>
+                            {exploratoryTve ? "Exploratory Rotation" : row.major ?? "—"}
+                          </td>
+                          <td>
+                            {exploratoryTve ? (
+                              <div className={styles.exploratoryTeachers}>
+                                {exploratoryRows
+                                  .sort((a, b) => a.phase_no - b.phase_no)
+                                  .map((item) => (
+                                    <small key={item.id}>
+                                      {grade7TveLabel(item.major_code)} · {item.instructor_name}
+                                    </small>
+                                  ))}
+                              </div>
+                            ) : (
                             <select
                               id={`setup-teacher-${encodeURIComponent(row.key)}`}
                               data-attention={attentionKey === row.key ? "true" : undefined}
@@ -834,22 +894,35 @@ function subjectTeacherLabel(teacher: Teacher) {
                                 </option>
                               ))}
                             </select>
+                            )}
                           </td>
                           <td>
-                            <span
-                              className={
-                                selectedTeacher ? styles.setupAssigned : styles.setupMissing
-                              }
-                            >
-                              {selectedTeacher
-                                ? current?.is_active &&
-                                  current.teacher_id === selectedTeacher
-                                  ? "Assigned"
-                                  : "Ready to Save"
-                                : current?.is_active
-                                  ? "Will Remove"
-                                  : "Not Assigned"}
-                            </span>
+                            {exploratoryTve ? (
+                              <span className={
+                                grade7TveComplete(setupSection.id)
+                                  ? styles.setupAssigned
+                                  : styles.setupMissing
+                              }>
+                                {grade7TveComplete(setupSection.id)
+                                  ? "Rotation Assigned"
+                                  : "Rotation Incomplete"}
+                              </span>
+                            ) : (
+                              <span
+                                className={
+                                  selectedTeacher ? styles.setupAssigned : styles.setupMissing
+                                }
+                              >
+                                {selectedTeacher
+                                  ? current?.is_active &&
+                                    current.teacher_id === selectedTeacher
+                                    ? "Assigned"
+                                    : "Ready to Save"
+                                  : current?.is_active
+                                    ? "Will Remove"
+                                    : "Not Assigned"}
+                              </span>
+                            )}
                           </td>
                         </tr>
                       );
@@ -861,7 +934,10 @@ function subjectTeacherLabel(teacher: Teacher) {
               <div className={styles.setupFooter}>
                 <div>
                   <strong>
-                    {setupRows.filter((row) => setupTeachers[row.key]).length}
+                    {setupRows.filter((row) =>
+                      isGrade7ExploratoryTve(row.subject) ||
+                      Boolean(setupTeachers[row.key])
+                    ).length}
                     /{setupRows.length} Assignment Rows Selected
                   </strong>
                   <span>
