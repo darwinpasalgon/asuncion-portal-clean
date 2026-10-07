@@ -3,13 +3,24 @@ import { hasAdminPermission } from "@/lib/admin-access";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
 const REQUIRED_LEARNER_FIELDS = [
-  "last_name",
-  "first_name",
-  "sex",
-  "birth_date",
-  "mother_tongue",
-  "religion",
-  "learning_modality",
+  ["last_name", "Last Name"],
+  ["first_name", "First Name"],
+  ["sex", "Sex"],
+  ["birth_date", "Birth Date"],
+  ["mother_tongue", "Mother Tongue"],
+  ["religion", "Religion"],
+  ["address_barangay", "Current Barangay"],
+  ["address_municipality_city", "Current City / Municipality"],
+  ["address_province", "Current Province"],
+  ["guardian_name", "Guardian Name"],
+  ["guardian_relationship", "Guardian Relationship"],
+  ["guardian_contact_number", "Guardian Contact Number"],
+  ["citizenship", "Citizenship"],
+  ["is_indigenous_peoples", "Indigenous Peoples Response"],
+  ["cct_recipient", "4Ps / CCT Response"],
+  ["has_special_educational_needs", "Special Educational Needs Response"],
+  ["permanent_same_as_current", "Permanent Address Response"],
+  ["learning_modality", "Actual Modality"],
 ] as const;
 
 function headers(token: string) {
@@ -89,6 +100,23 @@ type LearnerInfo = {
   birth_date: string | null;
   mother_tongue: string | null;
   religion: string | null;
+  address_barangay: string | null;
+  address_municipality_city: string | null;
+  address_province: string | null;
+  guardian_name: string | null;
+  guardian_relationship: string | null;
+  guardian_contact_number: string | null;
+  citizenship: string | null;
+  is_indigenous_peoples: boolean | null;
+  ethnic_group: string | null;
+  cct_recipient: boolean | null;
+  cct_household_id: string | null;
+  has_special_educational_needs: boolean | null;
+  lsen_type: string | null;
+  permanent_same_as_current: boolean | null;
+  permanent_address_barangay: string | null;
+  permanent_address_municipality_city: string | null;
+  permanent_address_province: string | null;
   learning_modality: string | null;
 };
 
@@ -219,7 +247,7 @@ export async function GET(request: NextRequest) {
         token
       ),
       getAllRows(
-        "learner_information?select=student_id,last_name,first_name,sex,birth_date,mother_tongue,religion,learning_modality",
+        "learner_information?select=student_id,last_name,first_name,sex,birth_date,mother_tongue,religion,address_barangay,address_municipality_city,address_province,guardian_name,guardian_relationship,guardian_contact_number,citizenship,is_indigenous_peoples,ethnic_group,cct_recipient,cct_household_id,has_special_educational_needs,lsen_type,permanent_same_as_current,permanent_address_barangay,permanent_address_municipality_city,permanent_address_province,learning_modality",
         token
       ),
       getAllRows(
@@ -299,7 +327,34 @@ export async function GET(request: NextRequest) {
     let incompleteLearnerCount = 0;
     for (const enrollment of enrollments) {
       const info = infoMap.get(enrollment.student_id);
-      const missing = REQUIRED_LEARNER_FIELDS.filter((field) => blank(info?.[field]));
+      const missing: string[] = REQUIRED_LEARNER_FIELDS
+        .filter(([field]) => blank(info?.[field]))
+        .map(([, label]) => label);
+
+      if (info?.is_indigenous_peoples === true && blank(info.ethnic_group)) {
+        missing.push("Primary Ethnicity");
+      }
+      if (info?.cct_recipient === true && blank(info.cct_household_id)) {
+        missing.push("4Ps Household ID");
+      }
+      if (
+        info?.has_special_educational_needs === true &&
+        blank(info.lsen_type)
+      ) {
+        missing.push("LSEN Type");
+      }
+      if (info?.permanent_same_as_current === false) {
+        if (blank(info.permanent_address_barangay)) {
+          missing.push("Permanent Barangay");
+        }
+        if (blank(info.permanent_address_municipality_city)) {
+          missing.push("Permanent City / Municipality");
+        }
+        if (blank(info.permanent_address_province)) {
+          missing.push("Permanent Province");
+        }
+      }
+
       if (!missing.length) continue;
       incompleteLearnerCount += 1;
       if (incompleteLearnerSamples.length < 25) {
