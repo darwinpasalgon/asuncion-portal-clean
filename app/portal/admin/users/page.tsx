@@ -114,7 +114,12 @@ function emptyLearnerInfo(): LearnerInfo {
 }
 
 function learnerInfoOf(user: UserRecord): LearnerInfo {
-  return { ...emptyLearnerInfo(), ...(user.learner_info ?? {}) };
+  const info = { ...emptyLearnerInfo(), ...(user.learner_info ?? {}) };
+  return {
+    ...info,
+    is_indigenous_peoples:
+      info.is_indigenous_peoples || Boolean(String(info.ethnic_group ?? "").trim()),
+  };
 }
 
 function ageAsOfFirstFridayJune(birthDate: string, schoolYear?: string) {
