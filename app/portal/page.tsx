@@ -995,7 +995,7 @@ function SideNav({
             )}
 
             {(profile.role === "administrator" ||
-              ["users.manage", "accounts.manage", "password_resets.manage", "bulk_import.manage"].some((permission) =>
+              ["users.manage", "password_resets.manage", "bulk_import.manage"].some((permission) =>
                 adminPermissions.includes(permission)
               )) && (
               <div className="nav-group-section">
@@ -1011,19 +1011,6 @@ function SideNav({
                       >
                         <Users size={19} />
                         <span>Users & Accounts</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-                  {(profile.role === "administrator" || adminPermissions.includes("accounts.manage")) && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        className="nav-button"
-                        onClick={() => {
-                          window.location.href = "/portal/admin/accounts";
-                        }}
-                      >
-                        <Users size={19} />
-                        <span>Account Approvals</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
