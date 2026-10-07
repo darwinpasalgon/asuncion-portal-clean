@@ -490,6 +490,48 @@ export default function GradesPage() {
     }
   }
 
+  async function saveAllGrades() {
+    if (!selectedAssignmentId || classStudents.length === 0) return;
+
+    setWorking("save-all");
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch("/api/academic/grades", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_all_grades",
+          assignmentId: selectedAssignmentId,
+          termNo: selectedTerm,
+          records: classStudents.map((student) => ({
+            studentId: student.id,
+            termGrade: drafts[student.id] ?? "",
+            components: selectedIsMapeh
+              ? mapehDrafts[student.id] ?? emptyMapehDraft()
+              : undefined,
+          })),
+        }),
+      });
+
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(result.error ?? "Unable to save all Term Grades.");
+        return;
+      }
+
+      setSuccess(
+        `Term ${selectedTerm} grades saved for ${result.count ?? classStudents.length} learner(s).`
+      );
+      await load();
+    } catch {
+      setError("Unable to reach the grades service.");
+    } finally {
+      setWorking("");
+    }
+  }
+
   async function setPublication(publish: boolean) {
     if (!selectedAssignmentId) return;
 
