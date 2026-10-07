@@ -45,82 +45,89 @@
 .previewPlaceholder{min-height:220px;border:1px dashed #cbd9e0;border-radius:14px;background:#fbfdfe;display:grid;place-items:center;align-content:center;gap:7px;color:#7b8e99}
 .previewCanvas{overflow:auto;padding:14px;border:1px solid #dce5ea;border-radius:14px;background:#e7ecef}
 .printDocument{display:grid;gap:18px;justify-content:center}
-.printSheet{width:297mm;height:210mm;box-sizing:border-box;background:#fff;display:grid;grid-template-columns:148.25mm .5mm 148.25mm;overflow:hidden;box-shadow:0 5px 24px rgba(16,42,61,.18);font-family:"Times New Roman",Times,serif;color:#111}
+.printSheet{width:297mm;height:210mm;box-sizing:border-box;background:#fff;display:grid;grid-template-columns:148.25mm .5mm 148.25mm;overflow:hidden;box-shadow:0 5px 24px rgba(16,42,61,.18);font-family:"Bookman Old Style","Bookman","URW Bookman",serif;color:#111;font-synthesis:none}
 .halfSheet{width:148.25mm;height:210mm;box-sizing:border-box;overflow:hidden}
 .cutLine{width:.5mm;height:100%;background:#111}
 .emptyHalf{width:100%;height:100%;background:#fff}
-.cardFront,.cardBack{height:100%;box-sizing:border-box;padding:5.5mm 5.2mm 4.5mm;position:relative;font-size:7.7pt;line-height:1.1}
+.cardFront,.cardBack{height:100%;box-sizing:border-box;position:relative}
+.cardFront{padding:5.5mm 5.2mm 4.5mm;font-size:7.44pt;line-height:1.02}
+.cardBack{padding:5.5mm 5.2mm 4.5mm;font-size:6.84pt;line-height:1.02}
 .formHeader{height:35mm;position:relative;display:flex;justify-content:center;align-items:flex-start;text-align:center}
-.headerText{width:82mm;display:grid;justify-items:center;line-height:1.12;font-size:7.2pt}
-.headerText>strong{font-size:7.7pt}
-.headerText .schoolName{margin-top:3.4mm;font-size:7.8pt}
-.depedLogo,.schoolLogo{position:absolute;top:0;width:16mm;height:16mm;object-fit:contain}
+.headerText{width:86mm;display:grid;justify-items:center;line-height:1.02;font-size:7.44pt}
+.headerText>strong{font-size:7.44pt}
+.headerText>strong:nth-of-type(1){font-size:8.68pt}
+.headerText .schoolName{margin-top:3.4mm;font-size:6.82pt}
+.depedLogo,.schoolLogo{position:absolute;top:0;width:22.3mm;height:22.3mm;object-fit:contain}
 .depedLogo{left:0}
 .schoolLogo{right:0}
-.reportTitle{text-align:center;font-weight:800;font-size:8.4pt;margin-top:-1.5mm}
-.schoolYear{text-align:center;font-size:7.5pt;margin-top:1mm;margin-bottom:4mm}
+.reportTitle{text-align:center;font-weight:700;font-size:8.68pt;margin-top:-1.5mm}
+.schoolYear{text-align:center;font-size:7.44pt;margin-top:1mm;margin-bottom:4mm}
 .identity{display:grid;gap:1.4mm;margin-bottom:4mm}
-.identityRow{display:grid;grid-template-columns:auto minmax(24mm,1fr) auto 10mm auto 15mm;align-items:end;gap:1mm}
-.identityRow>span{white-space:nowrap}
-.identityRow>strong{min-height:3.4mm;border-bottom:.35mm solid #333;padding:0 .7mm .4mm;text-align:center;text-transform:uppercase}
-.identityRow .identityWide{text-align:left}
-.identityRow .track{grid-column:2/7;text-align:left}
+.identityNameRow,.identityLrnRow,.identityTrackRow{align-items:end}
+.identityNameRow{display:grid;grid-template-columns:8.58% 46.13% 9.56% 9.56% 10.41% 15.76%}
+.identityLrnRow{display:grid;grid-template-columns:8.58% 27.709% 18.426% 9.56% 9.56% 10.41% 15.755%}
+.identityTrackRow{display:grid;grid-template-columns:8.577% 8.577% 28.837% 54.009%}
+.identityNameRow>span,.identityLrnRow>span,.identityTrackRow>span{white-space:nowrap}
+.identityNameRow>strong,.identityLrnRow>strong,.identityTrackRow>strong{min-height:3.4mm;border-bottom:.25mm solid #111;padding:0 .7mm .35mm;text-align:center;text-transform:uppercase;font-weight:700}
+.identityNameRow>strong:nth-of-type(1),.identityLrnRow>strong:nth-of-type(1),.identityTrackRow>strong{text-align:left}
+.identityLrnRow>i,.identityTrackRow>i{display:block}
+.identityTrackRow>strong{grid-column:3}
 .parentNote{margin:0 0 3.5mm}
 .parentNote>div{margin-bottom:1.2mm}
-.parentNote p{margin:0 0 1.2mm;text-indent:8mm;line-height:1.2}
-.signaturesTop{display:grid;grid-template-columns:1fr 1fr;gap:8mm;margin:1.5mm 0 3mm}
+.parentNote p{margin:0 0 1.2mm;text-indent:8mm;line-height:1.28}
+.signaturesTop{display:grid;grid-template-columns:45.992% 45.287%;column-gap:8.721%;margin:1.5mm 0 3mm}
 .signaturesTop>div{text-align:center}
 .signaturesTop strong,.signaturesTop span{display:block}
-.signaturesTop strong{border-bottom:.25mm solid #333;padding-bottom:.7mm;font-size:7.3pt;text-transform:uppercase}
-.signaturesTop span{margin-top:.7mm;font-size:7pt}
-.progressTitle{text-align:center;font-weight:800;font-size:7.8pt;margin:0 0 1.6mm}
-.gradeTable{width:100%;border-collapse:collapse;table-layout:fixed;font-size:6.8pt}
+.signaturesTop strong{border-bottom:.25mm solid #111;padding-bottom:.7mm;font-size:7.44pt;text-transform:uppercase;font-weight:700}
+.signaturesTop span{margin-top:.7mm;font-size:7.44pt}
+.progressTitle{text-align:center;font-weight:700;font-size:7.44pt;margin:0 0 1.6mm}
+.gradeTable{width:100%;border-collapse:collapse;table-layout:fixed;font-size:7.44pt}
 .gradeTable th,.gradeTable td{border:.25mm solid #333;padding:.75mm .65mm;height:4.4mm;box-sizing:border-box}
-.gradeTable th{text-align:center;font-weight:800;line-height:1.05}
+.gradeTable th{text-align:center;font-weight:700;line-height:1.05}
 .gradeTable td:nth-child(n+2){text-align:center}
-.gradeTable .learningAreaCol{width:40%}
-.gradeTable .finalCol{width:10%}
-.gradeTable .remarksCol{width:18%}
+.gradeTable .learningAreaCol{width:36.286%}
+.gradeTable .finalCol{width:9.564%}
+.gradeTable .remarksCol{width:26.160%}
 .gradeTable tbody td:first-child{text-align:left}
-.componentRow td:first-child{font-style:italic;padding-left:2.4mm}
-.generalAverageRow td{font-weight:800}
-.generalAverageRow td:first-child{text-align:right;font-style:italic}
-.descriptorTitle{font-weight:800;font-size:7.1pt;margin-top:2.5mm}
-.descriptorTable{width:79%;border-collapse:collapse;margin-top:.7mm;margin-left:4mm;font-size:6.7pt;text-align:center}
+.componentRow td:first-child{font-family:"Bookman Old Style","Bookman","URW Bookman",serif;font-size:6.82pt;font-style:italic;padding-left:0}
+.generalAverageRow td{font-weight:700}
+.generalAverageRow td:first-child{text-align:right;font-size:8.68pt;font-style:italic;font-weight:700}
+.descriptorTitle{font-weight:700;font-size:7.44pt;margin-top:2.5mm}
+.descriptorTable{width:79%;border-collapse:collapse;margin-top:.7mm;margin-left:4mm;font-size:7.44pt;text-align:center}
 .descriptorTable th,.descriptorTable td{padding:.4mm 1mm;border:0}
-.descriptorTable th{font-weight:800}
-.cardBack{padding-top:5.5mm}
-.attendanceTable{width:100%;border-collapse:collapse;table-layout:fixed;font-size:6.25pt;text-align:center}
+.descriptorTable th{font-weight:700}
+.attendanceTable{width:100%;border-collapse:collapse;table-layout:fixed;font-size:6.84pt;text-align:center}
 .attendanceTable th,.attendanceTable td{border:.25mm solid #333;height:5.8mm;padding:.4mm;box-sizing:border-box}
-.attendanceTable th:first-child{width:17mm;line-height:1.05}
-.attendanceTable th{font-weight:800}
-.totalCell{font-weight:800;width:14mm}
-.backSectionTitle{text-align:center;font-weight:850;font-size:7.2pt;margin:5.5mm 0 1.2mm}
+.attendanceTable th:first-child{width:12.911%;line-height:1.02}
+.attendanceTable th:nth-child(n+2):nth-child(-n+12){width:5.687%}
+.attendanceTable th:last-child{width:24.532%}
+.attendanceTable th{font-weight:700}
+.totalCell{font-weight:700}
+.backSectionTitle{text-align:center;font-weight:700;font-size:6.84pt;margin:5.5mm 0 1.2mm}
 .commentGrid{border:.25mm solid #333}
 .commentBlock{min-height:15mm;border-bottom:.25mm solid #333;padding:1.2mm 1mm;box-sizing:border-box}
 .commentBlock:last-child{border-bottom:0}
-.commentBlock strong{display:block;margin-bottom:1mm;font-size:6.8pt}
-.commentBlock p{margin:0 2mm;font-size:6.4pt;line-height:1.2}
-.parentSignatureRows{display:grid;gap:2.5mm;margin:3.5mm auto 0;width:55mm}
-.parentSignatureRows>div{display:grid;grid-template-columns:13mm 1fr;align-items:end}
-.parentSignatureRows strong{text-align:right;padding-right:1mm;font-size:6.8pt}
-.parentSignatureRows span{border-bottom:.3mm solid #333;height:4mm}
-.transferText{font-size:6.8pt;line-height:1.55;margin:2.4mm 0 3mm}
-.transferField{display:flex;align-items:flex-end;gap:1.6mm;min-height:4.6mm;margin:1.5mm 0;font-size:6.8pt}
-.transferField>span:first-child{flex:0 0 auto;white-space:nowrap}
-.fillLine{display:block;flex:1 1 auto;min-width:24mm;height:3.4mm;border-bottom:.25mm solid #333;box-sizing:border-box}
-.approvedRow{display:grid;grid-template-columns:1fr 48mm;align-items:end;margin-top:6mm;font-size:6.8pt}
+.commentBlock strong{display:block;margin-bottom:1mm;font-size:6.84pt;font-weight:700}
+.commentBlock p{margin:0 2mm;font-family:"Bahnschrift Light","Bahnschrift",Arial,sans-serif;font-size:6.84pt;font-weight:300;line-height:1.15}
+.parentSignatureRows{display:grid;gap:0;margin:3.5mm 0 0;width:100%}
+.parentSignatureRows>div{display:grid;grid-template-columns:24.287% 39.811% 35.902%;align-items:end;min-height:9.35mm}
+.parentSignatureRows strong{text-align:right;padding-right:1mm;font-size:6.84pt;font-weight:700}
+.parentSignatureRows span{grid-column:2;border-bottom:.45mm solid #111;height:3.2mm}
+.transferText{font-size:6.84pt;line-height:1.28;margin:2.4mm 0 3mm}
+.transferField{display:grid;grid-template-columns:35.662% 28.437% 35.901%;align-items:end;min-height:5.1mm;margin:0;font-size:6.84pt}
+.transferField>span:first-child{white-space:nowrap}
+.fillLine{display:block;grid-column:2;width:100%;height:3.1mm;border-bottom:.45mm solid #111;box-sizing:border-box}
+.approvedRow{display:grid;grid-template-columns:47.036% 52.964%;align-items:end;margin-top:5.1mm;font-size:6.84pt}
 .approvedRow>div{text-align:center}
 .approvedRow strong,.approvedRow>div span{display:block}
-.approvedRow strong{border-bottom:.25mm solid #333;padding-bottom:.6mm;text-transform:uppercase}
-.approvedRow>div span{margin-top:.7mm}
-.headSignature{width:45mm;text-align:center;margin-top:7mm}
+.approvedRow strong{border-bottom:.25mm solid #111;padding-bottom:.6mm;text-transform:uppercase;font-size:6.84pt;font-weight:700}
+.approvedRow>div span{margin-top:.7mm;font-size:6.84pt}
+.headSignature{width:41.349%;text-align:center;margin-top:7mm}
 .headSignature strong,.headSignature span{display:block}
-.headSignature strong{border-bottom:.25mm solid #333;padding-bottom:.6mm;text-transform:uppercase;font-size:6.8pt}
-.headSignature span{margin-top:.7mm;font-size:6.6pt}
-.cancellationRow{display:grid;grid-template-columns:max-content minmax(25mm,1fr) max-content minmax(20mm,.65fr);column-gap:1.6mm;align-items:end;min-height:4.6mm;font-size:6.8pt;margin-top:2.5mm}
-.cancellationRow>span:not(.fillLine){white-space:nowrap}
-.cancellationRow .fillLine{width:100%;min-width:0}
+.headSignature strong{border-bottom:.25mm solid #111;padding-bottom:.6mm;text-transform:uppercase;font-size:6.84pt;font-weight:700}
+.headSignature span{margin-top:.7mm;font-size:6.84pt}
+.cancellationRow{display:grid;grid-template-columns:47.036% 52.964%;align-items:end;min-height:3.2mm;font-size:6.84pt;margin-top:2.5mm}
+.cancellationRow span{white-space:nowrap}
 @media(max-width:800px){
   .header{align-items:flex-start;flex-direction:column}
   .selectorTop{grid-template-columns:1fr}

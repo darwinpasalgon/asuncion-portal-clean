@@ -108,25 +108,27 @@ function HeaderBlock({
 function LearnerIdentity({ card }: { card: Sf9CardData }) {
   return (
     <div className={styles.identity}>
-      <div className={styles.identityRow}>
+      <div className={styles.identityNameRow}>
         <span>Name:</span>
-        <strong className={styles.identityWide}>{card.full_name}</strong>
+        <strong>{card.full_name}</strong>
         <span>Age:</span>
         <strong>{card.age ?? ""}</strong>
         <span>Sex:</span>
         <strong>{card.sex}</strong>
       </div>
-      <div className={styles.identityRow}>
+      <div className={styles.identityLrnRow}>
         <span>LRN:</span>
-        <strong className={styles.identityWide}>{card.lrn}</strong>
+        <strong>{card.lrn}</strong>
+        <i aria-hidden="true" />
         <span>Grade:</span>
         <strong>{card.grade_level}</strong>
         <span>Section:</span>
         <strong>{card.section}</strong>
       </div>
-      <div className={styles.identityRow}>
+      <div className={styles.identityTrackRow}>
         <span>Track (SHS only):</span>
-        <strong className={styles.track}>{card.track || ""}</strong>
+        <i aria-hidden="true" />
+        <strong>{card.track || ""}</strong>
       </div>
     </div>
   );
@@ -331,9 +333,7 @@ function BackCard({
       <div className={styles.backSectionTitle}>CANCELLATION OF ELIGIBILITY TO TRANSFER</div>
       <div className={styles.cancellationRow}>
         <span>Admitted in:</span>
-        <span className={styles.fillLine} />
         <span>Date:</span>
-        <span className={styles.fillLine} />
       </div>
       <div className={styles.headSignature}>
         <strong>{detail.schoolInformation.school_head_name}</strong>
