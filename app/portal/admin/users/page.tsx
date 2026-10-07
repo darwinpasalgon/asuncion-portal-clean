@@ -338,13 +338,25 @@ export default function UsersAccountsPage() {
   }
 
   useEffect(() => {
-    const query = new URLSearchParams(window.location.search).get("q")?.trim();
+    const params = new URLSearchParams(window.location.search);
+    const query = params.get("q")?.trim();
     if (query) {
       setPersonType("student");
       setSearch(query);
     }
     void loadUsers();
   }, []);
+
+  useEffect(() => {
+    if (!users.length) return;
+    const editId = new URLSearchParams(window.location.search).get("edit")?.trim();
+    if (!editId || editing) return;
+    const target = users.find((user) => user.id === editId);
+    if (target) {
+      setPersonType("student");
+      openEdit(target);
+    }
+  }, [users, editing]);
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -391,6 +403,23 @@ export default function UsersAccountsPage() {
     });
     setError("");
     setSuccess("");
+  }
+
+  function updateLearnerField<K extends keyof LearnerInfo>(
+    field: K,
+    value: LearnerInfo[K]
+  ) {
+    setEditing((current) =>
+      current && current.personType === "student"
+        ? {
+            ...current,
+            learnerInfo: {
+              ...current.learnerInfo,
+              [field]: value,
+            },
+          }
+        : current
+    );
   }
 
   const editSections =
