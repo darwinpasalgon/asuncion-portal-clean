@@ -492,7 +492,6 @@ export default function MyStudentsPage() {
                         />
                         <span>
                           <strong>Conditional Cash Transfer (CCT)</strong>
-                          Is this learner CCT recipient?
                         </span>
                       </label>
                       <label className={styles.checkboxField}>
