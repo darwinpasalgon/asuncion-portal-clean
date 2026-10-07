@@ -22,6 +22,7 @@ type Teacher={id:string;full_name:string;email:string};
 type Adviser={id:string;section_id:string;teacher_id:string};
 type Enrollment={student_id:string;grade_level:number;section_id:string|null};
 type Student={id:string;full_name:string;lrn:string|null};
+type LearnerInfo={student_id:string;sex:string|null;religion:string|null};
 type DailyStatus="present"|"absent"|"absent_morning"|"cutting_classes";
 type Attendance={student_id:string;section_id:string;status:DailyStatus|"transferred_in"|"transferred_out"|"dropped";note:string|null};
 type Exclusion={id:string;section_id:string;attendance_date:string;exclusion_type:"regular_holiday"|"special_non_working_holiday"|"class_suspension";reason:string|null};
@@ -55,6 +56,7 @@ export default function AdminAttendancePage(){
   const [advisers,setAdvisers]=useState<Adviser[]>([]);
   const [enrollments,setEnrollments]=useState<Enrollment[]>([]);
   const [students,setStudents]=useState<Student[]>([]);
+  const [learnerInformation,setLearnerInformation]=useState<LearnerInfo[]>([]);
   const [attendance,setAttendance]=useState<Attendance[]>([]);
   const [exclusions,setExclusions]=useState<Exclusion[]>([]);
   const [date,setDate]=useState(localDate());
@@ -62,6 +64,8 @@ export default function AdminAttendancePage(){
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const [success,setSuccess]=useState("");
+  const [scopeGradeLevel,setScopeGradeLevel]=useState<number|null>(null);
+  const [readOnly,setReadOnly]=useState(false);
 
   async function load(targetDate=date, background=false){
     const scrollY=captureRefreshScroll(background);
@@ -72,7 +76,10 @@ export default function AdminAttendancePage(){
       if(!r.ok){setError(x.error??"Unable to load attendance administration.");return;}
       setActiveYear(x.activeYear??null); setGrades(x.grades??[]); setSections(x.sections??[]);
       setTeachers(x.teachers??[]); setAdvisers(x.advisers??[]); setEnrollments(x.enrollments??[]);
-      setStudents(x.students??[]); setAttendance(x.attendance??[]); setExclusions(x.exclusions??[]);
+      setStudents(x.students??[]); setLearnerInformation(x.learnerInformation??[]);
+      setAttendance(x.attendance??[]); setExclusions(x.exclusions??[]);
+      setScopeGradeLevel(Number.isInteger(x.scopeGradeLevel)?Number(x.scopeGradeLevel):null);
+      setReadOnly(Boolean(x.readOnly));
     }catch{setError("Unable to reach the attendance service.");}
     finally{
       if(!background) setLoading(false);
@@ -84,6 +91,7 @@ export default function AdminAttendancePage(){
 
   const teacherMap=useMemo(()=>new Map(teachers.map(t=>[t.id,t.full_name])),[teachers]);
   const studentMap=useMemo(()=>new Map(students.map(s=>[s.id,s])),[students]);
+  const learnerInfoMap=useMemo(()=>new Map(learnerInformation.map(item=>[item.student_id,item])),[learnerInformation]);
   const dailyAttendance=useMemo(
     ()=>attendance.filter(a=>DAILY_STATUSES.includes(a.status as DailyStatus)),
     [attendance]
@@ -106,6 +114,21 @@ export default function AdminAttendancePage(){
     return sectionStudents(sectionId).filter(s=>!recorded.has(s.id));
   }
   const unrecordedTotal=sections.reduce((sum,s)=>sum+unrecorded(s.id).length,0);
+  const enrolledStudentIds=useMemo(()=>Array.from(new Set(enrollments.map(e=>e.student_id))),[enrollments]);
+  const totalMale=enrolledStudentIds.filter(id=>String(learnerInfoMap.get(id)?.sex??"").trim().toUpperCase()==="M").length;
+  const totalFemale=enrolledStudentIds.filter(id=>String(learnerInfoMap.get(id)?.sex??"").trim().toUpperCase()==="F").length;
+  const presentStudentIds=useMemo(()=>new Set(dailyAttendance.filter(a=>a.status==="present").map(a=>a.student_id)),[dailyAttendance]);
+  const presentMale=enrolledStudentIds.filter(id=>presentStudentIds.has(id)&&String(learnerInfoMap.get(id)?.sex??"").trim().toUpperCase()==="M").length;
+  const presentFemale=enrolledStudentIds.filter(id=>presentStudentIds.has(id)&&String(learnerInfoMap.get(id)?.sex??"").trim().toUpperCase()==="F").length;
+  function religionGroup(value:string|null|undefined){
+    const text=String(value??"").trim().toLowerCase();
+    if(!text)return "unrecorded";
+    if(/islam|muslim/.test(text))return "muslim";
+    if(/catholic|christ|baptist|jehovah|uccp|advent|born again|evangelical|iglesia|methodist|pentecost|protestant|church/.test(text))return "christian";
+    return "other";
+  }
+  const christianCount=enrolledStudentIds.filter(id=>religionGroup(learnerInfoMap.get(id)?.religion)==="christian").length;
+  const muslimCount=enrolledStudentIds.filter(id=>religionGroup(learnerInfoMap.get(id)?.religion)==="muslim").length;
 
   async function setAdviser(sectionId:string,teacherId:string){
     if(!teacherId)return;
@@ -123,7 +146,7 @@ export default function AdminAttendancePage(){
   return <main className={styles.page}><div className={styles.shell}>
     <nav className={styles.topActions}><a href="/portal" className={styles.topLink}><ArrowLeft size={16}/>Back to Portal</a></nav>
     <header className={styles.header}>
-      <div><span className={styles.eyebrow}>ADMINISTRATION</span><h1>Attendance</h1><p>Assign the Attendance Teacher / Adviser for each section and review the daily attendance overview.</p></div>
+      <div><span className={styles.eyebrow}>{scopeGradeLevel?"GRADE LEVEL ADMINISTRATION":"ADMINISTRATION"}</span><h1>{scopeGradeLevel?`Grade ${scopeGradeLevel} Attendance`:"Attendance"}</h1><p>{readOnly?"Monitor daily attendance, enrollment, sex, and religion summaries for your assigned grade level.":"Assign the Attendance Teacher / Adviser for each section and review the daily attendance overview."}</p></div>
       {activeYear&&<div className={styles.yearCard}><CheckCircle2 size={18}/><div><span>ACTIVE SCHOOL YEAR</span><strong>{activeYear.name}</strong></div></div>}
     </header>
     {error&&<div className={styles.error}>{error}</div>}{success&&<div className={styles.success}>{success}</div>}
@@ -143,6 +166,9 @@ export default function AdminAttendancePage(){
       <article><UserCheck size={22}/><span>Absent in the Morning</span><strong>{count("absent_morning")}</strong></article>
       <article><AlertTriangle size={22}/><span>Cutting Classes</span><strong>{count("cutting_classes")}</strong></article>
       <article className={unrecordedTotal?styles.needsAttention:""}><Users size={22}/><span>Unrecorded</span><strong>{unrecordedTotal}</strong></article>
+      <article><Users size={22}/><span>Total Learners by Sex</span><strong>M {totalMale} · F {totalFemale}</strong></article>
+      <article><UserCheck size={22}/><span>Present by Sex</span><strong>M {presentMale} · F {presentFemale}</strong></article>
+      <article><Users size={22}/><span>Religion Summary</span><strong>Christian {christianCount} · Muslim {muslimCount}</strong></article>
     </div>
 
     <section className={styles.panel}>
@@ -174,7 +200,7 @@ export default function AdminAttendancePage(){
     </section>
 
     <section className={styles.panel}>
-      <div className={styles.panelHeading}><div><h2>Attendance Teachers / Advisers</h2><p>One designated Teacher records the daily attendance for each section.</p></div></div>
+      <div className={styles.panelHeading}><div><h2>Attendance Teachers / Advisers</h2><p>{readOnly?"View the designated adviser for every section in your grade level.":"One designated Teacher records the daily attendance for each section."}</p></div></div>
       {loading?<div className={styles.empty}>Loading adviser assignments…</div>:
       <div className={styles.gradeGrid}>
         {grades.map(g=>{
@@ -185,10 +211,12 @@ export default function AdminAttendancePage(){
               const a=adviserFor(s.id);
               return <div className={styles.sectionRow} key={s.id}>
                 <div><strong>{s.name}</strong><span>{enrolledCount(s.id)} student{enrolledCount(s.id)===1?"":"s"}</span></div>
-                <select value={a?.teacher_id??""} disabled={working===s.id} onChange={e=>void setAdviser(s.id,e.target.value)}>
-                  <option value="">Select Adviser</option>
-                  {teachers.map(t=><option key={t.id} value={t.id}>{t.full_name}</option>)}
-                </select>
+                {readOnly
+                  ? <strong>{a?teacherMap.get(a.teacher_id):"Not Assigned"}</strong>
+                  : <select value={a?.teacher_id??""} disabled={working===s.id} onChange={e=>void setAdviser(s.id,e.target.value)}>
+                      <option value="">Select Adviser</option>
+                      {teachers.map(t=><option key={t.id} value={t.id}>{t.full_name}</option>)}
+                    </select>}
                 <small>{a?teacherMap.get(a.teacher_id):"Not Assigned"}</small>
               </div>
             })}
