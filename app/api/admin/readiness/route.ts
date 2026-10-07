@@ -152,8 +152,11 @@ export async function GET(request: NextRequest) {
     permissionNames.map((permission, index) => [permission, permissionValues[index]])
   ) as Record<(typeof permissionNames)[number], boolean>;
 
-  if (!permissionValues.some(Boolean)) {
-    return NextResponse.json({ error: "Administrator access required." }, { status: 403 });
+  if (!permissionValues.every(Boolean)) {
+    return NextResponse.json(
+      { error: "Full Administrator access is required for school-wide readiness data." },
+      { status: 403 }
+    );
   }
 
   try {
