@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getScopedAdminAccess, hasAdminPermission } from "@/lib/admin-access";
+import { getScopedAdminAccess } from "@/lib/admin-access";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 import { findScheduleConflicts, type ProposedPeriod } from "@/lib/schedule-conflicts";
 
@@ -34,9 +34,6 @@ async function getUserId(token: string) {
   return String(user?.id ?? "");
 }
 
-async function isAdmin(token: string) {
-  return hasAdminPermission(token, "schedules.manage");
-}
 
 async function scheduleAccess(token: string) {
   return getScopedAdminAccess(token, "schedules.manage");
