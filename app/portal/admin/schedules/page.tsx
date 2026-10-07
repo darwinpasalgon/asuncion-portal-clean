@@ -899,6 +899,26 @@ export default function ClassSchedulesPage() {
         ? grade7TveRotations.filter((rotation) => rotation.section_id === quickSection)
         : grade7TveRotations;
 
+  const quickRotationPeriods = visibleGrade7TveRotations.reduce(
+    (total, rotation) => total + (rotation.days_of_week ?? []).length,
+    0
+  );
+  const quickRotationMinutes = visibleGrade7TveRotations.reduce((total, rotation) => {
+    const minutes = (time: string) =>
+      Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+    return (
+      total +
+      (rotation.days_of_week ?? []).length *
+        (minutes(rotation.end_time) - minutes(rotation.start_time))
+    );
+  }, 0);
+  const quickVisibleLoadCount =
+    quickAssignments.length + visibleGrade7TveRotations.length;
+  const quickVisibleEntries = quickSummary.entries + quickRotationPeriods;
+  const quickVisibleWeeklyHours = Number(
+    (quickSummary.weeklyHours + quickRotationMinutes / 60).toFixed(2)
+  );
+
   const visibleScheduleItems = [
     ...visibleSchedules.map((item) => ({
       kind: "schedule" as const,
@@ -991,8 +1011,8 @@ export default function ClassSchedulesPage() {
               <h2>{teacherView ? "Quick Teacher Schedule" : "Quick Section Schedule"}</h2>
               <p>
                 {teacherView
-                  ? "Choose a teacher to schedule their assigned subjects and sections. Select multiple days to apply the same time and room."
-                  : "Choose a section once, then schedule each assigned subject directly from the list below."}
+                  ? "Choose a teacher to view all current teaching loads. Grade 7 TVE rotations appear automatically as read-only rotation loads."
+                  : "Choose a section once, then schedule each assigned subject directly from the list below. Current Grade 7 TVE rotations appear automatically."}
               </p>
             </div>
           </div>
@@ -1062,11 +1082,14 @@ export default function ClassSchedulesPage() {
 
             {hasSelection && (
               <div className={styles.quickSummary}>
-                <strong>{quickAssignments.length}</strong>
-                <span>Teaching Load{quickAssignments.length === 1 ? "" : "s"}</span>
+                <strong>{quickVisibleLoadCount}</strong>
+                <span>Active Load{quickVisibleLoadCount === 1 ? "" : "s"}</span>
                 <small>
-                  {quickSummary.scheduledLoads} scheduled · {quickAssignments.length - quickSummary.scheduledLoads} unscheduled
-                  <br />{quickSummary.entries} active periods · {quickSummary.weeklyHours} hours/week
+                  {quickSummary.scheduledLoads} class load{quickSummary.scheduledLoads === 1 ? "" : "s"} scheduled
+                  {visibleGrade7TveRotations.length > 0
+                    ? ` · ${visibleGrade7TveRotations.length} current TVE rotation${visibleGrade7TveRotations.length === 1 ? "" : "s"}`
+                    : ` · ${quickAssignments.length - quickSummary.scheduledLoads} unscheduled`}
+                  <br />{quickVisibleEntries} active periods · {quickVisibleWeeklyHours} hours/week
                 </small>
               </div>
             )}
@@ -1078,16 +1101,61 @@ export default function ClassSchedulesPage() {
               <strong>{teacherView ? "Select a Teacher" : "Select a Grade Level and Section"}</strong>
               <span>{teacherView ? "All assigned subjects and sections will appear automatically." : "The assigned Subjects and Teachers will appear automatically."}</span>
             </div>
-          ) : quickAssignments.length === 0 ? (
+          ) : quickAssignments.length === 0 && visibleGrade7TveRotations.length === 0 ? (
             <div className={styles.quickEmpty}>
               <CalendarDays size={26} />
-              <strong>No Subject Teacher Assignments Yet</strong>
+              <strong>No Teaching Loads Yet</strong>
               <span>
-                {teacherView ? "Assign this teacher's subjects and sections in Subjects & Teachers, then return here." : "Configure the section first in Subjects & Teachers, then return here."}
+                {teacherView ? "Assign this teacher's subjects or Grade 7 TVE rotation, then return here." : "Configure the section subjects or Grade 7 TVE rotation, then return here."}
               </span>
             </div>
           ) : (
             <div className={styles.quickRows}>
+              {visibleGrade7TveRotations.map((rotation) => (
+                <article
+                  className={`${styles.quickRow} ${styles.quickRotationRow}`}
+                  key={`quick-rotation-${rotation.id}`}
+                >
+                  <div className={styles.quickSubject}>
+                    <span>SUBJECT</span>
+                    <strong>Technical Vocational Education</strong>
+                    <small>{grade7TveMajorLabel(rotation.major_code)}</small>
+                    <small>
+                      {teacherView
+                        ? `Grade 7 · ${rotation.section_id
+                            ? lookup.sectionsById.get(rotation.section_id) ?? rotation.group_label
+                            : `${rotation.group_label} Group`}`
+                        : rotation.instructor_name}
+                    </small>
+                    <p>Current exploratory TVE rotation · read only</p>
+                  </div>
+
+                  <div className={styles.quickRotationDetails}>
+                    <div>
+                      <span>DAYS</span>
+                      <strong>
+                        {DAYS.filter((day) =>
+                          (rotation.days_of_week ?? []).includes(day.value)
+                        )
+                          .map((day) => day.short)
+                          .join(", ")}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>TIME</span>
+                      <strong>
+                        {timeLabel(rotation.start_time)}–{timeLabel(rotation.end_time)}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>ROTATION</span>
+                      <strong>Phase {rotation.phase_no}</strong>
+                      <small>{rotation.starts_on} to {rotation.ends_on}</small>
+                    </div>
+                  </div>
+                </article>
+              ))}
+
               {quickAssignments.map((assignment) => {
                 const draft =
                   quickDrafts[assignment.id] ?? emptyQuickDraft();
