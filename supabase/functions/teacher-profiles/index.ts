@@ -235,6 +235,106 @@ Deno.serve(async req => {
     if (error) return json({ error: "Unable to load teachers." }, 500);
     return json({ teachers: data, can_manage: true, can_import: superAdmin });
   }
+
+  if (action === "list_non_teaching") {
+    if (!canManage) return json({ error: "Human Resources access required." }, 403);
+    const { data, error } = await admin
+      .from("non_teaching_personnel")
+      .select("id,full_name,email,position,personal,portal_user_id,is_active,updated_at")
+      .eq("is_active", true)
+      .order("full_name")
+      .limit(1000);
+    if (error) return json({ error: "Unable to load Non-Teaching Personnel." }, 500);
+    return json({ personnel: data ?? [], can_manage: true });
+  }
+
+  if (action === "get_non_teaching") {
+    if (!canManage) return json({ error: "Human Resources access required." }, 403);
+    const personnelId = String(body.personnel_id ?? "");
+    if (!personnelId) return json({ error: "Select a Non-Teaching Personnel record." }, 400);
+    const { data: person, error } = await admin
+      .from("non_teaching_personnel")
+      .select("id,full_name,email,position,personal,official,portal_user_id,is_active,updated_at")
+      .eq("id", personnelId)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (error) return json({ error: "Unable to load the personnel profile." }, 500);
+    if (!person) return json({ error: "Non-Teaching Personnel record not found." }, 404);
+    return json({
+      personnel: person,
+      missing_fields: personnelProfileMissingFields(
+        (person.personal ?? {}) as Record<string, string>
+      ),
+      can_manage: true,
+    });
+  }
+
+  if (action === "save_non_teaching_profile") {
+    if (!canManage) return json({ error: "Human Resources access required." }, 403);
+    const personnelId = String(body.personnel_id ?? "");
+    if (!personnelId) return json({ error: "Select a Non-Teaching Personnel record." }, 400);
+
+    const { data: person, error: readError } = await admin
+      .from("non_teaching_personnel")
+      .select("id,full_name,email,position,personal,portal_user_id,is_active")
+      .eq("id", personnelId)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (readError) return json({ error: "Unable to load the personnel profile." }, 500);
+    if (!person) return json({ error: "Non-Teaching Personnel record not found." }, 404);
+
+    try {
+      const mergedPersonal = {
+        ...((person.personal ?? {}) as Record<string, string>),
+        ...cleanDetails(body.personal ?? {}, personalFields),
+      };
+      const normalized = normalizeGraduateProfile(
+        normalizeTeacherNameFields(mergedPersonal)
+      );
+      const missing = personnelProfileMissingFields(normalized);
+      if (missing.length) {
+        return json({
+          error: `Complete the required profile fields: ${missing.join(", ")}.`,
+          missing_fields: missing,
+        }, 400);
+      }
+
+      const displayName = teacherDisplayName(normalized, person.full_name);
+      const { data: saved, error: saveError } = await admin
+        .from("non_teaching_personnel")
+        .update({
+          personal: normalized,
+          full_name: displayName || person.full_name,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", personnelId)
+        .select("id,full_name,email,position,personal,official,portal_user_id,is_active,updated_at")
+        .single();
+
+      if (saveError || !saved) {
+        return json({ error: "Unable to save the personnel profile." }, 500);
+      }
+
+      if (person.portal_user_id && displayName && displayName !== person.full_name) {
+        await admin
+          .from("profiles")
+          .update({ full_name: displayName, updated_at: new Date().toISOString() })
+          .eq("id", person.portal_user_id);
+      }
+
+      return json({
+        personnel: saved,
+        missing_fields: personnelProfileMissingFields(
+          (saved.personal ?? {}) as Record<string, string>
+        ),
+        can_manage: true,
+      });
+    } catch (error) {
+      return json({
+        error: error instanceof Error ? error.message : "Invalid personnel details.",
+      }, 400);
+    }
+  }
   if (linkedNonTeaching && !canManage && !body.teacher_id) {
     const record = {
       teacher_id: caller.id,

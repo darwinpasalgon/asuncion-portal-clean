@@ -88,12 +88,14 @@
   .quickRow{grid-template-columns:minmax(180px,1.4fr) minmax(190px,1fr) 100px 100px minmax(140px,.9fr)}
   .quickSave{grid-column:1/-1;justify-content:flex-end}
   .quickExisting{grid-column:1/-1}
+  .quickRotationDetails{grid-column:1/-1}
 }
 @media(max-width:800px){
   .quickPicker{grid-template-columns:1fr 1fr}
   .quickSummary{grid-column:1/-1;justify-self:stretch}
   .quickRow{grid-template-columns:1fr 1fr}
   .quickSubject,.quickDays,.quickRoom,.quickSave,.quickExisting{grid-column:1/-1}
+  .quickRotationDetails{grid-column:1/-1;grid-template-columns:1fr 1fr}
   .quickTime{grid-column:auto}
   .quickSave button{width:100%}
 }
@@ -129,6 +131,24 @@
 .quickSave{padding-top:24px}
 .quickSave button{width:100%;min-width:78px;box-sizing:border-box}
 .quickExisting{grid-column:1/-1;min-width:0;padding-top:0}
+.quickRotationRow{background:#f5faff}
+.quickRotationRow:hover{background:#f1f8fd}
+.quickRotationDetails{
+  grid-column:2/-1;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(120px,1fr));
+  gap:10px;
+  align-items:center;
+  min-width:0;
+  padding:8px 10px;
+  border:1px solid #d9e8f3;
+  border-radius:10px;
+  background:#fbfdff;
+}
+.quickRotationDetails>div{min-width:0}
+.quickRotationDetails span{display:block;font-size:.56rem;font-weight:850;letter-spacing:.09em;color:#80919a}
+.quickRotationDetails strong{display:block;margin-top:4px;color:#285d83;font-size:.72rem}
+.quickRotationDetails small{display:block;margin-top:3px;color:#6d8290;font-size:.6rem}
 
 @media(max-width:1199px){
   .quickRow{
@@ -156,6 +176,7 @@
   .quickSummary{grid-column:auto}
   .quickRow{grid-template-columns:1fr;padding:13px}
   .quickSubject,.quickDays,.quickTime,.quickRoom,.quickSave,.quickExisting{grid-column:1}
+  .quickRotationDetails{grid-column:1;grid-template-columns:1fr}
   .quickDayChoices{grid-template-columns:repeat(5,minmax(0,1fr))}
   .quickDayChoice,.quickDaySelected{width:100%;min-width:0}
 }
