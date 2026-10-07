@@ -321,6 +321,70 @@ export default function GradesPage() {
     [classStudents]
   );
 
+  const selectedSubjectAssignment = subjectAssignments.find(
+    (item) => item.id === selectedSubjectAssignmentId
+  );
+  const selectedSubjectAssignmentSubject = selectedSubjectAssignment
+    ? subjectMap.get(selectedSubjectAssignment.subject_id)
+    : null;
+  const selectedSubjectAssignmentIsTve = isTechnicalVocationalEducation(
+    selectedSubjectAssignmentSubject?.name
+  );
+
+  const subjectClassStudents = useMemo(() => {
+    if (!selectedSubjectAssignment) return [];
+    return enrollments
+      .filter(
+        (item) =>
+          item.section_id === selectedSubjectAssignment.section_id &&
+          item.grade_level === selectedSubjectAssignment.grade_level &&
+          (!selectedSubjectAssignmentIsTve ||
+            !selectedSubjectAssignment.major ||
+            item.tve_major === selectedSubjectAssignment.major)
+      )
+      .map((item) => studentMap.get(item.student_id))
+      .filter((item): item is Student => Boolean(item))
+      .sort(compareStudents);
+  }, [
+    selectedSubjectAssignment,
+    selectedSubjectAssignmentIsTve,
+    enrollments,
+    studentMap,
+  ]);
+
+  const subjectClassStudentGroups = useMemo(
+    () =>
+      ["Male", "Female", "Unspecified"]
+        .map((group) => ({
+          group,
+          students: subjectClassStudents.filter(
+            (student) => sexGroup(student.sex) === group
+          ),
+        }))
+        .filter((item) => item.students.length > 0),
+    [subjectClassStudents]
+  );
+
+  function publishedSubjectGradeForStudent(studentId: string) {
+    if (!selectedSubjectAssignment) return undefined;
+    return grades.find(
+      (item) =>
+        item.student_id === studentId &&
+        item.teacher_assignment_id === selectedSubjectAssignment.id &&
+        item.term_no === selectedSubjectTerm &&
+        item.status === "published"
+    );
+  }
+
+  function subjectAssignmentLabel(assignment: Assignment) {
+    const subject = subjectMap.get(assignment.subject_id);
+    return `Grade ${assignment.grade_level} · ${sectionMap.get(
+      assignment.section_id
+    ) ?? "Unknown"} · ${subject?.name ?? "Unknown subject"}${
+      assignment.major ? ` · ${assignment.major}` : ""
+    }`;
+  }
+
   useEffect(() => {
     if (role !== "teacher" || !selectedAssignmentId) return;
 
