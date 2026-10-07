@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
-import { hasAdminPermission } from "@/lib/admin-access";
+import { getGradeLevelHeadScope, hasAdminPermission } from "@/lib/admin-access";
 
 const ALLOWED_MIME_TYPES = new Set([
   "application/pdf",
@@ -64,10 +64,14 @@ async function getIdentity(request: NextRequest) {
       token,
       userId,
       profile: { ...profile, role: "administrator" },
+      gradeLevelHead: null,
     };
   }
 
-  return { token, userId, profile };
+  const gradeLevelHead =
+    profile.role === "teacher" ? await getGradeLevelHeadScope(token) : null;
+
+  return { token, userId, profile, gradeLevelHead };
 }
 
 async function getActiveYear(token: string) {
@@ -143,33 +147,40 @@ export async function GET(request: NextRequest) {
     let allowedSections = sections ?? [];
 
     if (profile.role === "teacher") {
-      const [assignments, adviserRows] = await Promise.all([
-        getRows(
-          `teacher_assignments?school_year_id=eq.${encodeURIComponent(
-            activeYear.id
-          )}&teacher_id=eq.${encodeURIComponent(
-            profile.id
-          )}&is_active=eq.true&select=section_id`,
-          token
-        ),
-        getRows(
-          `section_advisers?school_year_id=eq.${encodeURIComponent(
-            activeYear.id
-          )}&teacher_id=eq.${encodeURIComponent(
-            profile.id
-          )}&is_active=eq.true&select=section_id`,
-          token
-        ),
-      ]);
+      if (identity.gradeLevelHead) {
+        allowedSections = (sections ?? []).filter(
+          (section: { grade_level: number }) =>
+            Number(section.grade_level) === identity.gradeLevelHead!.gradeLevel
+        );
+      } else {
+        const [assignments, adviserRows] = await Promise.all([
+          getRows(
+            `teacher_assignments?school_year_id=eq.${encodeURIComponent(
+              activeYear.id
+            )}&teacher_id=eq.${encodeURIComponent(
+              profile.id
+            )}&is_active=eq.true&select=section_id`,
+            token
+          ),
+          getRows(
+            `section_advisers?school_year_id=eq.${encodeURIComponent(
+              activeYear.id
+            )}&teacher_id=eq.${encodeURIComponent(
+              profile.id
+            )}&is_active=eq.true&select=section_id`,
+            token
+          ),
+        ]);
 
-      const ids = new Set<string>([
-        ...(assignments ?? []).map((item: { section_id: string }) => item.section_id),
-        ...(adviserRows ?? []).map((item: { section_id: string }) => item.section_id),
-      ]);
+        const ids = new Set<string>([
+          ...(assignments ?? []).map((item: { section_id: string }) => item.section_id),
+          ...(adviserRows ?? []).map((item: { section_id: string }) => item.section_id),
+        ]);
 
-      allowedSections = (sections ?? []).filter((section: { id: string }) =>
-        ids.has(section.id)
-      );
+        allowedSections = (sections ?? []).filter((section: { id: string }) =>
+          ids.has(section.id)
+        );
+      }
     }
 
     return NextResponse.json({
@@ -179,6 +190,12 @@ export async function GET(request: NextRequest) {
       grades,
       sections,
       allowedSections,
+      gradeLevelHead: identity.gradeLevelHead
+        ? {
+            grade_level: identity.gradeLevelHead.gradeLevel,
+            display_name: identity.gradeLevelHead.displayName,
+          }
+        : null,
     });
   } catch {
     return NextResponse.json(
@@ -194,7 +211,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const { token, userId, profile } = identity;
+  const { token, userId, profile, gradeLevelHead } = identity;
   const contentType = request.headers.get("content-type") ?? "";
 
   if (contentType.includes("application/json")) {
@@ -319,26 +336,65 @@ export async function POST(request: NextRequest) {
   let targetSectionId: string | null = null;
 
   if (profile.role === "teacher") {
-    audienceScope = "section";
-    targetSectionId = targetSectionIdRaw || null;
+    if (gradeLevelHead) {
+      if (!["grade", "section"].includes(requestedScope)) {
+        return NextResponse.json(
+          { error: `Grade Level Heads can post only to Grade ${gradeLevelHead.gradeLevel} or one of its sections.` },
+          { status: 403 }
+        );
+      }
 
-    if (!targetSectionId) {
-      return NextResponse.json(
-        { error: "Select one of your assigned sections." },
-        { status: 400 }
-      );
-    }
+      if (requestedScope === "grade") {
+        audienceScope = "grade";
+        targetGrade = gradeLevelHead.gradeLevel;
+      } else {
+        audienceScope = "section";
+        targetSectionId = targetSectionIdRaw || null;
+        if (!targetSectionId) {
+          return NextResponse.json(
+            { error: "Select a section in your grade level." },
+            { status: 400 }
+          );
+        }
 
-    const allowed = await getRows(
-      `sections?id=eq.${encodeURIComponent(targetSectionId)}&select=id&limit=1`,
-      token
-    ).catch(() => []);
+        const allowed = await getRows(
+          `sections?id=eq.${encodeURIComponent(
+            targetSectionId
+          )}&grade_level=eq.${encodeURIComponent(
+            String(gradeLevelHead.gradeLevel)
+          )}&select=id&limit=1`,
+          token
+        ).catch(() => []);
 
-    if (!allowed?.[0]) {
-      return NextResponse.json(
-        { error: "You can only post to a section assigned to you." },
-        { status: 403 }
-      );
+        if (!allowed?.[0]) {
+          return NextResponse.json(
+            { error: `You can only post to Grade ${gradeLevelHead.gradeLevel} sections.` },
+            { status: 403 }
+          );
+        }
+      }
+    } else {
+      audienceScope = "section";
+      targetSectionId = targetSectionIdRaw || null;
+
+      if (!targetSectionId) {
+        return NextResponse.json(
+          { error: "Select one of your assigned sections." },
+          { status: 400 }
+        );
+      }
+
+      const allowed = await getRows(
+        `sections?id=eq.${encodeURIComponent(targetSectionId)}&select=id&limit=1`,
+        token
+      ).catch(() => []);
+
+      if (!allowed?.[0]) {
+        return NextResponse.json(
+          { error: "You can only post to a section assigned to you." },
+          { status: 403 }
+        );
+      }
     }
   } else {
     if (!["school", "grade", "section"].includes(audienceScope)) {
