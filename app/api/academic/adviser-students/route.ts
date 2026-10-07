@@ -10,6 +10,21 @@ type LearnerInfoRow = {
   [key: string]: unknown;
 };
 
+type AdviserLearnerRow = LearnerInfoRow & {
+  enrollment_id: string;
+  student_id: string;
+  full_name: string;
+  lrn: string | null;
+  last_name: string | null;
+  first_name: string | null;
+  sex: string | null;
+  grade_level: number;
+  section_id: string;
+  section: string;
+  tve_major: string | null;
+  learner_status: string;
+};
+
 function authHeaders(token: string) {
   return {
     apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -153,22 +168,7 @@ export async function GET(request: NextRequest) {
       )
     );
 
-    const learners: Array<
-      LearnerInfoRow & {
-        enrollment_id: string;
-        student_id: string;
-        full_name: string;
-        lrn: string | null;
-        last_name: string | null;
-        first_name: string | null;
-        sex: string | null;
-        grade_level: number;
-        section_id: string;
-        section: string;
-        tve_major: string | null;
-        learner_status: string;
-      }
-    > = (enrollments ?? [])
+    const learners: AdviserLearnerRow[] = (enrollments ?? [])
       .filter(
         (enrollment: { section_id: string | null; grade_level: number }) =>
           Boolean(enrollment.section_id) &&
@@ -204,7 +204,7 @@ export async function GET(request: NextRequest) {
           };
         }
       )
-      .sort((a, b) => {
+      .sort((a: AdviserLearnerRow, b: AdviserLearnerRow) => {
           const sexRank = (sex: string | null) => {
             const normalized = String(sex ?? "").trim().toUpperCase();
             if (normalized === "M") return 0;
