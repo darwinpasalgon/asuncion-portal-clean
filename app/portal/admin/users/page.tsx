@@ -901,7 +901,6 @@ export default function UsersAccountsPage() {
                         />
                         <span>
                           <strong>Conditional Cash Transfer (CCT)</strong>
-                          Is this learner CCT recipient?
                         </span>
                       </label>
                     </div>
