@@ -66,6 +66,16 @@ type LearnerInfo = {
   guardian_contact_number?: string | null;
   learning_modality?: string | null;
   remarks?: string | null;
+  citizenship?: string | null;
+  is_indigenous_peoples?: boolean | null;
+  cct_recipient?: boolean | null;
+  cct_household_id?: string | null;
+  has_special_educational_needs?: boolean | null;
+  lsen_type?: string | null;
+  permanent_same_as_current?: boolean | null;
+  permanent_address_barangay?: string | null;
+  permanent_address_municipality_city?: string | null;
+  permanent_address_province?: string | null;
 };
 
 type Enrollment = {
@@ -338,9 +348,37 @@ export default function LearnerManagementPage() {
           info?.birth_date,
           info?.mother_tongue,
           info?.religion,
+          info?.address_barangay,
+          info?.address_municipality_city,
+          info?.address_province,
+          info?.guardian_name,
+          info?.guardian_relationship,
+          info?.guardian_contact_number,
+          info?.citizenship,
           info?.learning_modality,
         ];
-        if (requiredValues.every((value) => String(value ?? "").trim())) {
+        const missingCore = requiredValues.some(
+          (value) => !String(value ?? "").trim()
+        );
+        const missingResponses =
+          info?.is_indigenous_peoples == null ||
+          info?.cct_recipient == null ||
+          info?.has_special_educational_needs == null ||
+          info?.permanent_same_as_current == null;
+        const missingConditional =
+          (info?.is_indigenous_peoples === true &&
+            !String(info?.ethnic_group ?? "").trim()) ||
+          (info?.cct_recipient === true &&
+            !String(info?.cct_household_id ?? "").trim()) ||
+          (info?.has_special_educational_needs === true &&
+            !String(info?.lsen_type ?? "").trim()) ||
+          (info?.permanent_same_as_current === false &&
+            [
+              info?.permanent_address_barangay,
+              info?.permanent_address_municipality_city,
+              info?.permanent_address_province,
+            ].some((value) => !String(value ?? "").trim()));
+        if (!missingCore && !missingResponses && !missingConditional) {
           return [];
         }
       }
@@ -828,7 +866,7 @@ export default function LearnerManagementPage() {
               aria-label="Data Completeness"
             >
               <option value="all">All Data Records</option>
-              <option value="required">Missing Required Information</option>
+              <option value="required">Incomplete LIS Profile</option>
               <option value="tve_major">Missing TVE Major</option>
             </select>
 
