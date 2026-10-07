@@ -1182,7 +1182,7 @@ export default function LearnerManagementPage() {
                 className={styles.linkButton}
                 href={`/portal/admin/users?q=${encodeURIComponent(detailLearner.lrn || detailLearner.full_name)}&edit=${encodeURIComponent(detailLearner.id)}`}
               >
-                <Edit3 size={15} />Update Learner Profile
+                <Edit3 size={15} />Update LIS Profile
               </a>
               <button type="button" onClick={() => setDetailLearner(null)}>Close</button>
             </div>
