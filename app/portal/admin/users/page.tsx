@@ -860,12 +860,25 @@ export default function UsersAccountsPage() {
 
             <form onSubmit={saveEdit}>
               <label>
-                <span>{editing.personType === "student" ? "Portal display name" : "Full name"}</span>
+                <span>{editing.personType === "student" ? "Portal Display Name (Auto)" : "Full Name"}</span>
                 <input
-                  value={editing.fullName}
+                  value={
+                    editing.personType === "student"
+                      ? [
+                          editing.learnerInfo.first_name,
+                          editing.learnerInfo.middle_name,
+                          editing.learnerInfo.last_name,
+                          editing.learnerInfo.name_extension,
+                        ]
+                          .map((item) => item.trim())
+                          .filter(Boolean)
+                          .join(" ") || editing.fullName
+                      : editing.fullName
+                  }
                   onChange={(event) =>
                     setEditing({ ...editing, fullName: event.target.value })
                   }
+                  readOnly={editing.personType === "student"}
                   required
                 />
               </label>
