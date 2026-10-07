@@ -306,8 +306,14 @@ function BackCard({
         This is to certify that the above-named learner has satisfactorily completed the
         requirements for the grade level indicated.
       </div>
-      <div className={styles.transferField}><span>Admitted to Grade:</span><i /></div>
-      <div className={styles.transferField}><span>Eligible for Admission to Grade:</span><i /></div>
+      <div className={styles.transferField}>
+        <span>Admitted to Grade:</span>
+        <span className={styles.fillLine} />
+      </div>
+      <div className={styles.transferField}>
+        <span>Eligible for Admission to Grade:</span>
+        <span className={styles.fillLine} />
+      </div>
 
       <div className={styles.approvedRow}>
         <span>Approved:</span>
@@ -324,8 +330,10 @@ function BackCard({
 
       <div className={styles.backSectionTitle}>CANCELLATION OF ELIGIBILITY TO TRANSFER</div>
       <div className={styles.cancellationRow}>
-        <span>Admitted in:</span><i />
-        <span>Date:</span><i />
+        <span>Admitted in:</span>
+        <span className={styles.fillLine} />
+        <span>Date:</span>
+        <span className={styles.fillLine} />
       </div>
       <div className={styles.headSignature}>
         <strong>{detail.schoolInformation.school_head_name}</strong>

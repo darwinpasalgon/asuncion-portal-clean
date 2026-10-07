@@ -106,9 +106,10 @@
 .parentSignatureRows strong{text-align:right;padding-right:1mm;font-size:6.8pt}
 .parentSignatureRows span{border-bottom:.3mm solid #333;height:4mm}
 .transferText{font-size:6.8pt;line-height:1.55;margin:2.4mm 0 3mm}
-.transferField{display:grid;grid-template-columns:auto 35mm;gap:2mm;align-items:end;margin:1.8mm 0;font-size:6.8pt}
-.transferField i{display:block;border-bottom:.25mm solid #333;height:3mm}
-.approvedRow{display:grid;grid-template-columns:1fr 48mm;align-items:end;margin-top:4.5mm;font-size:6.8pt}
+.transferField{display:flex;align-items:flex-end;gap:1.6mm;min-height:4.6mm;margin:1.5mm 0;font-size:6.8pt}
+.transferField>span:first-child{flex:0 0 auto;white-space:nowrap}
+.fillLine{display:block;flex:1 1 auto;min-width:24mm;height:3.4mm;border-bottom:.25mm solid #333;box-sizing:border-box}
+.approvedRow{display:grid;grid-template-columns:1fr 48mm;align-items:end;margin-top:6mm;font-size:6.8pt}
 .approvedRow>div{text-align:center}
 .approvedRow strong,.approvedRow>div span{display:block}
 .approvedRow strong{border-bottom:.25mm solid #333;padding-bottom:.6mm;text-transform:uppercase}
@@ -117,8 +118,9 @@
 .headSignature strong,.headSignature span{display:block}
 .headSignature strong{border-bottom:.25mm solid #333;padding-bottom:.6mm;text-transform:uppercase;font-size:6.8pt}
 .headSignature span{margin-top:.7mm;font-size:6.6pt}
-.cancellationRow{display:grid;grid-template-columns:auto 32mm auto 25mm;gap:1.5mm;align-items:end;font-size:6.8pt;margin-top:2mm}
-.cancellationRow i{display:block;border-bottom:.25mm solid #333;height:3mm}
+.cancellationRow{display:grid;grid-template-columns:max-content minmax(25mm,1fr) max-content minmax(20mm,.65fr);column-gap:1.6mm;align-items:end;min-height:4.6mm;font-size:6.8pt;margin-top:2.5mm}
+.cancellationRow>span:not(.fillLine){white-space:nowrap}
+.cancellationRow .fillLine{width:100%;min-width:0}
 @media(max-width:800px){
   .header{align-items:flex-start;flex-direction:column}
   .selectorTop{grid-template-columns:1fr}
