@@ -327,7 +327,7 @@ export async function GET(request: NextRequest) {
     let incompleteLearnerCount = 0;
     for (const enrollment of enrollments) {
       const info = infoMap.get(enrollment.student_id);
-      const missing = REQUIRED_LEARNER_FIELDS
+      const missing: string[] = REQUIRED_LEARNER_FIELDS
         .filter(([field]) => blank(info?.[field]))
         .map(([, label]) => label);
 
