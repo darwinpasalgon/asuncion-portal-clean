@@ -485,7 +485,10 @@ export default function MyStudentsPage() {
                           type="checkbox"
                           name="is_indigenous_peoples"
                           value="true"
-                          defaultChecked={selected.is_indigenous_peoples === true}
+                          defaultChecked={
+                            selected.is_indigenous_peoples === true ||
+                            Boolean(String(selected.ethnic_group ?? "").trim())
+                          }
                           onChange={(event) => {
                             const select = event.currentTarget
                               .closest("form")
@@ -509,11 +512,18 @@ export default function MyStudentsPage() {
                         <select
                           name="ethnic_group"
                           defaultValue={selected.ethnic_group ?? ""}
-                          disabled={selected.is_indigenous_peoples !== true}
-                          required={selected.is_indigenous_peoples === true}
+                          disabled={
+                            selected.is_indigenous_peoples !== true &&
+                            !String(selected.ethnic_group ?? "").trim()
+                          }
+                          required={
+                            selected.is_indigenous_peoples === true ||
+                            Boolean(String(selected.ethnic_group ?? "").trim())
+                          }
                         >
                           <option value="">
-                            {selected.is_indigenous_peoples === true
+                            {selected.is_indigenous_peoples === true ||
+                            String(selected.ethnic_group ?? "").trim()
                               ? "Select Ethnicity"
                               : "Enable Indigenous Peoples first"}
                           </option>
