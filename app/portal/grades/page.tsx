@@ -354,14 +354,9 @@ export default function GradesPage() {
 
   const subjectClassStudentGroups = useMemo(
     () =>
-      ["Male", "Female", "Unspecified"]
-        .map((group) => ({
-          group,
-          students: subjectClassStudents.filter(
-            (student) => sexGroup(student.sex) === group
-          ),
-        }))
-        .filter((item) => item.students.length > 0),
+      subjectClassStudents.length > 0
+        ? [{ group: "Learners", students: subjectClassStudents }]
+        : [],
     [subjectClassStudents]
   );
 
