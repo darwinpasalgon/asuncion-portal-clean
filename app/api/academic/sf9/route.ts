@@ -138,8 +138,7 @@ export async function GET(request: NextRequest) {
   }
 
   const { token, userId, profile } = identity;
-  const isAdmin =
-    profile.role === "administrator" || profile.role === "staff_administrator";
+  const isAdmin = profile.role === "administrator";
   const isTeacher = profile.role === "teacher";
 
   if (!isAdmin && !isTeacher) {
