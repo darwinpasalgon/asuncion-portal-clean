@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getScopedAdminAccess, hasAdminPermission } from "@/lib/admin-access";
+import { getScopedAdminAccess } from "@/lib/admin-access";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
 function authHeaders(token: string) {
@@ -24,9 +24,6 @@ async function getUserId(token: string) {
   return String(user?.id ?? "");
 }
 
-async function isAdmin(token: string) {
-  return hasAdminPermission(token, "reports.view");
-}
 
 async function reportAccess(token: string) {
   return getScopedAdminAccess(token, "reports.view");
