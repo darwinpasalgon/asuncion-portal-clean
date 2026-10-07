@@ -81,3 +81,18 @@
 .mapehRow{transition:border-color .16s ease,box-shadow .16s ease,background-color .16s ease}
 .mapehRow:hover{background:#fcfefe}
 @media(max-width:760px){.page{padding:22px 12px 42px}.header h1{font-size:1.7rem}.controls{padding:14px}.gradePanel,.studentPanel,.legend{border-radius:12px}.panelHeading{padding:16px}.termButton,.termActive{min-height:40px;padding:0 12px}}
+
+.teacherViewTabs{display:flex;gap:8px;margin-top:18px;padding:6px;border:1px solid #dfe7ec;border-radius:12px;background:#fff;width:max-content;max-width:100%}
+.teacherViewTabs button{min-height:38px;border:0;border-radius:8px;background:transparent;color:#617783;padding:0 13px;font-size:.72rem;font-weight:750}
+.teacherViewTabs .teacherViewActive{background:#eaf6ee;color:#256a4c}
+.saveAll{min-height:39px;border:1px solid #bcd9c6;border-radius:8px;background:#eef8f1;color:#276c4d;padding:0 13px;font-weight:750;display:inline-flex;align-items:center;gap:7px}
+.saveAll:hover:not(:disabled){background:#e4f3e9}
+.saveAll:disabled{opacity:.5}
+.readOnlyBadge{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:0 10px;border-radius:999px;background:#eef4f8;color:#567383;font-size:.62rem;font-weight:800;letter-spacing:.08em}
+.subjectGradeValue{font-size:1rem!important;color:#285d79!important}
+@media(max-width:700px){
+  .teacherViewTabs{width:100%;display:grid;grid-template-columns:1fr 1fr}
+  .teacherViewTabs button{width:100%}
+  .publishActions{flex-wrap:wrap}
+  .saveAll{width:100%;justify-content:center}
+}

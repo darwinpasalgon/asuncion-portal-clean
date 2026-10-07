@@ -249,6 +249,18 @@ export async function GET(request: NextRequest) {
         gradedAssignmentIds.has(item.teacher_assignment_id)
     );
 
+    const subjectAssignments =
+      profile.role === "teacher"
+        ? gradedAssignments.filter(
+            (item: {
+              teacher_id: string;
+              co_teacher_ids?: string[] | null;
+            }) =>
+              item.teacher_id === identity.userId ||
+              (item.co_teacher_ids ?? []).includes(identity.userId)
+          )
+        : [];
+
     const gradeAssignments =
       profile.role === "teacher"
         ? gradedAssignments.filter(
@@ -269,6 +281,7 @@ export async function GET(request: NextRequest) {
       isSectionAdviser: profile.role === "teacher" && advisedSections.size > 0,
       adviserSections: adviserSectionDetails,
       assignments: gradeAssignments,
+      subjectAssignments,
       sections,
       subjects: (subjects ?? []).filter(
         (item: { is_graded?: boolean }) => item.is_graded !== false
@@ -294,6 +307,289 @@ export async function POST(request: NextRequest) {
   const { token, userId } = identity;
   const body = await request.json().catch(() => null);
   const action = String(body?.action ?? "");
+
+  if (action === "save_all_grades") {
+    const assignmentId = String(body?.assignmentId ?? "");
+    const termNo = Number(body?.termNo ?? 0);
+    const records = Array.isArray(body?.records) ? body.records : [];
+
+    if (!assignmentId || ![1, 2, 3].includes(termNo) || records.length === 0) {
+      return NextResponse.json(
+        { error: "Select a class and term, then enter all learner grades." },
+        { status: 400 }
+      );
+    }
+
+    const activeYear = await getActiveYear(token).catch(() => null);
+    if (!activeYear) {
+      return NextResponse.json(
+        { error: "No active school year is configured." },
+        { status: 409 }
+      );
+    }
+
+    const assignments = await getRows(
+      `teacher_assignments?id=eq.${encodeURIComponent(
+        assignmentId
+      )}&school_year_id=eq.${encodeURIComponent(
+        activeYear.id
+      )}&is_active=eq.true&select=id,section_id,subject_id,grade_level,major&limit=1`,
+      token
+    ).catch(() => []);
+
+    if (!assignments?.[0]) {
+      return NextResponse.json(
+        { error: "This class is not available to your Teacher account." },
+        { status: 403 }
+      );
+    }
+
+    const selectedAssignment = assignments[0];
+    const canGrade = await teacherAdvisesSection(
+      token,
+      userId,
+      activeYear.id,
+      selectedAssignment.section_id
+    );
+    if (!canGrade) {
+      return NextResponse.json(
+        { error: "Only the active Section Adviser can encode grades for this section." },
+        { status: 403 }
+      );
+    }
+
+    const subjectRows = await getRows(
+      `subjects?id=eq.${encodeURIComponent(
+        selectedAssignment.subject_id
+      )}&select=id,name,is_graded&limit=1`,
+      token
+    ).catch(() => []);
+    const subjectName = String(subjectRows?.[0]?.name ?? "");
+
+    if (subjectRows?.[0]?.is_graded === false) {
+      return NextResponse.json(
+        { error: "This subject is for schedule/teaching load only and does not accept grades." },
+        { status: 409 }
+      );
+    }
+
+    const isTveSubject = isTechnicalVocationalEducation(subjectName);
+    const isMapehSubject = isMapeh(subjectName);
+
+    const enrollments = await getRows(
+      `student_enrollments?school_year_id=eq.${encodeURIComponent(
+        activeYear.id
+      )}&section_id=eq.${encodeURIComponent(
+        selectedAssignment.section_id
+      )}&enrollment_status=eq.active&select=student_id,tve_major`,
+      token
+    ).catch(() => []);
+
+    const expectedEnrollments = (enrollments ?? []).filter(
+      (enrollment: { tve_major?: string | null }) =>
+        isTveSubject ||
+        !selectedAssignment.major ||
+        enrollment.tve_major === selectedAssignment.major
+    );
+
+    if (!expectedEnrollments.length) {
+      return NextResponse.json(
+        { error: "There are no active learners in this class." },
+        { status: 409 }
+      );
+    }
+
+    const recordByStudent = new Map<string, any>();
+    for (const record of records) {
+      const studentId = String(record?.studentId ?? "");
+      if (!studentId || recordByStudent.has(studentId)) {
+        return NextResponse.json(
+          { error: "The Save All request contains an invalid or duplicate learner." },
+          { status: 400 }
+        );
+      }
+      recordByStudent.set(studentId, record);
+    }
+
+    const missingRecord = expectedEnrollments.find(
+      (enrollment: { student_id: string }) =>
+        !recordByStudent.has(enrollment.student_id)
+    );
+    if (missingRecord || recordByStudent.size !== expectedEnrollments.length) {
+      return NextResponse.json(
+        { error: "Complete all learner grades before using Save All Grades." },
+        { status: 400 }
+      );
+    }
+
+    let targetAssignments = [selectedAssignment];
+    if (isTveSubject) {
+      targetAssignments = await getRows(
+        `teacher_assignments?school_year_id=eq.${encodeURIComponent(
+          activeYear.id
+        )}&section_id=eq.${encodeURIComponent(
+          selectedAssignment.section_id
+        )}&subject_id=eq.${encodeURIComponent(
+          selectedAssignment.subject_id
+        )}&is_active=eq.true&select=id,section_id,subject_id,grade_level,major`,
+        token
+      ).catch(() => []);
+
+      if (!targetAssignments.length) {
+        return NextResponse.json(
+          { error: "No active TVE Subject Teacher assignments are configured for this section." },
+          { status: 409 }
+        );
+      }
+    }
+
+    const assignmentByMajor = new Map<string, string>(
+      targetAssignments
+        .filter((item: { major?: string | null }) => Boolean(item.major))
+        .map((item: { id: string; major?: string | null }) => [
+          String(item.major),
+          String(item.id),
+        ])
+    );
+
+    const targetAssignmentIds = targetAssignments.map(
+      (item: { id: string }) => String(item.id)
+    );
+    const inFilter = `(${targetAssignmentIds.join(",")})`;
+    const existingGrades = await getRows(
+      `student_term_grades?teacher_assignment_id=in.${encodeURIComponent(
+        inFilter
+      )}&term_no=eq.${termNo}&select=id,student_id,teacher_assignment_id,status`,
+      token
+    ).catch(() => []);
+
+    if (
+      (existingGrades ?? []).some(
+        (grade: { status?: string }) => grade.status === "published"
+      )
+    ) {
+      return NextResponse.json(
+        { error: "Return this term to Draft before using Save All Grades." },
+        { status: 409 }
+      );
+    }
+
+    const now = new Date().toISOString();
+    const payload: Array<Record<string, unknown>> = [];
+
+    for (const enrollment of expectedEnrollments as Array<{
+      student_id: string;
+      tve_major?: string | null;
+    }>) {
+      const record = recordByStudent.get(enrollment.student_id);
+      const targetAssignmentId = isTveSubject
+        ? assignmentByMajor.get(String(enrollment.tve_major ?? ""))
+        : String(selectedAssignment.id);
+
+      if (!targetAssignmentId) {
+        return NextResponse.json(
+          {
+            error:
+              "Complete each learner's TVE Major and matching Subject Teacher assignment before saving all grades.",
+          },
+          { status: 409 }
+        );
+      }
+
+      let termGrade: number;
+      let componentPayload: Record<string, number | null> = {
+        music_grade: null,
+        arts_grade: null,
+        physical_education_grade: null,
+        health_grade: null,
+      };
+
+      if (isMapehSubject) {
+        const music = wholeGrade(record?.components?.music);
+        const arts = wholeGrade(record?.components?.arts);
+        const physicalEducation = wholeGrade(
+          record?.components?.physicalEducation
+        );
+        const health = wholeGrade(record?.components?.health);
+
+        if (
+          music === null ||
+          arts === null ||
+          physicalEducation === null ||
+          health === null
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                "Enter complete whole-number MAPEH component grades from 0 to 100 for every learner before saving all.",
+            },
+            { status: 400 }
+          );
+        }
+
+        termGrade = Math.round(
+          (music + arts + physicalEducation + health) / 4
+        );
+        componentPayload = {
+          music_grade: music,
+          arts_grade: arts,
+          physical_education_grade: physicalEducation,
+          health_grade: health,
+        };
+      } else {
+        const directGrade = wholeGrade(record?.termGrade);
+        if (directGrade === null) {
+          return NextResponse.json(
+            {
+              error:
+                "Enter a whole-number Term Grade from 0 to 100 for every learner before saving all.",
+            },
+            { status: 400 }
+          );
+        }
+        termGrade = directGrade;
+      }
+
+      payload.push({
+        student_id: enrollment.student_id,
+        teacher_assignment_id: targetAssignmentId,
+        school_year_id: activeYear.id,
+        term_no: termNo,
+        term_grade: termGrade,
+        ...componentPayload,
+        status: "draft",
+        encoded_by: userId,
+        updated_at: now,
+      });
+    }
+
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/student_term_grades?on_conflict=student_id,teacher_assignment_id,term_no`,
+      {
+        method: "POST",
+        headers: {
+          ...headers(token),
+          Prefer: "resolution=merge-duplicates,return=representation",
+        },
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      }
+    );
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !Array.isArray(result)) {
+      return NextResponse.json(
+        { error: "Unable to save all Term Grades." },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      count: result.length,
+      grades: result,
+    });
+  }
 
   if (action === "save_grade") {
     const assignmentId = String(body?.assignmentId ?? "");

@@ -22,6 +22,7 @@ type Assignment = {
   section_id: string;
   subject_id: string;
   major: string | null;
+  co_teacher_ids?: string[] | null;
 };
 type Section = { id: string; grade_level: number; name: string };
 type Subject = {
@@ -145,6 +146,7 @@ export default function GradesPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeYear, setActiveYear] = useState<ActiveYear | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [subjectAssignments, setSubjectAssignments] = useState<Assignment[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -152,6 +154,9 @@ export default function GradesPage() {
   const [grades, setGrades] = useState<Grade[]>([]);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState("");
   const [selectedTerm, setSelectedTerm] = useState(1);
+  const [teacherView, setTeacherView] = useState<"adviser" | "subjects">("adviser");
+  const [selectedSubjectAssignmentId, setSelectedSubjectAssignmentId] = useState("");
+  const [selectedSubjectTerm, setSelectedSubjectTerm] = useState(1);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [mapehDrafts, setMapehDrafts] = useState<Record<string, MapehDraft>>({});
   const [loading, setLoading] = useState(true);
@@ -177,6 +182,7 @@ export default function GradesPage() {
       setProfile(result.profile ?? null);
       setActiveYear(result.activeYear ?? null);
       setAssignments(result.assignments ?? []);
+      setSubjectAssignments(result.subjectAssignments ?? []);
       setSections(result.sections ?? []);
       setSubjects(result.subjects ?? []);
       setEnrollments(result.enrollments ?? []);
@@ -185,6 +191,19 @@ export default function GradesPage() {
 
       if (!selectedAssignmentId && result.assignments?.[0]?.id) {
         setSelectedAssignmentId(result.assignments[0].id);
+      }
+      if (
+        !selectedSubjectAssignmentId &&
+        result.subjectAssignments?.[0]?.id
+      ) {
+        setSelectedSubjectAssignmentId(result.subjectAssignments[0].id);
+      }
+      if (
+        result.role === "teacher" &&
+        !result.isSectionAdviser &&
+        result.subjectAssignments?.length
+      ) {
+        setTeacherView("subjects");
       }
     } catch {
       setError("Unable to reach the grades service.");
@@ -302,6 +321,65 @@ export default function GradesPage() {
     [classStudents]
   );
 
+  const selectedSubjectAssignment = subjectAssignments.find(
+    (item) => item.id === selectedSubjectAssignmentId
+  );
+  const selectedSubjectAssignmentSubject = selectedSubjectAssignment
+    ? subjectMap.get(selectedSubjectAssignment.subject_id)
+    : null;
+  const selectedSubjectAssignmentIsTve = isTechnicalVocationalEducation(
+    selectedSubjectAssignmentSubject?.name
+  );
+
+  const subjectClassStudents = useMemo(() => {
+    if (!selectedSubjectAssignment) return [];
+    return enrollments
+      .filter(
+        (item) =>
+          item.section_id === selectedSubjectAssignment.section_id &&
+          item.grade_level === selectedSubjectAssignment.grade_level &&
+          (!selectedSubjectAssignmentIsTve ||
+            !selectedSubjectAssignment.major ||
+            item.tve_major === selectedSubjectAssignment.major)
+      )
+      .map((item) => studentMap.get(item.student_id))
+      .filter((item): item is Student => Boolean(item))
+      .sort(compareStudents);
+  }, [
+    selectedSubjectAssignment,
+    selectedSubjectAssignmentIsTve,
+    enrollments,
+    studentMap,
+  ]);
+
+  const subjectClassStudentGroups = useMemo(
+    () =>
+      subjectClassStudents.length > 0
+        ? [{ group: "Learners", students: subjectClassStudents }]
+        : [],
+    [subjectClassStudents]
+  );
+
+  function publishedSubjectGradeForStudent(studentId: string) {
+    if (!selectedSubjectAssignment) return undefined;
+    return grades.find(
+      (item) =>
+        item.student_id === studentId &&
+        item.teacher_assignment_id === selectedSubjectAssignment.id &&
+        item.term_no === selectedSubjectTerm &&
+        item.status === "published"
+    );
+  }
+
+  function subjectAssignmentLabel(assignment: Assignment) {
+    const subject = subjectMap.get(assignment.subject_id);
+    return `Grade ${assignment.grade_level} · ${sectionMap.get(
+      assignment.section_id
+    ) ?? "Unknown"} · ${subject?.name ?? "Unknown subject"}${
+      assignment.major ? ` · ${assignment.major}` : ""
+    }`;
+  }
+
   useEffect(() => {
     if (role !== "teacher" || !selectedAssignmentId) return;
 
@@ -407,6 +485,48 @@ export default function GradesPage() {
     }
   }
 
+  async function saveAllGrades() {
+    if (!selectedAssignmentId || classStudents.length === 0) return;
+
+    setWorking("save-all");
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch("/api/academic/grades", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_all_grades",
+          assignmentId: selectedAssignmentId,
+          termNo: selectedTerm,
+          records: classStudents.map((student) => ({
+            studentId: student.id,
+            termGrade: drafts[student.id] ?? "",
+            components: selectedIsMapeh
+              ? mapehDrafts[student.id] ?? emptyMapehDraft()
+              : undefined,
+          })),
+        }),
+      });
+
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(result.error ?? "Unable to save all Term Grades.");
+        return;
+      }
+
+      setSuccess(
+        `Term ${selectedTerm} grades saved for ${result.count ?? classStudents.length} learner(s).`
+      );
+      await load();
+    } catch {
+      setError("Unable to reach the grades service.");
+    } finally {
+      setWorking("");
+    }
+  }
+
   async function setPublication(publish: boolean) {
     if (!selectedAssignmentId) return;
 
@@ -495,10 +615,10 @@ export default function GradesPage() {
         <header className={styles.header}>
           <div>
             <span className={styles.eyebrow}>ACADEMIC RECORDS</span>
-            <h1>{role === "teacher" ? "Section Adviser Gradebook" : "My Grades"}</h1>
+            <h1>{role === "teacher" ? "Grades" : "My Grades"}</h1>
             <p>
               {role === "teacher"
-                ? "Only the active Section Adviser can encode and publish official grades for learners in the section."
+                ? "Section Advisers can encode and publish official grades. Subject Teachers can view published grades only for the subjects assigned to them."
                 : "Published Term Grades and Final Grades for the active school year."}
             </p>
           </div>
@@ -515,16 +635,38 @@ export default function GradesPage() {
         {error && <div className={styles.error}>{error}</div>}
         {success && <div className={styles.success}>{success}</div>}
 
-        {role === "teacher" && !isSectionAdviser && (
-          <section className={styles.gradePanel}>
-            <div className={styles.empty}>
-              Grade encoding is reserved for the active Section Adviser. Your subject-teacher
-              assignments remain available in the other teaching modules.
-            </div>
-          </section>
-        )}
+        {role === "teacher" &&
+          isSectionAdviser &&
+          subjectAssignments.length > 0 && (
+            <section className={styles.teacherViewTabs}>
+              <button
+                type="button"
+                className={teacherView === "adviser" ? styles.teacherViewActive : ""}
+                onClick={() => setTeacherView("adviser")}
+              >
+                Adviser Gradebook
+              </button>
+              <button
+                type="button"
+                className={teacherView === "subjects" ? styles.teacherViewActive : ""}
+                onClick={() => setTeacherView("subjects")}
+              >
+                My Subject Grades
+              </button>
+            </section>
+          )}
 
-        {role === "teacher" && isSectionAdviser && (
+        {role === "teacher" &&
+          !isSectionAdviser &&
+          subjectAssignments.length === 0 && (
+            <section className={styles.gradePanel}>
+              <div className={styles.empty}>
+                No graded Subject Teacher assignments are available for your account yet.
+              </div>
+            </section>
+          )}
+
+        {role === "teacher" && isSectionAdviser && teacherView === "adviser" && (
           <>
             {assignments.length === 0 && adviserSections.length > 0 && (
               <section className={styles.gradePanel}>
@@ -615,6 +757,16 @@ export default function GradesPage() {
                   </p>
                 </div>
                 <div className={styles.publishActions}>
+                  {!allPublished && (
+                    <button
+                      className={styles.saveAll}
+                      disabled={Boolean(working) || classStudents.length === 0}
+                      onClick={() => void saveAllGrades()}
+                    >
+                      <Save size={16} />
+                      {working === "save-all" ? "Saving All…" : "Save All Grades"}
+                    </button>
+                  )}
                   {allPublished ? (
                     <button
                       className={styles.unpublish}
@@ -772,6 +924,7 @@ export default function GradesPage() {
                                     className={styles.saveButton}
                                     disabled={
                                       working === student.id ||
+                                      working === "save-all" ||
                                       published ||
                                       average === null
                                     }
@@ -898,6 +1051,7 @@ export default function GradesPage() {
                                       className={styles.saveButton}
                                       disabled={
                                         working === student.id ||
+                                        working === "save-all" ||
                                         saved?.status === "published" ||
                                         (selectedIsTve &&
                                           !gradeAssignmentIdForStudent(student.id))
@@ -927,6 +1081,171 @@ export default function GradesPage() {
             </section>
           </>
         )}
+
+        {role === "teacher" &&
+          subjectAssignments.length > 0 &&
+          (!isSectionAdviser || teacherView === "subjects") && (
+            <>
+              <section className={styles.controls}>
+                <label>
+                  <span>My Subject</span>
+                  <select
+                    value={selectedSubjectAssignmentId}
+                    onChange={(event) =>
+                      setSelectedSubjectAssignmentId(event.target.value)
+                    }
+                  >
+                    {subjectAssignments.map((assignment) => (
+                      <option key={assignment.id} value={assignment.id}>
+                        {subjectAssignmentLabel(assignment)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className={styles.termTabs}>
+                  {[1, 2, 3].map((term) => (
+                    <button
+                      type="button"
+                      key={term}
+                      className={
+                        selectedSubjectTerm === term
+                          ? styles.termActive
+                          : styles.termButton
+                      }
+                      onClick={() => setSelectedSubjectTerm(term)}
+                    >
+                      Term {term}
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section className={styles.gradePanel}>
+                <div className={styles.panelHeading}>
+                  <div>
+                    <h2>Published Subject Grades · Term {selectedSubjectTerm}</h2>
+                    <p>
+                      Read-only view. You can see only published grades for the
+                      subject and section assigned to your Teacher account.
+                    </p>
+                  </div>
+                  <span className={styles.readOnlyBadge}>VIEW ONLY</span>
+                </div>
+
+                {!selectedSubjectAssignment ? (
+                  <div className={styles.empty}>
+                    Select one of your graded Subject Teacher assignments.
+                  </div>
+                ) : subjectClassStudents.length === 0 ? (
+                  <div className={styles.empty}>
+                    No active learners are assigned to this subject.
+                  </div>
+                ) : (
+                  <div className={styles.tableWrap}>
+                    <table className={styles.gradeTable}>
+                      <thead>
+                        <tr>
+                          <th>Learner</th>
+                          <th>Term Grade</th>
+                          <th>Proficiency Descriptor</th>
+                          <th>Support</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {subjectClassStudentGroups.map(
+                          ({ group, students: groupStudents }) => (
+                            <Fragment key={group}>
+                              <tr className={styles.sexGroupRow}>
+                                <td colSpan={5}>
+                                  <strong>{group}</strong>
+                                  <span>
+                                    {groupStudents.length} learner
+                                    {groupStudents.length === 1 ? "" : "s"}
+                                  </span>
+                                </td>
+                              </tr>
+                              {groupStudents.map((student) => {
+                                const published =
+                                  publishedSubjectGradeForStudent(student.id);
+
+                                return (
+                                  <tr key={student.id}>
+                                    <td>
+                                      <strong>{student.full_name}</strong>
+                                      <span>
+                                        {(student.last_name && student.first_name
+                                          ? `${student.last_name}, ${student.first_name}${
+                                              student.middle_name
+                                                ? ` ${student.middle_name}`
+                                                : ""
+                                            }${
+                                              student.name_extension
+                                                ? ` ${student.name_extension}`
+                                                : ""
+                                            }`
+                                          : student.full_name)}
+                                        {student.lrn
+                                          ? ` · LRN ${student.lrn}`
+                                          : ""}
+                                      </span>
+                                    </td>
+                                    <td>
+                                      {published ? (
+                                        <strong className={styles.subjectGradeValue}>
+                                          {published.term_grade}
+                                        </strong>
+                                      ) : (
+                                        "—"
+                                      )}
+                                    </td>
+                                    <td>
+                                      {published
+                                        ? descriptor(published.term_grade)
+                                        : "—"}
+                                    </td>
+                                    <td>
+                                      {published ? (
+                                        <span
+                                          className={
+                                            published.term_grade < 75
+                                              ? styles.intervention
+                                              : styles.onTrack
+                                          }
+                                        >
+                                          {published.term_grade < 75
+                                            ? "Intervention needed"
+                                            : "Meets minimum standard"}
+                                        </span>
+                                      ) : (
+                                        "—"
+                                      )}
+                                    </td>
+                                    <td>
+                                      {published ? (
+                                        <span className={styles.published}>
+                                          Published
+                                        </span>
+                                      ) : (
+                                        <span className={styles.notSaved}>
+                                          Not Published
+                                        </span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </Fragment>
+                          )
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            </>
+          )}
 
         {role === "student" && (
           <section className={styles.studentPanel}>
