@@ -36,6 +36,10 @@ type Draft={status:AttendanceStatus|"";note:string};
 type ExclusionType="regular_holiday"|"special_non_working_holiday"|"class_suspension";
 type DateExclusion={id?:string;school_year_id:string;section_id:string;attendance_date:string;exclusion_type:ExclusionType;reason:string|null};
 type PendingDate={section_id:string;grade_level:number;section:string;attendance_date:string;expected_count:number;recorded_count:number};
+type AttendanceAssistant={id:string;school_year_id:string;section_id:string;student_id:string;assigned_by:string;is_active:boolean;assigned_at:string;updated_at:string};
+type AssistantEntry={id?:string;school_year_id:string;section_id:string;attendance_date:string;student_id:string;status:"present"|"absent";entered_by:string;updated_at?:string};
+type AssistantRoster={school_year_id:string;section_id:string;student_id:string;display_name:string;sex:string|null};
+type AssistantDraft={status:"present"|"absent"|""};
 
 function localDate(){
   const d=new Date();
@@ -105,6 +109,15 @@ export default function AttendancePage(){
   const [attendance,setAttendance]=useState<RecordRow[]>([]);
   const [dateExclusions,setDateExclusions]=useState<DateExclusion[]>([]);
   const [pendingDates,setPendingDates]=useState<PendingDate[]>([]);
+  const [attendanceAssistants,setAttendanceAssistants]=useState<AttendanceAssistant[]>([]);
+  const [assistantEntries,setAssistantEntries]=useState<AssistantEntry[]>([]);
+  const [assistantAssignment,setAssistantAssignment]=useState<AttendanceAssistant|null>(null);
+  const [assistantRoster,setAssistantRoster]=useState<AssistantRoster[]>([]);
+  const [assistantExclusions,setAssistantExclusions]=useState<DateExclusion[]>([]);
+  const [assistantDate,setAssistantDate]=useState(localDate());
+  const [assistantDrafts,setAssistantDrafts]=useState<Record<string,AssistantDraft>>({});
+  const [assistantCandidateId,setAssistantCandidateId]=useState("");
+  const [assistantWorking,setAssistantWorking]=useState(false);
   const [date,setDate]=useState(localDate());
   const [sectionId,setSectionId]=useState("");
   const [drafts,setDrafts]=useState<Record<string,Draft>>({});
@@ -126,6 +139,12 @@ export default function AttendancePage(){
       setAdvisers(x.advisers??[]);setSections(x.sections??[]);setEnrollments(x.enrollments??[]);
       setStudents(x.students??[]);setAttendance(x.attendance??[]);
       setDateExclusions(x.dateExclusions??[]);setPendingDates(x.pendingDates??[]);
+      setAttendanceAssistants(x.attendanceAssistants??[]);
+      setAssistantEntries(x.assistantEntries??[]);
+      setAssistantAssignment(x.assistantAssignment??null);
+      setAssistantRoster(x.assistantRoster??[]);
+      setAssistantExclusions(x.assistantExclusions??[]);
+      setAssistantDate(x.assistantDate??localDate());
       if(x.role==="teacher"){
         const requested=targetSectionId&&x.sections?.some((item:Section)=>item.id===targetSectionId)
           ? targetSectionId
@@ -168,15 +187,108 @@ export default function AttendancePage(){
     const next:Record<string,Draft>={};
     for(const student of roster){
       const existing=attendance.find(a=>a.student_id===student.id&&a.section_id===sectionId);
-      next[student.id]={status:existing?.status??"",note:existing?.note??""};
+      const assistant=assistantEntries.find(a=>a.student_id===student.id&&a.section_id===sectionId&&a.attendance_date===date);
+      next[student.id]={status:existing?.status??assistant?.status??"",note:existing?.note??""};
     }
     setDrafts(next);
-  },[role,sectionId,roster,attendance]);
+  },[role,sectionId,roster,attendance,assistantEntries,date]);
 
   function markAllPresent(){
     const next:Record<string,Draft>={};
     for(const s of roster)next[s.id]={status:"present",note:drafts[s.id]?.note??""};
     setDrafts(next);
+  }
+
+  useEffect(()=>{
+    if(role!=="student"||!assistantAssignment)return;
+    const next:Record<string,AssistantDraft>={};
+    for(const student of assistantRoster){
+      const existing=assistantEntries.find(
+        entry=>entry.student_id===student.student_id&&
+          entry.section_id===assistantAssignment.section_id&&
+          entry.attendance_date===assistantDate
+      );
+      next[student.student_id]={status:existing?.status??""};
+    }
+    setAssistantDrafts(next);
+  },[role,assistantAssignment,assistantRoster,assistantEntries,assistantDate]);
+
+  function markAssistantAllPresent(){
+    const next:Record<string,AssistantDraft>={};
+    for(const student of assistantRoster)next[student.student_id]={status:"present"};
+    setAssistantDrafts(next);
+  }
+
+  function updateAssistantDraft(studentId:string,status:"present"|"absent"|""){
+    setAssistantDrafts(current=>({...current,[studentId]:{status}}));
+  }
+
+  async function assignAttendanceAssistant(){
+    if(!sectionId||!assistantCandidateId)return;
+    setAssistantWorking(true);setError("");setSuccess("");
+    try{
+      const r=await fetch("/api/academic/attendance",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          action:"assign_attendance_assistant",
+          sectionId,
+          studentId:assistantCandidateId,
+        }),
+      });
+      const x=await r.json().catch(()=>({}));
+      if(!r.ok){setError(x.error??"Unable to assign Attendance Assistant.");return;}
+      setAssistantCandidateId("");
+      setSuccess("Attendance Assistant assigned.");
+      await load(date,sectionId);
+    }catch{setError("Unable to reach the attendance service.");}
+    finally{setAssistantWorking(false);}
+  }
+
+  async function removeAttendanceAssistant(assistantId:string){
+    if(!sectionId)return;
+    setAssistantWorking(true);setError("");setSuccess("");
+    try{
+      const r=await fetch("/api/academic/attendance",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          action:"remove_attendance_assistant",
+          sectionId,
+          assistantId,
+        }),
+      });
+      const x=await r.json().catch(()=>({}));
+      if(!r.ok){setError(x.error??"Unable to remove Attendance Assistant.");return;}
+      setSuccess("Attendance Assistant removed.");
+      await load(date,sectionId);
+    }catch{setError("Unable to reach the attendance service.");}
+    finally{setAssistantWorking(false);}
+  }
+
+  async function saveAssistantAttendance(){
+    if(!assistantAssignment||!assistantRoster.length)return;
+    setAssistantWorking(true);setError("");setSuccess("");
+    try{
+      const r=await fetch("/api/academic/attendance",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          action:"save_assistant_attendance",
+          sectionId:assistantAssignment.section_id,
+          attendanceDate:assistantDate,
+          records:assistantRoster.map(student=>({
+            studentId:student.student_id,
+            status:assistantDrafts[student.student_id]?.status??"",
+          })),
+        }),
+      });
+      const x=await r.json().catch(()=>({}));
+      if(!r.ok){setError(x.error??"Unable to submit attendance to your adviser.");return;}
+      setSuccess("Attendance draft submitted to your adviser for review.");
+      await load(assistantDate,assistantAssignment.section_id);
+    }catch{setError("Unable to reach the attendance service.");}
+    finally{setAssistantWorking(false);}
   }
 
   function update(studentId:string,field:keyof Draft,value:string){
@@ -221,6 +333,17 @@ export default function AttendancePage(){
   );
   const selectedIsWeekday=isWeekday(date);
   const untaggedCount=roster.filter(student=>!drafts[student.id]?.status).length;
+  const currentAssistants=attendanceAssistants.filter(item=>item.section_id===sectionId&&item.is_active);
+  const currentAssistantEntries=assistantEntries.filter(item=>item.section_id===sectionId&&item.attendance_date===date);
+  const assistantIds=new Set(currentAssistants.map(item=>item.student_id));
+  const assistantCandidates=roster.filter(student=>!assistantIds.has(student.id));
+  const assistantUntaggedCount=assistantRoster.filter(
+    student=>!assistantDrafts[student.student_id]?.status
+  ).length;
+  const assistantSection=assistantAssignment
+    ? sections.find(section=>section.id===assistantAssignment.section_id)
+    : null;
+  const assistantNoClasses=assistantExclusions.length>0;
 
   function openPending(item:PendingDate){
     setSectionId(item.section_id);
@@ -305,10 +428,12 @@ export default function AttendancePage(){
     <header className={styles.header}>
       <div>
         <span className={styles.eyebrow}>ACADEMIC RECORDS</span>
-        <h1>{role==="teacher"?"Daily Attendance":"My Attendance"}</h1>
+        <h1>{role==="teacher"?"Daily Attendance":assistantAssignment?"Attendance Assistant":"My Attendance"}</h1>
         <p>{role==="teacher"
           ?"Record daily section attendance for sections assigned to you as Attendance Teacher / Adviser."
-          :"Your recorded attendance for the active school year."}</p>
+          :assistantAssignment
+            ?"Mark your classmates Present or Absent for today. Your adviser reviews and saves the official attendance."
+            :"Your recorded attendance for the active school year."}</p>
       </div>
       {activeYear&&<div className={styles.yearCard}><CheckCircle2 size={18}/><div><span>SCHOOL YEAR</span><strong>{activeYear.name}</strong></div></div>}
     </header>
@@ -333,6 +458,49 @@ export default function AttendancePage(){
             </label>
             <label><span>Date</span><input type="date" value={date} max={localDate()} onChange={e=>setDate(e.target.value)}/></label>
             <button className={styles.loadButton} onClick={()=>void load(date)}><CalendarDays size={16}/>Load Date</button>
+          </section>
+
+          <section className={styles.assistantManager}>
+            <div className={styles.assistantManagerHeading}>
+              <div>
+                <UserCheck size={19}/>
+                <div>
+                  <strong>Attendance Assistants</strong>
+                  <span>Assign 2 or 3 students from this advisory section.</span>
+                </div>
+              </div>
+              <span>{currentAssistants.length}/3</span>
+            </div>
+            <div className={styles.assistantManagerBody}>
+              <div className={styles.assistantAssign}>
+                <select
+                  value={assistantCandidateId}
+                  disabled={assistantWorking||currentAssistants.length>=3}
+                  onChange={e=>setAssistantCandidateId(e.target.value)}
+                >
+                  <option value="">{currentAssistants.length>=3?"Maximum of 3 assistants assigned":"Select Student"}</option>
+                  {assistantCandidates.map(student=><option key={student.id} value={student.id}>{student.full_name}</option>)}
+                </select>
+                <button
+                  type="button"
+                  disabled={assistantWorking||!assistantCandidateId||currentAssistants.length>=3}
+                  onClick={()=>void assignAttendanceAssistant()}
+                >
+                  <UserCheck size={15}/>Assign Assistant
+                </button>
+              </div>
+              <div className={styles.assistantList}>
+                {currentAssistants.length===0
+                  ?<span className={styles.assistantEmpty}>No Attendance Assistants assigned yet.</span>
+                  :currentAssistants.map(item=>{
+                    const student=studentMap.get(item.student_id);
+                    return <div key={item.id} className={styles.assistantChip}>
+                      <div><strong>{student?.full_name??"Student"}</strong><small>Can submit Present/Absent drafts for this section</small></div>
+                      <button type="button" disabled={assistantWorking} onClick={()=>void removeAttendanceAssistant(item.id)}>Remove</button>
+                    </div>;
+                  })}
+              </div>
+            </div>
           </section>
 
           {pendingDates.length>0&&<section className={styles.pendingPanel}>
@@ -427,6 +595,13 @@ export default function AttendancePage(){
               </div>
             </div>
 
+            {currentAssistantEntries.length>0&&<div className={styles.assistantDraftNotice}>
+              <UserCheck size={16}/>
+              <span>
+                Attendance Assistants submitted {currentAssistantEntries.length} Present/Absent mark{currentAssistantEntries.length===1?"":"s"} for this date. Their marks are prefilled only where no official adviser record exists. Review before saving.
+              </span>
+            </div>}
+
             {untaggedCount>0&&<div className={styles.untaggedNotice}>
               <AlertTriangle size={16}/>
               <span>
@@ -482,6 +657,56 @@ export default function AttendancePage(){
     </>}
 
     {role==="student"&&<>
+      {assistantAssignment&&<section className={styles.assistantStudentPanel}>
+        <div className={styles.panelHeading}>
+          <div>
+            <h2>{"Attendance Assistant · "+(assistantSection?("Grade "+assistantSection.grade_level+" · "+assistantSection.name):"Your Section")}</h2>
+            <p>{formatDate(assistantDate)+" · Present/Absent only · Adviser approval required"}</p>
+          </div>
+          {!assistantNoClasses&&isWeekday(assistantDate)&&<div className={styles.actions}>
+            <button className={styles.markAll} onClick={markAssistantAllPresent}><CheckCircle2 size={16}/>Mark All Present</button>
+            <button
+              className={styles.saveAll}
+              disabled={assistantWorking||!assistantRoster.length||assistantUntaggedCount>0}
+              onClick={()=>void saveAssistantAttendance()}
+            >
+              <Save size={16}/>{assistantWorking?"Submitting…":"Submit to Adviser"}
+            </button>
+          </div>}
+        </div>
+
+        {!isWeekday(assistantDate)&&<div className={styles.weekendNotice}>
+          <CalendarOff size={20}/><div><strong>No Attendance Required</strong><span>Attendance Assistants can submit on school weekdays only.</span></div>
+        </div>}
+        {assistantNoClasses&&<div className={styles.noClassesBanner}>
+          <CalendarOff size={20}/><div><span>NO CLASSES</span><strong>Attendance entry is disabled for today.</strong></div>
+        </div>}
+        {!assistantNoClasses&&isWeekday(assistantDate)&&<>
+          {assistantUntaggedCount>0&&<div className={styles.untaggedNotice}>
+            <AlertTriangle size={16}/>
+            <span>{assistantUntaggedCount+" classmate"+(assistantUntaggedCount===1?"":"s")+" still need a Present or Absent mark."}</span>
+          </div>}
+          <div className={styles.assistantRoster}>
+            {assistantRoster.map((student,index)=>{
+              const d=assistantDrafts[student.student_id]??{status:""};
+              return <article key={student.student_id}>
+                <div className={styles.student}>
+                  <span>{index+1}</span>
+                  <div><strong>{student.display_name}</strong><small>{sexGroup(student.sex)}</small></div>
+                </div>
+                <div className={styles.assistantStatusButtons}>
+                  <button type="button" className={d.status==="present"?styles.assistantPresent:""} onClick={()=>updateAssistantDraft(student.student_id,"present")}>Present</button>
+                  <button type="button" className={d.status==="absent"?styles.assistantAbsent:""} onClick={()=>updateAssistantDraft(student.student_id,"absent")}>Absent</button>
+                </div>
+              </article>;
+            })}
+          </div>
+          <div className={styles.assistantDisclaimer}>
+            These are draft marks only. Your adviser remains responsible for the official attendance record and can correct any entry.
+          </div>
+        </>}
+      </section>}
+
       <div className={styles.summary}>
         <article><ClipboardCheck size={22}/><span>Recorded Days</span><strong>{counts.total}</strong></article>
         <article><CheckCircle2 size={22}/><span>Present</span><strong>{counts.present}</strong></article>

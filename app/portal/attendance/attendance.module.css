@@ -76,3 +76,41 @@
   .noClassesBanner{align-items:flex-start;flex-direction:column}
   .noClassesBanner button{width:100%}
 }
+
+
+.assistantManager{margin-top:16px;border:1px solid #d8e6df;border-radius:14px;background:#fff;overflow:hidden;box-shadow:0 10px 28px rgba(25,67,94,.04)}
+.assistantManagerHeading{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 15px;border-bottom:1px solid #e5ece8;background:#f5faf7}
+.assistantManagerHeading>div{display:flex;align-items:center;gap:9px;color:#2f7251}
+.assistantManagerHeading strong,.assistantManagerHeading span{display:block}
+.assistantManagerHeading>div span{margin-top:2px;color:#778b80;font-size:.65rem}
+.assistantManagerHeading>span{display:grid;place-items:center;min-width:42px;height:28px;border-radius:999px;background:#e6f3eb;color:#2e6d4e;font-size:.68rem;font-weight:800}
+.assistantManagerBody{padding:13px 14px}
+.assistantAssign{display:grid;grid-template-columns:1fr auto;gap:9px}
+.assistantAssign select{min-height:40px;border:1px solid #d5e0e6;border-radius:8px;background:#fff;padding:0 10px;color:#34566c}
+.assistantAssign button{min-height:40px;border:0;border-radius:8px;background:#356f57;color:#fff;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:.7rem;font-weight:750}
+.assistantAssign button:disabled,.assistantAssign select:disabled{opacity:.55}
+.assistantList{display:grid;gap:7px;margin-top:11px}
+.assistantChip{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 11px;border:1px solid #e2e9e5;border-radius:9px;background:#fbfdfc}
+.assistantChip strong,.assistantChip small{display:block}
+.assistantChip strong{color:#35596f;font-size:.76rem}
+.assistantChip small{margin-top:2px;color:#85968d;font-size:.62rem}
+.assistantChip button{border:1px solid #e5c9c5;border-radius:7px;background:#fff7f6;color:#9a4c43;padding:7px 9px;font-size:.63rem;font-weight:750}
+.assistantEmpty{color:#82928a;font-size:.68rem}
+.assistantDraftNotice{display:flex;align-items:center;gap:8px;padding:10px 18px;border-bottom:1px solid #dbe9e0;background:#f3faf5;color:#42705a;font-size:.72rem;font-weight:650;line-height:1.45}
+.assistantStudentPanel{margin-bottom:20px;background:#fff;border:1px solid #d8e6df;border-radius:16px;overflow:hidden;box-shadow:0 18px 50px rgba(22,71,106,.05)}
+.assistantRoster{display:grid}
+.assistantRoster article{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;padding:12px 18px;border-bottom:1px solid #e9eef1}
+.assistantRoster article:last-child{border-bottom:0}
+.assistantStatusButtons{display:flex;gap:7px}
+.assistantStatusButtons button{min-width:82px;min-height:36px;border:1px solid #d9e3e7;border-radius:8px;background:#fff;color:#607785;font-size:.68rem;font-weight:750}
+.assistantStatusButtons .assistantPresent{border-color:#aed8bd;background:#eff9f2;color:#2b704d}
+.assistantStatusButtons .assistantAbsent{border-color:#e9beb9;background:#fff1ef;color:#9a483e}
+.assistantDisclaimer{padding:11px 18px;border-top:1px solid #e8eef1;background:#f8fafb;color:#71848f;font-size:.65rem;line-height:1.5}
+@media(max-width:700px){
+  .assistantAssign{grid-template-columns:1fr}
+  .assistantChip{align-items:flex-start;flex-direction:column}
+  .assistantChip button{width:100%}
+  .assistantRoster article{grid-template-columns:1fr}
+  .assistantStatusButtons{width:100%}
+  .assistantStatusButtons button{flex:1}
+}
