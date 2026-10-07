@@ -343,6 +343,16 @@ Deno.serve(async (req) => {
       }
     }
 
+    const isIndigenousPeoples = body.is_indigenous_peoples === true ||
+      String(body.is_indigenous_peoples ?? "").toLowerCase() === "true";
+    const cctRecipient = body.cct_recipient === true ||
+      String(body.cct_recipient ?? "").toLowerCase() === "true";
+    const ethnicGroup = String(body.ethnic_group ?? "").trim();
+
+    if (isIndigenousPeoples && !ethnicGroup) {
+      return json({ error: "Select the learner's ethnicity when Indigenous Peoples is checked." }, 400);
+    }
+
     const learnerInfo = {
       student_id: userId,
       last_name: String(body.last_name ?? "").trim() || null,
@@ -354,8 +364,10 @@ Deno.serve(async (req) => {
         : null,
       birth_date: String(body.birth_date ?? "").trim() || null,
       mother_tongue: String(body.mother_tongue ?? "").trim() || null,
-      ethnic_group: String(body.ethnic_group ?? "").trim() || null,
+      is_indigenous_peoples: isIndigenousPeoples,
+      ethnic_group: isIndigenousPeoples ? ethnicGroup || null : null,
       religion: String(body.religion ?? "").trim() || null,
+      cct_recipient: cctRecipient,
       address_house_street_purok:
         String(body.address_house_street_purok ?? "").trim() || null,
       address_barangay: String(body.address_barangay ?? "").trim() || null,
