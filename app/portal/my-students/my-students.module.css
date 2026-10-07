@@ -29,3 +29,8 @@
 .protectedNote{border:1px solid #f0dfb7}
 @media(max-width:950px){.workspace{grid-template-columns:1fr}.formActions{position:static}}
 @media(max-width:620px){.page{padding:21px 11px 40px}.header h1{font-size:1.7rem}.listPanel,.editorPanel,.empty{border-radius:12px}.summary{gap:8px}.summary article{padding:13px}.formSection,.editorHeading,.formActions{padding-left:15px;padding-right:15px}}
+
+.checkboxField{display:flex!important;grid-template-columns:auto 1fr!important;align-items:flex-start;gap:9px!important;padding:10px 11px;border:1px solid #dce6eb;border-radius:9px;background:#fbfdfe}
+.checkboxField input{width:16px!important;height:16px!important;min-height:16px!important;margin-top:2px}
+.checkboxField span{display:grid;gap:2px;color:#667a85!important;font-size:.67rem!important;line-height:1.35}
+.checkboxField strong{color:#31566e;font-size:.7rem}
