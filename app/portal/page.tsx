@@ -520,12 +520,16 @@ function DashboardHome({
     ];
   } else {
     actions = [
-      {
-        label: "SF9 Report Cards",
-        description: "Print learner report cards in the A4 two-card front-and-back layout.",
-        href: "/portal/sf9",
-        icon: FileSpreadsheet,
-      },
+      ...(profile.role === "administrator"
+        ? [
+            {
+              label: "SF9 Report Cards",
+              description: "Print learner report cards in the A4 two-card front-and-back layout.",
+              href: "/portal/sf9",
+              icon: FileSpreadsheet,
+            },
+          ]
+        : []),
       ...(profile.role === "administrator"
         ? [
             {
@@ -999,9 +1003,7 @@ function SideNav({
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
-                  {(profile.role === "administrator" ||
-                    adminPermissions.includes("reports.view") ||
-                    adminPermissions.includes("sf10.manage")) && (
+                  {profile.role === "administrator" && (
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         className="nav-button"
