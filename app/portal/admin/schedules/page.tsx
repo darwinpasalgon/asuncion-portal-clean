@@ -26,6 +26,7 @@ type Assignment = {
   section_id: string;
   subject_id: string;
   major: string | null;
+  co_teacher_ids?: string[];
 };
 type Section = {
   id: string;
@@ -217,6 +218,16 @@ export default function ClassSchedulesPage() {
       message: prefix + (result.error ?? "This schedule overlaps with an existing class."),
       conflicts: result.conflicts ?? [],
     });
+  }
+
+  function assignmentTeacherIds(assignment: Assignment) {
+    return Array.from(new Set([assignment.teacher_id, ...(assignment.co_teacher_ids ?? [])]));
+  }
+
+  function assignmentTeacherNames(assignment: Assignment) {
+    return assignmentTeacherIds(assignment)
+      .map((id) => lookup.teachersById.get(id) ?? "Unknown Teacher")
+      .join(" / ");
   }
 
   function checkLocalConflicts(assignment: Assignment, periods: ProposedPeriod[]) {
@@ -411,7 +422,7 @@ export default function ClassSchedulesPage() {
     () =>
       assignments
         .filter((item) => teacherView
-          ? item.teacher_id === quickTeacher
+          ? assignmentTeacherIds(item).includes(quickTeacher)
           : item.section_id === quickSection)
         .sort((a, b) => {
           const subjectA = lookup.subjectsById.get(a.subject_id)?.name ?? "";
@@ -448,7 +459,7 @@ export default function ClassSchedulesPage() {
       lookup.sectionsById.get(assignment.section_id) ?? "Unknown section",
       subject?.name ?? "Unknown subject",
       assignment.major ?? "",
-      lookup.teachersById.get(assignment.teacher_id) ?? "Unknown teacher",
+      assignmentTeacherNames(assignment),
     ]
       .filter(Boolean)
       .join(" · ");
@@ -806,7 +817,7 @@ export default function ClassSchedulesPage() {
       ? lookup.sectionsById.get(assignment.section_id) ?? "Unknown Section"
       : "Unknown Section";
     const teacher = assignment
-      ? lookup.teachersById.get(assignment.teacher_id) ?? "Unknown Teacher"
+      ? assignmentTeacherNames(assignment)
       : "Unknown Teacher";
     const day = DAYS.find((item) => item.value === schedule.day_of_week)?.label ?? "Selected Day";
 
@@ -867,7 +878,7 @@ export default function ClassSchedulesPage() {
           schedule.teacher_assignment_id
         );
         return teacherView
-          ? assignment?.teacher_id === quickTeacher
+          ? Boolean(assignment && assignmentTeacherIds(assignment).includes(quickTeacher))
           : assignment?.section_id === quickSection;
       })
     : teacherView ? [] : orderedSchedules;
@@ -1083,9 +1094,7 @@ export default function ClassSchedulesPage() {
                 const subject =
                   lookup.subjectsById.get(assignment.subject_id)?.name ??
                   "Unknown Subject";
-                const teacher =
-                  lookup.teachersById.get(assignment.teacher_id) ??
-                  "Unknown Teacher";
+                const teacher = assignmentTeacherNames(assignment);
                 const existing = schedulesForAssignment(assignment.id);
                 const quickWorking = working === `quick:${assignment.id}`;
 
@@ -1662,8 +1671,7 @@ export default function ClassSchedulesPage() {
                       <span>TEACHER</span>
                       <strong>
                         {assignment
-                          ? lookup.teachersById.get(assignment.teacher_id) ??
-                            "Unknown teacher"
+                          ? assignmentTeacherNames(assignment)
                           : "Unknown teacher"}
                       </strong>
                     </div>

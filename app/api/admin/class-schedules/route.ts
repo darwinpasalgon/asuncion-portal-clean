@@ -101,7 +101,7 @@ async function conflictResponse(token: string, assignmentId: string, periods: Pr
     );
     if (!assignment) throw new Error("Assignment unavailable");
     const [assignments, schedules, teachers, sections, subjects] = await Promise.all([
-      getRows(`teacher_assignments?school_year_id=eq.${encodeURIComponent(assignment.school_year_id)}&is_active=eq.true&select=id,teacher_id,section_id,subject_id,grade_level,major`, token),
+      getRows(`teacher_assignments?school_year_id=eq.${encodeURIComponent(assignment.school_year_id)}&is_active=eq.true&select=id,teacher_id,co_teacher_ids,section_id,subject_id,grade_level,major`, token),
       getRows(`class_schedules?is_active=eq.true&day_of_week=in.(${[...new Set(periods.map((item) => item.day_of_week))].join(",")})&select=id,teacher_assignment_id,day_of_week,start_time,end_time,room,is_active`, token),
       getRows("profiles?role=eq.teacher&select=id,full_name", token),
       getRows("sections?select=id,name", token),
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
         ? getRows(
             `teacher_assignments?school_year_id=eq.${encodeURIComponent(
               year.id
-            )}&is_active=eq.true&select=id,teacher_id,grade_level,section_id,subject_id,major&order=grade_level.asc`,
+            )}&is_active=eq.true&select=id,teacher_id,co_teacher_ids,grade_level,section_id,subject_id,major&order=grade_level.asc`,
             token
           )
         : Promise.resolve([]),

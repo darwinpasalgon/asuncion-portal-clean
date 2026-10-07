@@ -74,13 +74,18 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { data: assignments, error: assignmentError } = await admin
+  const { data: assignmentRows, error: assignmentError } = await admin
     .from("teacher_assignments")
-    .select("id,grade_level,section_id,subject_id,major")
-    .eq("teacher_id", userId)
+    .select("id,teacher_id,co_teacher_ids,grade_level,section_id,subject_id,major")
     .eq("school_year_id", year.id)
     .eq("is_active", true)
     .order("grade_level");
+
+  const assignments = (assignmentRows ?? []).filter(
+    (item) =>
+      item.teacher_id === userId ||
+      (item.co_teacher_ids ?? []).includes(userId)
+  );
 
   if (assignmentError) {
     return json({ error: "Unable to load teaching assignments." }, 500);
