@@ -434,12 +434,6 @@ function DashboardHome({
               icon: Users,
             },
             {
-              label: "Grades",
-              description: "Encode and publish adviser grades.",
-              href: "/portal/grades",
-              icon: GraduationCap,
-            },
-            {
               label: "Attendance",
               description: "Record and review class attendance.",
               href: "/portal/attendance",
@@ -447,6 +441,15 @@ function DashboardHome({
             },
           ]
         : []),
+      {
+        label: "Grades",
+        description:
+          adviserSections.length > 0
+            ? "Encode adviser grades or view published grades for subjects you teach."
+            : "View published grades for your assigned subjects.",
+        href: "/portal/grades",
+        icon: GraduationCap,
+      },
       {
         label: "My Learners",
         description: "View learners in your assigned subjects.",
