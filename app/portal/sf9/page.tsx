@@ -7,11 +7,18 @@ import {
   FileSpreadsheet,
   Printer,
   RefreshCw,
+  RotateCcw,
+  Save,
   Search,
+  Settings2,
   ShieldCheck,
   Users,
 } from "lucide-react";
-import { Sf9PrintForms } from "./Sf9PrintForms";
+import {
+  DEFAULT_SF9_LAYOUT,
+  Sf9PrintForms,
+  type Sf9LayoutSettings,
+} from "./Sf9PrintForms";
 import styles from "./sf9.module.css";
 
 type Section = {
@@ -41,6 +48,13 @@ export default function Sf9Page() {
   const [loading, setLoading] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [error, setError] = useState("");
+  const [layoutSettings, setLayoutSettings] =
+    useState<Sf9LayoutSettings>(DEFAULT_SF9_LAYOUT);
+  const [savedLayoutSettings, setSavedLayoutSettings] =
+    useState<Sf9LayoutSettings>(DEFAULT_SF9_LAYOUT);
+  const [layoutEditorOpen, setLayoutEditorOpen] = useState(false);
+  const [savingLayout, setSavingLayout] = useState(false);
+  const [layoutMessage, setLayoutMessage] = useState("");
 
   async function loadBase() {
     setLoading(true);
@@ -56,6 +70,10 @@ export default function Sf9Page() {
       setSections(result.sections ?? []);
       setStudents(result.students ?? []);
       setAccessMode(result.accessMode ?? "");
+      if (result.layoutSettings) {
+        setLayoutSettings(result.layoutSettings);
+        setSavedLayoutSettings(result.layoutSettings);
+      }
       setSelectedSectionId((current) => {
         if (
           current &&
@@ -150,6 +168,205 @@ export default function Sf9Page() {
     window.print();
   }
 
+  function updateLayoutNumber(
+    key: keyof Sf9LayoutSettings,
+    value: string
+  ) {
+    const numberValue = Number(value);
+    if (!Number.isFinite(numberValue)) return;
+    setLayoutSettings((current) => ({
+      ...current,
+      [key]: numberValue,
+    }));
+    setLayoutMessage("");
+  }
+
+  function resetToExcelLayout() {
+    setLayoutSettings(DEFAULT_SF9_LAYOUT);
+    setLayoutMessage("Excel template defaults loaded in the preview. Click Save Layout to apply them school-wide.");
+  }
+
+  function cancelLayoutChanges() {
+    setLayoutSettings(savedLayoutSettings);
+    setLayoutMessage("");
+    setLayoutEditorOpen(false);
+  }
+
+  async function saveLayout() {
+    if (accessMode !== "admin") return;
+    setSavingLayout(true);
+    setError("");
+    setLayoutMessage("");
+    try {
+      const response = await fetch("/api/academic/sf9", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_layout",
+          settings: layoutSettings,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(result.error ?? "Unable to save the SF9 layout.");
+        return;
+      }
+      setLayoutSettings(result.settings ?? layoutSettings);
+      setSavedLayoutSettings(result.settings ?? layoutSettings);
+      setLayoutMessage("SF9 layout saved. Advisers will use these settings when they print report cards.");
+    } catch {
+      setError("Unable to reach the SF9 layout service.");
+    } finally {
+      setSavingLayout(false);
+    }
+  }
+
+  const layoutFields: Array<{
+    key: keyof Sf9LayoutSettings;
+    label: string;
+    unit: string;
+    min: number;
+    max: number;
+    step: number;
+    help: string;
+  }> = [
+    {
+      key: "headerHeightMm",
+      label: "Header Height",
+      unit: "mm",
+      min: 16,
+      max: 40,
+      step: 0.1,
+      help: "Controls the school header block before the report title.",
+    },
+    {
+      key: "headerGapMm",
+      label: "School Name to Report Title",
+      unit: "mm",
+      min: 0,
+      max: 15,
+      step: 0.1,
+      help: "The vertical gap after ASUNCION NATIONAL HIGH SCHOOL.",
+    },
+    {
+      key: "logoSizeMm",
+      label: "Logo Size",
+      unit: "mm",
+      min: 12,
+      max: 30,
+      step: 0.1,
+      help: "DepEd and school logo size.",
+    },
+    {
+      key: "leftCardWidthMm",
+      label: "Left Card Width",
+      unit: "mm",
+      min: 110,
+      max: 150,
+      step: 0.1,
+      help: "Physical width of the first report card on the A4 sheet.",
+    },
+    {
+      key: "rightCardWidthMm",
+      label: "Right Card Width",
+      unit: "mm",
+      min: 110,
+      max: 150,
+      step: 0.1,
+      help: "Physical width of the second report card on the A4 sheet.",
+    },
+    {
+      key: "centerLineMm",
+      label: "Center Divider",
+      unit: "mm",
+      min: 0.1,
+      max: 1.5,
+      step: 0.01,
+      help: "Width of the vertical divider between the two cards.",
+    },
+    {
+      key: "leftCardOuterMm",
+      label: "Left Card Outer Margin",
+      unit: "mm",
+      min: 0,
+      max: 25,
+      step: 0.1,
+      help: "Space from the left card edge to its content.",
+    },
+    {
+      key: "leftCardInnerMm",
+      label: "Left Card Center Margin",
+      unit: "mm",
+      min: 0,
+      max: 25,
+      step: 0.1,
+      help: "Space between the first card content and the center divider.",
+    },
+    {
+      key: "rightCardInnerMm",
+      label: "Right Card Center Margin",
+      unit: "mm",
+      min: 0,
+      max: 25,
+      step: 0.1,
+      help: "Space between the center divider and the second card content.",
+    },
+    {
+      key: "rightCardOuterMm",
+      label: "Right Card Outer Margin",
+      unit: "mm",
+      min: 0,
+      max: 25,
+      step: 0.1,
+      help: "Space from the second card content to its right edge.",
+    },
+    {
+      key: "topMm",
+      label: "Card Top Margin",
+      unit: "mm",
+      min: 0,
+      max: 20,
+      step: 0.1,
+      help: "Top content inset inside both cards.",
+    },
+    {
+      key: "bottomMm",
+      label: "Card Bottom Margin",
+      unit: "mm",
+      min: 0,
+      max: 20,
+      step: 0.1,
+      help: "Bottom content inset inside both cards.",
+    },
+    {
+      key: "frontFontPt",
+      label: "Front Base Font",
+      unit: "pt",
+      min: 5,
+      max: 11,
+      step: 0.1,
+      help: "Base font size for the front page.",
+    },
+    {
+      key: "backFontPt",
+      label: "Back Base Font",
+      unit: "pt",
+      min: 5,
+      max: 11,
+      step: 0.1,
+      help: "Base font size for the back page.",
+    },
+    {
+      key: "lineHeight",
+      label: "Line Spacing",
+      unit: "×",
+      min: 0.9,
+      max: 1.5,
+      step: 0.01,
+      help: "Overall text line-height multiplier.",
+    },
+  ];
+
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
@@ -192,6 +409,94 @@ export default function Sf9Page() {
             </span>
           </div>
         </section>
+
+        {accessMode === "admin" && (
+          <section className={styles.layoutEditor}>
+            <div className={styles.layoutEditorHeader}>
+              <div>
+                <strong>SF9 Layout Editor</strong>
+                <span>
+                  Adjust the print layout visually. A4 Landscape is fixed. Changes
+                  update the preview immediately and become school-wide only after
+                  you click Save Layout.
+                </span>
+              </div>
+              <button
+                type="button"
+                className={styles.layoutEditorToggle}
+                onClick={() => setLayoutEditorOpen((current) => !current)}
+              >
+                <Settings2 size={16} />
+                {layoutEditorOpen ? "Hide Layout Editor" : "Edit Layout"}
+              </button>
+            </div>
+
+            {layoutEditorOpen && (
+              <div className={styles.layoutEditorBody}>
+                <div className={styles.layoutEditorNote}>
+                  <strong>Excel reference:</strong> A4 Landscape. The current
+                  defaults use the workbook&apos;s wider center separation and a
+                  shorter header gap below ASUNCION NATIONAL HIGH SCHOOL. The same
+                  geometry is retained when only one learner is selected.
+                </div>
+
+                <div className={styles.layoutGrid}>
+                  {layoutFields.map((field) => (
+                    <label key={field.key} className={styles.layoutField}>
+                      <span>
+                        {field.label} ({field.unit})
+                      </span>
+                      <input
+                        type="number"
+                        min={field.min}
+                        max={field.max}
+                        step={field.step}
+                        value={Number(layoutSettings[field.key])}
+                        onChange={(event) =>
+                          updateLayoutNumber(field.key, event.target.value)
+                        }
+                      />
+                      <small>{field.help}</small>
+                    </label>
+                  ))}
+                </div>
+
+                {layoutMessage && (
+                  <div className={styles.layoutEditorNote}>{layoutMessage}</div>
+                )}
+
+                <div className={styles.layoutEditorActions}>
+                  <button
+                    type="button"
+                    className={styles.layoutReset}
+                    onClick={resetToExcelLayout}
+                    disabled={savingLayout}
+                  >
+                    <RotateCcw size={15} />
+                    Reset to Excel
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.layoutCancel}
+                    onClick={cancelLayoutChanges}
+                    disabled={savingLayout}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.layoutSave}
+                    onClick={() => void saveLayout()}
+                    disabled={savingLayout}
+                  >
+                    <Save size={15} />
+                    {savingLayout ? "Saving…" : "Save Layout"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
 
         <section className={styles.selectorPanel}>
           <div className={styles.selectorTop}>
@@ -303,7 +608,7 @@ export default function Sf9Page() {
           </section>
         ) : (
           <section className={styles.previewCanvas}>
-            <Sf9PrintForms detail={detail} />
+            <Sf9PrintForms detail={detail} layoutSettings={layoutSettings} />
           </section>
         )}
       </div>

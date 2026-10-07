@@ -45,22 +45,24 @@
 .previewPlaceholder{min-height:220px;border:1px dashed #cbd9e0;border-radius:14px;background:#fbfdfe;display:grid;place-items:center;align-content:center;gap:7px;color:#7b8e99}
 .previewCanvas{overflow:auto;padding:14px;border:1px solid #dce5ea;border-radius:14px;background:#e7ecef}
 .printDocument{display:grid;gap:18px;justify-content:center}
-.printSheet{width:297mm;height:210mm;box-sizing:border-box;background:#fff;display:grid;grid-template-columns:148.25mm .5mm 148.25mm;overflow:hidden;box-shadow:0 5px 24px rgba(16,42,61,.18);font-family:"Bookman Old Style","Bookman","URW Bookman",serif;color:#111;font-synthesis:none}
-.halfSheet{width:148.25mm;height:210mm;box-sizing:border-box;overflow:hidden}
-.cutLine{width:.5mm;height:100%;background:#111}
+.printSheet{width:297mm;height:210mm;box-sizing:border-box;background:#fff;display:grid;grid-template-columns:var(--sf9-left-card-width,140.58mm) var(--sf9-center-line,.33mm) var(--sf9-right-card-width,130.25mm);justify-content:center;overflow:hidden;box-shadow:0 5px 24px rgba(16,42,61,.18);font-family:"Bookman Old Style","Bookman","URW Bookman",serif;color:#111;font-synthesis:none}
+.halfSheet{width:auto;height:210mm;box-sizing:border-box;overflow:hidden}
+.cutLine{width:100%;height:100%;background:#111}
 .emptyHalf{width:100%;height:100%;background:#fff}
-.cardFront,.cardBack{height:100%;box-sizing:border-box;position:relative}
-.cardFront{padding:5.5mm 5.2mm 4.5mm;font-size:7.44pt;line-height:1.02}
-.cardBack{padding:5.5mm 5.2mm 4.5mm;font-size:6.84pt;line-height:1.02}
-.formHeader{height:35mm;position:relative;display:flex;justify-content:center;align-items:flex-start;text-align:center}
+.cardFront,.cardBack{height:100%;box-sizing:border-box;position:relative;line-height:var(--sf9-line-height,1.02)}
+.halfSheet:first-child .cardFront,.halfSheet:first-child .cardBack{padding:var(--sf9-top,5.5mm) var(--sf9-left-inner,10.33mm) var(--sf9-bottom,4.5mm) var(--sf9-left-outer,5.25mm)}
+.halfSheet:last-child .cardFront,.halfSheet:last-child .cardBack{padding:var(--sf9-top,5.5mm) var(--sf9-right-outer,0mm) var(--sf9-bottom,4.5mm) var(--sf9-right-inner,5.25mm)}
+.cardFront{font-size:var(--sf9-front-font,7.44pt)}
+.cardBack{font-size:var(--sf9-back-font,6.84pt)}
+.formHeader{height:var(--sf9-header-height,25.4mm);position:relative;display:flex;justify-content:center;align-items:flex-start;text-align:center}
 .headerText{width:86mm;display:grid;justify-items:center;line-height:1.02;font-size:7.44pt}
 .headerText>strong{font-size:7.44pt}
 .headerText>strong:nth-of-type(1){font-size:8.68pt}
 .headerText .schoolName{margin-top:3.4mm;font-size:6.82pt}
-.depedLogo,.schoolLogo{position:absolute;top:0;width:22.3mm;height:22.3mm;object-fit:contain}
+.depedLogo,.schoolLogo{position:absolute;top:0;width:var(--sf9-logo-size,22.3mm);height:var(--sf9-logo-size,22.3mm);object-fit:contain}
 .depedLogo{left:0}
 .schoolLogo{right:0}
-.reportTitle{text-align:center;font-weight:700;font-size:8.68pt;margin-top:-1.5mm}
+.reportTitle{text-align:center;font-weight:700;font-size:8.68pt;margin-top:var(--sf9-header-gap,3.83mm)}
 .schoolYear{text-align:center;font-size:7.44pt;margin-top:1mm;margin-bottom:4mm}
 .identity{display:grid;gap:1.4mm;margin-bottom:4mm}
 .identityNameRow,.identityLrnRow,.identityTrackRow{align-items:end}
@@ -128,12 +130,36 @@
 .headSignature span{margin-top:.7mm;font-size:6.84pt}
 .cancellationRow{display:grid;grid-template-columns:47.036% 52.964%;align-items:end;min-height:3.2mm;font-size:6.84pt;margin-top:2.5mm}
 .cancellationRow span{white-space:nowrap}
+
+.layoutEditor{margin:16px 0 20px;border:1px solid #cfe0d6;border-radius:14px;background:#fff;overflow:hidden;box-shadow:0 12px 30px rgba(31,77,60,.05)}
+.layoutEditorHeader{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;background:#f3faf6;border-bottom:1px solid #dce9e1}
+.layoutEditorHeader>div{display:grid;gap:3px}
+.layoutEditorHeader strong{color:#285e48;font-size:.83rem}
+.layoutEditorHeader span{color:#748a7e;font-size:.68rem;line-height:1.45}
+.layoutEditorToggle{border:1px solid #bcd8c7;border-radius:8px;background:#fff;color:#2f7053;min-height:36px;padding:0 12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.layoutEditorBody{padding:14px 16px}
+.layoutEditorNote{margin-bottom:12px;padding:10px 11px;border-radius:8px;background:#f7fafb;color:#637983;font-size:.68rem;line-height:1.5}
+.layoutGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.layoutField{display:grid;gap:5px}
+.layoutField span{font-size:.65rem;color:#5f7885;font-weight:800}
+.layoutField small{font-size:.58rem;color:#93a2aa;line-height:1.35}
+.layoutField input{width:100%;min-height:38px;border:1px solid #d6e2e7;border-radius:8px;padding:0 9px;color:#294d62;background:#fff}
+.layoutEditorActions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid #e6edef}
+.layoutEditorActions button{min-height:38px;border-radius:8px;padding:0 12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.layoutReset{border:1px solid #d7e1e6;background:#fff;color:#607784}
+.layoutCancel{border:1px solid #d7e1e6;background:#f8fafb;color:#607784}
+.layoutSave{border:0;background:#2d7857;color:#fff}
+.layoutEditorActions button:disabled{opacity:.5}
+
 @media(max-width:800px){
   .header{align-items:flex-start;flex-direction:column}
   .selectorTop{grid-template-columns:1fr}
   .studentList{grid-template-columns:1fr}
   .previewHeading{align-items:flex-start;flex-direction:column}
   .previewHeading p{text-align:left}
+  .layoutGrid{grid-template-columns:1fr 1fr}
+  .layoutEditorHeader{align-items:flex-start;flex-direction:column}
+  .layoutEditorToggle{width:100%}
 }
 @media print{
   @page{size:A4 landscape;margin:0}

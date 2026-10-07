@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { DEPED_LOGO_DATA_URI } from "../admin/sf10/Sf10LogoData";
 import styles from "./sf9.module.css";
 
@@ -20,6 +21,48 @@ type Attendance = {
   total_class_days: number;
   total_present: number;
   total_absent: number;
+};
+
+export type Sf9LayoutSettings = {
+  paper: "A4";
+  orientation: "landscape";
+  pageHorizontalMarginMm: number;
+  leftCardWidthMm: number;
+  rightCardWidthMm: number;
+  topMm: number;
+  bottomMm: number;
+  leftCardOuterMm: number;
+  leftCardInnerMm: number;
+  rightCardInnerMm: number;
+  rightCardOuterMm: number;
+  centerLineMm: number;
+  headerHeightMm: number;
+  headerGapMm: number;
+  logoSizeMm: number;
+  frontFontPt: number;
+  backFontPt: number;
+  lineHeight: number;
+};
+
+export const DEFAULT_SF9_LAYOUT: Sf9LayoutSettings = {
+  paper: "A4",
+  orientation: "landscape",
+  pageHorizontalMarginMm: 12.92,
+  leftCardWidthMm: 140.58,
+  rightCardWidthMm: 130.25,
+  topMm: 5.5,
+  bottomMm: 4.5,
+  leftCardOuterMm: 5.25,
+  leftCardInnerMm: 10.33,
+  rightCardInnerMm: 5.25,
+  rightCardOuterMm: 0,
+  centerLineMm: 0.33,
+  headerHeightMm: 25.4,
+  headerGapMm: 3.83,
+  logoSizeMm: 22.3,
+  frontFontPt: 7.44,
+  backFontPt: 6.84,
+  lineHeight: 1.02,
 };
 
 export type Sf9CardData = {
@@ -51,6 +94,7 @@ type Sf9Detail = {
   };
   adviser: { full_name: string };
   cards: Sf9CardData[];
+  layoutSettings?: Sf9LayoutSettings;
 };
 
 function displayNumber(value: number | null | undefined) {
@@ -347,12 +391,37 @@ function EmptyHalf() {
   return <div className={styles.emptyHalf} aria-hidden="true" />;
 }
 
-export function Sf9PrintForms({ detail }: { detail: Sf9Detail }) {
+export function Sf9PrintForms({
+  detail,
+  layoutSettings,
+}: {
+  detail: Sf9Detail;
+  layoutSettings?: Sf9LayoutSettings;
+}) {
   const first = detail.cards?.[0];
   const second = detail.cards?.[1];
+  const layout = layoutSettings ?? detail.layoutSettings ?? DEFAULT_SF9_LAYOUT;
+
+  const layoutStyle = {
+    "--sf9-left-card-width": `${layout.leftCardWidthMm}mm`,
+    "--sf9-right-card-width": `${layout.rightCardWidthMm}mm`,
+    "--sf9-top": `${layout.topMm}mm`,
+    "--sf9-bottom": `${layout.bottomMm}mm`,
+    "--sf9-left-outer": `${layout.leftCardOuterMm}mm`,
+    "--sf9-left-inner": `${layout.leftCardInnerMm}mm`,
+    "--sf9-right-inner": `${layout.rightCardInnerMm}mm`,
+    "--sf9-right-outer": `${layout.rightCardOuterMm}mm`,
+    "--sf9-center-line": `${layout.centerLineMm}mm`,
+    "--sf9-header-height": `${layout.headerHeightMm}mm`,
+    "--sf9-header-gap": `${layout.headerGapMm}mm`,
+    "--sf9-logo-size": `${layout.logoSizeMm}mm`,
+    "--sf9-front-font": `${layout.frontFontPt}pt`,
+    "--sf9-back-font": `${layout.backFontPt}pt`,
+    "--sf9-line-height": String(layout.lineHeight),
+  } as CSSProperties;
 
   return (
-    <div className={styles.printDocument}>
+    <div className={styles.printDocument} style={layoutStyle}>
       <section className={styles.printSheet + " " + styles.frontSheet}>
         <div className={styles.halfSheet}>
           {first ? <FrontCard card={first} detail={detail} /> : <EmptyHalf />}
