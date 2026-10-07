@@ -30,18 +30,60 @@ type LearnerInfo = {
   name_extension: string;
   sex: string;
   birth_date: string;
-  mother_tongue: string;
+
+  guardian_last_name: string;
+  guardian_first_name: string;
+  guardian_middle_name: string;
+  guardian_no_middle_name: boolean | null;
+  guardian_name_extension: string;
+  guardian_name: string;
+  guardian_relationship: string;
+  guardian_contact_number: string;
+
+  mother_last_name: string;
+  mother_first_name: string;
+  mother_middle_name: string;
+  mother_no_middle_name: boolean | null;
+  mother_name_extension: string;
+  mother_maiden_reason: string;
+  mother_maiden_name: string;
+
+  father_last_name: string;
+  father_first_name: string;
+  father_middle_name: string;
+  father_no_middle_name: boolean | null;
+  father_name_extension: string;
+  father_name: string;
+
+  is_indigenous_peoples: boolean | null;
   ethnic_group: string;
+  ethnicity_secondary: string;
+  mother_tongue: string;
+  mother_tongue_secondary: string;
+  mother_tongue_tertiary: string;
   religion: string;
+  learner_email: string;
+
   address_house_street_purok: string;
   address_barangay: string;
   address_municipality_city: string;
   address_province: string;
-  father_name: string;
-  mother_maiden_name: string;
-  guardian_name: string;
-  guardian_relationship: string;
-  guardian_contact_number: string;
+  address_zip_code: string;
+
+  permanent_same_as_current: boolean | null;
+  permanent_address_house_street_purok: string;
+  permanent_address_barangay: string;
+  permanent_address_municipality_city: string;
+  permanent_address_province: string;
+  permanent_address_zip_code: string;
+  permanent_address_other_barangay: string;
+
+  citizenship: string;
+  cct_recipient: boolean | null;
+  cct_household_id: string;
+  has_special_educational_needs: boolean | null;
+  lsen_type: string;
+  vaccinated_covid19: boolean | null;
   learning_modality: string;
   remarks: string;
 };
@@ -89,18 +131,60 @@ function emptyLearnerInfo(): LearnerInfo {
     name_extension: "",
     sex: "",
     birth_date: "",
-    mother_tongue: "",
+
+    guardian_last_name: "",
+    guardian_first_name: "",
+    guardian_middle_name: "",
+    guardian_no_middle_name: null,
+    guardian_name_extension: "",
+    guardian_name: "",
+    guardian_relationship: "",
+    guardian_contact_number: "",
+
+    mother_last_name: "",
+    mother_first_name: "",
+    mother_middle_name: "",
+    mother_no_middle_name: null,
+    mother_name_extension: "",
+    mother_maiden_reason: "",
+    mother_maiden_name: "",
+
+    father_last_name: "",
+    father_first_name: "",
+    father_middle_name: "",
+    father_no_middle_name: null,
+    father_name_extension: "",
+    father_name: "",
+
+    is_indigenous_peoples: null,
     ethnic_group: "",
+    ethnicity_secondary: "",
+    mother_tongue: "",
+    mother_tongue_secondary: "",
+    mother_tongue_tertiary: "",
     religion: "",
+    learner_email: "",
+
     address_house_street_purok: "",
     address_barangay: "",
     address_municipality_city: "",
     address_province: "",
-    father_name: "",
-    mother_maiden_name: "",
-    guardian_name: "",
-    guardian_relationship: "",
-    guardian_contact_number: "",
+    address_zip_code: "",
+
+    permanent_same_as_current: null,
+    permanent_address_house_street_purok: "",
+    permanent_address_barangay: "",
+    permanent_address_municipality_city: "",
+    permanent_address_province: "",
+    permanent_address_zip_code: "",
+    permanent_address_other_barangay: "",
+
+    citizenship: "",
+    cct_recipient: null,
+    cct_household_id: "",
+    has_special_educational_needs: null,
+    lsen_type: "",
+    vaccinated_covid19: null,
     learning_modality: "",
     remarks: "",
   };
@@ -109,6 +193,84 @@ function emptyLearnerInfo(): LearnerInfo {
 function learnerInfoOf(user: UserRecord): LearnerInfo {
   return { ...emptyLearnerInfo(), ...(user.learner_info ?? {}) };
 }
+
+const RELIGION_OPTIONS = [
+  "Buddhism",
+  "Christianity",
+  "Hinduism",
+  "Indigenous Religion",
+  "Islam",
+  "Judaism",
+  "No Religion",
+  "Not disclosed",
+  "Others",
+  "Sikhism",
+  "Taoism",
+];
+
+const LEARNING_MODALITIES = [
+  "Modular (print)",
+  "Modular Digital",
+  "Online",
+  "Educational TV",
+  "Radio-based Instruction",
+  "Homeschooling",
+  "Blended",
+  "Face to Face",
+];
+
+const LSEN_TYPES = [
+  "Visual Impairment",
+  "Hearing Impairment",
+  "Learning Disability",
+  "Intellectual Disability",
+  "Autism Spectrum Disorder",
+  "Emotional-Behavioral Disorder",
+  "Orthopedic/ Physical Handicap",
+  "Speech / Language Disorder",
+  "Cerebral Palsy",
+  "Special Health Problem/Chronic Disease (eg Cancer)",
+  "Multiple Disabilities",
+  "Difficulty in Seeing",
+  "Difficulty in Hearing",
+  "Difficulty in Basic Learning and Applying Knowledge",
+  "Difficulty in Remembering, Concentrating, Paying Attention and Understanding",
+  "Difficulty in Applying Adaptive Skills",
+  "Difficulty in Displaying Inter-Personal Behavior",
+  "Difficulty in Mobility (Walking, Climbing and Grasping)",
+  "Difficulty in Communicating",
+];
+
+const LOCAL_ETHNICITY_SUGGESTIONS = [
+  "Ata",
+  "Ata-Manobo",
+  "Bagobo",
+  "Bagobo-Klata",
+  "Bagobo-Tagabawa / Tagabawa",
+  "Blaan",
+  "Dibabawon",
+  "Higaonon",
+  "Kalagan / Kagan",
+  "Mandaya",
+  "Mangguangan",
+  "Manobo / Menuvu",
+  "Mansaka",
+  "Matigsalog / Matigsalug",
+  "Tagakaolo / Tagakaulo",
+];
+
+const LOCAL_LANGUAGE_SUGGESTIONS = [
+  "Cebuano / Sinugbuanong Binisay",
+  "Cebuano",
+  "Davawenyo",
+  "English",
+  "Filipino",
+  "Hiligaynon",
+  "Ilocano",
+  "Mandaya",
+  "Mansaka",
+  "Tagalog",
+];
 
 function ageAsOfFirstFridayJune(birthDate: string, schoolYear?: string) {
   if (!birthDate) return "";
