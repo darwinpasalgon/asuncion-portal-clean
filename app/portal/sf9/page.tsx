@@ -1,10 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import {
+  useEffect,
+  useMemo,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
+import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
   ArrowLeft,
+  Bold,
   CheckCircle2,
   FileSpreadsheet,
+  Italic,
+  MousePointer2,
   Printer,
   RefreshCw,
   RotateCcw,
@@ -12,11 +23,15 @@ import {
   Search,
   Settings2,
   ShieldCheck,
+  SlidersHorizontal,
   Users,
 } from "lucide-react";
 import {
   DEFAULT_SF9_LAYOUT,
   Sf9PrintForms,
+  type Sf9BlockId,
+  type Sf9BlockStyle,
+  type Sf9FontFamily,
   type Sf9LayoutSettings,
 } from "./Sf9PrintForms";
 import styles from "./sf9.module.css";
@@ -37,6 +52,37 @@ type Student = {
   tve_major: string | null;
 };
 
+type Sf9NumericLayoutKey = Exclude<
+  keyof Sf9LayoutSettings,
+  "paper" | "orientation" | "blockStyles"
+>;
+
+const SF9_BLOCK_LABELS: Record<Sf9BlockId, string> = {
+  header: "School Header",
+  reportTitle: "Learner's Performance Report",
+  schoolYear: "School Year",
+  learnerInfo: "Learner Information",
+  parentNote: "Parent Note",
+  frontSignatures: "School Head and Adviser Signatures",
+  progressTitle: "Learning Progress Title",
+  gradeTable: "Grades Table",
+  descriptorTitle: "Performance Descriptors Title",
+  descriptorTable: "Performance Descriptors Table",
+  attendanceTable: "Attendance Table",
+  comments: "Teacher's Comments",
+  guardianSignatures: "Parent/Guardian Signatures",
+  transfer: "Certificate of Transfer",
+  cancellation: "Cancellation of Eligibility",
+};
+
+const SF9_FONT_OPTIONS: Array<{ value: Sf9FontFamily; label: string }> = [
+  { value: "bookman", label: "Bookman Old Style" },
+  { value: "arial", label: "Arial" },
+  { value: "times", label: "Times New Roman" },
+  { value: "calibri", label: "Calibri" },
+  { value: "georgia", label: "Georgia" },
+];
+
 export default function Sf9Page() {
   const [sections, setSections] = useState<Section[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -55,6 +101,7 @@ export default function Sf9Page() {
   const [layoutEditorOpen, setLayoutEditorOpen] = useState(false);
   const [savingLayout, setSavingLayout] = useState(false);
   const [layoutMessage, setLayoutMessage] = useState("");
+  const [selectedBlock, setSelectedBlock] = useState<Sf9BlockId>("header");
 
   async function loadBase() {
     setLoading(true);
@@ -169,7 +216,7 @@ export default function Sf9Page() {
   }
 
   function updateLayoutNumber(
-    key: keyof Sf9LayoutSettings,
+    key: Sf9NumericLayoutKey,
     value: string
   ) {
     const numberValue = Number(value);
@@ -179,6 +226,53 @@ export default function Sf9Page() {
       [key]: numberValue,
     }));
     setLayoutMessage("");
+  }
+
+  const selectedBlockStyle =
+    layoutSettings.blockStyles?.[selectedBlock] ?? {};
+
+  function updateBlockStyle(patch: Partial<Sf9BlockStyle>) {
+    setLayoutSettings((current) => ({
+      ...current,
+      blockStyles: {
+        ...(current.blockStyles ?? {}),
+        [selectedBlock]: {
+          ...(current.blockStyles?.[selectedBlock] ?? {}),
+          ...patch,
+        },
+      },
+    }));
+    setLayoutMessage("");
+  }
+
+  function resetSelectedBlock() {
+    setLayoutSettings((current) => {
+      const nextBlocks = { ...(current.blockStyles ?? {}) };
+      delete nextBlocks[selectedBlock];
+      return { ...current, blockStyles: nextBlocks };
+    });
+    setLayoutMessage(
+      `${SF9_BLOCK_LABELS[selectedBlock]} returned to the default formatting.`
+    );
+  }
+
+  function toggleLayoutEditor() {
+    const opening = !layoutEditorOpen;
+    setLayoutEditorOpen(opening);
+    setLayoutMessage("");
+    if (opening && selectedIds.length === 0 && sectionStudents[0]) {
+      setSelectedIds([sectionStudents[0].id]);
+    }
+  }
+
+  function handlePreviewBlockClick(event: ReactMouseEvent<HTMLDivElement>) {
+    if (!layoutEditorOpen || accessMode !== "admin") return;
+    const target = event.target as HTMLElement;
+    const block = target.closest<HTMLElement>("[data-sf9-block]");
+    const blockId = block?.dataset.sf9Block as Sf9BlockId | undefined;
+    if (!blockId || !SF9_BLOCK_LABELS[blockId]) return;
+    event.preventDefault();
+    setSelectedBlock(blockId);
   }
 
   function resetToExcelLayout() {
@@ -222,7 +316,7 @@ export default function Sf9Page() {
   }
 
   const layoutFields: Array<{
-    key: keyof Sf9LayoutSettings;
+    key: Sf9NumericLayoutKey;
     label: string;
     unit: string;
     min: number;
@@ -414,52 +508,263 @@ export default function Sf9Page() {
           <section className={styles.layoutEditor}>
             <div className={styles.layoutEditorHeader}>
               <div>
-                <strong>SF9 Layout Editor</strong>
+                <strong>SF9 Visual Layout Editor</strong>
                 <span>
-                  Adjust the print layout visually. A4 Landscape is fixed. Changes
-                  update the preview immediately and become school-wide only after
-                  you click Save Layout.
+                  Edit the report card like a document. Click a part of the actual
+                  report card preview, then change its font, alignment, spacing, or
+                  position from the toolbar. A4 Landscape and the duplex card
+                  structure stay protected.
                 </span>
               </div>
               <button
                 type="button"
                 className={styles.layoutEditorToggle}
-                onClick={() => setLayoutEditorOpen((current) => !current)}
+                onClick={toggleLayoutEditor}
               >
                 <Settings2 size={16} />
-                {layoutEditorOpen ? "Hide Layout Editor" : "Edit Layout"}
+                {layoutEditorOpen ? "Close Visual Editor" : "Edit Layout Visually"}
               </button>
             </div>
 
             {layoutEditorOpen && (
               <div className={styles.layoutEditorBody}>
-                <div className={styles.layoutEditorNote}>
-                  <strong>Excel reference:</strong> A4 Landscape. The current
-                  defaults use the workbook&apos;s wider center separation and a
-                  shorter header gap below ASUNCION NATIONAL HIGH SCHOOL. The same
-                  geometry is retained when only one learner is selected.
+                <div className={styles.visualEditorHint}>
+                  <MousePointer2 size={17} />
+                  <span>
+                    <strong>Click directly on the report card below.</strong> The
+                    selected section is edited on both cards, so one saved template
+                    remains consistent for every learner.
+                  </span>
                 </div>
 
-                <div className={styles.layoutGrid}>
-                  {layoutFields.map((field) => (
-                    <label key={field.key} className={styles.layoutField}>
-                      <span>
-                        {field.label} ({field.unit})
-                      </span>
-                      <input
-                        type="number"
-                        min={field.min}
-                        max={field.max}
-                        step={field.step}
-                        value={Number(layoutSettings[field.key])}
-                        onChange={(event) =>
-                          updateLayoutNumber(field.key, event.target.value)
+                <div className={styles.editorToolbar}>
+                  <label className={styles.toolbarSelect}>
+                    <span>Selected</span>
+                    <select
+                      value={selectedBlock}
+                      onChange={(event) =>
+                        setSelectedBlock(event.target.value as Sf9BlockId)
+                      }
+                    >
+                      {Object.entries(SF9_BLOCK_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className={styles.toolbarSelect}>
+                    <span>Font</span>
+                    <select
+                      value={selectedBlockStyle.fontFamily ?? ""}
+                      onChange={(event) =>
+                        updateBlockStyle({
+                          fontFamily:
+                            (event.target.value as Sf9FontFamily) || undefined,
+                        })
+                      }
+                    >
+                      <option value="">Default</option>
+                      {SF9_FONT_OPTIONS.map((font) => (
+                        <option key={font.value} value={font.value}>
+                          {font.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className={styles.toolbarCompactField}>
+                    <span>Size</span>
+                    <input
+                      type="number"
+                      min="5"
+                      max="16"
+                      step="0.1"
+                      placeholder="Auto"
+                      value={selectedBlockStyle.fontPt ?? ""}
+                      onChange={(event) =>
+                        updateBlockStyle({
+                          fontPt: event.target.value
+                            ? Number(event.target.value)
+                            : undefined,
+                        })
+                      }
+                    />
+                  </label>
+
+                  <div className={styles.toolbarButtonGroup}>
+                    <button
+                      type="button"
+                      className={
+                        selectedBlockStyle.bold
+                          ? styles.toolbarButtonActive
+                          : styles.toolbarButton
+                      }
+                      title="Bold"
+                      onClick={() =>
+                        updateBlockStyle({
+                          bold: selectedBlockStyle.bold ? undefined : true,
+                        })
+                      }
+                    >
+                      <Bold size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      className={
+                        selectedBlockStyle.italic
+                          ? styles.toolbarButtonActive
+                          : styles.toolbarButton
+                      }
+                      title="Italic"
+                      onClick={() =>
+                        updateBlockStyle({
+                          italic: selectedBlockStyle.italic ? undefined : true,
+                        })
+                      }
+                    >
+                      <Italic size={16} />
+                    </button>
+                  </div>
+
+                  <div className={styles.toolbarButtonGroup}>
+                    {([
+                      ["left", AlignLeft],
+                      ["center", AlignCenter],
+                      ["right", AlignRight],
+                    ] as const).map(([align, Icon]) => (
+                      <button
+                        type="button"
+                        key={align}
+                        className={
+                          selectedBlockStyle.align === align
+                            ? styles.toolbarButtonActive
+                            : styles.toolbarButton
                         }
-                      />
-                      <small>{field.help}</small>
-                    </label>
-                  ))}
+                        title={`Align ${align}`}
+                        onClick={() =>
+                          updateBlockStyle({
+                            align:
+                              selectedBlockStyle.align === align
+                                ? undefined
+                                : align,
+                          })
+                        }
+                      >
+                        <Icon size={16} />
+                      </button>
+                    ))}
+                  </div>
+
+                  <label className={styles.toolbarCompactField}>
+                    <span>Line</span>
+                    <input
+                      type="number"
+                      min="0.8"
+                      max="2"
+                      step="0.01"
+                      placeholder="Auto"
+                      value={selectedBlockStyle.lineHeight ?? ""}
+                      onChange={(event) =>
+                        updateBlockStyle({
+                          lineHeight: event.target.value
+                            ? Number(event.target.value)
+                            : undefined,
+                        })
+                      }
+                    />
+                  </label>
+
+                  <label className={styles.toolbarCompactField}>
+                    <span>X mm</span>
+                    <input
+                      type="number"
+                      min="-30"
+                      max="30"
+                      step="0.1"
+                      value={selectedBlockStyle.offsetXMm ?? 0}
+                      onChange={(event) =>
+                        updateBlockStyle({
+                          offsetXMm: Number(event.target.value),
+                        })
+                      }
+                    />
+                  </label>
+
+                  <label className={styles.toolbarCompactField}>
+                    <span>Y mm</span>
+                    <input
+                      type="number"
+                      min="-30"
+                      max="30"
+                      step="0.1"
+                      value={selectedBlockStyle.offsetYMm ?? 0}
+                      onChange={(event) =>
+                        updateBlockStyle({
+                          offsetYMm: Number(event.target.value),
+                        })
+                      }
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    className={styles.resetSelectedButton}
+                    onClick={resetSelectedBlock}
+                  >
+                    <RotateCcw size={15} />
+                    Reset Selected
+                  </button>
                 </div>
+
+                <div className={styles.currentSelection}>
+                  Editing: <strong>{SF9_BLOCK_LABELS[selectedBlock]}</strong>
+                </div>
+
+                <details className={styles.advancedLayout}>
+                  <summary>
+                    <SlidersHorizontal size={16} />
+                    Page Setup & Fine Spacing
+                  </summary>
+                  <div className={styles.layoutEditorNote}>
+                    Use these controls only for the page geometry, card margins,
+                    logo size, and overall spacing. Most text editing can be done
+                    from the toolbar above by clicking the preview.
+                  </div>
+                  <div className={styles.layoutGrid}>
+                    {layoutFields.map((field) => (
+                      <label key={field.key} className={styles.layoutField}>
+                        <span>
+                          {field.label} ({field.unit})
+                        </span>
+                        <input
+                          type="range"
+                          min={field.min}
+                          max={field.max}
+                          step={field.step}
+                          value={Number(layoutSettings[field.key])}
+                          onChange={(event) =>
+                            updateLayoutNumber(field.key, event.target.value)
+                          }
+                        />
+                        <div className={styles.rangeValueRow}>
+                          <small>{field.help}</small>
+                          <input
+                            type="number"
+                            min={field.min}
+                            max={field.max}
+                            step={field.step}
+                            value={Number(layoutSettings[field.key])}
+                            onChange={(event) =>
+                              updateLayoutNumber(field.key, event.target.value)
+                            }
+                          />
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </details>
 
                 {layoutMessage && (
                   <div className={styles.layoutEditorNote}>{layoutMessage}</div>
@@ -473,7 +778,7 @@ export default function Sf9Page() {
                     disabled={savingLayout}
                   >
                     <RotateCcw size={15} />
-                    Reset to Excel
+                    Reset All to Excel
                   </button>
                   <button
                     type="button"
@@ -481,7 +786,7 @@ export default function Sf9Page() {
                     onClick={cancelLayoutChanges}
                     disabled={savingLayout}
                   >
-                    Cancel
+                    Cancel Changes
                   </button>
                   <button
                     type="button"
@@ -607,8 +912,20 @@ export default function Sf9Page() {
             Preparing the report card preview…
           </section>
         ) : (
-          <section className={styles.previewCanvas}>
-            <Sf9PrintForms detail={detail} layoutSettings={layoutSettings} />
+          <section
+            className={
+              layoutEditorOpen && accessMode === "admin"
+                ? styles.previewCanvas + " " + styles.editorPreviewActive
+                : styles.previewCanvas
+            }
+          >
+            <div
+              className={styles.previewDocumentWrap}
+              data-selected-block={layoutEditorOpen ? selectedBlock : undefined}
+              onClickCapture={handlePreviewBlockClick}
+            >
+              <Sf9PrintForms detail={detail} layoutSettings={layoutSettings} />
+            </div>
           </section>
         )}
       </div>
