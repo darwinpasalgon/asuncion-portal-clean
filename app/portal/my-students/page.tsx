@@ -270,18 +270,50 @@ export default function MyStudentsPage() {
       "name_extension",
       "sex",
       "birth_date",
+      "guardian_last_name",
+      "guardian_first_name",
+      "guardian_middle_name",
+      "guardian_no_middle_name",
+      "guardian_name_extension",
+      "guardian_relationship",
+      "guardian_contact_number",
+      "mother_last_name",
+      "mother_first_name",
+      "mother_middle_name",
+      "mother_no_middle_name",
+      "mother_name_extension",
+      "mother_maiden_reason",
+      "father_last_name",
+      "father_first_name",
+      "father_middle_name",
+      "father_no_middle_name",
+      "father_name_extension",
       "mother_tongue",
+      "mother_tongue_secondary",
+      "mother_tongue_tertiary",
+      "is_indigenous_peoples",
       "ethnic_group",
+      "ethnicity_secondary",
       "religion",
+      "learner_email",
       "address_house_street_purok",
       "address_barangay",
       "address_municipality_city",
       "address_province",
-      "father_name",
-      "mother_maiden_name",
-      "guardian_name",
-      "guardian_relationship",
-      "guardian_contact_number",
+      "address_zip_code",
+      "permanent_same_as_current",
+      "permanent_address_house_street_purok",
+      "permanent_address_barangay",
+      "permanent_address_municipality_city",
+      "permanent_address_province",
+      "permanent_address_zip_code",
+      "permanent_address_other_barangay",
+      "citizenship",
+      "cct_recipient",
+      "cct_household_id",
+      "has_special_educational_needs",
+      "lsen_type",
+      "vaccinated_covid19",
       "learning_modality",
       "remarks",
     ];
@@ -289,6 +321,56 @@ export default function MyStudentsPage() {
     const data = Object.fromEntries(
       fields.map((field) => [field, String(form.get(field) ?? "")])
     );
+
+    const hasStructuredGuardian = [
+      data.guardian_last_name,
+      data.guardian_first_name,
+      data.guardian_middle_name,
+      data.guardian_name_extension,
+    ].some((value) => String(value ?? "").trim());
+    if (!hasStructuredGuardian && selected.guardian_name) {
+      for (const field of [
+        "guardian_last_name",
+        "guardian_first_name",
+        "guardian_middle_name",
+        "guardian_no_middle_name",
+        "guardian_name_extension",
+      ]) delete data[field];
+    }
+
+    const hasStructuredMother = [
+      data.mother_last_name,
+      data.mother_first_name,
+      data.mother_middle_name,
+      data.mother_name_extension,
+      data.mother_maiden_reason,
+    ].some((value) => String(value ?? "").trim());
+    if (!hasStructuredMother && selected.mother_maiden_name) {
+      for (const field of [
+        "mother_last_name",
+        "mother_first_name",
+        "mother_middle_name",
+        "mother_no_middle_name",
+        "mother_name_extension",
+        "mother_maiden_reason",
+      ]) delete data[field];
+    }
+
+    const hasStructuredFather = [
+      data.father_last_name,
+      data.father_first_name,
+      data.father_middle_name,
+      data.father_name_extension,
+    ].some((value) => String(value ?? "").trim());
+    if (!hasStructuredFather && selected.father_name) {
+      for (const field of [
+        "father_last_name",
+        "father_first_name",
+        "father_middle_name",
+        "father_no_middle_name",
+        "father_name_extension",
+      ]) delete data[field];
+    }
 
     try {
       const infoResponse = await fetch("/api/academic/adviser-students", {
