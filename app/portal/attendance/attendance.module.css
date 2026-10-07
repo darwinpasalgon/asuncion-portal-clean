@@ -101,10 +101,12 @@
 .assistantRoster{display:grid}
 .assistantRoster article{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;padding:12px 18px;border-bottom:1px solid #e9eef1}
 .assistantRoster article:last-child{border-bottom:0}
-.assistantStatusButtons{display:flex;gap:7px}
+.assistantStatusButtons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
 .assistantStatusButtons button{min-width:82px;min-height:36px;border:1px solid #d9e3e7;border-radius:8px;background:#fff;color:#607785;font-size:.68rem;font-weight:750}
 .assistantStatusButtons .assistantPresent{border-color:#aed8bd;background:#eff9f2;color:#2b704d}
 .assistantStatusButtons .assistantAbsent{border-color:#e9beb9;background:#fff1ef;color:#9a483e}
+.assistantStatusButtons .assistantAbsentMorning{border-color:#ead59d;background:#fff9e9;color:#86661d}
+.assistantStatusButtons .assistantCutting{border-color:#e2b5ad;background:#fff0ed;color:#913b31}
 .assistantDisclaimer{padding:11px 18px;border-top:1px solid #e8eef1;background:#f8fafb;color:#71848f;font-size:.65rem;line-height:1.5}
 @media(max-width:700px){
   .assistantAssign{grid-template-columns:1fr}

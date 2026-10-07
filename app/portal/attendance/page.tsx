@@ -37,9 +37,9 @@ type ExclusionType="regular_holiday"|"special_non_working_holiday"|"class_suspen
 type DateExclusion={id?:string;school_year_id:string;section_id:string;attendance_date:string;exclusion_type:ExclusionType;reason:string|null};
 type PendingDate={section_id:string;grade_level:number;section:string;attendance_date:string;expected_count:number;recorded_count:number};
 type AttendanceAssistant={id:string;school_year_id:string;section_id:string;student_id:string;assigned_by:string;is_active:boolean;assigned_at:string;updated_at:string};
-type AssistantEntry={id?:string;school_year_id:string;section_id:string;attendance_date:string;student_id:string;status:"present"|"absent";entered_by:string;updated_at?:string};
+type AssistantEntry={id?:string;school_year_id:string;section_id:string;attendance_date:string;student_id:string;status:"present"|"absent"|"absent_morning"|"cutting_classes";entered_by:string;updated_at?:string};
 type AssistantRoster={school_year_id:string;section_id:string;student_id:string;display_name:string;sex:string|null};
-type AssistantDraft={status:"present"|"absent"|""};
+type AssistantDraft={status:"present"|"absent"|"absent_morning"|"cutting_classes"|""};
 
 function localDate(){
   const d=new Date();
@@ -219,7 +219,7 @@ export default function AttendancePage(){
     setAssistantDrafts(next);
   }
 
-  function updateAssistantDraft(studentId:string,status:"present"|"absent"|""){
+  function updateAssistantDraft(studentId:string,status:"present"|"absent"|"absent_morning"|"cutting_classes"|""){
     setAssistantDrafts(current=>({...current,[studentId]:{status}}));
   }
 
@@ -432,7 +432,7 @@ export default function AttendancePage(){
         <p>{role==="teacher"
           ?"Record daily section attendance for sections assigned to you as Attendance Teacher / Adviser."
           :assistantAssignment
-            ?"Mark your classmates Present or Absent for today. Your adviser reviews and saves the official attendance."
+            ?"Mark your classmates Present, Absent, Absent in the Morning, or Cutting Classes for today. Your adviser reviews and saves the official attendance."
             :"Your recorded attendance for the active school year."}</p>
       </div>
       {activeYear&&<div className={styles.yearCard}><CheckCircle2 size={18}/><div><span>SCHOOL YEAR</span><strong>{activeYear.name}</strong></div></div>}
@@ -495,7 +495,7 @@ export default function AttendancePage(){
                   :currentAssistants.map(item=>{
                     const student=studentMap.get(item.student_id);
                     return <div key={item.id} className={styles.assistantChip}>
-                      <div><strong>{student?.full_name??"Student"}</strong><small>Can submit Present/Absent drafts for this section</small></div>
+                      <div><strong>{student?.full_name??"Student"}</strong><small>Can submit attendance drafts for this section</small></div>
                       <button type="button" disabled={assistantWorking} onClick={()=>void removeAttendanceAssistant(item.id)}>Remove</button>
                     </div>;
                   })}
@@ -598,7 +598,7 @@ export default function AttendancePage(){
             {currentAssistantEntries.length>0&&<div className={styles.assistantDraftNotice}>
               <UserCheck size={16}/>
               <span>
-                Attendance Assistants submitted {currentAssistantEntries.length} Present/Absent mark{currentAssistantEntries.length===1?"":"s"} for this date. Their marks are prefilled only where no official adviser record exists. Review before saving.
+                Attendance Assistants submitted {currentAssistantEntries.length} attendance mark{currentAssistantEntries.length===1?"":"s"} for this date. Their marks are prefilled only where no official adviser record exists. Review before saving.
               </span>
             </div>}
 
@@ -661,7 +661,7 @@ export default function AttendancePage(){
         <div className={styles.panelHeading}>
           <div>
             <h2>{"Attendance Assistant · "+(assistantSection?("Grade "+assistantSection.grade_level+" · "+assistantSection.name):"Your Section")}</h2>
-            <p>{formatDate(assistantDate)+" · Present/Absent only · Adviser approval required"}</p>
+            <p>{formatDate(assistantDate)+" · Adviser approval required"}</p>
           </div>
           {!assistantNoClasses&&isWeekday(assistantDate)&&<div className={styles.actions}>
             <button className={styles.markAll} onClick={markAssistantAllPresent}><CheckCircle2 size={16}/>Mark All Present</button>
@@ -684,7 +684,7 @@ export default function AttendancePage(){
         {!assistantNoClasses&&isWeekday(assistantDate)&&<>
           {assistantUntaggedCount>0&&<div className={styles.untaggedNotice}>
             <AlertTriangle size={16}/>
-            <span>{assistantUntaggedCount+" classmate"+(assistantUntaggedCount===1?"":"s")+" still need a Present or Absent mark."}</span>
+            <span>{assistantUntaggedCount+" classmate"+(assistantUntaggedCount===1?"":"s")+" still need an attendance mark."}</span>
           </div>}
           <div className={styles.assistantRoster}>
             {assistantRoster.map((student,index)=>{
@@ -697,6 +697,8 @@ export default function AttendancePage(){
                 <div className={styles.assistantStatusButtons}>
                   <button type="button" className={d.status==="present"?styles.assistantPresent:""} onClick={()=>updateAssistantDraft(student.student_id,"present")}>Present</button>
                   <button type="button" className={d.status==="absent"?styles.assistantAbsent:""} onClick={()=>updateAssistantDraft(student.student_id,"absent")}>Absent</button>
+                  <button type="button" className={d.status==="absent_morning"?styles.assistantAbsentMorning:""} onClick={()=>updateAssistantDraft(student.student_id,"absent_morning")}>Absent in the Morning</button>
+                  <button type="button" className={d.status==="cutting_classes"?styles.assistantCutting:""} onClick={()=>updateAssistantDraft(student.student_id,"cutting_classes")}>Cutting Classes</button>
                 </div>
               </article>;
             })}
