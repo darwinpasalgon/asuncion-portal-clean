@@ -8,9 +8,6 @@ alter table public.teacher_assignments
   add constraint teacher_assignments_primary_not_coteacher
   check (array_position(co_teacher_ids, teacher_id) is null);
 
-create index if not exists teacher_assignments_co_teacher_ids_gin
-  on public.teacher_assignments using gin (co_teacher_ids);
-
 drop policy if exists "Teachers read own assignments" on public.teacher_assignments;
 create policy "Teachers read own assignments"
 on public.teacher_assignments
