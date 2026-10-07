@@ -16,6 +16,7 @@ import styles from "./announcements.module.css";
 
 type Role="student"|"teacher"|"administrator";
 type Profile={id:string;full_name:string;role:Role};
+type GradeLevelHead={grade_level:number;display_name:string};
 type Year={id:string;name:string};
 type Grade={grade_level:number;label:string};
 type Section={id:string;grade_level:number;name:string};
@@ -53,6 +54,7 @@ function fileSize(size:number|null){
 
 export default function AnnouncementsPage(){
   const [profile,setProfile]=useState<Profile|null>(null);
+  const [gradeLevelHead,setGradeLevelHead]=useState<GradeLevelHead|null>(null);
   const [activeYear,setActiveYear]=useState<Year|null>(null);
   const [announcements,setAnnouncements]=useState<Announcement[]>([]);
   const [grades,setGrades]=useState<Grade[]>([]);
@@ -77,7 +79,8 @@ export default function AnnouncementsPage(){
       setGrades(x.grades??[]);
       setSections(x.sections??[]);
       setAllowedSections(x.allowedSections??[]);
-      if(x.profile?.role==="teacher")setAudienceScope("section");
+      setGradeLevelHead(x.gradeLevelHead??null);
+      if(x.profile?.role==="teacher")setAudienceScope(x.gradeLevelHead?"grade":"section");
     }catch{setError("Unable to reach the announcements service.");}
     finally{setLoading(false);}
   }
@@ -86,6 +89,7 @@ export default function AnnouncementsPage(){
 
   const canPost=profile?.role==="teacher"||profile?.role==="administrator";
   const isAdmin=profile?.role==="administrator";
+  const isGradeHead=profile?.role==="teacher"&&Boolean(gradeLevelHead);
 
   const sectionMap=useMemo(()=>new Map(sections.map(s=>[s.id,s])),[sections]);
 
@@ -101,7 +105,10 @@ export default function AnnouncementsPage(){
     const form=event.currentTarget;
     const data=new FormData(form);
     data.set("announcementType",isAdmin?announcementType:"announcement");
-    data.set("audienceScope",profile?.role==="teacher"?"section":audienceScope);
+    data.set(
+      "audienceScope",
+      profile?.role==="teacher"&&!isGradeHead?"section":audienceScope
+    );
 
     const expiresLocal=String(data.get("expiresAt")??"");
     if(expiresLocal){
@@ -120,6 +127,7 @@ export default function AnnouncementsPage(){
       form.reset();
       setAnnouncementType("announcement");
       if(isAdmin)setAudienceScope("school");
+      else if(isGradeHead)setAudienceScope("grade");
       await load();
     }catch{setError("Unable to reach the announcements service.");}
     finally{setWorking("");}
@@ -161,11 +169,13 @@ export default function AnnouncementsPage(){
     {canPost&&<section className={styles.composer}>
       <div className={styles.composerHead}>
         <div>
-          <span>{isAdmin?"ADMINISTRATOR / PRINCIPAL":"TEACHER"}</span>
+          <span>{isAdmin?"ADMINISTRATOR / PRINCIPAL":isGradeHead?`GRADE ${gradeLevelHead?.grade_level} LEVEL HEAD`:"TEACHER"}</span>
           <h2>Create a Post</h2>
           <p>{isAdmin
             ?"Publish a school announcement or upload an official memorandum."
-            :"Post an announcement to one of your assigned sections."}</p>
+            :isGradeHead
+              ?`Post an announcement to all Grade ${gradeLevelHead?.grade_level} learners or to a selected section in your grade.`
+              :"Post an announcement to one of your assigned sections."}</p>
         </div>
         <Megaphone size={27}/>
       </div>
@@ -201,7 +211,15 @@ export default function AnnouncementsPage(){
                 <option value="section">Specific Section</option>
               </select>
             </label>
-            :<input type="hidden" name="audienceScope" value="section"/>}
+            :isGradeHead
+              ?<label>
+                <span>Audience</span>
+                <select name="audienceScope" value={audienceScope} onChange={e=>setAudienceScope(e.target.value as "grade"|"section")}>
+                  <option value="grade">Entire Grade {gradeLevelHead?.grade_level}</option>
+                  <option value="section">Specific Grade {gradeLevelHead?.grade_level} Section</option>
+                </select>
+              </label>
+              :<input type="hidden" name="audienceScope" value="section"/>}
 
           {isAdmin&&audienceScope==="grade"&&<label>
             <span>Grade Level</span>
@@ -211,7 +229,7 @@ export default function AnnouncementsPage(){
             </select>
           </label>}
 
-          {(audienceScope==="section"||profile?.role==="teacher")&&<label>
+          {(audienceScope==="section"||(profile?.role==="teacher"&&!isGradeHead))&&<label>
             <span>Section</span>
             <select name="targetSectionId" required defaultValue="">
               <option value="" disabled>Select Section</option>
