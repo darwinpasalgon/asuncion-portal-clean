@@ -2383,7 +2383,11 @@ export default function PortalPage() {
                                       ? `${entry.purpose || "Non-instructional period"} · No class`
                                       : entry.entry_type === "rotation"
                                         ? `${entry.instructor || "TVE Instructor"} · ${entry.purpose || "Exploratory rotation"}`
-                                        : entry.room || "Room not specified"}
+                                        : entry.instructor
+                                          ? entry.room
+                                            ? `${entry.instructor} · ${entry.room}`
+                                            : entry.instructor
+                                          : entry.room || "Room not specified"}
                                   </small>
                                 </div>
                               </article>
