@@ -586,14 +586,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const auth = await identity(request);
-  if (!auth || auth.profile.role !== "teacher") {
+  if (!auth) {
     return NextResponse.json(
-      { error: "Teacher access required." },
+      { error: "Student or Teacher access required." },
       { status: 403 }
     );
   }
 
-  const { token, userId } = auth;
+  const { token, userId, profile } = auth;
   const body = await request.json().catch(() => null);
   const action = String(body?.action ?? "");
   const sectionId = String(body?.sectionId ?? "");
@@ -605,6 +605,267 @@ export async function POST(request: NextRequest) {
       { error: "No active school year is configured." },
       { status: 409 }
     );
+  }
+
+  if (profile.role === "student") {
+    if (action !== "save_assistant_attendance") {
+      return NextResponse.json(
+        { error: "Attendance Assistant access required." },
+        { status: 403 }
+      );
+    }
+
+    const assignment = await attendanceAssistantAssignment(
+      token,
+      userId,
+      year.id
+    );
+    const today = manilaToday();
+
+    if (!assignment || assignment.section_id !== sectionId) {
+      return NextResponse.json(
+        { error: "You are not an active Attendance Assistant for this section." },
+        { status: 403 }
+      );
+    }
+    if (attendanceDate !== today || !isWeekday(attendanceDate)) {
+      return NextResponse.json(
+        { error: "Attendance Assistants can mark attendance for today only." },
+        { status: 400 }
+      );
+    }
+
+    const [roster, exclusions] = await Promise.all([
+      getRows(
+        `attendance_section_roster?school_year_id=eq.${encodeURIComponent(
+          year.id
+        )}&section_id=eq.${encodeURIComponent(
+          sectionId
+        )}&select=student_id,display_name`,
+        token
+      ).catch(() => []),
+      getRows(
+        `attendance_day_exclusions?school_year_id=eq.${encodeURIComponent(
+          year.id
+        )}&section_id=eq.${encodeURIComponent(
+          sectionId
+        )}&attendance_date=eq.${attendanceDate}&select=id&limit=1`,
+        token
+      ).catch(() => []),
+    ]);
+
+    if (exclusions?.[0]) {
+      return NextResponse.json(
+        { error: "Today is marked as No Classes. Attendance cannot be entered." },
+        { status: 409 }
+      );
+    }
+
+    const allowedStudents = new Set(
+      (roster ?? []).map((item: { student_id: string }) => String(item.student_id))
+    );
+    const records = Array.isArray(body?.records) ? body.records : [];
+
+    if (!allowedStudents.size || records.length !== allowedStudents.size) {
+      return NextResponse.json(
+        { error: "Mark every active classmate Present or Absent before saving." },
+        { status: 400 }
+      );
+    }
+
+    const payload: Array<{
+      school_year_id: string;
+      section_id: string;
+      attendance_date: string;
+      student_id: string;
+      status: "present" | "absent";
+      entered_by: string;
+      updated_at: string;
+    }> = [];
+
+    const seen = new Set<string>();
+    for (const record of records) {
+      const studentId = String(record?.studentId ?? "");
+      const status = String(record?.status ?? "");
+
+      if (
+        !studentId ||
+        seen.has(studentId) ||
+        !allowedStudents.has(studentId) ||
+        !["present", "absent"].includes(status)
+      ) {
+        return NextResponse.json(
+          { error: "Every classmate must be marked Present or Absent." },
+          { status: 400 }
+        );
+      }
+      seen.add(studentId);
+      payload.push({
+        school_year_id: year.id,
+        section_id: sectionId,
+        attendance_date: attendanceDate,
+        student_id: studentId,
+        status: status as "present" | "absent",
+        entered_by: userId,
+        updated_at: new Date().toISOString(),
+      });
+    }
+
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/attendance_assistant_entries?on_conflict=student_id,school_year_id,attendance_date`,
+      {
+        method: "POST",
+        headers: {
+          ...headers(token),
+          Prefer: "resolution=merge-duplicates,return=representation",
+        },
+        body: JSON.stringify(payload),
+        cache: "no-store",
+      }
+    );
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok || !Array.isArray(result)) {
+      return NextResponse.json(
+        { error: "Unable to save the Attendance Assistant sheet." },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      count: result.length,
+      assistantEntries: result,
+    });
+  }
+
+  if (profile.role !== "teacher") {
+    return NextResponse.json(
+      { error: "Teacher access required." },
+      { status: 403 }
+    );
+  }
+
+  if (action === "assign_attendance_assistant" || action === "remove_attendance_assistant") {
+    if (!sectionId) {
+      return NextResponse.json(
+        { error: "Select an adviser section." },
+        { status: 400 }
+      );
+    }
+
+    const adviserAllowed = await verifyAdviser(
+      token,
+      userId,
+      year.id,
+      sectionId
+    );
+    if (!adviserAllowed) {
+      return NextResponse.json(
+        { error: "You can only manage Attendance Assistants in your advisory section." },
+        { status: 403 }
+      );
+    }
+
+    if (action === "assign_attendance_assistant") {
+      const studentId = String(body?.studentId ?? "");
+      if (!studentId) {
+        return NextResponse.json(
+          { error: "Select a student to assign." },
+          { status: 400 }
+        );
+      }
+
+      const rosterRows = await getRows(
+        `attendance_section_roster?school_year_id=eq.${encodeURIComponent(
+          year.id
+        )}&section_id=eq.${encodeURIComponent(
+          sectionId
+        )}&student_id=eq.${encodeURIComponent(
+          studentId
+        )}&select=student_id&limit=1`,
+        token
+      ).catch(() => []);
+
+      if (!rosterRows?.[0]) {
+        return NextResponse.json(
+          { error: "Select an active learner from your advisory section." },
+          { status: 400 }
+        );
+      }
+
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/attendance_assistants?on_conflict=school_year_id,section_id,student_id`,
+        {
+          method: "POST",
+          headers: {
+            ...headers(token),
+            Prefer: "resolution=merge-duplicates,return=representation",
+          },
+          body: JSON.stringify([
+            {
+              school_year_id: year.id,
+              section_id: sectionId,
+              student_id: studentId,
+              assigned_by: userId,
+              is_active: true,
+              assigned_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
+          ]),
+          cache: "no-store",
+        }
+      );
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok || !Array.isArray(result) || !result[0]) {
+        const message =
+          typeof result?.message === "string" &&
+          result.message.includes("maximum of 3")
+            ? "You can assign a maximum of 3 Attendance Assistants."
+            : "Unable to assign this Attendance Assistant.";
+        return NextResponse.json({ error: message }, { status: 400 });
+      }
+
+      return NextResponse.json({ ok: true, assistant: result[0] });
+    }
+
+    const assistantId = String(body?.assistantId ?? "");
+    if (!assistantId) {
+      return NextResponse.json(
+        { error: "Attendance Assistant assignment is required." },
+        { status: 400 }
+      );
+    }
+
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/attendance_assistants?id=eq.${encodeURIComponent(
+        assistantId
+      )}&section_id=eq.${encodeURIComponent(sectionId)}`,
+      {
+        method: "PATCH",
+        headers: {
+          ...headers(token),
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify({
+          is_active: false,
+          assigned_by: userId,
+          updated_at: new Date().toISOString(),
+        }),
+        cache: "no-store",
+      }
+    );
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok || !Array.isArray(result) || !result[0]) {
+      return NextResponse.json(
+        { error: "Unable to remove this Attendance Assistant." },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ ok: true });
   }
 
   if (!sectionId || !validDate(attendanceDate)) {
