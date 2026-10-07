@@ -106,7 +106,8 @@ export async function GET(request: NextRequest) {
   let studentSectionId = "";
   if (profile.role === "teacher") {
     visibleAssignments = assignments.filter(
-      (item: { teacher_id: string }) => item.teacher_id === userId
+      (item: { teacher_id: string; co_teacher_ids?: string[] }) =>
+        item.teacher_id === userId || (item.co_teacher_ids ?? []).includes(userId)
     );
   } else if (profile.role === "student") {
     const enrollmentRows = await getRows(
@@ -134,13 +135,14 @@ export async function GET(request: NextRequest) {
 
   const today = manilaDate();
 
-  const [schedules, sections, subjects, scheduleBlocks, grade7TveRotations] = await Promise.all([
+  const [schedules, sections, subjects, teachers, scheduleBlocks, grade7TveRotations] = await Promise.all([
     getRows(
       "class_schedules?is_active=eq.true&select=id,teacher_assignment_id,day_of_week,start_time,end_time,room&order=day_of_week.asc,start_time.asc",
       token
     ),
     getRows("sections?select=id,name,grade_level", token),
     getRows("subjects?select=id,name,grade_level", token),
+    getRows("profiles?role=eq.teacher&account_status=eq.active&select=id,full_name", token),
     profile.role === "student" && studentSectionId
       ? getRows(
           `schedule_blocks?school_year_id=eq.${encodeURIComponent(
@@ -170,6 +172,7 @@ export async function GET(request: NextRequest) {
       section_id: string;
       subject_id: string;
       teacher_id: string;
+      co_teacher_ids: string[];
       major: string | null;
     }
   >(
@@ -180,6 +183,7 @@ export async function GET(request: NextRequest) {
         section_id: string;
         subject_id: string;
         teacher_id: string;
+        co_teacher_ids?: string[];
         major: string | null;
       }) =>
         [
@@ -189,6 +193,7 @@ export async function GET(request: NextRequest) {
             section_id: item.section_id,
             subject_id: item.subject_id,
             teacher_id: item.teacher_id,
+            co_teacher_ids: item.co_teacher_ids ?? [],
             major: item.major ?? null,
           },
         ] as [
@@ -198,6 +203,7 @@ export async function GET(request: NextRequest) {
             section_id: string;
             subject_id: string;
             teacher_id: string;
+            co_teacher_ids: string[];
             major: string | null;
           }
         ]
@@ -214,6 +220,13 @@ export async function GET(request: NextRequest) {
     (subjects ?? []).map(
       (item: { id: string; name: string }) =>
         [item.id, { name: item.name }] as [string, { name: string }]
+    )
+  );
+
+  const teacherMap = new Map<string, string>(
+    (teachers ?? []).map(
+      (item: { id: string; full_name: string }) =>
+        [item.id, item.full_name] as [string, string]
     )
   );
 
@@ -249,6 +262,16 @@ export async function GET(request: NextRequest) {
           subject: subject?.name ?? "Unknown subject",
           major: assignment?.major ?? null,
           purpose: null,
+          instructor: assignment
+            ? Array.from(
+                new Set([
+                  assignment.teacher_id,
+                  ...(assignment.co_teacher_ids ?? []),
+                ])
+              )
+                .map((id) => teacherMap.get(id) ?? "Unknown Teacher")
+                .join(" / ")
+            : null,
         };
       }
     );
