@@ -69,7 +69,8 @@ export function findScheduleConflicts(
       const combinedTveClass =
         other.teacher_id === assignment.teacher_id &&
         other.section_id !== assignment.section_id &&
-        other.subject_id === assignment.subject_id &&
+        subjects.get(assignment.subject_id) === "Technical Vocational Education" &&
+        subjects.get(other.subject_id) === "Technical Vocational Education" &&
         assignment.major !== null &&
         other.major === assignment.major;
       if (other.teacher_id === assignment.teacher_id && !combinedTveClass) {
