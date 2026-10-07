@@ -1056,7 +1056,18 @@ function SideNav({
                       }}
                     >
                       <UserRound size={19} />
-                      <span>Teacher HR Profiles</span>
+                      <span>Teaching Personnel Profiles</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
+                        window.location.href = "/portal/admin/non-teaching-profiles";
+                      }}
+                    >
+                      <UserRound size={19} />
+                      <span>Non-Teaching Personnel Profiles</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   {profile.role === "administrator" && (
@@ -1688,11 +1699,16 @@ export default function PortalPage() {
                                 </p>
                                 <div className="real-personnel-list">
                                   {personnelAttention.incomplete_non_teaching.slice(0, 8).map((person) => (
-                                    <div key={person.id}>
+                                    <a
+                                      key={person.id}
+                                      className="real-personnel-action"
+                                      href={`/portal/admin/non-teaching-profiles?personnel=${encodeURIComponent(person.id)}&field=${encodeURIComponent(person.missing_fields[0] ?? "")}`}
+                                    >
                                       <strong>{person.full_name}</strong>
                                       <span>{person.position || "Non-Teaching Personnel"}</span>
                                       <small>Missing: {person.missing_fields.join(", ")}</small>
-                                    </div>
+                                      <span className="real-personnel-open">Open Required Field <ChevronRight size={13} /></span>
+                                    </a>
                                   ))}
                                   {personnelAttention.non_teaching_count > 8 && (
                                     <small className="real-personnel-more">
