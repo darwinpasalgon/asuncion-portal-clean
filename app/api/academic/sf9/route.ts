@@ -17,6 +17,36 @@ const MONTHS = [
   { key: "Apr", month: 4 },
 ];
 
+type Sf9FontFamily = "bookman" | "arial" | "times" | "calibri" | "georgia";
+
+type Sf9BlockId =
+  | "header"
+  | "reportTitle"
+  | "schoolYear"
+  | "learnerInfo"
+  | "parentNote"
+  | "frontSignatures"
+  | "progressTitle"
+  | "gradeTable"
+  | "descriptorTitle"
+  | "descriptorTable"
+  | "attendanceTable"
+  | "comments"
+  | "guardianSignatures"
+  | "transfer"
+  | "cancellation";
+
+type Sf9BlockStyle = {
+  fontFamily?: Sf9FontFamily;
+  fontPt?: number;
+  bold?: boolean;
+  italic?: boolean;
+  align?: "left" | "center" | "right";
+  lineHeight?: number;
+  offsetXMm?: number;
+  offsetYMm?: number;
+};
+
 type Sf9LayoutSettings = {
   paper: "A4";
   orientation: "landscape";
@@ -36,6 +66,7 @@ type Sf9LayoutSettings = {
   frontFontPt: number;
   backFontPt: number;
   lineHeight: number;
+  blockStyles: Partial<Record<Sf9BlockId, Sf9BlockStyle>>;
 };
 
 const DEFAULT_SF9_LAYOUT: Sf9LayoutSettings = {
@@ -57,7 +88,34 @@ const DEFAULT_SF9_LAYOUT: Sf9LayoutSettings = {
   frontFontPt: 7.44,
   backFontPt: 6.84,
   lineHeight: 1.02,
+  blockStyles: {},
 };
+
+const SF9_BLOCK_IDS: Sf9BlockId[] = [
+  "header",
+  "reportTitle",
+  "schoolYear",
+  "learnerInfo",
+  "parentNote",
+  "frontSignatures",
+  "progressTitle",
+  "gradeTable",
+  "descriptorTitle",
+  "descriptorTable",
+  "attendanceTable",
+  "comments",
+  "guardianSignatures",
+  "transfer",
+  "cancellation",
+];
+
+const SF9_FONT_FAMILIES = new Set<Sf9FontFamily>([
+  "bookman",
+  "arial",
+  "times",
+  "calibri",
+  "georgia",
+]);
 
 function boundedNumber(
   value: unknown,
@@ -68,6 +126,53 @@ function boundedNumber(
   const numberValue = Number(value);
   if (!Number.isFinite(numberValue)) return fallback;
   return Math.min(max, Math.max(min, numberValue));
+}
+
+function sanitizeBlockStyles(input: unknown) {
+  const source =
+    input && typeof input === "object" ? (input as Record<string, unknown>) : {};
+  const result: Partial<Record<Sf9BlockId, Sf9BlockStyle>> = {};
+
+  for (const blockId of SF9_BLOCK_IDS) {
+    const raw =
+      source[blockId] && typeof source[blockId] === "object"
+        ? (source[blockId] as Record<string, unknown>)
+        : null;
+    if (!raw) continue;
+
+    const style: Sf9BlockStyle = {};
+    if (
+      typeof raw.fontFamily === "string" &&
+      SF9_FONT_FAMILIES.has(raw.fontFamily as Sf9FontFamily)
+    ) {
+      style.fontFamily = raw.fontFamily as Sf9FontFamily;
+    }
+    if (raw.fontPt !== undefined) {
+      style.fontPt = boundedNumber(raw.fontPt, 7.44, 5, 16);
+    }
+    if (typeof raw.bold === "boolean") style.bold = raw.bold;
+    if (typeof raw.italic === "boolean") style.italic = raw.italic;
+    if (
+      raw.align === "left" ||
+      raw.align === "center" ||
+      raw.align === "right"
+    ) {
+      style.align = raw.align;
+    }
+    if (raw.lineHeight !== undefined) {
+      style.lineHeight = boundedNumber(raw.lineHeight, 1.02, 0.8, 2);
+    }
+    if (raw.offsetXMm !== undefined) {
+      style.offsetXMm = boundedNumber(raw.offsetXMm, 0, -30, 30);
+    }
+    if (raw.offsetYMm !== undefined) {
+      style.offsetYMm = boundedNumber(raw.offsetYMm, 0, -30, 30);
+    }
+
+    if (Object.keys(style).length > 0) result[blockId] = style;
+  }
+
+  return result;
 }
 
 function sanitizeLayoutSettings(input: unknown): Sf9LayoutSettings {
@@ -168,6 +273,7 @@ function sanitizeLayoutSettings(input: unknown): Sf9LayoutSettings {
       0.9,
       1.5
     ),
+    blockStyles: sanitizeBlockStyles(source.blockStyles),
   };
 }
 
