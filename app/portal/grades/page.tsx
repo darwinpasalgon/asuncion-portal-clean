@@ -1087,6 +1087,171 @@ export default function GradesPage() {
           </>
         )}
 
+        {role === "teacher" &&
+          subjectAssignments.length > 0 &&
+          (!isSectionAdviser || teacherView === "subjects") && (
+            <>
+              <section className={styles.controls}>
+                <label>
+                  <span>My Subject</span>
+                  <select
+                    value={selectedSubjectAssignmentId}
+                    onChange={(event) =>
+                      setSelectedSubjectAssignmentId(event.target.value)
+                    }
+                  >
+                    {subjectAssignments.map((assignment) => (
+                      <option key={assignment.id} value={assignment.id}>
+                        {subjectAssignmentLabel(assignment)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className={styles.termTabs}>
+                  {[1, 2, 3].map((term) => (
+                    <button
+                      type="button"
+                      key={term}
+                      className={
+                        selectedSubjectTerm === term
+                          ? styles.termActive
+                          : styles.termButton
+                      }
+                      onClick={() => setSelectedSubjectTerm(term)}
+                    >
+                      Term {term}
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section className={styles.gradePanel}>
+                <div className={styles.panelHeading}>
+                  <div>
+                    <h2>Published Subject Grades · Term {selectedSubjectTerm}</h2>
+                    <p>
+                      Read-only view. You can see only published grades for the
+                      subject and section assigned to your Teacher account.
+                    </p>
+                  </div>
+                  <span className={styles.readOnlyBadge}>VIEW ONLY</span>
+                </div>
+
+                {!selectedSubjectAssignment ? (
+                  <div className={styles.empty}>
+                    Select one of your graded Subject Teacher assignments.
+                  </div>
+                ) : subjectClassStudents.length === 0 ? (
+                  <div className={styles.empty}>
+                    No active learners are assigned to this subject.
+                  </div>
+                ) : (
+                  <div className={styles.tableWrap}>
+                    <table className={styles.gradeTable}>
+                      <thead>
+                        <tr>
+                          <th>Learner</th>
+                          <th>Term Grade</th>
+                          <th>Proficiency Descriptor</th>
+                          <th>Support</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {subjectClassStudentGroups.map(
+                          ({ group, students: groupStudents }) => (
+                            <Fragment key={group}>
+                              <tr className={styles.sexGroupRow}>
+                                <td colSpan={5}>
+                                  <strong>{group}</strong>
+                                  <span>
+                                    {groupStudents.length} learner
+                                    {groupStudents.length === 1 ? "" : "s"}
+                                  </span>
+                                </td>
+                              </tr>
+                              {groupStudents.map((student) => {
+                                const published =
+                                  publishedSubjectGradeForStudent(student.id);
+
+                                return (
+                                  <tr key={student.id}>
+                                    <td>
+                                      <strong>{student.full_name}</strong>
+                                      <span>
+                                        {(student.last_name && student.first_name
+                                          ? `${student.last_name}, ${student.first_name}${
+                                              student.middle_name
+                                                ? ` ${student.middle_name}`
+                                                : ""
+                                            }${
+                                              student.name_extension
+                                                ? ` ${student.name_extension}`
+                                                : ""
+                                            }`
+                                          : student.full_name)}
+                                        {student.lrn
+                                          ? ` · LRN ${student.lrn}`
+                                          : ""}
+                                      </span>
+                                    </td>
+                                    <td>
+                                      {published ? (
+                                        <strong className={styles.subjectGradeValue}>
+                                          {published.term_grade}
+                                        </strong>
+                                      ) : (
+                                        "—"
+                                      )}
+                                    </td>
+                                    <td>
+                                      {published
+                                        ? descriptor(published.term_grade)
+                                        : "—"}
+                                    </td>
+                                    <td>
+                                      {published ? (
+                                        <span
+                                          className={
+                                            published.term_grade < 75
+                                              ? styles.intervention
+                                              : styles.onTrack
+                                          }
+                                        >
+                                          {published.term_grade < 75
+                                            ? "Intervention needed"
+                                            : "Meets minimum standard"}
+                                        </span>
+                                      ) : (
+                                        "—"
+                                      )}
+                                    </td>
+                                    <td>
+                                      {published ? (
+                                        <span className={styles.published}>
+                                          Published
+                                        </span>
+                                      ) : (
+                                        <span className={styles.notSaved}>
+                                          Not Published
+                                        </span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </Fragment>
+                          )
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            </>
+          )}
+
         {role === "student" && (
           <section className={styles.studentPanel}>
             <div className={styles.panelHeading}>
