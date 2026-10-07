@@ -13,6 +13,11 @@ import {
   Users,
 } from "lucide-react";
 import { TECHNICAL_VOCATIONAL_MAJORS } from "@/lib/subject-config";
+import {
+  LIS_ETHNICITY_OPTIONS,
+  LIS_MOTHER_TONGUE_OPTIONS,
+  LIS_RELIGION_OPTIONS,
+} from "@/lib/lis-learner-options";
 import styles from "./my-students.module.css";
 
 type Section = { id: string; grade_level: number; name: string };
@@ -29,8 +34,10 @@ type Learner = {
   sex: string | null;
   birth_date: string | null;
   mother_tongue: string | null;
+  is_indigenous_peoples: boolean | null;
   ethnic_group: string | null;
   religion: string | null;
+  cct_recipient: boolean | null;
   address_house_street_purok: string | null;
   address_barangay: string | null;
   address_municipality_city: string | null;
@@ -179,8 +186,10 @@ export default function MyStudentsPage() {
       "sex",
       "birth_date",
       "mother_tongue",
+      "is_indigenous_peoples",
       "ethnic_group",
       "religion",
+      "cct_recipient",
       "address_house_street_purok",
       "address_barangay",
       "address_municipality_city",
@@ -448,16 +457,99 @@ export default function MyStudentsPage() {
                       </label>
                       <label>
                         <span>Mother Tongue</span>
-                        <input name="mother_tongue" defaultValue={selected.mother_tongue ?? ""} />
-                      </label>
-                      <label>
-                        <span>Ethnic Group</span>
-                        <input name="ethnic_group" defaultValue={selected.ethnic_group ?? ""} />
+                        <input
+                          name="mother_tongue"
+                          list="lis-mother-tongue-options"
+                          defaultValue={selected.mother_tongue ?? ""}
+                          placeholder="Type or select from LIS choices"
+                        />
                       </label>
                       <label>
                         <span>Religion</span>
-                        <input name="religion" defaultValue={selected.religion ?? ""} />
+                        <select name="religion" defaultValue={selected.religion ?? ""}>
+                          <option value="">Select Religion</option>
+                          {selected.religion &&
+                            !LIS_RELIGION_OPTIONS.includes(
+                              selected.religion as (typeof LIS_RELIGION_OPTIONS)[number]
+                            ) && (
+                              <option value={selected.religion}>{selected.religion}</option>
+                            )}
+                          {LIS_RELIGION_OPTIONS.map((religion) => (
+                            <option key={religion} value={religion}>
+                              {religion}
+                            </option>
+                          ))}
+                        </select>
                       </label>
+                      <label className={styles.checkboxField}>
+                        <input
+                          type="checkbox"
+                          name="cct_recipient"
+                          value="true"
+                          defaultChecked={selected.cct_recipient === true}
+                        />
+                        <span>
+                          <strong>Conditional Cash Transfer (CCT)</strong>
+                          Is this learner CCT recipient?
+                        </span>
+                      </label>
+                      <label className={styles.checkboxField}>
+                        <input
+                          type="checkbox"
+                          name="is_indigenous_peoples"
+                          value="true"
+                          defaultChecked={selected.is_indigenous_peoples === true}
+                          onChange={(event) => {
+                            const select = event.currentTarget
+                              .closest("form")
+                              ?.querySelector<HTMLSelectElement>(
+                                'select[name="ethnic_group"]'
+                              );
+                            if (select) {
+                              select.disabled = !event.currentTarget.checked;
+                              select.required = event.currentTarget.checked;
+                              if (!event.currentTarget.checked) select.value = "";
+                            }
+                          }}
+                        />
+                        <span>
+                          <strong>Indigenous Peoples</strong>
+                          Is this learner a member of Indigenous Cultural Communities/Indigenous Peoples?
+                        </span>
+                      </label>
+                      <label>
+                        <span>Ethnicity</span>
+                        <select
+                          name="ethnic_group"
+                          defaultValue={selected.ethnic_group ?? ""}
+                          disabled={selected.is_indigenous_peoples !== true}
+                          required={selected.is_indigenous_peoples === true}
+                        >
+                          <option value="">
+                            {selected.is_indigenous_peoples === true
+                              ? "Select Ethnicity"
+                              : "Enable Indigenous Peoples first"}
+                          </option>
+                          {selected.ethnic_group &&
+                            !LIS_ETHNICITY_OPTIONS.includes(
+                              selected.ethnic_group as (typeof LIS_ETHNICITY_OPTIONS)[number]
+                            ) && (
+                              <option value={selected.ethnic_group}>
+                                {selected.ethnic_group}
+                              </option>
+                            )}
+                          {LIS_ETHNICITY_OPTIONS.map((ethnicity) => (
+                            <option key={ethnicity} value={ethnicity}>
+                              {ethnicity}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <datalist id="lis-mother-tongue-options">
+                        {LIS_MOTHER_TONGUE_OPTIONS.map((language) => (
+                          <option key={language} value={language} />
+                        ))}
+                      </datalist>
                       <label>
                         <span>Learning Modality</span>
                         <input name="learning_modality" defaultValue={selected.learning_modality ?? ""} />
