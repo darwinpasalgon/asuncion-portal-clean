@@ -331,9 +331,7 @@ function BackCard({
       <div className={styles.backSectionTitle}>CANCELLATION OF ELIGIBILITY TO TRANSFER</div>
       <div className={styles.cancellationRow}>
         <span>Admitted in:</span>
-        <span className={styles.fillLine} />
         <span>Date:</span>
-        <span className={styles.fillLine} />
       </div>
       <div className={styles.headSignature}>
         <strong>{detail.schoolInformation.school_head_name}</strong>
