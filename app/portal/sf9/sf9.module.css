@@ -166,6 +166,16 @@
 .resetSelectedButton{height:34px;border:1px solid #d8e2e7;border-radius:7px;background:#fff;color:#5a7180;padding:0 10px;display:inline-flex;align-items:center;gap:6px;font-size:.68rem;font-weight:800}
 .currentSelection{margin:9px 0 0;padding:7px 9px;border-radius:7px;background:#f7fafb;color:#69808c;font-size:.65rem}
 .currentSelection strong{color:#2c5b78}
+.inlineEditorPreview{margin-top:10px;border:1px solid #d8e3e9;border-radius:11px;background:#eef2f4;overflow:hidden}
+.inlineEditorPreviewHeader{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 12px;border-bottom:1px solid #d8e3e9;background:#fff}
+.inlineEditorPreviewHeader>div{display:grid;gap:2px}
+.inlineEditorPreviewHeader strong{color:#2b536b;font-size:.72rem}
+.inlineEditorPreviewHeader span{color:#7d8f99;font-size:.62rem;line-height:1.4}
+.previewLearnerName{flex:none;padding:5px 8px;border-radius:6px;background:#f3f8fb;color:#52758a!important;font-weight:800}
+.inlineEditorCanvas{max-width:100%;overflow:auto;padding:14px;min-height:260px}
+.inlineEditorEmpty{min-height:240px;display:grid;place-items:center;align-content:center;gap:7px;padding:24px;text-align:center;color:#788d99}
+.inlineEditorEmpty strong{color:#466779;font-size:.78rem}
+.inlineEditorEmpty span{max-width:480px;font-size:.67rem;line-height:1.5}
 .advancedLayout{margin-top:10px;border:1px solid #e0e8ec;border-radius:9px;background:#fbfdfe;overflow:hidden}
 .advancedLayout summary{cursor:pointer;display:flex;align-items:center;gap:7px;padding:10px 11px;color:#45687b;font-size:.7rem;font-weight:850;list-style:none}
 .advancedLayout summary::-webkit-details-marker{display:none}
@@ -209,6 +219,8 @@
   .toolbarSelect select{width:100%;min-width:0}
   .toolbarCompactField{flex:1 1 76px}
   .toolbarCompactField input{width:100%}
+  .inlineEditorPreviewHeader{align-items:flex-start;flex-direction:column}
+  .previewLearnerName{flex:none}
 }
 @media print{
   @page{size:A4 landscape;margin:0}

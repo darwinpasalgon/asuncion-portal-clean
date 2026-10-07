@@ -260,8 +260,13 @@ export default function Sf9Page() {
     const opening = !layoutEditorOpen;
     setLayoutEditorOpen(opening);
     setLayoutMessage("");
-    if (opening && selectedIds.length === 0 && sectionStudents[0]) {
-      setSelectedIds([sectionStudents[0].id]);
+    if (opening && selectedIds.length === 0) {
+      const sampleStudent = students.find(
+        (student) => student.section_id === selectedSectionId
+      );
+      if (sampleStudent) {
+        setSelectedIds([sampleStudent.id]);
+      }
     }
   }
 
@@ -720,6 +725,55 @@ export default function Sf9Page() {
 
                 <div className={styles.currentSelection}>
                   Editing: <strong>{SF9_BLOCK_LABELS[selectedBlock]}</strong>
+                </div>
+
+                <div className={styles.inlineEditorPreview}>
+                  <div className={styles.inlineEditorPreviewHeader}>
+                    <div>
+                      <strong>Editable Report Card Preview</strong>
+                      <span>
+                        Click any text, table, signature area, or section directly
+                        on the SF9 below.
+                      </span>
+                    </div>
+                    {detail?.cards?.[0] && (
+                      <span className={styles.previewLearnerName}>
+                        Previewing: {detail.cards[0].full_name}
+                      </span>
+                    )}
+                  </div>
+
+                  {selectedIds.length === 0 ? (
+                    <div className={styles.inlineEditorEmpty}>
+                      <MousePointer2 size={28} />
+                      <strong>Select a learner to load the report card.</strong>
+                      <span>
+                        Choose any learner in the section below. The saved layout
+                        will still apply to all learners.
+                      </span>
+                    </div>
+                  ) : loadingDetail || !detail ? (
+                    <div className={styles.inlineEditorEmpty}>
+                      Preparing the editable report card…
+                    </div>
+                  ) : (
+                    <div
+                      className={
+                        styles.inlineEditorCanvas + " " + styles.editorPreviewActive
+                      }
+                    >
+                      <div
+                        className={styles.previewDocumentWrap}
+                        data-selected-block={selectedBlock}
+                        onClickCapture={handlePreviewBlockClick}
+                      >
+                        <Sf9PrintForms
+                          detail={detail}
+                          layoutSettings={layoutSettings}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <details className={styles.advancedLayout}>
