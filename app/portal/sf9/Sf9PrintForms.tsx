@@ -23,6 +23,36 @@ type Attendance = {
   total_absent: number;
 };
 
+export type Sf9FontFamily = "bookman" | "arial" | "times" | "calibri" | "georgia";
+
+export type Sf9BlockId =
+  | "header"
+  | "reportTitle"
+  | "schoolYear"
+  | "learnerInfo"
+  | "parentNote"
+  | "frontSignatures"
+  | "progressTitle"
+  | "gradeTable"
+  | "descriptorTitle"
+  | "descriptorTable"
+  | "attendanceTable"
+  | "comments"
+  | "guardianSignatures"
+  | "transfer"
+  | "cancellation";
+
+export type Sf9BlockStyle = {
+  fontFamily?: Sf9FontFamily;
+  fontPt?: number;
+  bold?: boolean;
+  italic?: boolean;
+  align?: "left" | "center" | "right";
+  lineHeight?: number;
+  offsetXMm?: number;
+  offsetYMm?: number;
+};
+
 export type Sf9LayoutSettings = {
   paper: "A4";
   orientation: "landscape";
@@ -42,6 +72,7 @@ export type Sf9LayoutSettings = {
   frontFontPt: number;
   backFontPt: number;
   lineHeight: number;
+  blockStyles: Partial<Record<Sf9BlockId, Sf9BlockStyle>>;
 };
 
 export const DEFAULT_SF9_LAYOUT: Sf9LayoutSettings = {
@@ -63,7 +94,49 @@ export const DEFAULT_SF9_LAYOUT: Sf9LayoutSettings = {
   frontFontPt: 7.44,
   backFontPt: 6.84,
   lineHeight: 1.02,
+  blockStyles: {},
 };
+
+const SF9_FONT_STACKS: Record<Sf9FontFamily, string> = {
+  bookman: '"Bookman Old Style","Bookman","URW Bookman",serif',
+  arial: 'Arial,Helvetica,sans-serif',
+  times: '"Times New Roman",Times,serif',
+  calibri: 'Calibri,"Segoe UI",Arial,sans-serif',
+  georgia: 'Georgia,serif',
+};
+
+function blockStyle(
+  layout: Sf9LayoutSettings,
+  blockId: Sf9BlockId
+): CSSProperties {
+  const block = layout.blockStyles?.[blockId];
+  if (!block) return {};
+
+  const x = Number(block.offsetXMm ?? 0);
+  const y = Number(block.offsetYMm ?? 0);
+  return {
+    fontFamily: block.fontFamily ? SF9_FONT_STACKS[block.fontFamily] : undefined,
+    fontSize:
+      typeof block.fontPt === "number" && Number.isFinite(block.fontPt)
+        ? `${block.fontPt}pt`
+        : undefined,
+    fontWeight:
+      block.bold === true ? 700 : block.bold === false ? 400 : undefined,
+    fontStyle:
+      block.italic === true
+        ? "italic"
+        : block.italic === false
+          ? "normal"
+          : undefined,
+    textAlign: block.align,
+    lineHeight:
+      typeof block.lineHeight === "number" && Number.isFinite(block.lineHeight)
+        ? block.lineHeight
+        : undefined,
+    transform:
+      x !== 0 || y !== 0 ? `translate(${x}mm, ${y}mm)` : undefined,
+  };
+}
 
 export type Sf9CardData = {
   id: string;
@@ -122,13 +195,19 @@ function padGradeRows(rows: GradeRow[]) {
 function HeaderBlock({
   school,
   schoolYear,
+  layout,
 }: {
   school: Sf9Detail["schoolInformation"];
   schoolYear: string;
+  layout: Sf9LayoutSettings;
 }) {
   return (
     <>
-      <div className={styles.formHeader}>
+      <div
+        className={styles.formHeader}
+        data-sf9-block="header"
+        style={blockStyle(layout, "header")}
+      >
         <img className={styles.depedLogo} src={DEPED_LOGO_DATA_URI} alt="" />
         <div className={styles.headerText}>
           <div>Republic of the Philippines</div>
@@ -143,15 +222,37 @@ function HeaderBlock({
         </div>
         <img className={styles.schoolLogo} src="/school-logo.png" alt="" />
       </div>
-      <div className={styles.reportTitle}>LEARNER&apos;S PERFORMANCE REPORT</div>
-      <div className={styles.schoolYear}>School Year {schoolYear}</div>
+      <div
+        className={styles.reportTitle}
+        data-sf9-block="reportTitle"
+        style={blockStyle(layout, "reportTitle")}
+      >
+        LEARNER&apos;S PERFORMANCE REPORT
+      </div>
+      <div
+        className={styles.schoolYear}
+        data-sf9-block="schoolYear"
+        style={blockStyle(layout, "schoolYear")}
+      >
+        School Year {schoolYear}
+      </div>
     </>
   );
 }
 
-function LearnerIdentity({ card }: { card: Sf9CardData }) {
+function LearnerIdentity({
+  card,
+  layout,
+}: {
+  card: Sf9CardData;
+  layout: Sf9LayoutSettings;
+}) {
   return (
-    <div className={styles.identity}>
+    <div
+      className={styles.identity}
+      data-sf9-block="learnerInfo"
+      style={blockStyle(layout, "learnerInfo")}
+    >
       <div className={styles.identityNameRow}>
         <span>Name:</span>
         <strong>{card.full_name}</strong>
@@ -181,9 +282,11 @@ function LearnerIdentity({ card }: { card: Sf9CardData }) {
 function FrontCard({
   card,
   detail,
+  layout,
 }: {
   card: Sf9CardData;
   detail: Sf9Detail;
+  layout: Sf9LayoutSettings;
 }) {
   const rows = padGradeRows(card.grade_rows);
   return (
@@ -191,11 +294,16 @@ function FrontCard({
       <HeaderBlock
         school={detail.schoolInformation}
         schoolYear={detail.activeYear?.name ?? ""}
+        layout={layout}
       />
 
-      <LearnerIdentity card={card} />
+      <LearnerIdentity card={card} layout={layout} />
 
-      <div className={styles.parentNote}>
+      <div
+        className={styles.parentNote}
+        data-sf9-block="parentNote"
+        style={blockStyle(layout, "parentNote")}
+      >
         <div>Dear Parents,</div>
         <p>
           This Performance Report presents your child&apos;s progress and achievement
@@ -207,7 +315,11 @@ function FrontCard({
         </p>
       </div>
 
-      <div className={styles.signaturesTop}>
+      <div
+        className={styles.signaturesTop}
+        data-sf9-block="frontSignatures"
+        style={blockStyle(layout, "frontSignatures")}
+      >
         <div>
           <strong>{detail.schoolInformation.school_head_name}</strong>
           <span>{detail.schoolInformation.school_head_designation || "School Head"}</span>
@@ -218,8 +330,18 @@ function FrontCard({
         </div>
       </div>
 
-      <div className={styles.progressTitle}>LEARNING PROGRESS AND ACHIEVEMENT</div>
-      <table className={styles.gradeTable}>
+      <div
+        className={styles.progressTitle}
+        data-sf9-block="progressTitle"
+        style={blockStyle(layout, "progressTitle")}
+      >
+        LEARNING PROGRESS AND ACHIEVEMENT
+      </div>
+      <table
+        className={styles.gradeTable}
+        data-sf9-block="gradeTable"
+        style={blockStyle(layout, "gradeTable")}
+      >
         <thead>
           <tr>
             <th rowSpan={2} className={styles.learningAreaCol}>Learning Areas</th>
@@ -258,8 +380,18 @@ function FrontCard({
         </tbody>
       </table>
 
-      <div className={styles.descriptorTitle}>PERFORMANCE DESCRIPTORS</div>
-      <table className={styles.descriptorTable}>
+      <div
+        className={styles.descriptorTitle}
+        data-sf9-block="descriptorTitle"
+        style={blockStyle(layout, "descriptorTitle")}
+      >
+        PERFORMANCE DESCRIPTORS
+      </div>
+      <table
+        className={styles.descriptorTable}
+        data-sf9-block="descriptorTable"
+        style={blockStyle(layout, "descriptorTable")}
+      >
         <thead>
           <tr>
             <th>Grading Scale</th>
@@ -279,7 +411,13 @@ function FrontCard({
   );
 }
 
-function AttendanceTable({ attendance }: { attendance: Attendance }) {
+function AttendanceTable({
+  attendance,
+  layout,
+}: {
+  attendance: Attendance;
+  layout: Sf9LayoutSettings;
+}) {
   const months = attendance.months;
   const row = (
     label: string,
@@ -300,7 +438,11 @@ function AttendanceTable({ attendance }: { attendance: Attendance }) {
   );
 
   return (
-    <table className={styles.attendanceTable}>
+    <table
+      className={styles.attendanceTable}
+      data-sf9-block="attendanceTable"
+      style={blockStyle(layout, "attendanceTable")}
+    >
       <thead>
         <tr>
           <th>Month</th>
@@ -320,16 +462,28 @@ function AttendanceTable({ attendance }: { attendance: Attendance }) {
 function BackCard({
   card,
   detail,
+  layout,
 }: {
   card: Sf9CardData;
   detail: Sf9Detail;
+  layout: Sf9LayoutSettings;
 }) {
   return (
     <article className={styles.cardBack}>
-      <AttendanceTable attendance={card.attendance} />
+      <AttendanceTable attendance={card.attendance} layout={layout} />
 
-      <div className={styles.backSectionTitle}>TEACHER&apos;S COMMENTS / REMARKS</div>
-      <div className={styles.commentGrid}>
+      <div
+        className={styles.backSectionTitle}
+        data-sf9-block="comments"
+        style={blockStyle(layout, "comments")}
+      >
+        TEACHER&apos;S COMMENTS / REMARKS
+      </div>
+      <div
+        className={styles.commentGrid}
+        data-sf9-block="comments"
+        style={blockStyle(layout, "comments")}
+      >
         {[1, 2, 3].map((term, index) => (
           <div key={term} className={styles.commentBlock}>
             <strong>Term {term}</strong>
@@ -338,8 +492,18 @@ function BackCard({
         ))}
       </div>
 
-      <div className={styles.backSectionTitle}>PARENT/S GUARDIAN&apos;S SIGNATURE</div>
-      <div className={styles.parentSignatureRows}>
+      <div
+        className={styles.backSectionTitle}
+        data-sf9-block="guardianSignatures"
+        style={blockStyle(layout, "guardianSignatures")}
+      >
+        PARENT/S GUARDIAN&apos;S SIGNATURE
+      </div>
+      <div
+        className={styles.parentSignatureRows}
+        data-sf9-block="guardianSignatures"
+        style={blockStyle(layout, "guardianSignatures")}
+      >
         {[1, 2, 3].map((term) => (
           <div key={term}>
             <strong>Term {term}</strong><span />
@@ -347,21 +511,43 @@ function BackCard({
         ))}
       </div>
 
-      <div className={styles.backSectionTitle}>CERTIFICATE OF TRANSFER</div>
-      <div className={styles.transferText}>
+      <div
+        className={styles.backSectionTitle}
+        data-sf9-block="transfer"
+        style={blockStyle(layout, "transfer")}
+      >
+        CERTIFICATE OF TRANSFER
+      </div>
+      <div
+        className={styles.transferText}
+        data-sf9-block="transfer"
+        style={blockStyle(layout, "transfer")}
+      >
         This is to certify that the above-named learner has satisfactorily completed the
         requirements for the grade level indicated.
       </div>
-      <div className={styles.transferField}>
+      <div
+        className={styles.transferField}
+        data-sf9-block="transfer"
+        style={blockStyle(layout, "transfer")}
+      >
         <span>Admitted to Grade:</span>
         <span className={styles.fillLine} />
       </div>
-      <div className={styles.transferField}>
+      <div
+        className={styles.transferField}
+        data-sf9-block="transfer"
+        style={blockStyle(layout, "transfer")}
+      >
         <span>Eligible for Admission to Grade:</span>
         <span className={styles.fillLine} />
       </div>
 
-      <div className={styles.approvedRow}>
+      <div
+        className={styles.approvedRow}
+        data-sf9-block="transfer"
+        style={blockStyle(layout, "transfer")}
+      >
         <span>Approved:</span>
         <div>
           <strong>{detail.adviser.full_name || ""}</strong>
@@ -369,17 +555,35 @@ function BackCard({
         </div>
       </div>
 
-      <div className={styles.headSignature}>
+      <div
+        className={styles.headSignature}
+        data-sf9-block="transfer"
+        style={blockStyle(layout, "transfer")}
+      >
         <strong>{detail.schoolInformation.school_head_name}</strong>
         <span>{detail.schoolInformation.school_head_designation || "School Head"}</span>
       </div>
 
-      <div className={styles.backSectionTitle}>CANCELLATION OF ELIGIBILITY TO TRANSFER</div>
-      <div className={styles.cancellationRow}>
+      <div
+        className={styles.backSectionTitle}
+        data-sf9-block="cancellation"
+        style={blockStyle(layout, "cancellation")}
+      >
+        CANCELLATION OF ELIGIBILITY TO TRANSFER
+      </div>
+      <div
+        className={styles.cancellationRow}
+        data-sf9-block="cancellation"
+        style={blockStyle(layout, "cancellation")}
+      >
         <span>Admitted in:</span>
         <span>Date:</span>
       </div>
-      <div className={styles.headSignature}>
+      <div
+        className={styles.headSignature}
+        data-sf9-block="cancellation"
+        style={blockStyle(layout, "cancellation")}
+      >
         <strong>{detail.schoolInformation.school_head_name}</strong>
         <span>{detail.schoolInformation.school_head_designation || "School Head"}</span>
       </div>
@@ -424,21 +628,21 @@ export function Sf9PrintForms({
     <div className={styles.printDocument} style={layoutStyle}>
       <section className={styles.printSheet + " " + styles.frontSheet}>
         <div className={styles.halfSheet}>
-          {first ? <FrontCard card={first} detail={detail} /> : <EmptyHalf />}
+          {first ? <FrontCard card={first} detail={detail} layout={layout} /> : <EmptyHalf />}
         </div>
         <div className={styles.cutLine} />
         <div className={styles.halfSheet}>
-          {second ? <FrontCard card={second} detail={detail} /> : <EmptyHalf />}
+          {second ? <FrontCard card={second} detail={detail} layout={layout} /> : <EmptyHalf />}
         </div>
       </section>
 
       <section className={styles.printSheet + " " + styles.backSheet}>
         <div className={styles.halfSheet}>
-          {first ? <BackCard card={first} detail={detail} /> : <EmptyHalf />}
+          {first ? <BackCard card={first} detail={detail} layout={layout} /> : <EmptyHalf />}
         </div>
         <div className={styles.cutLine} />
         <div className={styles.halfSheet}>
-          {second ? <BackCard card={second} detail={detail} /> : <EmptyHalf />}
+          {second ? <BackCard card={second} detail={detail} layout={layout} /> : <EmptyHalf />}
         </div>
       </section>
     </div>
