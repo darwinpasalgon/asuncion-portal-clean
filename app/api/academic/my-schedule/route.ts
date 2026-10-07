@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
         today
       )}&ends_on=gte.${encodeURIComponent(
         today
-      )}&select=id,rotation_block,group_label,section_id,phase_no,starts_on,ends_on,major_code,instructor_name,days_of_week,start_time,end_time&order=start_time.asc`,
+      )}&select=id,rotation_block,group_label,section_id,phase_no,starts_on,ends_on,major_code,teacher_id,instructor_name,days_of_week,start_time,end_time&order=start_time.asc`,
       token
     ).catch(() => []),
   ]);
@@ -276,12 +276,20 @@ export async function GET(request: NextRequest) {
       }
     );
 
-  const grade7TveEntries = (grade7TveRotations ?? []).flatMap(
+  const visibleGrade7TveRotations = (grade7TveRotations ?? []).filter(
+    (rotation: { teacher_id: string | null; section_id: string | null }) =>
+      profile.role === "teacher"
+        ? rotation.teacher_id === userId
+        : Boolean(studentSectionId && rotation.section_id === studentSectionId)
+  );
+
+  const grade7TveEntries = visibleGrade7TveRotations.flatMap(
     (rotation: {
       id: string;
       group_label: string;
       section_id: string | null;
       major_code: string;
+      teacher_id: string | null;
       instructor_name: string;
       days_of_week: number[];
       start_time: string;
