@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { hasAdminPermission } from "@/lib/admin-access";
+import { getScopedAdminAccess, hasAdminPermission } from "@/lib/admin-access";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
 function headers(token: string) {
@@ -28,6 +28,10 @@ async function isAdmin(token: string) {
   return hasAdminPermission(token, "attendance.manage");
 }
 
+async function attendanceAccess(token: string) {
+  return getScopedAdminAccess(token, "attendance.manage");
+}
+
 async function getRows(path: string, token: string) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     headers: headers(token),
@@ -51,59 +55,87 @@ function validDate(value: string) {
 
 export async function GET(request: NextRequest) {
   const token = tokenFrom(request);
-  if (!token || !(await isAdmin(token))) {
+  if (!token) {
     return NextResponse.json({ error: "Administrator access required." }, { status: 403 });
   }
 
+  const access = await attendanceAccess(token);
+  if (!access.allowed) {
+    return NextResponse.json({ error: "Attendance administration access required." }, { status: 403 });
+  }
+
   const date = request.nextUrl.searchParams.get("date") ?? "";
+  const gradeFilter =
+    access.gradeLevel !== null
+      ? `&grade_level=eq.${encodeURIComponent(String(access.gradeLevel))}`
+      : "";
 
   try {
     const year = await activeYear(token);
-    const [grades, sections, teachers, advisers, enrollments, students, attendance, exclusions] =
-      await Promise.all([
-        getRows("grade_levels?select=grade_level,label,sort_order&order=sort_order.asc", token),
-        getRows("sections?is_active=eq.true&select=id,grade_level,name&order=grade_level.asc,name.asc", token),
-        getRows(
-          "profiles?role=eq.teacher&account_status=eq.active&select=id,full_name,email&order=full_name.asc",
-          token
-        ),
-        year
-          ? getRows(
-              `section_advisers?school_year_id=eq.${encodeURIComponent(
-                year.id
-              )}&is_active=eq.true&select=id,school_year_id,section_id,teacher_id,is_active&order=assigned_at.asc`,
-              token
-            )
-          : Promise.resolve([]),
-        year
-          ? getRows(
-              `student_enrollments?school_year_id=eq.${encodeURIComponent(
-                year.id
-              )}&enrollment_status=eq.active&select=id,student_id,grade_level,section_id`,
-              token
-            )
-          : Promise.resolve([]),
-        getRows(
-          "profiles?role=eq.student&account_status=eq.active&select=id,full_name,lrn&order=full_name.asc",
-          token
-        ),
-        year && validDate(date)
-          ? getRows(
-              `daily_attendance?school_year_id=eq.${encodeURIComponent(
-                year.id
-              )}&attendance_date=eq.${date}&select=id,student_id,section_id,attendance_date,status,note,recorded_by,updated_at&order=updated_at.asc`,
-              token
-            )
-          : Promise.resolve([]),
-        year && validDate(date)
-          ? getRows(
-              `attendance_day_exclusions?school_year_id=eq.${encodeURIComponent(
-                year.id
-              )}&attendance_date=eq.${date}&select=id,section_id,attendance_date,exclusion_type,reason`,
-              token
-            )
-          : Promise.resolve([]),
-      ]);
+    const [
+      grades,
+      sections,
+      teachers,
+      advisers,
+      enrollments,
+      students,
+      attendance,
+      exclusions,
+      learnerInformation,
+    ] = await Promise.all([
+      getRows(
+        `grade_levels?select=grade_level,label,sort_order${gradeFilter}&order=sort_order.asc`,
+        token
+      ),
+      getRows(
+        `sections?is_active=eq.true&select=id,grade_level,name${gradeFilter}&order=grade_level.asc,name.asc`,
+        token
+      ),
+      getRows(
+        "profiles?role=eq.teacher&account_status=eq.active&select=id,full_name,email&order=full_name.asc",
+        token
+      ),
+      year
+        ? getRows(
+            `section_advisers?school_year_id=eq.${encodeURIComponent(
+              year.id
+            )}&is_active=eq.true&select=id,school_year_id,section_id,teacher_id,is_active&order=assigned_at.asc`,
+            token
+          )
+        : Promise.resolve([]),
+      year
+        ? getRows(
+            `student_enrollments?school_year_id=eq.${encodeURIComponent(
+              year.id
+            )}&enrollment_status=eq.active${gradeFilter}&select=id,student_id,grade_level,section_id`,
+            token
+          )
+        : Promise.resolve([]),
+      getRows(
+        "profiles?role=eq.student&account_status=eq.active&select=id,full_name,lrn&order=full_name.asc",
+        token
+      ),
+      year && validDate(date)
+        ? getRows(
+            `daily_attendance?school_year_id=eq.${encodeURIComponent(
+              year.id
+            )}&attendance_date=eq.${date}&select=id,student_id,section_id,attendance_date,status,note,recorded_by,updated_at&order=updated_at.asc`,
+            token
+          )
+        : Promise.resolve([]),
+      year && validDate(date)
+        ? getRows(
+            `attendance_day_exclusions?school_year_id=eq.${encodeURIComponent(
+              year.id
+            )}&attendance_date=eq.${date}&select=id,section_id,attendance_date,exclusion_type,reason`,
+            token
+          )
+        : Promise.resolve([]),
+      getRows(
+        "learner_information?select=student_id,sex,religion",
+        token
+      ),
+    ]);
 
     return NextResponse.json({
       activeYear: year,
@@ -115,7 +147,10 @@ export async function GET(request: NextRequest) {
       students,
       attendance,
       exclusions,
+      learnerInformation,
       date: validDate(date) ? date : null,
+      scopeGradeLevel: access.gradeLevel,
+      readOnly: access.gradeLevelHead,
     });
   } catch {
     return NextResponse.json(
