@@ -28,59 +28,18 @@ type Learner = {
   name_extension: string | null;
   sex: string | null;
   birth_date: string | null;
-  guardian_last_name: string | null;
-  guardian_first_name: string | null;
-  guardian_middle_name: string | null;
-  guardian_no_middle_name: boolean | null;
-  guardian_name_extension: string | null;
-  guardian_name: string | null;
-  guardian_relationship: string | null;
-  guardian_contact_number: string | null;
-
-  mother_last_name: string | null;
-  mother_first_name: string | null;
-  mother_middle_name: string | null;
-  mother_no_middle_name: boolean | null;
-  mother_name_extension: string | null;
-  mother_maiden_reason: string | null;
-  mother_maiden_name: string | null;
-
-  father_last_name: string | null;
-  father_first_name: string | null;
-  father_middle_name: string | null;
-  father_no_middle_name: boolean | null;
-  father_name_extension: string | null;
-  father_name: string | null;
-
   mother_tongue: string | null;
-  mother_tongue_secondary: string | null;
-  mother_tongue_tertiary: string | null;
-  is_indigenous_peoples: boolean | null;
   ethnic_group: string | null;
-  ethnicity_secondary: string | null;
   religion: string | null;
-  learner_email: string | null;
-
   address_house_street_purok: string | null;
   address_barangay: string | null;
   address_municipality_city: string | null;
   address_province: string | null;
-  address_zip_code: string | null;
-
-  permanent_same_as_current: boolean | null;
-  permanent_address_house_street_purok: string | null;
-  permanent_address_barangay: string | null;
-  permanent_address_municipality_city: string | null;
-  permanent_address_province: string | null;
-  permanent_address_zip_code: string | null;
-  permanent_address_other_barangay: string | null;
-
-  citizenship: string | null;
-  cct_recipient: boolean | null;
-  cct_household_id: string | null;
-  has_special_educational_needs: boolean | null;
-  lsen_type: string | null;
-  vaccinated_covid19: boolean | null;
+  father_name: string | null;
+  mother_maiden_name: string | null;
+  guardian_name: string | null;
+  guardian_relationship: string | null;
+  guardian_contact_number: string | null;
   learning_modality: string | null;
   remarks: string | null;
   grade_level: number;
@@ -104,57 +63,6 @@ function displayName(learner: Learner) {
     }${learner.name_extension ? ` ${learner.name_extension}` : ""}`;
   }
   return learner.full_name;
-}
-
-const RELIGION_OPTIONS = [
-  "Buddhism",
-  "Christianity",
-  "Hinduism",
-  "Indigenous Religion",
-  "Islam",
-  "Judaism",
-  "No Religion",
-  "Not disclosed",
-  "Others",
-  "Sikhism",
-  "Taoism",
-];
-
-const LEARNING_MODALITIES = [
-  "Modular (print)",
-  "Modular Digital",
-  "Online",
-  "Educational TV",
-  "Radio-based Instruction",
-  "Homeschooling",
-  "Blended",
-  "Face to Face",
-];
-
-const LSEN_TYPES = [
-  "Visual Impairment",
-  "Hearing Impairment",
-  "Learning Disability",
-  "Intellectual Disability",
-  "Autism Spectrum Disorder",
-  "Emotional-Behavioral Disorder",
-  "Orthopedic/ Physical Handicap",
-  "Speech / Language Disorder",
-  "Cerebral Palsy",
-  "Special Health Problem/Chronic Disease (eg Cancer)",
-  "Multiple Disabilities",
-  "Difficulty in Seeing",
-  "Difficulty in Hearing",
-  "Difficulty in Basic Learning and Applying Knowledge",
-  "Difficulty in Remembering, Concentrating, Paying Attention and Understanding",
-  "Difficulty in Applying Adaptive Skills",
-  "Difficulty in Displaying Inter-Personal Behavior",
-  "Difficulty in Mobility (Walking, Climbing and Grasping)",
-  "Difficulty in Communicating",
-];
-
-function booleanDefault(value: boolean | null) {
-  return value === true ? "true" : value === false ? "false" : "";
 }
 
 export default function MyStudentsPage() {
@@ -270,50 +178,18 @@ export default function MyStudentsPage() {
       "name_extension",
       "sex",
       "birth_date",
-      "guardian_last_name",
-      "guardian_first_name",
-      "guardian_middle_name",
-      "guardian_no_middle_name",
-      "guardian_name_extension",
-      "guardian_relationship",
-      "guardian_contact_number",
-      "mother_last_name",
-      "mother_first_name",
-      "mother_middle_name",
-      "mother_no_middle_name",
-      "mother_name_extension",
-      "mother_maiden_reason",
-      "father_last_name",
-      "father_first_name",
-      "father_middle_name",
-      "father_no_middle_name",
-      "father_name_extension",
       "mother_tongue",
-      "mother_tongue_secondary",
-      "mother_tongue_tertiary",
-      "is_indigenous_peoples",
       "ethnic_group",
-      "ethnicity_secondary",
       "religion",
-      "learner_email",
       "address_house_street_purok",
       "address_barangay",
       "address_municipality_city",
       "address_province",
-      "address_zip_code",
-      "permanent_same_as_current",
-      "permanent_address_house_street_purok",
-      "permanent_address_barangay",
-      "permanent_address_municipality_city",
-      "permanent_address_province",
-      "permanent_address_zip_code",
-      "permanent_address_other_barangay",
-      "citizenship",
-      "cct_recipient",
-      "cct_household_id",
-      "has_special_educational_needs",
-      "lsen_type",
-      "vaccinated_covid19",
+      "father_name",
+      "mother_maiden_name",
+      "guardian_name",
+      "guardian_relationship",
+      "guardian_contact_number",
       "learning_modality",
       "remarks",
     ];
@@ -321,56 +197,6 @@ export default function MyStudentsPage() {
     const data = Object.fromEntries(
       fields.map((field) => [field, String(form.get(field) ?? "")])
     );
-
-    const hasStructuredGuardian = [
-      data.guardian_last_name,
-      data.guardian_first_name,
-      data.guardian_middle_name,
-      data.guardian_name_extension,
-    ].some((value) => String(value ?? "").trim());
-    if (!hasStructuredGuardian && selected.guardian_name) {
-      for (const field of [
-        "guardian_last_name",
-        "guardian_first_name",
-        "guardian_middle_name",
-        "guardian_no_middle_name",
-        "guardian_name_extension",
-      ]) delete data[field];
-    }
-
-    const hasStructuredMother = [
-      data.mother_last_name,
-      data.mother_first_name,
-      data.mother_middle_name,
-      data.mother_name_extension,
-      data.mother_maiden_reason,
-    ].some((value) => String(value ?? "").trim());
-    if (!hasStructuredMother && selected.mother_maiden_name) {
-      for (const field of [
-        "mother_last_name",
-        "mother_first_name",
-        "mother_middle_name",
-        "mother_no_middle_name",
-        "mother_name_extension",
-        "mother_maiden_reason",
-      ]) delete data[field];
-    }
-
-    const hasStructuredFather = [
-      data.father_last_name,
-      data.father_first_name,
-      data.father_middle_name,
-      data.father_name_extension,
-    ].some((value) => String(value ?? "").trim());
-    if (!hasStructuredFather && selected.father_name) {
-      for (const field of [
-        "father_last_name",
-        "father_first_name",
-        "father_middle_name",
-        "father_no_middle_name",
-        "father_name_extension",
-      ]) delete data[field];
-    }
 
     try {
       const infoResponse = await fetch("/api/academic/adviser-students", {
@@ -588,167 +414,122 @@ export default function MyStudentsPage() {
 
                   <section className={styles.formSection}>
                     <div className={styles.sectionHeading}>
-                      <h3>Learner Identity & Profile</h3>
-                      <p>Official identity plus the language, ethnicity, religion, email, and modality fields patterned after DepEd LIS.</p>
+                      <h3>Student Information</h3>
+                      <p>SF1 identity and learner profile fields.</p>
                     </div>
                     <div className={styles.formGrid}>
-                      <label><span>Last Name</span><input name="last_name" defaultValue={selected.last_name ?? ""} required /></label>
-                      <label><span>First Name</span><input name="first_name" defaultValue={selected.first_name ?? ""} required /></label>
-                      <label><span>Middle Name</span><input name="middle_name" defaultValue={selected.middle_name ?? ""} /></label>
-                      <label><span>Name Extension</span><input name="name_extension" defaultValue={selected.name_extension ?? ""} /></label>
+                      <label>
+                        <span>Last Name</span>
+                        <input name="last_name" defaultValue={selected.last_name ?? ""} required />
+                      </label>
+                      <label>
+                        <span>First Name</span>
+                        <input name="first_name" defaultValue={selected.first_name ?? ""} required />
+                      </label>
+                      <label>
+                        <span>Middle Name</span>
+                        <input name="middle_name" defaultValue={selected.middle_name ?? ""} />
+                      </label>
+                      <label>
+                        <span>Name Extension</span>
+                        <input name="name_extension" defaultValue={selected.name_extension ?? ""} />
+                      </label>
                       <label>
                         <span>Sex</span>
                         <select name="sex" defaultValue={selected.sex ?? ""} required>
-                          <option value="">Select</option><option value="M">Male</option><option value="F">Female</option>
+                          <option value="">Select</option>
+                          <option value="M">Male</option>
+                          <option value="F">Female</option>
                         </select>
                       </label>
-                      <label><span>Birth Date</span><input type="date" name="birth_date" defaultValue={selected.birth_date ?? ""} /></label>
-                      <label><span>Mother Tongue</span><input name="mother_tongue" defaultValue={selected.mother_tongue ?? ""} /></label>
-                      <label><span>Other Spoken Language 1</span><input name="mother_tongue_secondary" defaultValue={selected.mother_tongue_secondary ?? ""} /></label>
-                      <label><span>Other Spoken Language 2</span><input name="mother_tongue_tertiary" defaultValue={selected.mother_tongue_tertiary ?? ""} /></label>
                       <label>
-                        <span>Indigenous Peoples (ICC/IP)</span>
-                        <select name="is_indigenous_peoples" defaultValue={booleanDefault(selected.is_indigenous_peoples)}>
-                          <option value="">Not Recorded</option><option value="true">Yes</option><option value="false">No</option>
-                        </select>
+                        <span>Birth Date</span>
+                        <input type="date" name="birth_date" defaultValue={selected.birth_date ?? ""} />
                       </label>
-                      <label><span>Primary Ethnicity</span><input name="ethnic_group" defaultValue={selected.ethnic_group ?? ""} /></label>
-                      <label><span>Other Ethnicity</span><input name="ethnicity_secondary" defaultValue={selected.ethnicity_secondary ?? ""} /></label>
+                      <label>
+                        <span>Mother Tongue</span>
+                        <input name="mother_tongue" defaultValue={selected.mother_tongue ?? ""} />
+                      </label>
+                      <label>
+                        <span>Ethnic Group</span>
+                        <input name="ethnic_group" defaultValue={selected.ethnic_group ?? ""} />
+                      </label>
                       <label>
                         <span>Religion</span>
-                        <select name="religion" defaultValue={selected.religion ?? ""}>
-                          <option value="">Select Religion</option>
-                          {selected.religion && !RELIGION_OPTIONS.includes(selected.religion) && <option value={selected.religion}>{selected.religion}</option>}
-                          {RELIGION_OPTIONS.map((value)=><option key={value} value={value}>{value}</option>)}
-                        </select>
+                        <input name="religion" defaultValue={selected.religion ?? ""} />
                       </label>
-                      <label><span>Learner Email</span><input type="email" name="learner_email" defaultValue={selected.learner_email ?? ""} /></label>
                       <label>
-                        <span>Actual Modality</span>
-                        <select name="learning_modality" defaultValue={selected.learning_modality ?? ""}>
-                          <option value="">Select Actual Modality</option>
-                          {selected.learning_modality && !LEARNING_MODALITIES.includes(selected.learning_modality) && <option value={selected.learning_modality}>{selected.learning_modality}</option>}
-                          {LEARNING_MODALITIES.map((value)=><option key={value} value={value}>{value}</option>)}
-                        </select>
+                        <span>Learning Modality</span>
+                        <input name="learning_modality" defaultValue={selected.learning_modality ?? ""} />
                       </label>
                     </div>
                   </section>
 
                   <section className={styles.formSection}>
                     <div className={styles.sectionHeading}>
-                      <h3>Current & Permanent Residence</h3>
-                      <p>Current and permanent address fields patterned after the LIS Update Profile page.</p>
+                      <h3>Address</h3>
+                      <p>Current learner address from the school record.</p>
                     </div>
                     <div className={styles.formGrid}>
-                      <label className={styles.wide}><span>Current House / Street / Purok</span><input name="address_house_street_purok" defaultValue={selected.address_house_street_purok ?? ""} /></label>
-                      <label><span>Current Province</span><input name="address_province" defaultValue={selected.address_province ?? ""} /></label>
-                      <label><span>Current Municipality / City</span><input name="address_municipality_city" defaultValue={selected.address_municipality_city ?? ""} /></label>
-                      <label><span>Current Zip Code</span><input name="address_zip_code" defaultValue={selected.address_zip_code ?? ""} /></label>
-                      <label><span>Current Barangay</span><input name="address_barangay" defaultValue={selected.address_barangay ?? ""} /></label>
-                      <label>
-                        <span>Permanent Address</span>
-                        <select name="permanent_same_as_current" defaultValue={booleanDefault(selected.permanent_same_as_current)}>
-                          <option value="">Not Recorded</option><option value="true">Same as Current Address</option><option value="false">Different Address</option>
-                        </select>
-                      </label>
-                      <label className={styles.wide}><span>Permanent House / Street / Purok</span><input name="permanent_address_house_street_purok" defaultValue={selected.permanent_address_house_street_purok ?? ""} /></label>
-                      <label><span>Permanent Province</span><input name="permanent_address_province" defaultValue={selected.permanent_address_province ?? ""} /></label>
-                      <label><span>Permanent Municipality / City</span><input name="permanent_address_municipality_city" defaultValue={selected.permanent_address_municipality_city ?? ""} /></label>
-                      <label><span>Permanent Zip Code</span><input name="permanent_address_zip_code" defaultValue={selected.permanent_address_zip_code ?? ""} /></label>
-                      <label><span>Permanent Barangay</span><input name="permanent_address_barangay" defaultValue={selected.permanent_address_barangay ?? ""} /></label>
-                      <label><span>Other Barangay</span><input name="permanent_address_other_barangay" defaultValue={selected.permanent_address_other_barangay ?? ""} /></label>
-                    </div>
-                  </section>
-
-                  <section className={styles.formSection}>
-                    <div className={styles.sectionHeading}>
-                      <h3>Guardian, Mother & Father</h3>
-                      <p>Structured LIS-style parent and guardian names. Existing imported full names are shown for reference.</p>
-                    </div>
-                    <div className={styles.formGrid}>
-                      <label><span>Guardian Last Name</span><input name="guardian_last_name" defaultValue={selected.guardian_last_name ?? ""} /></label>
-                      <label><span>Guardian First Name</span><input name="guardian_first_name" defaultValue={selected.guardian_first_name ?? ""} /></label>
-                      <label><span>Guardian Middle Name</span><input name="guardian_middle_name" defaultValue={selected.guardian_middle_name ?? ""} /></label>
-                      <label>
-                        <span>Guardian Middle Name Status</span>
-                        <select name="guardian_no_middle_name" defaultValue={booleanDefault(selected.guardian_no_middle_name)}>
-                          <option value="">Not Recorded</option><option value="false">Has / May Have Middle Name</option><option value="true">No Middle Name</option>
-                        </select>
-                      </label>
-                      <label><span>Guardian Extension</span><input name="guardian_name_extension" defaultValue={selected.guardian_name_extension ?? ""} /></label>
-                      <label>
-                        <span>Guardian Relationship</span>
-                        <select name="guardian_relationship" defaultValue={selected.guardian_relationship ?? ""}>
-                          <option value="">Select</option><option value="Parent">Parent</option><option value="Relative">Relative</option><option value="Non-relative">Non-relative</option>
-                        </select>
-                      </label>
-                      <label><span>Guardian Contact</span><input name="guardian_contact_number" defaultValue={selected.guardian_contact_number ?? ""} /></label>
-                      <label className={styles.wide}><span>Imported Guardian Name</span><input value={selected.guardian_name ?? "Not recorded"} readOnly /></label>
-
-                      <label><span>Mother Last Name</span><input name="mother_last_name" defaultValue={selected.mother_last_name ?? ""} /></label>
-                      <label><span>Mother First Name</span><input name="mother_first_name" defaultValue={selected.mother_first_name ?? ""} /></label>
-                      <label><span>Mother Middle Name</span><input name="mother_middle_name" defaultValue={selected.mother_middle_name ?? ""} /></label>
-                      <label>
-                        <span>Mother Middle Name Status</span>
-                        <select name="mother_no_middle_name" defaultValue={booleanDefault(selected.mother_no_middle_name)}>
-                          <option value="">Not Recorded</option><option value="false">Has / May Have Middle Name</option><option value="true">No Middle Name</option>
-                        </select>
-                      </label>
-                      <label><span>Mother Extension</span><input name="mother_name_extension" defaultValue={selected.mother_name_extension ?? ""} /></label>
-                      <label>
-                        <span>Reason if Mother&apos;s Maiden Name Not Specified</span>
-                        <select name="mother_maiden_reason" defaultValue={selected.mother_maiden_reason ?? ""}>
-                          <option value="">Not Applicable</option><option value="No mother">No mother</option><option value="Not disclosed">Not disclosed</option>
-                        </select>
-                      </label>
-                      <label className={styles.wide}><span>Imported Mother&apos;s Maiden Name</span><input value={selected.mother_maiden_name ?? "Not recorded"} readOnly /></label>
-
-                      <label><span>Father Last Name</span><input name="father_last_name" defaultValue={selected.father_last_name ?? ""} /></label>
-                      <label><span>Father First Name</span><input name="father_first_name" defaultValue={selected.father_first_name ?? ""} /></label>
-                      <label><span>Father Middle Name</span><input name="father_middle_name" defaultValue={selected.father_middle_name ?? ""} /></label>
-                      <label>
-                        <span>Father Middle Name Status</span>
-                        <select name="father_no_middle_name" defaultValue={booleanDefault(selected.father_no_middle_name)}>
-                          <option value="">Not Recorded</option><option value="false">Has / May Have Middle Name</option><option value="true">No Middle Name</option>
-                        </select>
-                      </label>
-                      <label><span>Father Extension</span><input name="father_name_extension" defaultValue={selected.father_name_extension ?? ""} /></label>
-                      <label className={styles.wide}><span>Imported Father Name</span><input value={selected.father_name ?? "Not recorded"} readOnly /></label>
-                    </div>
-                  </section>
-
-                  <section className={styles.formSection}>
-                    <div className={styles.sectionHeading}>
-                      <h3>Citizenship, 4Ps & Learner Needs</h3>
-                      <p>Additional LIS-style learner profile information.</p>
-                    </div>
-                    <div className={styles.formGrid}>
-                      <label><span>Country of Citizenship</span><input name="citizenship" defaultValue={selected.citizenship ?? ""} placeholder="e.g. Philippines" /></label>
-                      <label>
-                        <span>4Ps / CCT Recipient</span>
-                        <select name="cct_recipient" defaultValue={booleanDefault(selected.cct_recipient)}>
-                          <option value="">Not Recorded</option><option value="true">Yes</option><option value="false">No</option>
-                        </select>
-                      </label>
-                      <label><span>4Ps Household ID</span><input name="cct_household_id" defaultValue={selected.cct_household_id ?? ""} minLength={12} maxLength={21} /></label>
-                      <label>
-                        <span>Special Educational Needs</span>
-                        <select name="has_special_educational_needs" defaultValue={booleanDefault(selected.has_special_educational_needs)}>
-                          <option value="">Not Recorded</option><option value="true">Yes</option><option value="false">No</option>
-                        </select>
-                      </label>
                       <label className={styles.wide}>
-                        <span>LSEN Type</span>
-                        <select name="lsen_type" defaultValue={selected.lsen_type ?? ""}>
-                          <option value="">Select LSEN Type</option>
-                          {LSEN_TYPES.map((value)=><option key={value} value={value}>{value}</option>)}
-                        </select>
+                        <span>House / Street / Purok</span>
+                        <input
+                          name="address_house_street_purok"
+                          defaultValue={selected.address_house_street_purok ?? ""}
+                        />
                       </label>
                       <label>
-                        <span>COVID-19 Vaccination</span>
-                        <select name="vaccinated_covid19" defaultValue={booleanDefault(selected.vaccinated_covid19)}>
-                          <option value="">Not Recorded</option><option value="true">Yes</option><option value="false">No</option>
-                        </select>
+                        <span>Barangay</span>
+                        <input name="address_barangay" defaultValue={selected.address_barangay ?? ""} />
+                      </label>
+                      <label>
+                        <span>Municipality / City</span>
+                        <input
+                          name="address_municipality_city"
+                          defaultValue={selected.address_municipality_city ?? ""}
+                        />
+                      </label>
+                      <label>
+                        <span>Province</span>
+                        <input name="address_province" defaultValue={selected.address_province ?? ""} />
+                      </label>
+                    </div>
+                  </section>
+
+                  <section className={styles.formSection}>
+                    <div className={styles.sectionHeading}>
+                      <h3>Parent & Guardian Information</h3>
+                      <p>Family and emergency-contact information.</p>
+                    </div>
+                    <div className={styles.formGrid}>
+                      <label>
+                        <span>Father's Name</span>
+                        <input name="father_name" defaultValue={selected.father_name ?? ""} />
+                      </label>
+                      <label>
+                        <span>Mother's Maiden Name</span>
+                        <input
+                          name="mother_maiden_name"
+                          defaultValue={selected.mother_maiden_name ?? ""}
+                        />
+                      </label>
+                      <label>
+                        <span>Guardian</span>
+                        <input name="guardian_name" defaultValue={selected.guardian_name ?? ""} />
+                      </label>
+                      <label>
+                        <span>Relationship</span>
+                        <input
+                          name="guardian_relationship"
+                          defaultValue={selected.guardian_relationship ?? ""}
+                        />
+                      </label>
+                      <label>
+                        <span>Guardian Contact</span>
+                        <input
+                          name="guardian_contact_number"
+                          defaultValue={selected.guardian_contact_number ?? ""}
+                        />
                       </label>
                     </div>
                   </section>
