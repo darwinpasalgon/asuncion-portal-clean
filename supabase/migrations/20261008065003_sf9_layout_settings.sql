@@ -5,6 +5,9 @@ create table if not exists public.sf9_layout_settings (
   updated_at timestamptz not null default now()
 );
 
+create index if not exists sf9_layout_settings_updated_by_idx
+  on public.sf9_layout_settings(updated_by);
+
 alter table public.sf9_layout_settings enable row level security;
 
 revoke all on table public.sf9_layout_settings from anon;
