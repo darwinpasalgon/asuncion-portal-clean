@@ -249,6 +249,18 @@ export async function GET(request: NextRequest) {
         gradedAssignmentIds.has(item.teacher_assignment_id)
     );
 
+    const subjectAssignments =
+      profile.role === "teacher"
+        ? gradedAssignments.filter(
+            (item: {
+              teacher_id: string;
+              co_teacher_ids?: string[] | null;
+            }) =>
+              item.teacher_id === identity.userId ||
+              (item.co_teacher_ids ?? []).includes(identity.userId)
+          )
+        : [];
+
     const gradeAssignments =
       profile.role === "teacher"
         ? gradedAssignments.filter(
@@ -269,6 +281,7 @@ export async function GET(request: NextRequest) {
       isSectionAdviser: profile.role === "teacher" && advisedSections.size > 0,
       adviserSections: adviserSectionDetails,
       assignments: gradeAssignments,
+      subjectAssignments,
       sections,
       subjects: (subjects ?? []).filter(
         (item: { is_graded?: boolean }) => item.is_graded !== false
