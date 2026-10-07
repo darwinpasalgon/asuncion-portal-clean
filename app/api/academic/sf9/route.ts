@@ -21,6 +21,8 @@ type Sf9LayoutSettings = {
   paper: "A4";
   orientation: "landscape";
   pageHorizontalMarginMm: number;
+  leftCardWidthMm: number;
+  rightCardWidthMm: number;
   topMm: number;
   bottomMm: number;
   leftCardOuterMm: number;
@@ -39,16 +41,18 @@ type Sf9LayoutSettings = {
 const DEFAULT_SF9_LAYOUT: Sf9LayoutSettings = {
   paper: "A4",
   orientation: "landscape",
-  pageHorizontalMarginMm: 15.5,
+  pageHorizontalMarginMm: 12.92,
+  leftCardWidthMm: 140.58,
+  rightCardWidthMm: 130.25,
   topMm: 5.5,
   bottomMm: 4.5,
   leftCardOuterMm: 5.25,
-  leftCardInnerMm: 10.35,
+  leftCardInnerMm: 10.33,
   rightCardInnerMm: 5.25,
-  rightCardOuterMm: 5.25,
+  rightCardOuterMm: 0,
   centerLineMm: 0.33,
   headerHeightMm: 25.4,
-  headerGapMm: 3.8,
+  headerGapMm: 3.83,
   logoSizeMm: 22.3,
   frontFontPt: 7.44,
   backFontPt: 6.84,
@@ -78,6 +82,18 @@ function sanitizeLayoutSettings(input: unknown): Sf9LayoutSettings {
       DEFAULT_SF9_LAYOUT.pageHorizontalMarginMm,
       0,
       30
+    ),
+    leftCardWidthMm: boundedNumber(
+      source.leftCardWidthMm,
+      DEFAULT_SF9_LAYOUT.leftCardWidthMm,
+      110,
+      150
+    ),
+    rightCardWidthMm: boundedNumber(
+      source.rightCardWidthMm,
+      DEFAULT_SF9_LAYOUT.rightCardWidthMm,
+      110,
+      150
     ),
     topMm: boundedNumber(source.topMm, DEFAULT_SF9_LAYOUT.topMm, 0, 20),
     bottomMm: boundedNumber(
