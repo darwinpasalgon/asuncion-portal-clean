@@ -1142,9 +1142,9 @@ export default function LearnerManagementPage() {
             <div className={styles.modalActions}>
               <a
                 className={styles.linkButton}
-                href={`/portal/admin/users?q=${encodeURIComponent(detailLearner.lrn || detailLearner.full_name)}`}
+                href={`/portal/admin/users?q=${encodeURIComponent(detailLearner.lrn || detailLearner.full_name)}&edit=${encodeURIComponent(detailLearner.id)}`}
               >
-                <Edit3 size={15} />Edit SF1 profile
+                <Edit3 size={15} />Update Learner Profile
               </a>
               <button type="button" onClick={() => setDetailLearner(null)}>Close</button>
             </div>
