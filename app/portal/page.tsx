@@ -213,6 +213,11 @@ type Profile = {
   must_change_password: boolean;
 };
 
+type GradeLevelHead = {
+  grade_level: number;
+  display_name: string;
+};
+
 type NavigationItem = {
   name: Page;
   label: string;
@@ -358,6 +363,7 @@ function DashboardHome({
   personnelAttention,
   academicSetupAttention,
   communityUnread,
+  gradeLevelHead,
 }: {
   profile: Profile;
   displayRole: string;
@@ -369,6 +375,7 @@ function DashboardHome({
   personnelAttention: PersonnelProfileAttention | null;
   academicSetupAttention: AcademicSetupAttention | null;
   communityUnread: number;
+  gradeLevelHead: GradeLevelHead | null;
 }) {
   const isSuperAdmin = profile.role === "administrator";
   const can = (permission: string) =>
@@ -466,10 +473,34 @@ function DashboardHome({
       },
       {
         label: "Announcements",
-        description: "Read school announcements.",
+        description: gradeLevelHead
+          ? `Post or review Grade ${gradeLevelHead.grade_level} announcements.`
+          : "Read school announcements.",
         href: "/portal/announcements",
         icon: Megaphone,
       },
+      ...(gradeLevelHead
+        ? [
+            {
+              label: `Grade ${gradeLevelHead.grade_level} Attendance Overview`,
+              description: "Monitor attendance and demographic summaries for the whole grade.",
+              href: "/portal/admin/attendance",
+              icon: ClipboardCheck,
+            },
+            {
+              label: `Grade ${gradeLevelHead.grade_level} Class Schedules`,
+              description: "Review and manage schedules within your assigned grade level.",
+              href: "/portal/admin/schedules",
+              icon: CalendarDays,
+            },
+            {
+              label: `Grade ${gradeLevelHead.grade_level} Reports`,
+              description: "Open grade-scoped enrollment, attendance, and academic analytics.",
+              href: "/portal/admin/reports",
+              icon: BarChart3,
+            },
+          ]
+        : []),
       {
         label: "Community Chat",
         description: "Connect with colleagues and learners.",
@@ -659,8 +690,8 @@ function DashboardHome({
               <strong>{rosterSections || teacherSections}</strong>
             </div>
             <div>
-              <span>Adviser Sections</span>
-              <strong>{adviserSections.length}</strong>
+              <span>{gradeLevelHead ? "Grade Level Head" : "Adviser Sections"}</span>
+              <strong>{gradeLevelHead ? `Grade ${gradeLevelHead.grade_level}` : adviserSections.length}</strong>
             </div>
           </>
         ) : (
@@ -718,6 +749,7 @@ function SideNav({
   isAdviser,
   hasPersonnelProfile,
   communityUnread,
+  gradeLevelHead,
 }: {
   profile: Profile;
   page: Page;
@@ -727,6 +759,7 @@ function SideNav({
   isAdviser: boolean;
   hasPersonnelProfile: boolean;
   communityUnread: number;
+  gradeLevelHead: GradeLevelHead | null;
 }) {
   const { setOpenMobile } = useSidebar();
   const visibleGroups = Array.from(
@@ -831,6 +864,52 @@ function SideNav({
             </SidebarMenu>
           </div>
         ))}
+
+        {profile.role === "teacher" && gradeLevelHead && (
+          <div className="nav-group-section">
+            <p className="nav-label">GRADE LEVEL ADMINISTRATION</p>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton className="nav-button" onClick={() => {
+                  window.location.href = "/portal/admin/attendance";
+                }}>
+                  <ClipboardCheck size={19} />
+                  <span>Grade {gradeLevelHead.grade_level} Attendance</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton className="nav-button" onClick={() => {
+                  window.location.href = "/portal/admin/schedules";
+                }}>
+                  <CalendarDays size={19} />
+                  <span>Class Schedules</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton className="nav-button" onClick={() => {
+                  window.location.href = "/portal/admin/schedules?view=teacher";
+                }}>
+                  <CalendarDays size={19} />
+                  <span>Teacher Schedule</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton className="nav-button" onClick={() => go("Announcements")}>
+                  <Megaphone size={19} />
+                  <span>Grade Announcements</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton className="nav-button" onClick={() => {
+                  window.location.href = "/portal/admin/reports";
+                }}>
+                  <BarChart3 size={19} />
+                  <span>Reports & Analytics</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </div>
+        )}
 
         <div className="nav-group-section">
           <p className="nav-label">MY COMMUNITY</p>
@@ -1206,6 +1285,7 @@ export default function PortalPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [academicContext, setAcademicContext] = useState<AcademicContext | null>(null);
   const [adminPermissions, setAdminPermissions] = useState<string[]>([]);
+  const [gradeLevelHead, setGradeLevelHead] = useState<GradeLevelHead | null>(null);
   const [page, setPage] = useState<Page>("Overview");
 
   useEffect(() => {
@@ -1258,6 +1338,7 @@ export default function PortalPage() {
           setProfile(loadedProfile);
           setAcademicContext((result.academicContext ?? null) as AcademicContext | null);
           setAdminPermissions((result.adminPermissions ?? []) as string[]);
+          setGradeLevelHead((result.gradeLevelHead ?? null) as GradeLevelHead | null);
 
           if (loadedProfile.role !== "student") {
             setPersonnelAttentionLoading(true);
@@ -1435,8 +1516,13 @@ export default function PortalPage() {
   }, [profile]);
 
   const displayRole = useMemo(
-    () => (profile ? administratorLabel(profile, adminPermissions) : ""),
-    [profile, adminPermissions]
+    () =>
+      profile
+        ? gradeLevelHead
+          ? `Grade ${gradeLevelHead.grade_level} Level Head`
+          : administratorLabel(profile, adminPermissions)
+        : "",
+    [profile, adminPermissions, gradeLevelHead]
   );
 
   async function saveLearnerMajor(enrollmentId: string, major: string) {
@@ -1517,6 +1603,7 @@ export default function PortalPage() {
           profile.role === "teacher" || Boolean(personnelAttention?.self)
         }
         communityUnread={communityUnread}
+        gradeLevelHead={gradeLevelHead}
       />
 
       <main className="workspace">
@@ -2011,6 +2098,7 @@ export default function PortalPage() {
                 personnelAttention={personnelAttention}
                 academicSetupAttention={academicSetupAttention}
                 communityUnread={communityUnread}
+                gradeLevelHead={gradeLevelHead}
               />
 
               <section className="panel real-profile-card">
