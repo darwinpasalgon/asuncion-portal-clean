@@ -41,6 +41,71 @@ using (
   )
 );
 
+
+create or replace function private.can_read_assigned_teacher_profile(target_profile_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+  select exists (
+    select 1
+    from public.profiles caller
+    join public.profiles target on target.id = target_profile_id
+    where caller.id = (select auth.uid())
+      and caller.account_status = 'active'
+      and target.role = 'teacher'
+      and target.account_status = 'active'
+      and (
+        (
+          caller.role = 'student'
+          and exists (
+            select 1
+            from public.student_enrollments e
+            join public.teacher_assignments ta
+              on ta.school_year_id = e.school_year_id
+             and ta.section_id = e.section_id
+             and ta.is_active = true
+            where e.student_id = caller.id
+              and e.enrollment_status = 'active'
+              and (ta.major is null or ta.major = e.tve_major)
+              and (
+                ta.teacher_id = target_profile_id
+                or target_profile_id = any(ta.co_teacher_ids)
+              )
+          )
+        )
+        or (
+          caller.role = 'teacher'
+          and exists (
+            select 1
+            from public.teacher_assignments ta
+            where ta.is_active = true
+              and (
+                ta.teacher_id = caller.id
+                or caller.id = any(ta.co_teacher_ids)
+              )
+              and (
+                ta.teacher_id = target_profile_id
+                or target_profile_id = any(ta.co_teacher_ids)
+              )
+          )
+        )
+      )
+  );
+$function$;
+
+revoke all on function private.can_read_assigned_teacher_profile(uuid) from public;
+grant execute on function private.can_read_assigned_teacher_profile(uuid) to authenticated;
+
+drop policy if exists "Users read assigned teacher profiles" on public.profiles;
+create policy "Users read assigned teacher profiles"
+on public.profiles
+for select
+to authenticated
+using ((select private.can_read_assigned_teacher_profile(profiles.id)));
+
 create or replace function private.validate_class_schedule()
 returns trigger
 language plpgsql
