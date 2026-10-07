@@ -22,6 +22,7 @@ type Assignment = {
   section_id: string;
   subject_id: string;
   major: string | null;
+  co_teacher_ids?: string[] | null;
 };
 type Section = { id: string; grade_level: number; name: string };
 type Subject = {
@@ -145,6 +146,7 @@ export default function GradesPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeYear, setActiveYear] = useState<ActiveYear | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [subjectAssignments, setSubjectAssignments] = useState<Assignment[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -152,6 +154,9 @@ export default function GradesPage() {
   const [grades, setGrades] = useState<Grade[]>([]);
   const [selectedAssignmentId, setSelectedAssignmentId] = useState("");
   const [selectedTerm, setSelectedTerm] = useState(1);
+  const [teacherView, setTeacherView] = useState<"adviser" | "subjects">("adviser");
+  const [selectedSubjectAssignmentId, setSelectedSubjectAssignmentId] = useState("");
+  const [selectedSubjectTerm, setSelectedSubjectTerm] = useState(1);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [mapehDrafts, setMapehDrafts] = useState<Record<string, MapehDraft>>({});
   const [loading, setLoading] = useState(true);
@@ -177,6 +182,7 @@ export default function GradesPage() {
       setProfile(result.profile ?? null);
       setActiveYear(result.activeYear ?? null);
       setAssignments(result.assignments ?? []);
+      setSubjectAssignments(result.subjectAssignments ?? []);
       setSections(result.sections ?? []);
       setSubjects(result.subjects ?? []);
       setEnrollments(result.enrollments ?? []);
@@ -185,6 +191,19 @@ export default function GradesPage() {
 
       if (!selectedAssignmentId && result.assignments?.[0]?.id) {
         setSelectedAssignmentId(result.assignments[0].id);
+      }
+      if (
+        !selectedSubjectAssignmentId &&
+        result.subjectAssignments?.[0]?.id
+      ) {
+        setSelectedSubjectAssignmentId(result.subjectAssignments[0].id);
+      }
+      if (
+        result.role === "teacher" &&
+        !result.isSectionAdviser &&
+        result.subjectAssignments?.length
+      ) {
+        setTeacherView("subjects");
       }
     } catch {
       setError("Unable to reach the grades service.");
