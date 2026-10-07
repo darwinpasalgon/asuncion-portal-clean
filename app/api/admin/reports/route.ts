@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { hasAdminPermission } from "@/lib/admin-access";
+import { getScopedAdminAccess, hasAdminPermission } from "@/lib/admin-access";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
 function authHeaders(token: string) {
@@ -26,6 +26,10 @@ async function getUserId(token: string) {
 
 async function isAdmin(token: string) {
   return hasAdminPermission(token, "reports.view");
+}
+
+async function reportAccess(token: string) {
+  return getScopedAdminAccess(token, "reports.view");
 }
 
 async function getRows(path: string, token: string) {
@@ -145,9 +149,17 @@ type TeacherMeta = {
 
 export async function GET(request: NextRequest) {
   const token = tokenFrom(request);
-  if (!token || !(await isAdmin(token))) {
+  if (!token) {
     return NextResponse.json(
       { error: "Administrator access required." },
+      { status: 403 }
+    );
+  }
+
+  const access = await reportAccess(token);
+  if (!access.allowed) {
+    return NextResponse.json(
+      { error: "Reports and analytics access required." },
       { status: 403 }
     );
   }
@@ -159,13 +171,25 @@ export async function GET(request: NextRequest) {
   const from = request.nextUrl.searchParams.get("from") ?? "";
   const to = request.nextUrl.searchParams.get("to") ?? "";
 
-  const gradeLevel = gradeParam ? Number(gradeParam) : null;
+  const requestedGradeLevel = gradeParam ? Number(gradeParam) : null;
+  const gradeLevel = access.gradeLevel ?? requestedGradeLevel;
 
   if (
-    gradeLevel !== null &&
-    (!Number.isInteger(gradeLevel) || gradeLevel < 7 || gradeLevel > 12)
+    requestedGradeLevel !== null &&
+    (!Number.isInteger(requestedGradeLevel) || requestedGradeLevel < 7 || requestedGradeLevel > 12)
   ) {
     return NextResponse.json({ error: "Invalid grade filter." }, { status: 400 });
+  }
+
+  if (
+    access.gradeLevel !== null &&
+    requestedGradeLevel !== null &&
+    requestedGradeLevel !== access.gradeLevel
+  ) {
+    return NextResponse.json(
+      { error: `You can only view Grade ${access.gradeLevel} reports.` },
+      { status: 403 }
+    );
   }
 
   if ((from && !validDate(from)) || (to && !validDate(to))) {
@@ -226,18 +250,23 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const gradeFilter =
+      access.gradeLevel !== null
+        ? `&grade_level=eq.${encodeURIComponent(String(access.gradeLevel))}`
+        : "";
+
     const [gradeLevels, sections, subjects, teachers, assignmentRows] =
       await Promise.all([
         getRows(
-          "grade_levels?select=grade_level,label,sort_order&order=sort_order.asc",
+          `grade_levels?select=grade_level,label,sort_order${gradeFilter}&order=sort_order.asc`,
           token
         ),
         getRows(
-          "sections?select=id,grade_level,name,is_active&order=grade_level.asc,name.asc",
+          `sections?select=id,grade_level,name,is_active${gradeFilter}&order=grade_level.asc,name.asc`,
           token
         ),
         getRows(
-          "subjects?select=id,grade_level,name,code,is_active&order=grade_level.asc,name.asc",
+          `subjects?select=id,grade_level,name,code,is_active${gradeFilter}&order=grade_level.asc,name.asc`,
           token
         ),
         getRows(
@@ -568,6 +597,7 @@ export async function GET(request: NextRequest) {
       },
       gradeDistribution,
       attendanceTotals,
+      scopeGradeLevel: access.gradeLevel,
     });
   } catch (error) {
     const message =
