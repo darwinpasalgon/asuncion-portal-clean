@@ -39,7 +39,6 @@ type LearnerInfo = {
   is_indigenous_peoples: boolean;
   ethnic_group: string;
   religion: string;
-  cct_recipient: boolean;
   address_house_street_purok: string;
   address_barangay: string;
   address_municipality_city: string;
@@ -100,7 +99,6 @@ function emptyLearnerInfo(): LearnerInfo {
     is_indigenous_peoples: false,
     ethnic_group: "",
     religion: "",
-    cct_recipient: false,
     address_house_street_purok: "",
     address_barangay: "",
     address_municipality_city: "",
@@ -884,24 +882,6 @@ export default function UsersAccountsPage() {
                             </option>
                           ))}
                         </select>
-                      </label>
-                      <label className={styles.checkboxField}>
-                        <input
-                          type="checkbox"
-                          checked={editing.learnerInfo.cct_recipient}
-                          onChange={(event) =>
-                            setEditing({
-                              ...editing,
-                              learnerInfo: {
-                                ...editing.learnerInfo,
-                                cct_recipient: event.target.checked,
-                              },
-                            })
-                          }
-                        />
-                        <span>
-                          <strong>Conditional Cash Transfer (CCT)</strong>
-                        </span>
                       </label>
                     </div>
 
