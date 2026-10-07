@@ -272,6 +272,40 @@ const LOCAL_LANGUAGE_SUGGESTIONS = [
   "Tagalog",
 ];
 
+function BooleanChoice({
+  value,
+  onChange,
+}: {
+  value: boolean | null;
+  onChange: (value: boolean | null) => void;
+}) {
+  return (
+    <div className={styles.booleanChoice}>
+      <button
+        type="button"
+        className={value === true ? styles.choiceActive : ""}
+        onClick={() => onChange(true)}
+      >
+        Yes
+      </button>
+      <button
+        type="button"
+        className={value === false ? styles.choiceActive : ""}
+        onClick={() => onChange(false)}
+      >
+        No
+      </button>
+      <button
+        type="button"
+        className={value === null ? styles.choiceActive : ""}
+        onClick={() => onChange(null)}
+      >
+        Not Recorded
+      </button>
+    </div>
+  );
+}
+
 function ageAsOfFirstFridayJune(birthDate: string, schoolYear?: string) {
   if (!birthDate) return "";
   const birth = new Date(`${birthDate}T00:00:00`);
