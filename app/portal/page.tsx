@@ -439,6 +439,12 @@ function DashboardHome({
               href: "/portal/attendance",
               icon: ClipboardCheck,
             },
+            {
+              label: "SF9 Report Cards",
+              description: "Print one or two learner report cards on A4 front and back.",
+              href: "/portal/sf9",
+              icon: FileSpreadsheet,
+            },
           ]
         : []),
       {
@@ -514,6 +520,16 @@ function DashboardHome({
     ];
   } else {
     actions = [
+      ...(profile.role === "administrator"
+        ? [
+            {
+              label: "SF9 Report Cards",
+              description: "Print learner report cards in the A4 two-card front-and-back layout.",
+              href: "/portal/sf9",
+              icon: FileSpreadsheet,
+            },
+          ]
+        : []),
       ...(profile.role === "administrator"
         ? [
             {
@@ -968,7 +984,7 @@ function SideNav({
         {(profile.role === "administrator" || profile.role === "staff_administrator") && (
           <>
             {(profile.role === "administrator" ||
-              ["sf10.manage", "teaching.manage", "attendance.manage"].some((permission) =>
+              ["sf10.manage", "reports.view", "teaching.manage", "attendance.manage"].some((permission) =>
                 adminPermissions.includes(permission)
               )) && (
               <div className="nav-group-section">
@@ -984,6 +1000,19 @@ function SideNav({
                       >
                         <GraduationCap size={19} />
                         <span>Learner Management</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {profile.role === "administrator" && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        className="nav-button"
+                        onClick={() => {
+                          window.location.href = "/portal/sf9";
+                        }}
+                      >
+                        <FileSpreadsheet size={19} />
+                        <span>SF9 Report Cards</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
@@ -2297,17 +2326,23 @@ export default function PortalPage() {
             <section className="panel real-school-forms-unavailable">
               <div className="real-school-forms-warning">
                 <span className="real-school-forms-icon">
-                  <CircleAlert size={22} />
+                  <FileSpreadsheet size={22} />
                 </span>
                 <div>
-                  <span className="real-school-forms-kicker">MODULE STATUS</span>
-                  <h2>School Forms are not available yet.</h2>
+                  <span className="real-school-forms-kicker">AVAILABLE NOW</span>
+                  <h2>SF9 · Learner&apos;s Progress Report Card</h2>
                   <p>
-                    This module is still under development. The forms below are
-                    planned for future Adviser access in the Academic Portal.
+                    Section Advisers can now select one or two learners and print
+                    their SF9 on one A4 landscape sheet, front and back.
                   </p>
                 </div>
-                <span className="real-school-forms-status">Coming Soon</span>
+                <a
+                  className="real-school-forms-status"
+                  href="/portal/sf9"
+                  style={{ textDecoration: "none" }}
+                >
+                  Open SF9
+                </a>
               </div>
 
               <div className="real-school-forms-list">
@@ -2348,11 +2383,12 @@ export default function PortalPage() {
                   </p>
                 </article>
                 <article>
-                  <strong>SF9 · Learner&apos;s Progress Report Card</strong>
+                  <strong>SF9 · Learner&apos;s Progress Report Card · Available</strong>
                   <p>
-                    Learner report card showing academic performance and other
-                    official progress information.
+                    Print one or two learner cards per A4 sheet with aligned front
+                    and back pages using published grades and recorded attendance.
                   </p>
+                  <a href="/portal/sf9">Open SF9 Report Cards</a>
                 </article>
                 <article>
                   <strong>SF10 · Learner&apos;s Permanent Academic Record</strong>
@@ -2366,8 +2402,8 @@ export default function PortalPage() {
               <div className="real-school-forms-note">
                 <FileSpreadsheet size={18} />
                 <span>
-                  No School Form can be generated or printed from the Adviser
-                  account yet.
+                  SF9 is available now. The other School Forms remain under
+                  development.
                 </span>
               </div>
             </section>
