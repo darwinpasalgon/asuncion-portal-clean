@@ -27,22 +27,6 @@ const normalizePhone = (input: string) => {
   return null;
 };
 
-function clean(value: unknown) {
-  return String(value ?? "").trim();
-}
-
-function nullableBoolean(value: unknown) {
-  if (value === true || value === false) return value;
-  const normalized = String(value ?? "").trim().toLowerCase();
-  if (["true", "1", "yes"].includes(normalized)) return true;
-  if (["false", "0", "no"].includes(normalized)) return false;
-  return null;
-}
-
-function joinedName(parts: unknown[]) {
-  return parts.map(clean).filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
-}
-
 function temporaryPassword() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const values = new Uint32Array(10);
@@ -359,172 +343,34 @@ Deno.serve(async (req) => {
       }
     }
 
-    const learnerEmail = clean(body.learner_email).toLowerCase();
-    if (learnerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(learnerEmail)) {
-      return json({ error: "Enter a valid learner email address or leave it blank." }, 400);
-    }
-
-    const guardianRelationship = clean(body.guardian_relationship);
-    if (
-      guardianRelationship &&
-      !["Parent", "Relative", "Non-relative"].includes(guardianRelationship)
-    ) {
-      return json({ error: "Choose a valid Guardian relationship." }, 400);
-    }
-
-    const motherMaidenReason = clean(body.mother_maiden_reason);
-    if (
-      motherMaidenReason &&
-      !["No mother", "Not disclosed"].includes(motherMaidenReason)
-    ) {
-      return json({ error: "Choose a valid reason for not specifying the mother's maiden name." }, 400);
-    }
-
-    const indigenous = nullableBoolean(body.is_indigenous_peoples);
-    const specialNeeds = nullableBoolean(body.has_special_educational_needs);
-    const cctRecipient = nullableBoolean(body.cct_recipient);
-    const vaccinated = nullableBoolean(body.vaccinated_covid19);
-    const permanentSame = nullableBoolean(body.permanent_same_as_current);
-
-    const primaryEthnicity = clean(body.ethnic_group);
-    if (indigenous === true && !primaryEthnicity) {
-      return json({ error: "Enter the learner's primary ethnicity for an Indigenous Peoples record." }, 400);
-    }
-
-    const lsenType = clean(body.lsen_type);
-    if (specialNeeds === true && !lsenType) {
-      return json({ error: "Select the learner's Special Educational Needs classification." }, 400);
-    }
-
-    const cctHouseholdId = clean(body.cct_household_id);
-    if (
-      cctRecipient === true &&
-      (cctHouseholdId.length < 12 || cctHouseholdId.length > 21)
-    ) {
-      return json({ error: "4Ps Household ID must contain 12 to 21 characters." }, 400);
-    }
-
-    const guardianNoMiddle = nullableBoolean(body.guardian_no_middle_name) === true;
-    const motherNoMiddle = nullableBoolean(body.mother_no_middle_name) === true;
-    const fatherNoMiddle = nullableBoolean(body.father_no_middle_name) === true;
-
-    const guardianStructuredName = joinedName([
-      body.guardian_first_name,
-      guardianNoMiddle ? "" : body.guardian_middle_name,
-      body.guardian_last_name,
-      body.guardian_name_extension,
-    ]);
-    const motherStructuredName = motherMaidenReason
-      ? ""
-      : joinedName([
-          body.mother_first_name,
-          motherNoMiddle ? "" : body.mother_middle_name,
-          body.mother_last_name,
-          body.mother_name_extension,
-        ]);
-    const fatherStructuredName = joinedName([
-      body.father_first_name,
-      fatherNoMiddle ? "" : body.father_middle_name,
-      body.father_last_name,
-      body.father_name_extension,
-    ]);
-
-    const currentResidence = {
-      house: clean(body.address_house_street_purok) || null,
-      barangay: clean(body.address_barangay) || null,
-      municipality: clean(body.address_municipality_city) || null,
-      province: clean(body.address_province) || null,
-      zip: clean(body.address_zip_code) || null,
-    };
-
     const learnerInfo = {
       student_id: userId,
-      last_name: clean(body.last_name) || null,
-      first_name: clean(body.first_name) || null,
-      middle_name: clean(body.middle_name) || null,
-      name_extension: clean(body.name_extension) || null,
-      sex: ["M", "F"].includes(clean(body.sex).toUpperCase())
-        ? clean(body.sex).toUpperCase()
+      last_name: String(body.last_name ?? "").trim() || null,
+      first_name: String(body.first_name ?? "").trim() || null,
+      middle_name: String(body.middle_name ?? "").trim() || null,
+      name_extension: String(body.name_extension ?? "").trim() || null,
+      sex: ["M", "F"].includes(String(body.sex ?? "").trim().toUpperCase())
+        ? String(body.sex).trim().toUpperCase()
         : null,
-      birth_date: clean(body.birth_date) || null,
-
-      mother_tongue: clean(body.mother_tongue) || null,
-      mother_tongue_secondary: clean(body.mother_tongue_secondary) || null,
-      mother_tongue_tertiary: clean(body.mother_tongue_tertiary) || null,
-      is_indigenous_peoples: indigenous,
-      ethnic_group: indigenous === false ? null : primaryEthnicity || null,
-      ethnicity_secondary:
-        indigenous === false ? null : clean(body.ethnicity_secondary) || null,
-      religion: clean(body.religion) || null,
-      learner_email: learnerEmail || null,
-
-      address_house_street_purok: currentResidence.house,
-      address_barangay: currentResidence.barangay,
-      address_municipality_city: currentResidence.municipality,
-      address_province: currentResidence.province,
-      address_zip_code: currentResidence.zip,
-
-      permanent_same_as_current: permanentSame,
-      permanent_address_house_street_purok:
-        permanentSame === true
-          ? currentResidence.house
-          : clean(body.permanent_address_house_street_purok) || null,
-      permanent_address_barangay:
-        permanentSame === true
-          ? currentResidence.barangay
-          : clean(body.permanent_address_barangay) || null,
-      permanent_address_municipality_city:
-        permanentSame === true
-          ? currentResidence.municipality
-          : clean(body.permanent_address_municipality_city) || null,
-      permanent_address_province:
-        permanentSame === true
-          ? currentResidence.province
-          : clean(body.permanent_address_province) || null,
-      permanent_address_zip_code:
-        permanentSame === true
-          ? currentResidence.zip
-          : clean(body.permanent_address_zip_code) || null,
-      permanent_address_other_barangay:
-        permanentSame === true
-          ? null
-          : clean(body.permanent_address_other_barangay) || null,
-
-      guardian_last_name: clean(body.guardian_last_name) || null,
-      guardian_first_name: clean(body.guardian_first_name) || null,
-      guardian_middle_name: guardianNoMiddle ? null : clean(body.guardian_middle_name) || null,
-      guardian_no_middle_name: guardianNoMiddle,
-      guardian_name_extension: clean(body.guardian_name_extension) || null,
-      guardian_name: guardianStructuredName || clean(body.guardian_name) || null,
-      guardian_relationship: guardianRelationship || null,
-      guardian_contact_number: recoveryPhone || null,
-
-      mother_last_name: motherMaidenReason ? null : clean(body.mother_last_name) || null,
-      mother_first_name: motherMaidenReason ? null : clean(body.mother_first_name) || null,
-      mother_middle_name:
-        motherMaidenReason || motherNoMiddle ? null : clean(body.mother_middle_name) || null,
-      mother_no_middle_name: motherNoMiddle,
-      mother_name_extension:
-        motherMaidenReason ? null : clean(body.mother_name_extension) || null,
-      mother_maiden_reason: motherMaidenReason || null,
+      birth_date: String(body.birth_date ?? "").trim() || null,
+      mother_tongue: String(body.mother_tongue ?? "").trim() || null,
+      ethnic_group: String(body.ethnic_group ?? "").trim() || null,
+      religion: String(body.religion ?? "").trim() || null,
+      address_house_street_purok:
+        String(body.address_house_street_purok ?? "").trim() || null,
+      address_barangay: String(body.address_barangay ?? "").trim() || null,
+      address_municipality_city:
+        String(body.address_municipality_city ?? "").trim() || null,
+      address_province: String(body.address_province ?? "").trim() || null,
+      father_name: String(body.father_name ?? "").trim() || null,
       mother_maiden_name:
-        motherStructuredName || (motherMaidenReason ? null : clean(body.mother_maiden_name) || null),
-
-      father_last_name: clean(body.father_last_name) || null,
-      father_first_name: clean(body.father_first_name) || null,
-      father_middle_name: fatherNoMiddle ? null : clean(body.father_middle_name) || null,
-      father_no_middle_name: fatherNoMiddle,
-      father_name_extension: clean(body.father_name_extension) || null,
-      father_name: fatherStructuredName || clean(body.father_name) || null,
-
-      citizenship: clean(body.citizenship) || null,
-      cct_recipient: cctRecipient,
-      cct_household_id: cctRecipient === true ? cctHouseholdId || null : null,
-      has_special_educational_needs: specialNeeds,
-      lsen_type: specialNeeds === true ? lsenType || null : null,
-      vaccinated_covid19: vaccinated,
-      learning_modality: clean(body.learning_modality) || null,
-      remarks: clean(body.remarks) || null,
+        String(body.mother_maiden_name ?? "").trim() || null,
+      guardian_name: String(body.guardian_name ?? "").trim() || null,
+      guardian_relationship:
+        String(body.guardian_relationship ?? "").trim() || null,
+      guardian_contact_number: recoveryPhone || null,
+      learning_modality: String(body.learning_modality ?? "").trim() || null,
+      remarks: String(body.remarks ?? "").trim() || null,
       updated_by: callerId,
       updated_at: new Date().toISOString(),
     };
