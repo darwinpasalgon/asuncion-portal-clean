@@ -70,16 +70,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ activeYear: null, assignments: [] });
   }
 
-  const assignments = await getRows(
-    `teacher_assignments?teacher_id=eq.${encodeURIComponent(
-      userId
-    )}&school_year_id=eq.${encodeURIComponent(
+  const assignmentRows = await getRows(
+    `teacher_assignments?school_year_id=eq.${encodeURIComponent(
       activeYear.id
-    )}&is_active=eq.true&select=id,grade_level,section_id,subject_id,major&order=grade_level.asc`,
+    )}&is_active=eq.true&select=id,teacher_id,co_teacher_ids,grade_level,section_id,subject_id,major&order=grade_level.asc`,
     token
   );
 
-  if (!assignments) {
+  const assignments = (assignmentRows ?? []).filter(
+    (item: { teacher_id: string; co_teacher_ids?: string[] }) =>
+      item.teacher_id === userId || (item.co_teacher_ids ?? []).includes(userId)
+  );
+
+  if (!assignmentRows) {
     return NextResponse.json({ error: "Unable to load teaching assignments." }, { status: 500 });
   }
 
