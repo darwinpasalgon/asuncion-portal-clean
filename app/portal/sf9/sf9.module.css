@@ -66,12 +66,12 @@
 .identityNameRow,.identityLrnRow,.identityTrackRow{align-items:end}
 .identityNameRow{display:grid;grid-template-columns:8.58% 46.13% 9.56% 9.56% 10.41% 15.76%}
 .identityLrnRow{display:grid;grid-template-columns:8.58% 27.709% 18.426% 9.56% 9.56% 10.41% 15.755%}
-.identityTrackRow{display:grid;grid-template-columns:8.58% 27.709% 63.711%}
+.identityTrackRow{display:grid;grid-template-columns:8.577% 8.577% 28.837% 54.009%}
 .identityNameRow>span,.identityLrnRow>span,.identityTrackRow>span{white-space:nowrap}
 .identityNameRow>strong,.identityLrnRow>strong,.identityTrackRow>strong{min-height:3.4mm;border-bottom:.25mm solid #111;padding:0 .7mm .35mm;text-align:center;text-transform:uppercase;font-weight:700}
 .identityNameRow>strong:nth-of-type(1),.identityLrnRow>strong:nth-of-type(1),.identityTrackRow>strong{text-align:left}
-.identityLrnRow>i{display:block}
-.identityTrackRow>strong{grid-column:2}
+.identityLrnRow>i,.identityTrackRow>i{display:block}
+.identityTrackRow>strong{grid-column:3}
 .parentNote{margin:0 0 3.5mm}
 .parentNote>div{margin-bottom:1.2mm}
 .parentNote p{margin:0 0 1.2mm;text-indent:8mm;line-height:1.28}
@@ -112,11 +112,11 @@
 .parentSignatureRows{display:grid;gap:0;margin:3.5mm 0 0;width:100%}
 .parentSignatureRows>div{display:grid;grid-template-columns:24.287% 39.811% 35.902%;align-items:end;min-height:9.35mm}
 .parentSignatureRows strong{text-align:right;padding-right:1mm;font-size:6.84pt;font-weight:700}
-.parentSignatureRows span{grid-column:2;border-bottom:.25mm solid #111;height:3.2mm}
+.parentSignatureRows span{grid-column:2;border-bottom:.45mm solid #111;height:3.2mm}
 .transferText{font-size:6.84pt;line-height:1.28;margin:2.4mm 0 3mm}
 .transferField{display:grid;grid-template-columns:35.662% 28.437% 35.901%;align-items:end;min-height:5.1mm;margin:0;font-size:6.84pt}
 .transferField>span:first-child{white-space:nowrap}
-.fillLine{display:block;grid-column:2;width:100%;height:3.1mm;border-bottom:.25mm solid #111;box-sizing:border-box}
+.fillLine{display:block;grid-column:2;width:100%;height:3.1mm;border-bottom:.45mm solid #111;box-sizing:border-box}
 .approvedRow{display:grid;grid-template-columns:47.036% 52.964%;align-items:end;margin-top:5.1mm;font-size:6.84pt}
 .approvedRow>div{text-align:center}
 .approvedRow strong,.approvedRow>div span{display:block}
