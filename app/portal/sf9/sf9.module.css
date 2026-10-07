@@ -151,6 +151,50 @@
 .layoutSave{border:0;background:#2d7857;color:#fff}
 .layoutEditorActions button:disabled{opacity:.5}
 
+.visualEditorHint{display:flex;align-items:flex-start;gap:9px;margin-bottom:10px;padding:10px 12px;border:1px solid #cfe0ef;border-radius:9px;background:#f5faff;color:#547284;font-size:.68rem;line-height:1.5}
+.visualEditorHint svg{flex:none;margin-top:1px;color:#2b6f9f}
+.editorToolbar{position:sticky;top:8px;z-index:20;display:flex;align-items:flex-end;gap:7px;flex-wrap:wrap;padding:9px;border:1px solid #dce5eb;border-radius:10px;background:rgba(255,255,255,.97);box-shadow:0 8px 24px rgba(24,62,87,.08);backdrop-filter:blur(10px)}
+.toolbarSelect,.toolbarCompactField{display:grid;gap:4px}
+.toolbarSelect>span,.toolbarCompactField>span{font-size:.57rem;letter-spacing:.04em;text-transform:uppercase;color:#738792;font-weight:850}
+.toolbarSelect select,.toolbarCompactField input{height:34px;border:1px solid #d5e0e6;border-radius:7px;background:#fff;color:#294e65;padding:0 8px;font-size:.72rem}
+.toolbarSelect select{min-width:145px}
+.toolbarCompactField input{width:66px}
+.toolbarButtonGroup{display:flex;align-items:center;gap:3px}
+.toolbarButton,.toolbarButtonActive{width:34px;height:34px;border-radius:7px;display:grid;place-items:center}
+.toolbarButton{border:1px solid #d8e2e7;background:#fff;color:#496879}
+.toolbarButtonActive{border:1px solid #8db2d2;background:#eaf4fc;color:#1d5f91}
+.resetSelectedButton{height:34px;border:1px solid #d8e2e7;border-radius:7px;background:#fff;color:#5a7180;padding:0 10px;display:inline-flex;align-items:center;gap:6px;font-size:.68rem;font-weight:800}
+.currentSelection{margin:9px 0 0;padding:7px 9px;border-radius:7px;background:#f7fafb;color:#69808c;font-size:.65rem}
+.currentSelection strong{color:#2c5b78}
+.advancedLayout{margin-top:10px;border:1px solid #e0e8ec;border-radius:9px;background:#fbfdfe;overflow:hidden}
+.advancedLayout summary{cursor:pointer;display:flex;align-items:center;gap:7px;padding:10px 11px;color:#45687b;font-size:.7rem;font-weight:850;list-style:none}
+.advancedLayout summary::-webkit-details-marker{display:none}
+.advancedLayout[open] summary{border-bottom:1px solid #e5ecef;background:#f7fafb}
+.advancedLayout>.layoutEditorNote{margin:10px 10px 0}
+.advancedLayout>.layoutGrid{padding:10px}
+.layoutField input[type="range"]{min-height:22px;height:22px;border:0;padding:0;background:transparent;accent-color:#2f7656}
+.rangeValueRow{display:grid;grid-template-columns:1fr 76px;gap:8px;align-items:center}
+.rangeValueRow input{min-height:32px!important;height:32px!important;padding:0 7px!important}
+.previewDocumentWrap{width:max-content}
+.editorPreviewActive{outline:2px solid #9fc2dd;outline-offset:2px}
+.editorPreviewActive [data-sf9-block]{cursor:pointer;outline:1px dashed transparent;outline-offset:1px;transition:outline-color .12s ease,background-color .12s ease}
+.editorPreviewActive [data-sf9-block]:hover{outline-color:#4b8ec1;background:rgba(75,142,193,.045)}
+.editorPreviewActive .previewDocumentWrap[data-selected-block="header"] [data-sf9-block="header"],
+.editorPreviewActive .previewDocumentWrap[data-selected-block="reportTitle"] [data-sf9-block="reportTitle"],
+.editorPreviewActive .previewDocumentWrap[data-selected-block="schoolYear"] [data-sf9-block="schoolYear"],
+.editorPreviewActive .previewDocumentWrap[data-selected-block="learnerInfo"] [data-sf9-block="learnerInfo"],
+.editorPreviewActive .previewDocumentWrap[data-selected-block="parentNote"] [data-sf9-block="parentNote"],
+.editorPreviewActive .previewDocumentWrap[data-selected-block="frontSignatures"] [data-sf9-block="frontSignatures"],
+.editorPreviewActive .previewDocumentWrap[data-selected-block="progressTitle"] [data-sf9-block="progressTitle"],
+.editorPreviewActive .previewDocumentWrap[data-selected-block="gradeTable"] [data-sf9-block="gradeTable"],
+.editorPreviewActive .previewDocumentWrap[data-selected-block="descriptorTitle"] [data-sf9-block="descriptorTitle"],
+.editorPreviewActive .previewDocumentWrap[data-selected-block="descriptorTable"] [data-sf9-block="descriptorTable"],
+.editorPreviewActive .previewDocumentWrap[data-selected-block="attendanceTable"] [data-sf9-block="attendanceTable"],
+.editorPreviewActive .previewDocumentWrap[data-selected-block="comments"] [data-sf9-block="comments"],
+.editorPreviewActive .previewDocumentWrap[data-selected-block="guardianSignatures"] [data-sf9-block="guardianSignatures"],
+.editorPreviewActive .previewDocumentWrap[data-selected-block="transfer"] [data-sf9-block="transfer"],
+.editorPreviewActive .previewDocumentWrap[data-selected-block="cancellation"] [data-sf9-block="cancellation"]{outline:2px solid #2878b4;outline-offset:1px;background:rgba(40,120,180,.065)}
+
 @media(max-width:800px){
   .header{align-items:flex-start;flex-direction:column}
   .selectorTop{grid-template-columns:1fr}
@@ -160,13 +204,20 @@
   .layoutGrid{grid-template-columns:1fr 1fr}
   .layoutEditorHeader{align-items:flex-start;flex-direction:column}
   .layoutEditorToggle{width:100%}
+  .editorToolbar{position:static;align-items:stretch}
+  .toolbarSelect{flex:1 1 180px}
+  .toolbarSelect select{width:100%;min-width:0}
+  .toolbarCompactField{flex:1 1 76px}
+  .toolbarCompactField input{width:100%}
 }
 @media print{
   @page{size:A4 landscape;margin:0}
   .page{min-height:0!important;padding:0!important;background:#fff!important}
   .shell{width:auto!important;margin:0!important}
-  .topActions,.header,.error,.instructions,.selectorPanel,.previewHeading,.previewPlaceholder{display:none!important}
-  .previewCanvas{display:block!important;overflow:visible!important;padding:0!important;border:0!important;border-radius:0!important;background:#fff!important}
+  .topActions,.header,.error,.instructions,.layoutEditor,.selectorPanel,.previewHeading,.previewPlaceholder{display:none!important}
+  .previewCanvas{display:block!important;overflow:visible!important;padding:0!important;border:0!important;border-radius:0!important;background:#fff!important;outline:0!important}
+  .previewDocumentWrap{width:auto!important}
+  .editorPreviewActive [data-sf9-block]{outline:0!important;background:transparent!important;cursor:default!important}
   .printDocument{width:297mm!important;display:block!important;margin:0!important;padding:0!important;gap:0!important}
   .printSheet{width:297mm!important;height:210mm!important;margin:0!important;box-shadow:none!important;page-break-after:always!important;break-after:page!important}
   .printSheet:last-child{page-break-after:auto!important;break-after:auto!important}
