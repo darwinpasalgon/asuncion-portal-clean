@@ -63,15 +63,19 @@
 .reportTitle{text-align:center;font-weight:700;font-size:8.68pt;margin-top:-1.5mm}
 .schoolYear{text-align:center;font-size:7.44pt;margin-top:1mm;margin-bottom:4mm}
 .identity{display:grid;gap:1.4mm;margin-bottom:4mm}
-.identityRow{display:grid;grid-template-columns:8.58% 46.13% 9.56% 9.56% 10.41% 15.76%;align-items:end;gap:0}
-.identityRow>span{white-space:nowrap}
-.identityRow>strong{min-height:3.4mm;border-bottom:.25mm solid #111;padding:0 .7mm .35mm;text-align:center;text-transform:uppercase;font-weight:700}
-.identityRow .identityWide{text-align:left}
-.identityRow .track{grid-column:2/7;text-align:left}
+.identityNameRow,.identityLrnRow,.identityTrackRow{align-items:end}
+.identityNameRow{display:grid;grid-template-columns:8.58% 46.13% 9.56% 9.56% 10.41% 15.76%}
+.identityLrnRow{display:grid;grid-template-columns:8.58% 27.709% 18.426% 9.56% 9.56% 10.41% 15.755%}
+.identityTrackRow{display:grid;grid-template-columns:8.58% 27.709% 63.711%}
+.identityNameRow>span,.identityLrnRow>span,.identityTrackRow>span{white-space:nowrap}
+.identityNameRow>strong,.identityLrnRow>strong,.identityTrackRow>strong{min-height:3.4mm;border-bottom:.25mm solid #111;padding:0 .7mm .35mm;text-align:center;text-transform:uppercase;font-weight:700}
+.identityNameRow>strong:nth-of-type(1),.identityLrnRow>strong:nth-of-type(1),.identityTrackRow>strong{text-align:left}
+.identityLrnRow>i{display:block}
+.identityTrackRow>strong{grid-column:2}
 .parentNote{margin:0 0 3.5mm}
 .parentNote>div{margin-bottom:1.2mm}
-.parentNote p{margin:0 0 1.2mm;text-indent:8mm;line-height:1.2}
-.signaturesTop{display:grid;grid-template-columns:1fr 1fr;gap:8mm;margin:1.5mm 0 3mm}
+.parentNote p{margin:0 0 1.2mm;text-indent:8mm;line-height:1.28}
+.signaturesTop{display:grid;grid-template-columns:45.992% 45.287%;column-gap:8.721%;margin:1.5mm 0 3mm}
 .signaturesTop>div{text-align:center}
 .signaturesTop strong,.signaturesTop span{display:block}
 .signaturesTop strong{border-bottom:.25mm solid #111;padding-bottom:.7mm;font-size:7.44pt;text-transform:uppercase;font-weight:700}
@@ -79,7 +83,7 @@
 .progressTitle{text-align:center;font-weight:700;font-size:7.44pt;margin:0 0 1.6mm}
 .gradeTable{width:100%;border-collapse:collapse;table-layout:fixed;font-size:7.44pt}
 .gradeTable th,.gradeTable td{border:.25mm solid #333;padding:.75mm .65mm;height:4.4mm;box-sizing:border-box}
-.gradeTable th{text-align:center;font-weight:800;line-height:1.05}
+.gradeTable th{text-align:center;font-weight:700;line-height:1.05}
 .gradeTable td:nth-child(n+2){text-align:center}
 .gradeTable .learningAreaCol{width:36.286%}
 .gradeTable .finalCol{width:9.564%}
@@ -91,7 +95,7 @@
 .descriptorTitle{font-weight:700;font-size:7.44pt;margin-top:2.5mm}
 .descriptorTable{width:79%;border-collapse:collapse;margin-top:.7mm;margin-left:4mm;font-size:7.44pt;text-align:center}
 .descriptorTable th,.descriptorTable td{padding:.4mm 1mm;border:0}
-.descriptorTable th{font-weight:800}
+.descriptorTable th{font-weight:700}
 .attendanceTable{width:100%;border-collapse:collapse;table-layout:fixed;font-size:6.84pt;text-align:center}
 .attendanceTable th,.attendanceTable td{border:.25mm solid #333;height:5.8mm;padding:.4mm;box-sizing:border-box}
 .attendanceTable th:first-child{width:12.911%;line-height:1.02}
