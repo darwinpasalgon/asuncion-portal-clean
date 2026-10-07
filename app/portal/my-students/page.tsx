@@ -28,18 +28,59 @@ type Learner = {
   name_extension: string | null;
   sex: string | null;
   birth_date: string | null;
+  guardian_last_name: string | null;
+  guardian_first_name: string | null;
+  guardian_middle_name: string | null;
+  guardian_no_middle_name: boolean | null;
+  guardian_name_extension: string | null;
+  guardian_name: string | null;
+  guardian_relationship: string | null;
+  guardian_contact_number: string | null;
+
+  mother_last_name: string | null;
+  mother_first_name: string | null;
+  mother_middle_name: string | null;
+  mother_no_middle_name: boolean | null;
+  mother_name_extension: string | null;
+  mother_maiden_reason: string | null;
+  mother_maiden_name: string | null;
+
+  father_last_name: string | null;
+  father_first_name: string | null;
+  father_middle_name: string | null;
+  father_no_middle_name: boolean | null;
+  father_name_extension: string | null;
+  father_name: string | null;
+
   mother_tongue: string | null;
+  mother_tongue_secondary: string | null;
+  mother_tongue_tertiary: string | null;
+  is_indigenous_peoples: boolean | null;
   ethnic_group: string | null;
+  ethnicity_secondary: string | null;
   religion: string | null;
+  learner_email: string | null;
+
   address_house_street_purok: string | null;
   address_barangay: string | null;
   address_municipality_city: string | null;
   address_province: string | null;
-  father_name: string | null;
-  mother_maiden_name: string | null;
-  guardian_name: string | null;
-  guardian_relationship: string | null;
-  guardian_contact_number: string | null;
+  address_zip_code: string | null;
+
+  permanent_same_as_current: boolean | null;
+  permanent_address_house_street_purok: string | null;
+  permanent_address_barangay: string | null;
+  permanent_address_municipality_city: string | null;
+  permanent_address_province: string | null;
+  permanent_address_zip_code: string | null;
+  permanent_address_other_barangay: string | null;
+
+  citizenship: string | null;
+  cct_recipient: boolean | null;
+  cct_household_id: string | null;
+  has_special_educational_needs: boolean | null;
+  lsen_type: string | null;
+  vaccinated_covid19: boolean | null;
   learning_modality: string | null;
   remarks: string | null;
   grade_level: number;
@@ -63,6 +104,57 @@ function displayName(learner: Learner) {
     }${learner.name_extension ? ` ${learner.name_extension}` : ""}`;
   }
   return learner.full_name;
+}
+
+const RELIGION_OPTIONS = [
+  "Buddhism",
+  "Christianity",
+  "Hinduism",
+  "Indigenous Religion",
+  "Islam",
+  "Judaism",
+  "No Religion",
+  "Not disclosed",
+  "Others",
+  "Sikhism",
+  "Taoism",
+];
+
+const LEARNING_MODALITIES = [
+  "Modular (print)",
+  "Modular Digital",
+  "Online",
+  "Educational TV",
+  "Radio-based Instruction",
+  "Homeschooling",
+  "Blended",
+  "Face to Face",
+];
+
+const LSEN_TYPES = [
+  "Visual Impairment",
+  "Hearing Impairment",
+  "Learning Disability",
+  "Intellectual Disability",
+  "Autism Spectrum Disorder",
+  "Emotional-Behavioral Disorder",
+  "Orthopedic/ Physical Handicap",
+  "Speech / Language Disorder",
+  "Cerebral Palsy",
+  "Special Health Problem/Chronic Disease (eg Cancer)",
+  "Multiple Disabilities",
+  "Difficulty in Seeing",
+  "Difficulty in Hearing",
+  "Difficulty in Basic Learning and Applying Knowledge",
+  "Difficulty in Remembering, Concentrating, Paying Attention and Understanding",
+  "Difficulty in Applying Adaptive Skills",
+  "Difficulty in Displaying Inter-Personal Behavior",
+  "Difficulty in Mobility (Walking, Climbing and Grasping)",
+  "Difficulty in Communicating",
+];
+
+function booleanDefault(value: boolean | null) {
+  return value === true ? "true" : value === false ? "false" : "";
 }
 
 export default function MyStudentsPage() {
