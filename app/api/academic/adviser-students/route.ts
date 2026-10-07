@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
         auth.token
       ),
       getRows(
-        "learner_information?select=student_id,last_name,first_name,middle_name,name_extension,sex,birth_date,mother_tongue,is_indigenous_peoples,ethnic_group,religion,cct_recipient,address_house_street_purok,address_barangay,address_municipality_city,address_province,father_name,mother_maiden_name,guardian_name,guardian_relationship,guardian_contact_number,learning_modality,remarks&order=last_name.asc,first_name.asc",
+        "learner_information?select=student_id,last_name,first_name,middle_name,name_extension,sex,birth_date,mother_tongue,is_indigenous_peoples,ethnic_group,religion,address_house_street_purok,address_barangay,address_municipality_city,address_province,father_name,mother_maiden_name,guardian_name,guardian_relationship,guardian_contact_number,learning_modality,remarks&order=last_name.asc,first_name.asc",
         auth.token
       ),
     ]);
@@ -181,7 +181,6 @@ export async function GET(request: NextRequest) {
                 is_indigenous_peoples: boolean | null;
                 ethnic_group: string | null;
                 religion: string | null;
-                cct_recipient: boolean | null;
                 address_house_street_purok: string | null;
                 address_barangay: string | null;
                 address_municipality_city: string | null;
@@ -210,7 +209,6 @@ export async function GET(request: NextRequest) {
             is_indigenous_peoples: info?.is_indigenous_peoples ?? null,
             ethnic_group: info?.ethnic_group ?? null,
             religion: info?.religion ?? null,
-            cct_recipient: info?.cct_recipient ?? null,
             address_house_street_purok: info?.address_house_street_purok ?? null,
             address_barangay: info?.address_barangay ?? null,
             address_municipality_city: info?.address_municipality_city ?? null,
@@ -318,7 +316,6 @@ export async function POST(request: NextRequest) {
       "is_indigenous_peoples",
       "ethnic_group",
       "religion",
-      "cct_recipient",
       "address_house_street_purok",
       "address_barangay",
       "address_municipality_city",
