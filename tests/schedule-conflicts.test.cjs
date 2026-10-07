@@ -76,7 +76,14 @@ test('all selected days are checked and missing active assignments are excluded'
 function route(allowed = true) {
   const writes=[];
   const api = loadTS('app/api/admin/class-schedules/route.ts', {
-    '@/lib/admin-access':{hasAdminPermission:async()=>allowed},
+    '@/lib/admin-access':{
+      hasAdminPermission:async()=>allowed,
+      getScopedAdminAccess:async()=>({
+        allowed,
+        gradeLevel:null,
+        gradeLevelHead:false,
+      }),
+    },
     '@/lib/supabase-config':{SUPABASE_URL:'https://test.invalid',SUPABASE_PUBLISHABLE_KEY:'test'},
     fetch:async (url,options={})=> {
       const u = new URL(url);
