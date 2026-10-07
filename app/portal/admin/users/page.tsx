@@ -783,7 +783,7 @@ export default function UsersAccountsPage() {
                       <td>
                         <div className={styles.actions}>
                           <button onClick={() => openEdit(user)}>
-                            <Edit3 size={15} /> Edit
+                            <Edit3 size={15} /> {personType === "student" ? "Update LIS Profile" : "Edit"}
                           </button>
 
                           {user.account_status === "active" && (
@@ -847,7 +847,7 @@ export default function UsersAccountsPage() {
             <div className={styles.modalHead}>
               <div>
                 <span>EDIT {editing.personType.toUpperCase()}</span>
-                <h2>{editing.personType === "student" ? "Learner Profile" : "Update Account Information"}</h2>
+                <h2>{editing.personType === "student" ? "LIS-Style Learner Profile" : "Update Account Information"}</h2>
               </div>
               <button
                 className={styles.iconButton}
