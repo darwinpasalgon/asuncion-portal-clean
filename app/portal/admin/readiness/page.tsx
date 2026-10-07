@@ -356,11 +356,11 @@ export default function SchoolReadinessPage() {
               </div>
               <div className={styles.grid}>
                 <HealthCard
-                  title="Incomplete LIS-Style Learner Profiles"
-                  description="Learners missing one or more core LIS-style profile fields or required Yes/No responses."
+                  title="Incomplete Learner Records"
+                  description="Learners missing one or more required profile fields."
                   count={data.incompleteLearners.count}
                   href="/portal/admin/learners?missing=required"
-                  action="Complete Learner Profiles"
+                  action="Complete Records"
                   icon={GraduationCap}
                 />
                 <HealthCard
@@ -386,7 +386,7 @@ export default function SchoolReadinessPage() {
                 <div className={styles.detailPanel}>
                   <div className={styles.detailHeading}>
                     <div>
-                      <h3>LIS-Style Learner Profiles Needing Attention</h3>
+                      <h3>Learner Records Needing Attention</h3>
                       <p>Showing the first {data.incompleteLearners.samples.length} affected learners.</p>
                     </div>
                     <a href="/portal/admin/learners?missing=required">
