@@ -127,6 +127,7 @@ function LearnerIdentity({ card }: { card: Sf9CardData }) {
       </div>
       <div className={styles.identityTrackRow}>
         <span>Track (SHS only):</span>
+        <i aria-hidden="true" />
         <strong>{card.track || ""}</strong>
       </div>
     </div>
