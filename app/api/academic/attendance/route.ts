@@ -37,6 +37,36 @@ type ExclusionRow = {
   updated_at?: string;
 };
 
+type AttendanceAssistantRow = {
+  id: string;
+  school_year_id: string;
+  section_id: string;
+  student_id: string;
+  assigned_by: string;
+  is_active: boolean;
+  assigned_at: string;
+  updated_at: string;
+};
+
+type AssistantEntryRow = {
+  id?: string;
+  school_year_id: string;
+  section_id: string;
+  attendance_date: string;
+  student_id: string;
+  status: "present" | "absent";
+  entered_by: string;
+  updated_at?: string;
+};
+
+type AssistantRosterRow = {
+  school_year_id: string;
+  section_id: string;
+  student_id: string;
+  display_name: string;
+  sex: string | null;
+};
+
 function headers(token: string) {
   return {
     apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -169,6 +199,23 @@ async function verifyAdviser(
   return Boolean(rows?.[0]);
 }
 
+async function attendanceAssistantAssignment(
+  token: string,
+  userId: string,
+  schoolYearId: string
+) {
+  const rows = await getRows(
+    `attendance_assistants?school_year_id=eq.${encodeURIComponent(
+      schoolYearId
+    )}&student_id=eq.${encodeURIComponent(
+      userId
+    )}&is_active=eq.true&select=id,school_year_id,section_id,student_id,assigned_by,is_active,assigned_at,updated_at&limit=1`,
+    token
+  ).catch(() => []);
+
+  return (rows?.[0] ?? null) as AttendanceAssistantRow | null;
+}
+
 export async function GET(request: NextRequest) {
   const auth = await identity(request);
   if (!auth) {
@@ -195,6 +242,10 @@ export async function GET(request: NextRequest) {
         attendance: [],
         dateExclusions: [],
         pendingDates: [],
+        attendanceAssistants: [],
+        assistantEntries: [],
+        assistantAssignment: null,
+        assistantRoster: [],
       });
     }
 
@@ -224,6 +275,8 @@ export async function GET(request: NextRequest) {
           attendance: [],
           dateExclusions: [],
           pendingDates: [],
+          attendanceAssistants: [],
+          assistantEntries: [],
           date: validDate(date) ? date : null,
           isWeekday: validDate(date) ? isWeekday(date) : null,
         });
@@ -242,6 +295,8 @@ export async function GET(request: NextRequest) {
         selectedExclusions,
         attendanceRange,
         exclusionRange,
+        attendanceAssistants,
+        assistantEntries,
       ] = await Promise.all([
         getRows(
           `sections?id=in.${encodeURIComponent(
@@ -302,6 +357,24 @@ export async function GET(request: NextRequest) {
               )}&attendance_date=gte.${monthStart}&attendance_date=lte.${today}&section_id=in.${encodeURIComponent(
                 filter
               )}&select=section_id,attendance_date,exclusion_type,reason`,
+              token
+            )
+          : Promise.resolve([]),
+        getRows(
+          `attendance_assistants?school_year_id=eq.${encodeURIComponent(
+            year.id
+          )}&section_id=in.${encodeURIComponent(
+            filter
+          )}&is_active=eq.true&select=id,school_year_id,section_id,student_id,assigned_by,is_active,assigned_at,updated_at&order=assigned_at.asc`,
+          token
+        ),
+        validDate(date)
+          ? getRows(
+              `attendance_assistant_entries?school_year_id=eq.${encodeURIComponent(
+                year.id
+              )}&attendance_date=eq.${date}&section_id=in.${encodeURIComponent(
+                filter
+              )}&select=id,school_year_id,section_id,attendance_date,student_id,status,entered_by,updated_at&order=updated_at.asc`,
               token
             )
           : Promise.resolve([]),
@@ -422,6 +495,8 @@ export async function GET(request: NextRequest) {
         attendance,
         dateExclusions: selectedExclusions,
         pendingDates,
+        attendanceAssistants: (attendanceAssistants ?? []) as AttendanceAssistantRow[],
+        assistantEntries: (assistantEntries ?? []) as AssistantEntryRow[],
         date: validDate(date) ? date : null,
         isWeekday: validDate(date) ? isWeekday(date) : null,
         today,
@@ -429,25 +504,64 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const [enrollments, sections, attendance] = await Promise.all([
-      getRows(
-        `student_enrollments?student_id=eq.${encodeURIComponent(
-          userId
-        )}&school_year_id=eq.${encodeURIComponent(
-          year.id
-        )}&enrollment_status=eq.active&select=id,student_id,grade_level,section_id&limit=1`,
-        token
-      ),
-      getRows("sections?select=id,grade_level,name", token),
-      getRows(
-        `daily_attendance?student_id=eq.${encodeURIComponent(
-          userId
-        )}&school_year_id=eq.${encodeURIComponent(
-          year.id
-        )}&select=id,attendance_date,status,note,section_id,updated_at&order=attendance_date.desc&limit=180`,
-        token
-      ),
-    ]);
+    const enrollments = await getRows(
+      `student_enrollments?student_id=eq.${encodeURIComponent(
+        userId
+      )}&school_year_id=eq.${encodeURIComponent(
+        year.id
+      )}&enrollment_status=eq.active&select=id,student_id,grade_level,section_id&limit=1`,
+      token
+    );
+
+    const assignment = await attendanceAssistantAssignment(
+      token,
+      userId,
+      year.id
+    );
+    const today = manilaToday();
+
+    const [sections, attendance, assistantRoster, assistantEntries, assistantExclusions] =
+      await Promise.all([
+        getRows("sections?select=id,grade_level,name", token),
+        getRows(
+          `daily_attendance?student_id=eq.${encodeURIComponent(
+            userId
+          )}&school_year_id=eq.${encodeURIComponent(
+            year.id
+          )}&select=id,attendance_date,status,note,section_id,updated_at&order=attendance_date.desc&limit=180`,
+          token
+        ),
+        assignment
+          ? getRows(
+              `attendance_section_roster?school_year_id=eq.${encodeURIComponent(
+                year.id
+              )}&section_id=eq.${encodeURIComponent(
+                assignment.section_id
+              )}&select=school_year_id,section_id,student_id,display_name,sex&order=display_name.asc`,
+              token
+            )
+          : Promise.resolve([]),
+        assignment
+          ? getRows(
+              `attendance_assistant_entries?school_year_id=eq.${encodeURIComponent(
+                year.id
+              )}&section_id=eq.${encodeURIComponent(
+                assignment.section_id
+              )}&attendance_date=eq.${today}&select=id,school_year_id,section_id,attendance_date,student_id,status,entered_by,updated_at&order=updated_at.asc`,
+              token
+            )
+          : Promise.resolve([]),
+        assignment
+          ? getRows(
+              `attendance_day_exclusions?school_year_id=eq.${encodeURIComponent(
+                year.id
+              )}&section_id=eq.${encodeURIComponent(
+                assignment.section_id
+              )}&attendance_date=eq.${today}&select=id,school_year_id,section_id,attendance_date,exclusion_type,reason&limit=1`,
+              token
+            )
+          : Promise.resolve([]),
+      ]);
 
     return NextResponse.json({
       role: profile.role,
@@ -456,6 +570,11 @@ export async function GET(request: NextRequest) {
       enrollments,
       sections,
       attendance,
+      assistantAssignment: assignment,
+      assistantRoster: (assistantRoster ?? []) as AssistantRosterRow[],
+      assistantEntries: (assistantEntries ?? []) as AssistantEntryRow[],
+      assistantExclusions: assistantExclusions ?? [],
+      assistantDate: today,
     });
   } catch {
     return NextResponse.json(
