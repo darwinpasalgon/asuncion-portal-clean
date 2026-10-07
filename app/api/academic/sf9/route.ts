@@ -244,10 +244,10 @@ export async function GET(request: NextRequest) {
           ).catch(() => [])
         : [];
 
-      const profileMap = new Map(
+      const profileMap = new Map<string, JsonRow>(
         (profiles ?? []).map((row: JsonRow) => [String(row.id), row])
       );
-      const sectionMap = new Map(
+      const sectionMap = new Map<string, JsonRow>(
         sections.map((row: JsonRow) => [String(row.id), row])
       );
 
@@ -410,19 +410,19 @@ export async function GET(request: NextRequest) {
           ).catch(() => [])
         : [];
 
-    const profileMap = new Map(
+    const profileMap = new Map<string, JsonRow>(
       (selectedProfiles ?? []).map((row: JsonRow) => [String(row.id), row])
     );
-    const infoMap = new Map(
+    const infoMap = new Map<string, JsonRow>(
       (learnerInformation ?? []).map((row: JsonRow) => [
         String(row.student_id),
         row,
       ])
     );
-    const enrollmentMap = new Map(
+    const enrollmentMap = new Map<string, JsonRow>(
       enrollmentRows.map((row: JsonRow) => [String(row.student_id), row])
     );
-    const subjectMap = new Map(
+    const subjectMap = new Map<string, JsonRow>(
       (subjects ?? []).map((row: JsonRow) => [String(row.id), row])
     );
 
@@ -635,9 +635,9 @@ export async function GET(request: NextRequest) {
     }
 
     const cards = requestedStudentIds.map((studentId) => {
-      const student = profileMap.get(studentId) ?? {};
-      const info = infoMap.get(studentId) ?? {};
-      const enrollment = enrollmentMap.get(studentId) ?? {};
+      const student: JsonRow = profileMap.get(studentId) ?? {};
+      const info: JsonRow = infoMap.get(studentId) ?? {};
+      const enrollment: JsonRow = enrollmentMap.get(studentId) ?? {};
       const gradesBuilt = buildGradeRows(
         studentId,
         String(enrollment.tve_major ?? "") || null
