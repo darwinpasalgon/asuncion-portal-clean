@@ -466,7 +466,7 @@ export default function AttendancePage(){
                 <UserCheck size={19}/>
                 <div>
                   <strong>Attendance Assistants</strong>
-                  <span>Assign up to 3 students from this advisory section.</span>
+                  <span>Assign 2 or 3 students from this advisory section.</span>
                 </div>
               </div>
               <span>{currentAssistants.length}/3</span>
