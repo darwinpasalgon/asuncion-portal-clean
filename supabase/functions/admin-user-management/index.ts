@@ -345,8 +345,6 @@ Deno.serve(async (req) => {
 
     const isIndigenousPeoples = body.is_indigenous_peoples === true ||
       String(body.is_indigenous_peoples ?? "").toLowerCase() === "true";
-    const cctRecipient = body.cct_recipient === true ||
-      String(body.cct_recipient ?? "").toLowerCase() === "true";
     const ethnicGroup = String(body.ethnic_group ?? "").trim();
 
     if (isIndigenousPeoples && !ethnicGroup) {
@@ -367,7 +365,6 @@ Deno.serve(async (req) => {
       is_indigenous_peoples: isIndigenousPeoples,
       ethnic_group: isIndigenousPeoples ? ethnicGroup || null : null,
       religion: String(body.religion ?? "").trim() || null,
-      cct_recipient: cctRecipient,
       address_house_street_purok:
         String(body.address_house_street_purok ?? "").trim() || null,
       address_barangay: String(body.address_barangay ?? "").trim() || null,

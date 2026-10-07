@@ -37,7 +37,6 @@ type Learner = {
   is_indigenous_peoples: boolean | null;
   ethnic_group: string | null;
   religion: string | null;
-  cct_recipient: boolean | null;
   address_house_street_purok: string | null;
   address_barangay: string | null;
   address_municipality_city: string | null;
@@ -189,7 +188,6 @@ export default function MyStudentsPage() {
       "is_indigenous_peoples",
       "ethnic_group",
       "religion",
-      "cct_recipient",
       "address_house_street_purok",
       "address_barangay",
       "address_municipality_city",
@@ -207,7 +205,6 @@ export default function MyStudentsPage() {
       fields.map((field) => [field, String(form.get(field) ?? "")])
     );
     data.is_indigenous_peoples = form.has("is_indigenous_peoples") ? "true" : "false";
-    data.cct_recipient = form.has("cct_recipient") ? "true" : "false";
 
     try {
       const infoResponse = await fetch("/api/academic/adviser-students", {
@@ -482,18 +479,6 @@ export default function MyStudentsPage() {
                             </option>
                           ))}
                         </select>
-                      </label>
-                      <label className={styles.checkboxField}>
-                        <input
-                          type="checkbox"
-                          name="cct_recipient"
-                          value="true"
-                          defaultChecked={selected.cct_recipient === true}
-                        />
-                        <span>
-                          <strong>Conditional Cash Transfer (CCT)</strong>
-                          Is this learner CCT recipient?
-                        </span>
                       </label>
                       <label className={styles.checkboxField}>
                         <input
