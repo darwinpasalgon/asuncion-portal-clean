@@ -620,10 +620,10 @@ export default function GradesPage() {
         <header className={styles.header}>
           <div>
             <span className={styles.eyebrow}>ACADEMIC RECORDS</span>
-            <h1>{role === "teacher" ? "Section Adviser Gradebook" : "My Grades"}</h1>
+            <h1>{role === "teacher" ? "Grades" : "My Grades"}</h1>
             <p>
               {role === "teacher"
-                ? "Only the active Section Adviser can encode and publish official grades for learners in the section."
+                ? "Section Advisers can encode and publish official grades. Subject Teachers can view published grades only for the subjects assigned to them."
                 : "Published Term Grades and Final Grades for the active school year."}
             </p>
           </div>
@@ -640,16 +640,38 @@ export default function GradesPage() {
         {error && <div className={styles.error}>{error}</div>}
         {success && <div className={styles.success}>{success}</div>}
 
-        {role === "teacher" && !isSectionAdviser && (
-          <section className={styles.gradePanel}>
-            <div className={styles.empty}>
-              Grade encoding is reserved for the active Section Adviser. Your subject-teacher
-              assignments remain available in the other teaching modules.
-            </div>
-          </section>
-        )}
+        {role === "teacher" &&
+          isSectionAdviser &&
+          subjectAssignments.length > 0 && (
+            <section className={styles.teacherViewTabs}>
+              <button
+                type="button"
+                className={teacherView === "adviser" ? styles.teacherViewActive : ""}
+                onClick={() => setTeacherView("adviser")}
+              >
+                Adviser Gradebook
+              </button>
+              <button
+                type="button"
+                className={teacherView === "subjects" ? styles.teacherViewActive : ""}
+                onClick={() => setTeacherView("subjects")}
+              >
+                My Subject Grades
+              </button>
+            </section>
+          )}
 
-        {role === "teacher" && isSectionAdviser && (
+        {role === "teacher" &&
+          !isSectionAdviser &&
+          subjectAssignments.length === 0 && (
+            <section className={styles.gradePanel}>
+              <div className={styles.empty}>
+                No graded Subject Teacher assignments are available for your account yet.
+              </div>
+            </section>
+          )}
+
+        {role === "teacher" && isSectionAdviser && teacherView === "adviser" && (
           <>
             {assignments.length === 0 && adviserSections.length > 0 && (
               <section className={styles.gradePanel}>
@@ -740,6 +762,16 @@ export default function GradesPage() {
                   </p>
                 </div>
                 <div className={styles.publishActions}>
+                  {!allPublished && (
+                    <button
+                      className={styles.saveAll}
+                      disabled={Boolean(working) || classStudents.length === 0}
+                      onClick={() => void saveAllGrades()}
+                    >
+                      <Save size={16} />
+                      {working === "save-all" ? "Saving All…" : "Save All Grades"}
+                    </button>
+                  )}
                   {allPublished ? (
                     <button
                       className={styles.unpublish}
@@ -897,6 +929,7 @@ export default function GradesPage() {
                                     className={styles.saveButton}
                                     disabled={
                                       working === student.id ||
+                                      working === "save-all" ||
                                       published ||
                                       average === null
                                     }
@@ -1023,6 +1056,7 @@ export default function GradesPage() {
                                       className={styles.saveButton}
                                       disabled={
                                         working === student.id ||
+                                        working === "save-all" ||
                                         saved?.status === "published" ||
                                         (selectedIsTve &&
                                           !gradeAssignmentIdForStudent(student.id))
