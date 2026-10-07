@@ -511,7 +511,7 @@ function DashboardHome({
     ];
   } else {
     actions = [
-      ...(profile.role === "administrator" || adminPermissions.length > 0
+      ...(profile.role === "administrator"
         ? [
             {
               label: "School Readiness",
@@ -1189,7 +1189,7 @@ function SideNav({
               </div>
             )}
 
-            {(profile.role === "administrator" || adminPermissions.length > 0) && (
+            {profile.role === "administrator" && (
               <div className="nav-group-section">
                 <p className="nav-label">SYSTEM</p>
                 <SidebarMenu>
