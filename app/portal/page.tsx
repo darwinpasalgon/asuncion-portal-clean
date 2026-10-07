@@ -511,6 +511,16 @@ function DashboardHome({
     ];
   } else {
     actions = [
+      ...(profile.role === "administrator"
+        ? [
+            {
+              label: "School Readiness",
+              description: "Find incomplete setup, missing data, and daily operational issues.",
+              href: "/portal/admin/readiness",
+              icon: CheckCircle2,
+            },
+          ]
+        : []),
       ...(isSuperAdmin
         ? [
             {
@@ -1179,12 +1189,21 @@ function SideNav({
               </div>
             )}
 
-            {(profile.role === "administrator" ||
-              adminPermissions.includes("school_setup.manage") ||
-              adminPermissions.includes("reports.view")) && (
+            {profile.role === "administrator" && (
               <div className="nav-group-section">
                 <p className="nav-label">SYSTEM</p>
                 <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
+                        window.location.href = "/portal/admin/readiness";
+                      }}
+                    >
+                      <CheckCircle2 size={19} />
+                      <span>School Readiness</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   {(profile.role === "administrator" || adminPermissions.includes("school_setup.manage")) && (
                     <SidebarMenuItem>
                       <SidebarMenuButton

@@ -213,6 +213,8 @@ export default function LearnerManagementPage() {
   const [gradeFilter, setGradeFilter] = useState("");
   const [sectionFilter, setSectionFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [missingFilter, setMissingFilter] = useState<"all"|"required"|"tve_major">("all");
+  const [requestedStudentId, setRequestedStudentId] = useState("");
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [detailLearner, setDetailLearner] = useState<Learner | null>(null);
@@ -254,8 +256,28 @@ export default function LearnerManagementPage() {
   }
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const grade = params.get("grade");
+    const section = params.get("section");
+    const missing = params.get("missing");
+    const student = params.get("student");
+
+    if (grade && /^\d+$/.test(grade)) setGradeFilter(grade);
+    if (section) setSectionFilter(section);
+    if (missing === "required" || missing === "tve_major") {
+      setMissingFilter(missing);
+    }
+    if (student) setRequestedStudentId(student);
+
     void loadData();
   }, []);
+
+  useEffect(() => {
+    if (!requestedStudentId || learners.length === 0) return;
+    const learner = learners.find((item) => item.id === requestedStudentId);
+    if (learner) setDetailLearner(learner);
+    setRequestedStudentId("");
+  }, [learners, requestedStudentId]);
 
   const selectedYear = useMemo(
     () => schoolYears.find((year) => year.id === selectedYearId) ?? null,
@@ -295,6 +317,32 @@ export default function LearnerManagementPage() {
         (enrollment.learner_status ?? "active") !== statusFilter
       ) {
         return [];
+      }
+
+      if (missingFilter === "tve_major") {
+        if (
+          enrollment.grade_level < 8 ||
+          enrollment.grade_level > 10 ||
+          String(enrollment.tve_major ?? "").trim()
+        ) {
+          return [];
+        }
+      }
+
+      if (missingFilter === "required") {
+        const info = learner.learner_info;
+        const requiredValues = [
+          info?.last_name,
+          info?.first_name,
+          info?.sex,
+          info?.birth_date,
+          info?.mother_tongue,
+          info?.religion,
+          info?.learning_modality,
+        ];
+        if (requiredValues.every((value) => String(value ?? "").trim())) {
+          return [];
+        }
       }
 
       if (query) {
@@ -351,7 +399,7 @@ export default function LearnerManagementPage() {
         sensitivity: "base",
       });
     });
-  }, [learners, selectedYearId, gradeFilter, sectionFilter, statusFilter, search]);
+  }, [learners, selectedYearId, gradeFilter, sectionFilter, statusFilter, missingFilter, search]);
 
   const summary = useMemo(() => {
     const enrolled = filtered.filter(({ enrollment }) =>
@@ -768,6 +816,20 @@ export default function LearnerManagementPage() {
                   {option.label}
                 </option>
               ))}
+            </select>
+
+            <select
+              value={missingFilter}
+              onChange={(event) =>
+                setMissingFilter(
+                  event.target.value as "all"|"required"|"tve_major"
+                )
+              }
+              aria-label="Data Completeness"
+            >
+              <option value="all">All Data Records</option>
+              <option value="required">Missing Required Information</option>
+              <option value="tve_major">Missing TVE Major</option>
             </select>
 
           </div>
