@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 import { TECHNICAL_VOCATIONAL_MAJORS } from "@/lib/subject-config";
 
+type LearnerInfoRow = {
+  student_id: string;
+  last_name?: string | null;
+  first_name?: string | null;
+  sex?: string | null;
+  [key: string]: unknown;
+};
+
 function authHeaders(token: string) {
   return {
     apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -115,7 +123,7 @@ export async function GET(request: NextRequest) {
         auth.token
       ),
       getRows(
-        "learner_information?select=student_id,last_name,first_name,middle_name,name_extension,sex,birth_date,mother_tongue,ethnic_group,religion,address_house_street_purok,address_barangay,address_municipality_city,address_province,father_name,mother_maiden_name,guardian_name,guardian_relationship,guardian_contact_number,learning_modality,remarks&order=last_name.asc,first_name.asc",
+        "learner_information?select=*&order=last_name.asc,first_name.asc",
         auth.token
       ),
     ]);
@@ -135,14 +143,7 @@ export async function GET(request: NextRequest) {
       )
     );
     const learnerInfoMap = new Map(
-      (learnerInfos ?? []).map(
-        (info: {
-          student_id: string;
-          last_name: string | null;
-          first_name: string | null;
-          sex: string | null;
-        }) => [info.student_id, info]
-      )
+      (learnerInfos ?? []).map((info: LearnerInfoRow) => [info.student_id, info])
     );
     const sectionMap = new Map(
       eligibleSections.map(
@@ -168,56 +169,16 @@ export async function GET(request: NextRequest) {
           const profile = profileMap.get(enrollment.student_id) as
             | { id: string; full_name: string; lrn: string | null }
             | undefined;
-          const info = learnerInfoMap.get(enrollment.student_id) as
-            | {
-                student_id: string;
-                last_name: string | null;
-                first_name: string | null;
-                middle_name: string | null;
-                name_extension: string | null;
-                sex: string | null;
-                birth_date: string | null;
-                mother_tongue: string | null;
-                ethnic_group: string | null;
-                religion: string | null;
-                address_house_street_purok: string | null;
-                address_barangay: string | null;
-                address_municipality_city: string | null;
-                address_province: string | null;
-                father_name: string | null;
-                mother_maiden_name: string | null;
-                guardian_name: string | null;
-                guardian_relationship: string | null;
-                guardian_contact_number: string | null;
-                learning_modality: string | null;
-                remarks: string | null;
-              }
-            | undefined;
+          const info = learnerInfoMap.get(enrollment.student_id);
           return {
+            ...(info ?? {}),
             enrollment_id: enrollment.id,
             student_id: enrollment.student_id,
             full_name: profile?.full_name ?? "Unknown learner",
             lrn: profile?.lrn ?? null,
             last_name: info?.last_name ?? null,
             first_name: info?.first_name ?? null,
-            middle_name: info?.middle_name ?? null,
-            name_extension: info?.name_extension ?? null,
             sex: info?.sex ?? null,
-            birth_date: info?.birth_date ?? null,
-            mother_tongue: info?.mother_tongue ?? null,
-            ethnic_group: info?.ethnic_group ?? null,
-            religion: info?.religion ?? null,
-            address_house_street_purok: info?.address_house_street_purok ?? null,
-            address_barangay: info?.address_barangay ?? null,
-            address_municipality_city: info?.address_municipality_city ?? null,
-            address_province: info?.address_province ?? null,
-            father_name: info?.father_name ?? null,
-            mother_maiden_name: info?.mother_maiden_name ?? null,
-            guardian_name: info?.guardian_name ?? null,
-            guardian_relationship: info?.guardian_relationship ?? null,
-            guardian_contact_number: info?.guardian_contact_number ?? null,
-            learning_modality: info?.learning_modality ?? null,
-            remarks: info?.remarks ?? null,
             grade_level: enrollment.grade_level,
             section_id: enrollment.section_id,
             section: sectionMap.get(enrollment.section_id) ?? "Unknown section",
@@ -226,21 +187,7 @@ export async function GET(request: NextRequest) {
           };
         }
       )
-      .sort(
-        (
-          a: {
-            full_name: string;
-            last_name: string | null;
-            first_name: string | null;
-            sex: string | null;
-          },
-          b: {
-            full_name: string;
-            last_name: string | null;
-            first_name: string | null;
-            sex: string | null;
-          }
-        ) => {
+      .sort((a, b) => {
           const sexRank = (sex: string | null) => {
             const normalized = String(sex ?? "").trim().toUpperCase();
             if (normalized === "M") return 0;
@@ -310,18 +257,53 @@ export async function POST(request: NextRequest) {
       "name_extension",
       "sex",
       "birth_date",
+      "guardian_last_name",
+      "guardian_first_name",
+      "guardian_middle_name",
+      "guardian_no_middle_name",
+      "guardian_name_extension",
+      "guardian_name",
+      "guardian_relationship",
+      "guardian_contact_number",
+      "mother_last_name",
+      "mother_first_name",
+      "mother_middle_name",
+      "mother_no_middle_name",
+      "mother_name_extension",
+      "mother_maiden_reason",
+      "mother_maiden_name",
+      "father_last_name",
+      "father_first_name",
+      "father_middle_name",
+      "father_no_middle_name",
+      "father_name_extension",
+      "father_name",
       "mother_tongue",
+      "mother_tongue_secondary",
+      "mother_tongue_tertiary",
+      "is_indigenous_peoples",
       "ethnic_group",
+      "ethnicity_secondary",
       "religion",
+      "learner_email",
       "address_house_street_purok",
       "address_barangay",
       "address_municipality_city",
       "address_province",
-      "father_name",
-      "mother_maiden_name",
-      "guardian_name",
-      "guardian_relationship",
-      "guardian_contact_number",
+      "address_zip_code",
+      "permanent_same_as_current",
+      "permanent_address_house_street_purok",
+      "permanent_address_barangay",
+      "permanent_address_municipality_city",
+      "permanent_address_province",
+      "permanent_address_zip_code",
+      "permanent_address_other_barangay",
+      "citizenship",
+      "cct_recipient",
+      "cct_household_id",
+      "has_special_educational_needs",
+      "lsen_type",
+      "vaccinated_covid19",
       "learning_modality",
       "remarks",
     ]);
