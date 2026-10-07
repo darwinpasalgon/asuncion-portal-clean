@@ -5,6 +5,7 @@ export type ConflictAssignment = {
   subject_id: string;
   grade_level: number;
   major: string | null;
+  co_teacher_ids?: string[];
 };
 
 export type ConflictSchedule = {
@@ -66,14 +67,23 @@ export function findScheduleConflicts(
       if (schedule.id === period.id || schedule.day_of_week !== period.day_of_week ||
           schedule.start_time.slice(0, 5) >= period.end_time.slice(0, 5) ||
           schedule.end_time.slice(0, 5) <= period.start_time.slice(0, 5)) continue;
+      const assignmentTeacherIds = new Set([
+        assignment.teacher_id,
+        ...(assignment.co_teacher_ids ?? []),
+      ]);
+      const otherTeacherIds = [
+        other.teacher_id,
+        ...(other.co_teacher_ids ?? []),
+      ];
+      const sharedTeacherId = otherTeacherIds.find((id) => assignmentTeacherIds.has(id));
       const combinedTveClass =
-        other.teacher_id === assignment.teacher_id &&
+        Boolean(sharedTeacherId) &&
         other.section_id !== assignment.section_id &&
         subjects.get(assignment.subject_id) === "Technical Vocational Education" &&
         subjects.get(other.subject_id) === "Technical Vocational Education" &&
         assignment.major !== null &&
         other.major === assignment.major;
-      if (other.teacher_id === assignment.teacher_id && !combinedTveClass) {
+      if (sharedTeacherId && !combinedTveClass) {
         kinds.add("teacher");
       }
       const separateMajors = assignment.major !== null && other.major !== null &&
@@ -89,7 +99,15 @@ export function findScheduleConflicts(
     }
     if (kinds.size) conflicts.push({
       schedule, assignment: other, kinds: [...kinds],
-      teacherName: teachers.get(other.teacher_id) ?? "Assigned Teacher",
+      teacherName:
+        teachers.get(
+          [
+            other.teacher_id,
+            ...(other.co_teacher_ids ?? []),
+          ].find((id) =>
+            new Set([assignment.teacher_id, ...(assignment.co_teacher_ids ?? [])]).has(id)
+          ) ?? other.teacher_id
+        ) ?? "Assigned Teacher",
       sectionName: sections.get(other.section_id) ?? "Assigned Section",
       subjectName: subjects.get(other.subject_id) ?? "Assigned Subject",
     });
