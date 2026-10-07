@@ -206,6 +206,8 @@ export default function MyStudentsPage() {
     const data = Object.fromEntries(
       fields.map((field) => [field, String(form.get(field) ?? "")])
     );
+    data.is_indigenous_peoples = form.has("is_indigenous_peoples") ? "true" : "false";
+    data.cct_recipient = form.has("cct_recipient") ? "true" : "false";
 
     try {
       const infoResponse = await fetch("/api/academic/adviser-students", {
