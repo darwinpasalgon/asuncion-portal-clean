@@ -19,6 +19,11 @@ import styles from "./users.module.css";
 import { captureRefreshScroll, restoreRefreshScroll } from "@/lib/background-refresh";
 import ActionWaitOverlay from "@/app/components/action-wait-overlay";
 import { positionOptions, teachingPositions } from "@/lib/deped-positions";
+import {
+  LIS_ETHNICITY_OPTIONS,
+  LIS_MOTHER_TONGUE_OPTIONS,
+  LIS_RELIGION_OPTIONS,
+} from "@/lib/lis-learner-options";
 
 type PersonType = "student" | "teacher";
 type UserStatus = "pending" | "active" | "suspended";
@@ -31,8 +36,10 @@ type LearnerInfo = {
   sex: string;
   birth_date: string;
   mother_tongue: string;
+  is_indigenous_peoples: boolean;
   ethnic_group: string;
   religion: string;
+  cct_recipient: boolean;
   address_house_street_purok: string;
   address_barangay: string;
   address_municipality_city: string;
@@ -90,8 +97,10 @@ function emptyLearnerInfo(): LearnerInfo {
     sex: "",
     birth_date: "",
     mother_tongue: "",
+    is_indigenous_peoples: false,
     ethnic_group: "",
     religion: "",
+    cct_recipient: false,
     address_house_street_purok: "",
     address_barangay: "",
     address_municipality_city: "",
@@ -832,6 +841,7 @@ export default function UsersAccountsPage() {
                       <label>
                         <span>Mother Tongue</span>
                         <input
+                          list="lis-mother-tongue-options"
                           value={editing.learnerInfo.mother_tongue}
                           onChange={(event) =>
                             setEditing({
@@ -842,26 +852,12 @@ export default function UsersAccountsPage() {
                               },
                             })
                           }
-                        />
-                      </label>
-                      <label>
-                        <span>Ethnic Group</span>
-                        <input
-                          value={editing.learnerInfo.ethnic_group}
-                          onChange={(event) =>
-                            setEditing({
-                              ...editing,
-                              learnerInfo: {
-                                ...editing.learnerInfo,
-                                ethnic_group: event.target.value,
-                              },
-                            })
-                          }
+                          placeholder="Type or select from LIS choices"
                         />
                       </label>
                       <label>
                         <span>Religion</span>
-                        <input
+                        <select
                           value={editing.learnerInfo.religion}
                           onChange={(event) =>
                             setEditing({
@@ -872,9 +868,110 @@ export default function UsersAccountsPage() {
                               },
                             })
                           }
+                        >
+                          <option value="">Select Religion</option>
+                          {editing.learnerInfo.religion &&
+                            !LIS_RELIGION_OPTIONS.includes(
+                              editing.learnerInfo.religion as (typeof LIS_RELIGION_OPTIONS)[number]
+                            ) && (
+                              <option value={editing.learnerInfo.religion}>
+                                {editing.learnerInfo.religion}
+                              </option>
+                            )}
+                          {LIS_RELIGION_OPTIONS.map((religion) => (
+                            <option key={religion} value={religion}>
+                              {religion}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className={styles.checkboxField}>
+                        <input
+                          type="checkbox"
+                          checked={editing.learnerInfo.cct_recipient}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                cct_recipient: event.target.checked,
+                              },
+                            })
+                          }
                         />
+                        <span>
+                          <strong>Conditional Cash Transfer (CCT)</strong>
+                          Is this learner CCT recipient?
+                        </span>
                       </label>
                     </div>
+
+                    <div className={styles.twoCol}>
+                      <label className={styles.checkboxField}>
+                        <input
+                          type="checkbox"
+                          checked={editing.learnerInfo.is_indigenous_peoples}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                is_indigenous_peoples: event.target.checked,
+                                ethnic_group: event.target.checked
+                                  ? editing.learnerInfo.ethnic_group
+                                  : "",
+                              },
+                            })
+                          }
+                        />
+                        <span>
+                          <strong>Indigenous Peoples</strong>
+                          Is this learner a member of Indigenous Cultural Communities/Indigenous Peoples?
+                        </span>
+                      </label>
+                      <label>
+                        <span>Ethnicity</span>
+                        <select
+                          value={editing.learnerInfo.ethnic_group}
+                          disabled={!editing.learnerInfo.is_indigenous_peoples}
+                          required={editing.learnerInfo.is_indigenous_peoples}
+                          onChange={(event) =>
+                            setEditing({
+                              ...editing,
+                              learnerInfo: {
+                                ...editing.learnerInfo,
+                                ethnic_group: event.target.value,
+                              },
+                            })
+                          }
+                        >
+                          <option value="">
+                            {editing.learnerInfo.is_indigenous_peoples
+                              ? "Select Ethnicity"
+                              : "Enable Indigenous Peoples first"}
+                          </option>
+                          {editing.learnerInfo.ethnic_group &&
+                            !LIS_ETHNICITY_OPTIONS.includes(
+                              editing.learnerInfo.ethnic_group as (typeof LIS_ETHNICITY_OPTIONS)[number]
+                            ) && (
+                              <option value={editing.learnerInfo.ethnic_group}>
+                                {editing.learnerInfo.ethnic_group}
+                              </option>
+                            )}
+                          {LIS_ETHNICITY_OPTIONS.map((ethnicity) => (
+                            <option key={ethnicity} value={ethnicity}>
+                              {ethnicity}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+
+                    <datalist id="lis-mother-tongue-options">
+                      {LIS_MOTHER_TONGUE_OPTIONS.map((language) => (
+                        <option key={language} value={language} />
+                      ))}
+                    </datalist>
                   </div>
 
                   <div className={styles.profileSection}>
