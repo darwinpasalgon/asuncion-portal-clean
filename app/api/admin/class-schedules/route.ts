@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { hasAdminPermission } from "@/lib/admin-access";
+import { getScopedAdminAccess, hasAdminPermission } from "@/lib/admin-access";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 import { findScheduleConflicts, type ProposedPeriod } from "@/lib/schedule-conflicts";
 
@@ -36,6 +36,10 @@ async function getUserId(token: string) {
 
 async function isAdmin(token: string) {
   return hasAdminPermission(token, "schedules.manage");
+}
+
+async function scheduleAccess(token: string) {
+  return getScopedAdminAccess(token, "schedules.manage");
 }
 
 async function getRows(path: string, token: string) {
@@ -120,24 +124,33 @@ async function conflictResponse(token: string, assignmentId: string, periods: Pr
 
 export async function GET(request: NextRequest) {
   const token = getToken(request);
-  if (!token || !(await isAdmin(token))) {
+  if (!token) {
     return NextResponse.json({ error: "Administrator access required." }, { status: 403 });
+  }
+
+  const access = await scheduleAccess(token);
+  if (!access.allowed) {
+    return NextResponse.json({ error: "Class schedule administration access required." }, { status: 403 });
   }
 
   try {
     const year = await activeYear(token);
     const today = manilaDate();
+    const gradeFilter =
+      access.gradeLevel !== null
+        ? `&grade_level=eq.${encodeURIComponent(String(access.gradeLevel))}`
+        : "";
     const [assignments, sections, subjects, teachers, schedules, scheduleBlocks, grade7TveRotations] = await Promise.all([
       year
         ? getRows(
             `teacher_assignments?school_year_id=eq.${encodeURIComponent(
               year.id
-            )}&is_active=eq.true&select=id,teacher_id,co_teacher_ids,grade_level,section_id,subject_id,major&order=grade_level.asc`,
+            )}&is_active=eq.true${gradeFilter}&select=id,teacher_id,co_teacher_ids,grade_level,section_id,subject_id,major&order=grade_level.asc`,
             token
           )
         : Promise.resolve([]),
-      getRows("sections?select=id,grade_level,name,is_active", token),
-      getRows("subjects?select=id,grade_level,name,is_active", token),
+      getRows(`sections?select=id,grade_level,name,is_active${gradeFilter}`, token),
+      getRows(`subjects?select=id,grade_level,name,is_active${gradeFilter}`, token),
       getRows(
         "profiles?role=eq.teacher&account_status=eq.active&select=id,full_name",
         token
@@ -159,11 +172,11 @@ export async function GET(request: NextRequest) {
         ? getRows(
             `schedule_blocks?school_year_id=eq.${encodeURIComponent(
               year.id
-            )}&is_active=eq.true&select=id,school_year_id,grade_level,section_id,day_of_week,start_time,end_time,label,purpose,block_type,is_active&order=day_of_week.asc,start_time.asc`,
+            )}&is_active=eq.true${gradeFilter}&select=id,school_year_id,grade_level,section_id,day_of_week,start_time,end_time,label,purpose,block_type,is_active&order=day_of_week.asc,start_time.asc`,
             token
           )
         : Promise.resolve([]),
-      year
+      year && (access.gradeLevel === null || access.gradeLevel === 7)
         ? getRows(
             `grade7_tve_rotations?school_year_id=eq.${encodeURIComponent(
               year.id
@@ -192,6 +205,7 @@ export async function GET(request: NextRequest) {
       ),
       scheduleBlocks: scheduleBlocks ?? [],
       grade7TveRotations: grade7TveRotations ?? [],
+      scopeGradeLevel: access.gradeLevel,
     });
   } catch {
     return NextResponse.json(
@@ -203,8 +217,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const token = getToken(request);
-  if (!token || !(await isAdmin(token))) {
+  if (!token) {
     return NextResponse.json({ error: "Administrator access required." }, { status: 403 });
+  }
+
+  const access = await scheduleAccess(token);
+  if (!access.allowed) {
+    return NextResponse.json({ error: "Class schedule administration access required." }, { status: 403 });
   }
 
   const body = await request.json().catch(() => null);
@@ -237,8 +256,17 @@ export async function POST(request: NextRequest) {
 
     if (!assignmentRows?.[0]) {
       return NextResponse.json(
-        { error: "Select an active Teacher assignment for the current school year." },
+        { error: "Select an active Teacher assignment for the current school year and your authorized grade level." },
         { status: 400 }
+      );
+    }
+    if (
+      access.gradeLevel !== null &&
+      Number(assignmentRows[0].grade_level) !== access.gradeLevel
+    ) {
+      return NextResponse.json(
+        { error: `You can only manage Grade ${access.gradeLevel} schedules.` },
+        { status: 403 }
       );
     }
 
