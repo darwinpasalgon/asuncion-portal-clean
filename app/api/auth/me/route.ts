@@ -222,10 +222,25 @@ export async function GET(request: NextRequest) {
     ).filter(Boolean);
   }
 
+  const gradeLevelHeadRows = await getRows(
+    `${SUPABASE_URL}/rest/v1/grade_level_heads?profile_id=eq.${encodeURIComponent(
+      userId
+    )}&is_active=eq.true&select=grade_level,display_name&limit=1`,
+    token
+  );
+  const gradeLevelHeadRow = gradeLevelHeadRows?.[0] ?? null;
+  const gradeLevelHead = gradeLevelHeadRow
+    ? {
+        grade_level: Number(gradeLevelHeadRow.grade_level),
+        display_name: String(gradeLevelHeadRow.display_name ?? profile.full_name),
+      }
+    : null;
+
   const response = NextResponse.json({
     profile,
     academicContext,
     adminPermissions,
+    gradeLevelHead,
   });
 
   if (refreshedSession) {
