@@ -300,7 +300,7 @@ const navigation: Record<Role, NavigationItem[]> = {
   teacher: [
     commonItems.overview,
     commonItems.students,
-    { ...commonItems.grades, group: "ADVISER TOOLS" },
+    commonItems.grades,
     { ...commonItems.attendance, group: "ADVISER TOOLS" },
     commonItems.schoolForms,
     commonItems.myLearners,
