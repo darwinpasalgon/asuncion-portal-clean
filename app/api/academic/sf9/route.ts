@@ -17,6 +17,152 @@ const MONTHS = [
   { key: "Apr", month: 4 },
 ];
 
+type Sf9LayoutSettings = {
+  paper: "A4";
+  orientation: "landscape";
+  pageHorizontalMarginMm: number;
+  topMm: number;
+  bottomMm: number;
+  leftCardOuterMm: number;
+  leftCardInnerMm: number;
+  rightCardInnerMm: number;
+  rightCardOuterMm: number;
+  centerLineMm: number;
+  headerHeightMm: number;
+  headerGapMm: number;
+  logoSizeMm: number;
+  frontFontPt: number;
+  backFontPt: number;
+  lineHeight: number;
+};
+
+const DEFAULT_SF9_LAYOUT: Sf9LayoutSettings = {
+  paper: "A4",
+  orientation: "landscape",
+  pageHorizontalMarginMm: 15.5,
+  topMm: 5.5,
+  bottomMm: 4.5,
+  leftCardOuterMm: 5.25,
+  leftCardInnerMm: 10.35,
+  rightCardInnerMm: 5.25,
+  rightCardOuterMm: 5.25,
+  centerLineMm: 0.33,
+  headerHeightMm: 25.4,
+  headerGapMm: 3.8,
+  logoSizeMm: 22.3,
+  frontFontPt: 7.44,
+  backFontPt: 6.84,
+  lineHeight: 1.02,
+};
+
+function boundedNumber(
+  value: unknown,
+  fallback: number,
+  min: number,
+  max: number
+) {
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) return fallback;
+  return Math.min(max, Math.max(min, numberValue));
+}
+
+function sanitizeLayoutSettings(input: unknown): Sf9LayoutSettings {
+  const source =
+    input && typeof input === "object" ? (input as Record<string, unknown>) : {};
+
+  return {
+    paper: "A4",
+    orientation: "landscape",
+    pageHorizontalMarginMm: boundedNumber(
+      source.pageHorizontalMarginMm,
+      DEFAULT_SF9_LAYOUT.pageHorizontalMarginMm,
+      0,
+      30
+    ),
+    topMm: boundedNumber(source.topMm, DEFAULT_SF9_LAYOUT.topMm, 0, 20),
+    bottomMm: boundedNumber(
+      source.bottomMm,
+      DEFAULT_SF9_LAYOUT.bottomMm,
+      0,
+      20
+    ),
+    leftCardOuterMm: boundedNumber(
+      source.leftCardOuterMm,
+      DEFAULT_SF9_LAYOUT.leftCardOuterMm,
+      0,
+      25
+    ),
+    leftCardInnerMm: boundedNumber(
+      source.leftCardInnerMm,
+      DEFAULT_SF9_LAYOUT.leftCardInnerMm,
+      0,
+      25
+    ),
+    rightCardInnerMm: boundedNumber(
+      source.rightCardInnerMm,
+      DEFAULT_SF9_LAYOUT.rightCardInnerMm,
+      0,
+      25
+    ),
+    rightCardOuterMm: boundedNumber(
+      source.rightCardOuterMm,
+      DEFAULT_SF9_LAYOUT.rightCardOuterMm,
+      0,
+      25
+    ),
+    centerLineMm: boundedNumber(
+      source.centerLineMm,
+      DEFAULT_SF9_LAYOUT.centerLineMm,
+      0.1,
+      1.5
+    ),
+    headerHeightMm: boundedNumber(
+      source.headerHeightMm,
+      DEFAULT_SF9_LAYOUT.headerHeightMm,
+      16,
+      40
+    ),
+    headerGapMm: boundedNumber(
+      source.headerGapMm,
+      DEFAULT_SF9_LAYOUT.headerGapMm,
+      0,
+      15
+    ),
+    logoSizeMm: boundedNumber(
+      source.logoSizeMm,
+      DEFAULT_SF9_LAYOUT.logoSizeMm,
+      12,
+      30
+    ),
+    frontFontPt: boundedNumber(
+      source.frontFontPt,
+      DEFAULT_SF9_LAYOUT.frontFontPt,
+      5,
+      11
+    ),
+    backFontPt: boundedNumber(
+      source.backFontPt,
+      DEFAULT_SF9_LAYOUT.backFontPt,
+      5,
+      11
+    ),
+    lineHeight: boundedNumber(
+      source.lineHeight,
+      DEFAULT_SF9_LAYOUT.lineHeight,
+      0.9,
+      1.5
+    ),
+  };
+}
+
+async function getLayoutSettings(token: string) {
+  const rows = await getRows(
+    "sf9_layout_settings?id=eq.true&select=settings&limit=1",
+    token
+  ).catch(() => []);
+  return sanitizeLayoutSettings(rows?.[0]?.settings ?? DEFAULT_SF9_LAYOUT);
+}
+
 function headers(token: string) {
   return {
     apikey: SUPABASE_PUBLISHABLE_KEY,
@@ -149,6 +295,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const layoutSettings = await getLayoutSettings(token);
     const years = await getRows(
       "school_years?is_active=eq.true&select=id,name,start_year,end_year&limit=1",
       token
@@ -159,6 +306,8 @@ export async function GET(request: NextRequest) {
         activeYear: null,
         sections: [],
         students: [],
+        accessMode: isAdmin ? "admin" : "adviser",
+        layoutSettings,
       });
     }
 
@@ -220,6 +369,7 @@ export async function GET(request: NextRequest) {
           sections,
           students: [],
           accessMode: isAdmin ? "admin" : "adviser",
+          layoutSettings,
         });
       }
 
@@ -278,6 +428,7 @@ export async function GET(request: NextRequest) {
         sections,
         students,
         accessMode: isAdmin ? "admin" : "adviser",
+        layoutSettings,
       });
     }
 
@@ -686,6 +837,7 @@ export async function GET(request: NextRequest) {
       },
       cards,
       accessMode: isAdmin ? "admin" : "adviser",
+      layoutSettings,
     });
   } catch (error) {
     console.error("SF9 load failed", error);
@@ -694,4 +846,59 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+
+export async function POST(request: NextRequest) {
+  const identity = await getIdentity(request);
+  if (!identity) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const { token, userId, profile } = identity;
+  if (profile.role !== "administrator") {
+    return NextResponse.json(
+      { error: "Only the full Administrator can edit the SF9 layout." },
+      { status: 403 }
+    );
+  }
+
+  const body = await request.json().catch(() => null);
+  if (String(body?.action ?? "") !== "save_layout") {
+    return NextResponse.json({ error: "Unsupported SF9 action." }, { status: 400 });
+  }
+
+  const settings = sanitizeLayoutSettings(body?.settings);
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/sf9_layout_settings?on_conflict=id`,
+    {
+      method: "POST",
+      headers: {
+        ...headers(token),
+        Prefer: "resolution=merge-duplicates,return=representation",
+      },
+      body: JSON.stringify([
+        {
+          id: true,
+          settings,
+          updated_by: userId,
+          updated_at: new Date().toISOString(),
+        },
+      ]),
+      cache: "no-store",
+    }
+  );
+
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || !Array.isArray(result) || !result[0]) {
+    return NextResponse.json(
+      { error: "Unable to save the SF9 layout settings." },
+      { status: 400 }
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    settings: sanitizeLayoutSettings(result[0].settings),
+  });
 }
