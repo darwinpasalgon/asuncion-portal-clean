@@ -142,8 +142,10 @@ export async function GET(request: NextRequest) {
         ]
       )
     );
-    const learnerInfoMap = new Map(
-      (learnerInfos ?? []).map((info: LearnerInfoRow) => [info.student_id, info])
+    const learnerInfoMap = new Map<string, LearnerInfoRow>(
+      (learnerInfos ?? []).map(
+        (info: LearnerInfoRow): [string, LearnerInfoRow] => [info.student_id, info]
+      )
     );
     const sectionMap = new Map(
       eligibleSections.map(
@@ -151,7 +153,22 @@ export async function GET(request: NextRequest) {
       )
     );
 
-    const learners = (enrollments ?? [])
+    const learners: Array<
+      LearnerInfoRow & {
+        enrollment_id: string;
+        student_id: string;
+        full_name: string;
+        lrn: string | null;
+        last_name: string | null;
+        first_name: string | null;
+        sex: string | null;
+        grade_level: number;
+        section_id: string;
+        section: string;
+        tve_major: string | null;
+        learner_status: string;
+      }
+    > = (enrollments ?? [])
       .filter(
         (enrollment: { section_id: string | null; grade_level: number }) =>
           Boolean(enrollment.section_id) &&
