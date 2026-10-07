@@ -374,10 +374,25 @@ export default function ClassSchedulesPage() {
 
   const teacherView = scheduleView === "teacher";
   const hasSelection = Boolean(teacherView ? quickTeacher : quickSection);
-  const teacherOptions = useMemo(
-    () => [...teachers].sort((a, b) => a.full_name.localeCompare(b.full_name)),
-    [teachers]
-  );
+  const teacherOptions = useMemo(() => {
+    const options = new Map(
+      teachers.map((teacher) => [teacher.id, teacher] as [string, Teacher])
+    );
+    for (const rotation of grade7TveRotations) {
+      if (
+        rotation.non_teaching_personnel_id &&
+        !options.has(rotation.non_teaching_personnel_id)
+      ) {
+        options.set(rotation.non_teaching_personnel_id, {
+          id: rotation.non_teaching_personnel_id,
+          full_name: `${rotation.instructor_name} · TVE Instructor`,
+        });
+      }
+    }
+    return [...options.values()].sort((a, b) =>
+      a.full_name.localeCompare(b.full_name)
+    );
+  }, [teachers, grade7TveRotations]);
 
   const lookup = useMemo(() => {
     const sectionsById = new Map(sections.map((item) => [item.id, item.name]));
@@ -893,7 +908,11 @@ export default function ClassSchedulesPage() {
     ? []
     : teacherView
       ? quickTeacher
-        ? grade7TveRotations.filter((rotation) => rotation.teacher_id === quickTeacher)
+        ? grade7TveRotations.filter(
+            (rotation) =>
+              rotation.teacher_id === quickTeacher ||
+              rotation.non_teaching_personnel_id === quickTeacher
+          )
         : []
       : quickSection
         ? grade7TveRotations.filter((rotation) => rotation.section_id === quickSection)
