@@ -31,6 +31,7 @@ export default function Sf10Page() {
   const [working, setWorking] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [accessMode, setAccessMode] = useState<"admin" | "adviser">("admin");
 
   async function loadStudents() {
     setLoading(true);
@@ -43,6 +44,7 @@ export default function Sf10Page() {
         return;
       }
       setStudents(result.students ?? []);
+      setAccessMode(result.access_mode === "adviser" ? "adviser" : "admin");
     } catch {
       setError("Unable to reach the SF10 service.");
     } finally {
@@ -69,6 +71,7 @@ export default function Sf10Page() {
         return;
       }
       setDetail(result);
+      setAccessMode(result.access_mode === "adviser" ? "adviser" : "admin");
     } catch {
       setError("Unable to reach the SF10 service.");
     } finally {
@@ -176,15 +179,18 @@ export default function Sf10Page() {
 
         <header className={styles.header}>
           <div>
-            <span>REGISTRAR</span>
+            <span>{accessMode === "adviser" ? "SECTION ADVISER" : "REGISTRAR"}</span>
             <h1>SF10 Records</h1>
             <p>
-              Learner identity fields are initialized from verified SF1 data. Historical eligibility,
-              school history, and credentials must still come from official records. Published grades
-              flow into the scholastic record automatically.
+              {accessMode === "adviser"
+                ? "View and print the permanent records of learners in your current advisory section. Published Term 1–3 grades flow into SF10 automatically."
+                : "Learner identity fields are initialized from verified SF1 data. Historical eligibility, school history, and credentials must still come from official records. Published grades flow into the scholastic record automatically."}
             </p>
           </div>
-          <div className={styles.badge}><ShieldCheck size={18} />Restricted Record Access</div>
+          <div className={styles.badge}>
+            <ShieldCheck size={18} />
+            {accessMode === "adviser" ? "Advisory Section Access" : "Restricted Record Access"}
+          </div>
         </header>
 
         {error && <div className={styles.error}>{error}</div>}
@@ -262,6 +268,18 @@ export default function Sf10Page() {
                   </button>
                 </section>
 
+                {accessMode === "adviser" ? (
+                  <section className={styles.editor}>
+                    <div className={styles.sectionHeading}>
+                      <h2>Read-Only Permanent Record</h2>
+                      <p>
+                        Advisers can review and print SF10 for their advisory learners.
+                        Permanent-record identity, eligibility, and historical fields can
+                        only be edited by authorized records personnel.
+                      </p>
+                    </div>
+                  </section>
+                ) : (
                 <section className={styles.editor}>
                   <div className={styles.sectionHeading}>
                     <h2>Learner Permanent-Record Information</h2>
@@ -327,6 +345,7 @@ export default function Sf10Page() {
                     </button>
                   </form>
                 </section>
+                )}
 
                 <section className={styles.printArea}>
                   <style>{`@media print { @page { size: ${detail.formType === "JHS" ? "8.5in 14in" : "8.5in 13in"}; margin: 0; } }`}</style>

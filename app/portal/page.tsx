@@ -17,6 +17,7 @@ import {
   LogOut,
   Megaphone,
   MessageCircle,
+  Printer,
   Settings2,
   ShieldCheck,
   UserRound,
@@ -67,6 +68,8 @@ type TeacherAssignment = {
   subject: string;
   major: string | null;
   student_count: number;
+  section_student_count?: number;
+  pending_tve_major_count?: number;
 };
 
 type AdviserSection = {
@@ -89,6 +92,9 @@ type TeacherLearnerSection = {
   grade_level: number;
   name: string;
   learner_count: number;
+  section_enrollment_count?: number;
+  pending_tve_major_count?: number;
+  roster_note?: string;
   subjects: Array<{
     assignment_id: string;
     subject: string;
@@ -443,6 +449,12 @@ function DashboardHome({
               label: "SF9 Report Cards",
               description: "Print one or two learner report cards on A4 front and back.",
               href: "/portal/sf9",
+              icon: FileSpreadsheet,
+            },
+            {
+              label: "SF10 Permanent Records",
+              description: "View and print SF10 permanent records for your advisory learners.",
+              href: "/portal/sf10",
               icon: FileSpreadsheet,
             },
           ]
@@ -2232,8 +2244,13 @@ export default function PortalPage() {
                                 Grade {section.grade_level} · {section.name}
                               </span>
                               <strong>
-                                {section.learner_count} learner
-                                {section.learner_count === 1 ? "" : "s"}
+                                {section.roster_note
+                                  ? "Current Grade 7 TVE rotation"
+                                  : (section.pending_tve_major_count ?? 0) > 0
+                                    ? section.learner_count > 0
+                                      ? `${section.learner_count} assigned · ${section.pending_tve_major_count} pending TVE major`
+                                      : `${section.section_enrollment_count ?? 0} in section · TVE major pending`
+                                    : `${section.learner_count} learner${section.learner_count === 1 ? "" : "s"}`}
                               </strong>
                             </div>
                             <div className="real-my-learners-subjects">
@@ -2249,13 +2266,17 @@ export default function PortalPage() {
                             </div>
                           </summary>
                           <div className="real-my-learners-roster">
-                            {section.learners.map((learner, index) => (
-                              <div key={learner.student_id}>
-                                <span>{index + 1}</span>
-                                <strong>{learner.full_name}</strong>
-                                <small>{learner.lrn ? `LRN ${learner.lrn}` : "LRN Not Recorded"}</small>
-                              </div>
-                            ))}
+                            {section.roster_note && section.learners.length === 0 ? (
+                              <p className="real-assignment-empty">{section.roster_note}</p>
+                            ) : (
+                              section.learners.map((learner, index) => (
+                                <div key={learner.student_id}>
+                                  <span>{index + 1}</span>
+                                  <strong>{learner.full_name}</strong>
+                                  <small>{learner.lrn ? `LRN ${learner.lrn}` : "LRN Not Recorded"}</small>
+                                </div>
+                              ))
+                            )}
                           </div>
                           <a
                             className="real-my-learners-section-link"
@@ -2301,8 +2322,11 @@ export default function PortalPage() {
                             </strong>
                           </div>
                           <span>
-                            {assignment.student_count} student
-                            {assignment.student_count === 1 ? "" : "s"}
+                            {assignment.major && (assignment.pending_tve_major_count ?? 0) > 0
+                              ? assignment.student_count > 0
+                                ? `${assignment.student_count} assigned · ${assignment.pending_tve_major_count} pending TVE major`
+                                : `${assignment.section_student_count ?? 0} in section · TVE major pending`
+                              : `${assignment.student_count} student${assignment.student_count === 1 ? "" : "s"}`}
                           </span>
                         </article>
                       ))}
@@ -2346,6 +2370,19 @@ export default function PortalPage() {
               </div>
 
               <div className="real-school-forms-list">
+                {adviserSections.length > 0 && (
+                  <article>
+                    <strong>SF10 · Learner Permanent Record</strong>
+                    <p>
+                      Advisers can view and print the SF10 of learners in their
+                      current advisory section. Permanent-record editing remains
+                      restricted to authorized records personnel.
+                    </p>
+                    <a href="/portal/sf10" className="real-school-forms-status">
+                      Open SF10
+                    </a>
+                  </article>
+                )}
                 <article>
                   <strong>SF1 · School Register</strong>
                   <p>
@@ -2439,8 +2476,11 @@ export default function PortalPage() {
                         </strong>
                       </div>
                       <span>
-                        {assignment.student_count} enrolled student
-                        {assignment.student_count === 1 ? "" : "s"}
+                        {assignment.major && (assignment.pending_tve_major_count ?? 0) > 0
+                          ? assignment.student_count > 0
+                            ? `${assignment.student_count} assigned · ${assignment.pending_tve_major_count} awaiting TVE major`
+                            : `${assignment.section_student_count ?? 0} learners in section · TVE major assignment pending`
+                          : `${assignment.student_count} enrolled student${assignment.student_count === 1 ? "" : "s"}`}
                       </span>
                     </article>
                   ))}
@@ -2460,9 +2500,22 @@ export default function PortalPage() {
                       official published class schedule
                     </p>
                   </div>
-                  <span className="tag blue">
-                    {classSchedules.length} entr{classSchedules.length === 1 ? "y" : "ies"}
-                  </span>
+                  <div className="real-schedule-heading-actions">
+                    <span className="tag blue">
+                      {classSchedules.length} entr{classSchedules.length === 1 ? "y" : "ies"}
+                    </span>
+                    {profile.role === "teacher" && (
+                      <a
+                        className="real-schedule-print-link"
+                        href="/portal/my-schedule/print"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <Printer size={15} />
+                        Print Schedule
+                      </a>
+                    )}
+                  </div>
                 </div>
 
                 {classSchedulesLoading ? (

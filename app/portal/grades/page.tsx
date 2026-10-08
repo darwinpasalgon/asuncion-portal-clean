@@ -55,10 +55,8 @@ type Grade = {
   school_year_id: string;
   term_no: number;
   term_grade: number;
-  music_grade: number | null;
-  arts_grade: number | null;
-  physical_education_grade: number | null;
-  health_grade: number | null;
+  music_arts_grade: number | null;
+  pe_health_grade: number | null;
   status: "draft" | "published";
   published_at: string | null;
   updated_at: string;
@@ -84,23 +82,16 @@ function isMapeh(name?: string | null) {
 }
 
 type MapehDraft = {
-  music: string;
-  arts: string;
-  physicalEducation: string;
-  health: string;
+  musicArts: string;
+  peHealth: string;
 };
 
 function emptyMapehDraft(): MapehDraft {
-  return { music: "", arts: "", physicalEducation: "", health: "" };
+  return { musicArts: "", peHealth: "" };
 }
 
 function computedMapehAverage(draft: MapehDraft) {
-  const values = [
-    draft.music,
-    draft.arts,
-    draft.physicalEducation,
-    draft.health,
-  ].map((value) => Number(value));
+  const values = [draft.musicArts, draft.peHealth].map((value) => Number(value));
   if (
     values.some(
       (value) => !Number.isInteger(value) || value < 0 || value > 100
@@ -108,7 +99,7 @@ function computedMapehAverage(draft: MapehDraft) {
   ) {
     return null;
   }
-  return Math.round(values.reduce((sum, value) => sum + value, 0) / 4);
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / 2);
 }
 
 function compareStudents(a: Student, b: Student) {
@@ -400,15 +391,14 @@ export default function GradesPage() {
       next[student.id] = grade ? String(grade.term_grade) : "";
       nextMapeh[student.id] = grade
         ? {
-            music:
-              grade.music_grade === null ? "" : String(grade.music_grade),
-            arts: grade.arts_grade === null ? "" : String(grade.arts_grade),
-            physicalEducation:
-              grade.physical_education_grade === null
+            musicArts:
+              grade.music_arts_grade === null
                 ? ""
-                : String(grade.physical_education_grade),
-            health:
-              grade.health_grade === null ? "" : String(grade.health_grade),
+                : String(grade.music_arts_grade),
+            peHealth:
+              grade.pe_health_grade === null
+                ? ""
+                : String(grade.pe_health_grade),
           }
         : emptyMapehDraft();
     }
@@ -797,10 +787,8 @@ export default function GradesPage() {
                     <div className={styles.mapehGradebook}>
                       <div className={styles.mapehHeader}>
                         <span>Learner</span>
-                        <span>Music</span>
-                        <span>Arts</span>
-                        <span>PE</span>
-                        <span>Health</span>
+                        <span>Music and Arts</span>
+                        <span>Physical Education and Health</span>
                         <span>MAPEH Result</span>
                         <span>Action</span>
                       </div>
@@ -846,10 +834,8 @@ export default function GradesPage() {
 
                                 {(
                                   [
-                                    ["music", "Music"],
-                                    ["arts", "Arts"],
-                                    ["physicalEducation", "PE"],
-                                    ["health", "Health"],
+                                    ["musicArts", "Music and Arts"],
+                                    ["peHealth", "Physical Education and Health"],
                                   ] as Array<[keyof MapehDraft, string]>
                                 ).map(([field, label]) => (
                                   <label
@@ -1298,13 +1284,11 @@ export default function GradesPage() {
                               <strong>{term.term_grade}</strong>
                               <small>{descriptor(term.term_grade)}</small>
                               {isMapeh(subject?.name) &&
-                                term.music_grade !== null &&
-                                term.arts_grade !== null &&
-                                term.physical_education_grade !== null &&
-                                term.health_grade !== null && (
+                                term.music_arts_grade !== null &&
+                                term.pe_health_grade !== null && (
                                   <span className={styles.componentSummary}>
-                                    Music {term.music_grade} · Arts {term.arts_grade} ·
-                                    PE {term.physical_education_grade} · Health {term.health_grade}
+                                    Music and Arts {term.music_arts_grade} ·
+                                    Physical Education and Health {term.pe_health_grade}
                                   </span>
                                 )}
                               {term.term_grade < 75 && <em>Intervention needed</em>}

@@ -30,20 +30,87 @@ async function authorize(admin: ReturnType<typeof createClient>, token: string) 
     profile.role === "administrator" &&
     profile.admin_role === "super_administrator"
   ) {
-    return { userId, profile };
+    return {
+      userId,
+      profile,
+      accessMode: "admin",
+      adviserSchoolYearId: null,
+      adviserSectionIds: [] as string[],
+    };
   }
 
-  if (profile.role !== "staff_administrator") return null;
+  if (profile.role === "staff_administrator") {
+    const { data: permission } = await admin
+      .from("administrator_permissions")
+      .select("permission")
+      .eq("administrator_id", userId)
+      .eq("permission", "sf10.manage")
+      .limit(1)
+      .maybeSingle();
 
-  const { data: permission } = await admin
-    .from("administrator_permissions")
-    .select("permission")
-    .eq("administrator_id", userId)
-    .eq("permission", "sf10.manage")
+    return permission
+      ? {
+          userId,
+          profile,
+          accessMode: "admin",
+          adviserSchoolYearId: null,
+          adviserSectionIds: [] as string[],
+        }
+      : null;
+  }
+
+  if (profile.role !== "teacher") return null;
+
+  const { data: activeYear } = await admin
+    .from("school_years")
+    .select("id")
+    .eq("is_active", true)
     .limit(1)
     .maybeSingle();
 
-  return permission ? { userId, profile } : null;
+  if (!activeYear?.id) return null;
+
+  const { data: adviserRows } = await admin
+    .from("section_advisers")
+    .select("section_id")
+    .eq("teacher_id", userId)
+    .eq("school_year_id", activeYear.id)
+    .eq("is_active", true);
+
+  const adviserSectionIds = Array.from(
+    new Set((adviserRows ?? []).map((item) => String(item.section_id)))
+  );
+  if (!adviserSectionIds.length) return null;
+
+  return {
+    userId,
+    profile,
+    accessMode: "adviser",
+    adviserSchoolYearId: String(activeYear.id),
+    adviserSectionIds,
+  };
+}
+
+async function canAccessStudent(
+  admin: ReturnType<typeof createClient>,
+  caller: Awaited<ReturnType<typeof authorize>>,
+  studentId: string
+) {
+  if (!caller) return false;
+  if (caller.accessMode === "admin") return true;
+  if (!caller.adviserSchoolYearId || !caller.adviserSectionIds.length) return false;
+
+  const { data: enrollment } = await admin
+    .from("student_enrollments")
+    .select("id")
+    .eq("student_id", studentId)
+    .eq("school_year_id", caller.adviserSchoolYearId)
+    .eq("enrollment_status", "active")
+    .in("section_id", caller.adviserSectionIds)
+    .limit(1)
+    .maybeSingle();
+
+  return Boolean(enrollment);
 }
 
 function profileComplete(record: Record<string, unknown> | null) {
@@ -76,7 +143,7 @@ Deno.serve(async (req) => {
   const caller = await authorize(admin, token);
   if (!caller) {
     return json(
-      { error: "Registrar or Super Administrator access required." },
+      { error: "Registrar, Super Administrator, or active Section Adviser access required." },
       403
     );
   }
@@ -86,6 +153,73 @@ Deno.serve(async (req) => {
   const studentId = String(body.student_id ?? "");
 
   if (action === "list") {
+    if (caller.accessMode === "adviser") {
+      const { data: enrollmentRows, error: enrollmentError } = await admin
+        .from("student_enrollments")
+        .select("student_id,grade_level,section_id")
+        .eq("school_year_id", caller.adviserSchoolYearId)
+        .eq("enrollment_status", "active")
+        .in("section_id", caller.adviserSectionIds);
+
+      if (enrollmentError) return json({ error: "Unable to load advisory learners." }, 500);
+
+      const studentIds = Array.from(
+        new Set((enrollmentRows ?? []).map((item) => String(item.student_id)))
+      );
+      if (!studentIds.length) {
+        return json({ ok: true, access_mode: "adviser", students: [] });
+      }
+
+      const [{ data: students, error: studentError }, { data: permanentRows }, { data: sectionRows }] =
+        await Promise.all([
+          admin
+            .from("profiles")
+            .select("id,full_name,lrn")
+            .in("id", studentIds)
+            .eq("role", "student")
+            .eq("account_status", "active")
+            .order("full_name"),
+          admin
+            .from("learner_permanent_records")
+            .select("student_id,last_name,first_name,birth_date,sex")
+            .in("student_id", studentIds),
+          admin
+            .from("sections")
+            .select("id,name")
+            .in("id", caller.adviserSectionIds),
+        ]);
+
+      if (studentError) return json({ error: "Unable to load advisory learners." }, 500);
+
+      const records = new Map(
+        (permanentRows ?? []).map((item) => [String(item.student_id), item])
+      );
+      const enrollmentMap = new Map(
+        (enrollmentRows ?? []).map((item) => [String(item.student_id), item])
+      );
+      const sectionMap = new Map(
+        (sectionRows ?? []).map((item) => [String(item.id), String(item.name)])
+      );
+
+      return json({
+        ok: true,
+        access_mode: "adviser",
+        students: (students ?? []).map((student) => {
+          const enrollment = enrollmentMap.get(String(student.id));
+          return {
+            ...student,
+            grade_level: enrollment?.grade_level ?? null,
+            section: enrollment?.section_id
+              ? sectionMap.get(String(enrollment.section_id)) ?? null
+              : null,
+            sf10_profile_complete: profileComplete(
+              (records.get(String(student.id)) ?? null) as Record<string, unknown> | null
+            ),
+          };
+        }),
+      });
+    }
+
     const [{ data: students, error: studentError }, { data: permanentRows }] =
       await Promise.all([
         admin
@@ -107,6 +241,7 @@ Deno.serve(async (req) => {
 
     return json({
       ok: true,
+      access_mode: "admin",
       students: (students ?? []).map((student) => ({
         ...student,
         sf10_profile_complete: profileComplete(
@@ -117,6 +252,10 @@ Deno.serve(async (req) => {
   }
 
   if (!studentId) return json({ error: "Select a learner." }, 400);
+
+  if (!(await canAccessStudent(admin, caller, studentId))) {
+    return json({ error: "This learner is outside your permitted SF10 scope." }, 403);
+  }
 
   if (action === "detail") {
     const { data: student } = await admin
@@ -285,10 +424,18 @@ Deno.serve(async (req) => {
       school_information: schoolInfoResult.data ?? null,
       scholastic_records: scholasticRecords,
       form_type: Number(student.grade_level ?? 0) <= 10 ? "JHS" : "SHS",
+      access_mode: caller.accessMode,
     });
   }
 
   if (action === "save_profile") {
+    if (caller.accessMode === "adviser") {
+      return json(
+        { error: "Advisers have read-and-print access to SF10. Permanent-record editing is restricted to authorized records personnel." },
+        403
+      );
+    }
+
     const elementaryAverageText = String(body.elementary_general_average ?? "").trim();
     const jhsAverageText = String(body.jhs_general_average ?? "").trim();
     const eligibilityType = String(body.eligibility_type ?? "elementary_completer");

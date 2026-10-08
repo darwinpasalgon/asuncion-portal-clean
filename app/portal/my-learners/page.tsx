@@ -32,6 +32,9 @@ type LearnerSection = {
   grade_level: number;
   name: string;
   learner_count: number;
+  section_enrollment_count?: number;
+  pending_tve_major_count?: number;
+  roster_note?: string;
   subjects: AssignedSubject[];
   learners: Learner[];
 };
@@ -225,8 +228,11 @@ export default function MyLearnersPage() {
                         Grade {section.grade_level} · {section.name}
                       </h2>
                       <p>
-                        {section.learner_count} enrolled learner
-                        {section.learner_count === 1 ? "" : "s"}
+                        {(section.pending_tve_major_count ?? 0) > 0
+                          ? section.learner_count > 0
+                            ? `${section.learner_count} assigned · ${section.pending_tve_major_count} awaiting TVE major`
+                            : `${section.section_enrollment_count ?? 0} learners in section · TVE major assignment pending`
+                          : `${section.learner_count} enrolled learner${section.learner_count === 1 ? "" : "s"}`}
                       </p>
                     </div>
                     <div className={styles.subjects}>
@@ -241,7 +247,13 @@ export default function MyLearnersPage() {
 
                   {section.learners.length === 0 ? (
                     <div className={styles.noMatch}>
-                      No learners match the current search.
+                      {search.trim()
+                        ? "No learners match the current search."
+                        : section.roster_note
+                          ? section.roster_note
+                          : (section.pending_tve_major_count ?? 0) > 0
+                            ? `No learner is tagged to your TVE major yet. ${section.pending_tve_major_count} learner${section.pending_tve_major_count === 1 ? "" : "s"} in this section still need a TVE major assigned by the Adviser.`
+                            : "No learners are currently assigned to this subject."}
                     </div>
                   ) : (
                     <div className={styles.groups}>

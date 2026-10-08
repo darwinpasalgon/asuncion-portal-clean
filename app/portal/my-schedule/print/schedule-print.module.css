@@ -1,0 +1,35 @@
+.page{min-height:100vh;background:#eef3f0;padding:24px;font-family:Arial,Helvetica,sans-serif;color:#263b32}
+.controls{max-width:900px;margin:0 auto 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.controls a,.controls button{display:inline-flex;align-items:center;gap:8px;border:1px solid #cbd9d1;border-radius:8px;background:#fff;color:#31536a;padding:10px 14px;font:inherit;font-size:.82rem;font-weight:700;text-decoration:none;cursor:pointer}
+.controls button{background:#315f4a;color:#fff;border-color:#315f4a}
+.controls button:disabled{opacity:.5;cursor:not-allowed}
+.sheet{width:min(100%,900px);min-height:1120px;margin:0 auto;background:#fff;padding:28px 34px;box-shadow:0 10px 30px rgba(35,60,48,.12);box-sizing:border-box}
+.header{display:grid;grid-template-columns:74px 1fr 74px;align-items:center;text-align:center;border-bottom:2px solid #263b32;padding-bottom:14px}
+.header img{width:64px;height:64px;object-fit:contain;justify-self:center}
+.header div{display:grid;gap:2px;font-size:10pt;line-height:1.25}
+.header strong{font-size:14pt;margin:2px 0}
+.title{display:flex;align-items:center;justify-content:center;gap:12px;margin:22px 0 14px;text-align:center}
+.title h1{margin:0;font-size:18pt}
+.title p{margin:3px 0 0;font-size:10pt}
+.teacherLine{display:grid;grid-template-columns:90px 1fr;gap:12px;align-items:end;border-bottom:1px solid #263b32;padding:7px 0;margin-bottom:18px;font-size:10pt}
+.teacherLine span{font-weight:700}
+.teacherLine strong{text-transform:uppercase}
+.schedule{display:grid;gap:14px}
+.day{break-inside:avoid}
+.day h2{margin:0;padding:7px 10px;background:#f1f5f3;border:1px solid #9eb2a7;border-bottom:0;font-size:10.5pt}
+.day table{width:100%;border-collapse:collapse;table-layout:fixed}
+.day th,.day td{border:1px solid #9eb2a7;padding:6px 7px;vertical-align:top;font-size:8.5pt;line-height:1.3}
+.day th{background:#f8faf9;text-align:left;font-size:8pt;text-transform:uppercase;letter-spacing:.02em}
+.day th:nth-child(1){width:19%}.day th:nth-child(2){width:23%}.day th:nth-child(3){width:31%}.day th:nth-child(4){width:27%}
+.day td small{font-size:7.8pt;font-weight:700}
+.message{padding:36px 20px;text-align:center;border:1px dashed #b8c8bf;color:#6c7d73;font-size:10pt}
+.footer{margin-top:24px;padding-top:10px;border-top:1px solid #b8c8bf;display:flex;justify-content:space-between;gap:20px;font-size:7.5pt;color:#6d7d74}
+@page{size:A4 portrait;margin:12mm}
+@media print{
+  .page{background:#fff;padding:0}
+  .controls{display:none!important}
+  .sheet{width:auto;min-height:auto;margin:0;padding:0;box-shadow:none}
+}
+@media(max-width:700px){
+  .page{padding:12px}.sheet{padding:20px 16px;min-height:auto}.controls{align-items:stretch;flex-direction:column}.controls a,.controls button{justify-content:center}.header{grid-template-columns:58px 1fr 58px}.header img{width:52px;height:52px}
+}

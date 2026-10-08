@@ -57,7 +57,7 @@ function JhsGradeBlock({
         <thead>
           <tr>
             <th rowSpan={2} className="area-col">LEARNING AREAS</th>
-            <th colSpan={4}>QUARTERLY RATING</th>
+            <th colSpan={3}>TERM RATING</th>
             <th rowSpan={2} className="final-col">FINAL<br/>RATING</th>
             <th rowSpan={2} className="remarks-col">REMARKS</th>
           </tr>
@@ -65,7 +65,6 @@ function JhsGradeBlock({
             <th className="quarter-col">1</th>
             <th className="quarter-col">2</th>
             <th className="quarter-col">3</th>
-            <th className="quarter-col">4</th>
           </tr>
         </thead>
         <tbody>
@@ -75,13 +74,12 @@ function JhsGradeBlock({
               <td>{subject?.terms?.[0] ?? ""}</td>
               <td>{subject?.terms?.[1] ?? ""}</td>
               <td>{subject?.terms?.[2] ?? ""}</td>
-              <td>{subject?.terms?.[3] ?? ""}</td>
               <td>{subject?.final_rating ?? ""}</td>
               <td>{subject?.remarks ?? ""}</td>
             </tr>
           ))}
           <tr className="general-row">
-            <td colSpan={5}><b><i>General Average</i></b></td>
+            <td colSpan={4}><b><i>General Average</i></b></td>
             <td>{record?.general_average ?? ""}</td>
             <td>{record?.general_average == null ? "" : record.general_average >= 75 ? "PROMOTED" : "RETAINED"}</td>
           </tr>
@@ -256,18 +254,16 @@ export function JhsSf10Form({ detail }: { detail: Sf10Detail }) {
   );
 }
 
-function ShsSemesterBlock({
+function ShsGradeBlock({
   record,
-  semester,
   school,
   track,
   strand,
   schoolHead,
   designation,
-  rows = 9,
+  rows = 12,
 }: {
   record?: any;
-  semester: "1ST" | "2ND";
   school: any;
   track: string;
   strand: string;
@@ -284,8 +280,7 @@ function ShsSemesterBlock({
             <td><b>SCHOOL:</b></td><td colSpan={7}>{record ? text(school.school_name).toUpperCase() : ""}</td>
             <td><b>SCHOOL ID:</b></td><td colSpan={2}>{record ? text(school.school_id) : ""}</td>
             <td><b>GRADE LEVEL:</b></td><td>{record?.grade_level ?? ""}</td>
-            <td><b>SY:</b></td><td colSpan={2}>{record?.school_year ?? ""}</td>
-            <td><b>SEM:</b></td><td>{semester}</td>
+            <td><b>SY:</b></td><td colSpan={3}>{record?.school_year ?? ""}</td>
           </tr>
           <tr>
             <td><b>TRACK/STRAND:</b></td><td colSpan={12}>{record ? [track, strand].filter(Boolean).join(" / ") : ""}</td>
@@ -299,28 +294,30 @@ function ShsSemesterBlock({
           <tr>
             <th rowSpan={2} className="shs-type-col">Indicate if Subject is CORE, APPLIED, or SPECIALIZED</th>
             <th rowSpan={2} className="shs-subject-col">SUBJECTS</th>
-            <th colSpan={2}>Quarter</th>
-            <th rowSpan={2} className="shs-final-col">SEM FINAL GRADE</th>
+            <th colSpan={3}>TERM RATING</th>
+            <th rowSpan={2} className="shs-final-col">FINAL GRADE</th>
             <th rowSpan={2} className="shs-action-col">ACTION TAKEN</th>
           </tr>
           <tr>
-            <th className="shs-quarter">{semester === "1ST" ? "1ST" : "3RD"}</th>
-            <th className="shs-quarter">{semester === "1ST" ? "2ND" : "4TH"}</th>
+            <th className="shs-quarter">TERM 1</th>
+            <th className="shs-quarter">TERM 2</th>
+            <th className="shs-quarter">TERM 3</th>
           </tr>
         </thead>
         <tbody>
           {subjects.map((subject, index) => (
-            <tr key={subject?.assignment_id ?? `shs-blank-${semester}-${index}`}>
+            <tr key={subject?.assignment_id ?? `shs-blank-${record?.grade_level ?? "x"}-${index}`}>
               <td>{subject ? "Core/Applied/Specialized" : ""}</td>
               <td className="subject-cell">{subject?.subject ?? ""}</td>
-              <td>{subject?.terms?.[semester === "1ST" ? 0 : 2] ?? ""}</td>
-              <td>{subject?.terms?.[semester === "1ST" ? 1 : 3] ?? ""}</td>
+              <td>{subject?.terms?.[0] ?? ""}</td>
+              <td>{subject?.terms?.[1] ?? ""}</td>
+              <td>{subject?.terms?.[2] ?? ""}</td>
               <td>{subject?.final_rating ?? ""}</td>
               <td>{subject?.remarks ?? ""}</td>
             </tr>
           ))}
           <tr className="general-row">
-            <td colSpan={4}><b>General Ave. for the Semester:</b></td>
+            <td colSpan={5}><b>General Average:</b></td>
             <td>{record?.general_average ?? ""}</td>
             <td>{record?.general_average == null ? "" : record.general_average >= 75 ? "PROMOTED" : "RETAINED"}</td>
           </tr>
@@ -346,7 +343,7 @@ function ShsSemesterBlock({
           <tr>
             <th>Indicate if Subject is CORE, APPLIED, or SPECIALIZED</th>
             <th>SUBJECTS</th>
-            <th>SEM FINAL GRADE</th>
+            <th>FINAL GRADE</th>
             <th>REMEDIAL CLASS MARK</th>
             <th>RECOMPUTED FINAL GRADE</th>
             <th>ACTION TAKEN</th>
@@ -454,14 +451,12 @@ export function ShsSf10Form({ detail }: { detail: Sf10Detail }) {
         </div>
 
         <div className="section-band shs-band">SCHOLASTIC RECORD</div>
-        <ShsSemesterBlock record={grade11[0]} semester="1ST" school={school} track={track} strand={strand} schoolHead={schoolHead} designation={designation} rows={9} />
-        <ShsSemesterBlock record={grade11[1] ?? grade11[0]} semester="2ND" school={school} track={track} strand={strand} schoolHead={schoolHead} designation={designation} rows={9} />
+        <ShsGradeBlock record={grade11[0]} school={school} track={track} strand={strand} schoolHead={schoolHead} designation={designation} rows={14} />
       </section>
 
       <section className="sf10-paper shs-paper">
         <div className="page-two-head shs-page-two"><span>Page 2</span><span>SF10-SHS</span></div>
-        <ShsSemesterBlock record={grade12[0]} semester="1ST" school={school} track={track} strand={strand} schoolHead={schoolHead} designation={designation} rows={10} />
-        <ShsSemesterBlock record={grade12[1] ?? grade12[0]} semester="2ND" school={school} track={track} strand={strand} schoolHead={schoolHead} designation={designation} rows={10} />
+        <ShsGradeBlock record={grade12[0]} school={school} track={track} strand={strand} schoolHead={schoolHead} designation={designation} rows={14} />
 
         <section className="shs-completion">
           <div><b>Track/Strand Accomplished:</b> <u>{[track, strand].filter(Boolean).join(" / ")}</u><span><b>SHS General Average:</b> <u>{shsAverage}</u></span></div>

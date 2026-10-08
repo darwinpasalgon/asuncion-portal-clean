@@ -118,10 +118,15 @@ function validExternalUrl(value: string) {
 }
 
 async function removeStorageObject(path: string, token: string) {
-  await fetch(
-    `${SUPABASE_URL}/storage/v1/object/learning-resources/${encodeStoragePath(path)}`,
-    { method: "DELETE", headers: authHeaders(token), cache: "no-store" }
-  ).catch(() => null);
+  await fetch(`${SUPABASE_URL}/storage/v1/object/learning-resources`, {
+    method: "DELETE",
+    headers: {
+      ...authHeaders(token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ prefixes: [path] }),
+    cache: "no-store",
+  }).catch(() => null);
 }
 
 export async function GET(request: NextRequest) {
@@ -155,7 +160,7 @@ export async function GET(request: NextRequest) {
       getRows(
         `teacher_assignments?school_year_id=eq.${encodeURIComponent(
           year.id
-        )}&is_active=eq.true&select=id,teacher_id,grade_level,section_id,subject_id&order=grade_level.asc`,
+        )}&is_active=eq.true&select=id,teacher_id,co_teacher_ids,grade_level,section_id,subject_id,major&order=grade_level.asc`,
         token
       ),
       getRows(
@@ -168,11 +173,23 @@ export async function GET(request: NextRequest) {
       ),
     ]);
 
+    const visibleAssignments =
+      profile.role === "teacher"
+        ? (assignments ?? []).filter(
+            (assignment: {
+              teacher_id: string;
+              co_teacher_ids?: string[] | null;
+            }) =>
+              assignment.teacher_id === auth.userId ||
+              (assignment.co_teacher_ids ?? []).includes(auth.userId)
+          )
+        : assignments ?? [];
+
     return NextResponse.json({
       profile,
       activeYear: year,
       resources,
-      assignments,
+      assignments: visibleAssignments,
       sections,
       subjects,
     });
@@ -325,13 +342,20 @@ export async function POST(request: NextRequest) {
         teacherAssignmentId
       )}&school_year_id=eq.${encodeURIComponent(
         year.id
-      )}&is_active=eq.true&select=id&limit=1`,
+      )}&is_active=eq.true&select=id,teacher_id,co_teacher_ids,major&limit=1`,
       token
     ).catch(() => []);
 
-    if (!assignmentRows?.[0]) {
+    const selectedAssignment = assignmentRows?.[0] ?? null;
+    const teacherOwnsAssignment =
+      profile.role !== "teacher" ||
+      (selectedAssignment &&
+        (selectedAssignment.teacher_id === userId ||
+          (selectedAssignment.co_teacher_ids ?? []).includes(userId)));
+
+    if (!selectedAssignment || !teacherOwnsAssignment) {
       return NextResponse.json(
-        { error: "Select a class assignment available to your account." },
+        { error: "Select one of your active teaching assignments." },
         { status: 403 }
       );
     }

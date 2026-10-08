@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
+function manilaDate() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 function grade7TveMajorLabel(code?: string | null) {
   switch (String(code ?? "")) {
     case "AGRI-CROP": return "Agriculture Crop Production";
@@ -100,7 +109,11 @@ export async function GET(request: NextRequest) {
         activeYear.id
       )}&teacher_id=eq.${encodeURIComponent(
         userId
-      )}&is_active=eq.true&select=id,group_label,section_id,major_code,starts_on,ends_on`,
+      )}&is_active=eq.true&starts_on=lte.${encodeURIComponent(
+        manilaDate()
+      )}&ends_on=gte.${encodeURIComponent(
+        manilaDate()
+      )}&select=id,group_label,section_id,major_code,starts_on,ends_on`,
       token
     ).catch(() => []),
   ]);
@@ -126,11 +139,20 @@ export async function GET(request: NextRequest) {
       major: string | null;
     }) => {
       const subject = subjectMap.get(assignment.subject_id);
-      const studentCount = (enrollments ?? []).filter(
-        (enrollment: { section_id: string | null; tve_major?: string | null }) =>
-          enrollment.section_id === assignment.section_id &&
-          (!assignment.major || enrollment.tve_major === assignment.major)
+      const sectionEnrollments = (enrollments ?? []).filter(
+        (enrollment: { section_id: string | null }) =>
+          enrollment.section_id === assignment.section_id
+      );
+      const studentCount = sectionEnrollments.filter(
+        (enrollment: { tve_major?: string | null }) =>
+          !assignment.major || enrollment.tve_major === assignment.major
       ).length;
+      const pendingTveMajorCount = assignment.major
+        ? sectionEnrollments.filter(
+            (enrollment: { tve_major?: string | null }) =>
+              !String(enrollment.tve_major ?? "").trim()
+          ).length
+        : 0;
 
       return {
         id: assignment.id,
@@ -139,6 +161,8 @@ export async function GET(request: NextRequest) {
         subject: subject?.name ?? "Unknown subject",
         major: assignment.major ?? null,
         student_count: studentCount,
+        section_student_count: sectionEnrollments.length,
+        pending_tve_major_count: pendingTveMajorCount,
       };
     }
   );
@@ -150,6 +174,8 @@ export async function GET(request: NextRequest) {
     subject: string;
     major: string | null;
     student_count: number;
+    section_student_count: number;
+    pending_tve_major_count: number;
   }>();
 
   for (const rotation of grade7TveRotations ?? []) {
@@ -175,6 +201,8 @@ export async function GET(request: NextRequest) {
       subject: "Technical Vocational Education",
       major: grade7TveMajorLabel(majorCode),
       student_count: studentCount,
+      section_student_count: studentCount,
+      pending_tve_major_count: 0,
     });
   }
 
