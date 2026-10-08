@@ -92,6 +92,7 @@ export default function Sf9Page() {
   const [accessMode, setAccessMode] = useState<"admin" | "adviser" | "">("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadingStudents, setLoadingStudents] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [error, setError] = useState("");
   const [layoutSettings, setLayoutSettings] =
@@ -118,7 +119,7 @@ export default function Sf9Page() {
       }
 
       setSections(result.sections ?? []);
-      setStudents(result.students ?? []);
+      setStudents([]);
       setAccessMode(result.accessMode ?? "");
       if (result.layoutSettings) {
         setLayoutSettings(result.layoutSettings);
@@ -150,6 +151,44 @@ export default function Sf9Page() {
     setSearch("");
     setEditorSampleId("");
     setEditorDetail(null);
+    setStudents([]);
+
+    if (!selectedSectionId) return;
+
+    let cancelled = false;
+    async function loadSectionStudents() {
+      setLoadingStudents(true);
+      setError("");
+      try {
+        const params = new URLSearchParams({ sectionId: selectedSectionId });
+        const response = await fetch("/api/academic/sf9?" + params.toString(), {
+          cache: "no-store",
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          if (!cancelled) {
+            setStudents([]);
+            setError(result.error ?? "Unable to load learners in this section.");
+          }
+          return;
+        }
+        if (!cancelled) {
+          setStudents(result.students ?? []);
+        }
+      } catch {
+        if (!cancelled) {
+          setStudents([]);
+          setError("Unable to load learners in this section.");
+        }
+      } finally {
+        if (!cancelled) setLoadingStudents(false);
+      }
+    }
+
+    void loadSectionStudents();
+    return () => {
+      cancelled = true;
+    };
   }, [selectedSectionId]);
 
   useEffect(() => {
@@ -793,12 +832,14 @@ export default function Sf9Page() {
                       <span>Sample Learner</span>
                       <select
                         value={editorSampleId}
-                        disabled={allSectionStudents.length === 0}
+                        disabled={loadingStudents || allSectionStudents.length === 0}
                         onChange={(event) =>
                           setEditorSampleId(event.target.value)
                         }
                       >
-                        {allSectionStudents.length === 0 ? (
+                        {loadingStudents ? (
+                          <option value="">Loading Learners…</option>
+                        ) : allSectionStudents.length === 0 ? (
                           <option value="">No Learners Available</option>
                         ) : (
                           allSectionStudents.map((student) => (
@@ -811,7 +852,11 @@ export default function Sf9Page() {
                     </label>
                   </div>
 
-                  {allSectionStudents.length === 0 ? (
+                  {loadingStudents ? (
+                    <div className={styles.inlineEditorEmpty}>
+                      Loading learners in the selected section…
+                    </div>
+                  ) : allSectionStudents.length === 0 ? (
                     <div className={styles.inlineEditorEmpty}>
                       <MousePointer2 size={28} />
                       <strong>No active learner is available in this section.</strong>
@@ -972,7 +1017,7 @@ export default function Sf9Page() {
           </div>
 
           <div className={styles.studentList}>
-            {loading ? (
+            {loading || loadingStudents ? (
               <div className={styles.empty}>Loading learners…</div>
             ) : sectionStudents.length === 0 ? (
               <div className={styles.empty}>

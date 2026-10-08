@@ -480,26 +480,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!sectionId || requestedStudentIds.length === 0) {
-      const targetSectionIds = sectionId
-        ? [sectionId]
-        : sections.map((row: JsonRow) => String(row.id));
+    if (!sectionId) {
+      return NextResponse.json({
+        activeYear,
+        sections,
+        students: [],
+        accessMode: isAdmin ? "admin" : "adviser",
+        layoutSettings,
+      });
+    }
 
-      if (!targetSectionIds.length) {
-        return NextResponse.json({
-          activeYear,
-          sections,
-          students: [],
-          accessMode: isAdmin ? "admin" : "adviser",
-          layoutSettings,
-        });
-      }
-
+    if (requestedStudentIds.length === 0) {
       const enrollments = await getRows(
         `student_enrollments?school_year_id=eq.${encodeURIComponent(
           activeYear.id
-        )}&section_id=in.${encodeURIComponent(
-          inFilter(targetSectionIds)
+        )}&section_id=eq.${encodeURIComponent(
+          sectionId
         )}&enrollment_status=eq.active&select=student_id,grade_level,section_id,tve_major`,
         token
       ).catch(() => []);
