@@ -102,6 +102,9 @@ export default function Sf9Page() {
   const [savingLayout, setSavingLayout] = useState(false);
   const [layoutMessage, setLayoutMessage] = useState("");
   const [selectedBlock, setSelectedBlock] = useState<Sf9BlockId>("header");
+  const [editorSampleId, setEditorSampleId] = useState("");
+  const [editorDetail, setEditorDetail] = useState<any>(null);
+  const [loadingEditorDetail, setLoadingEditorDetail] = useState(false);
 
   async function loadBase() {
     setLoading(true);
@@ -145,6 +148,8 @@ export default function Sf9Page() {
     setSelectedIds([]);
     setDetail(null);
     setSearch("");
+    setEditorSampleId("");
+    setEditorDetail(null);
   }, [selectedSectionId]);
 
   useEffect(() => {
@@ -184,21 +189,78 @@ export default function Sf9Page() {
     };
   }, [selectedSectionId, selectedIds]);
 
+  const allSectionStudents = useMemo(
+    () => students.filter((student) => student.section_id === selectedSectionId),
+    [students, selectedSectionId]
+  );
+
+  useEffect(() => {
+    if (!layoutEditorOpen || !selectedSectionId || editorSampleId) return;
+    const firstLearner = allSectionStudents[0];
+    if (firstLearner) setEditorSampleId(firstLearner.id);
+  }, [
+    layoutEditorOpen,
+    selectedSectionId,
+    editorSampleId,
+    allSectionStudents,
+  ]);
+
+  useEffect(() => {
+    if (!layoutEditorOpen || !selectedSectionId || !editorSampleId) {
+      setEditorDetail(null);
+      return;
+    }
+
+    let cancelled = false;
+    async function loadEditorSample() {
+      setLoadingEditorDetail(true);
+      setError("");
+      try {
+        const params = new URLSearchParams({
+          sectionId: selectedSectionId,
+          studentIds: editorSampleId,
+        });
+        const response = await fetch("/api/academic/sf9?" + params.toString(), {
+          cache: "no-store",
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          if (!cancelled) {
+            setError(result.error ?? "Unable to prepare the sample SF9.");
+            setEditorDetail(null);
+          }
+          return;
+        }
+        if (!cancelled) setEditorDetail(result);
+      } catch {
+        if (!cancelled) {
+          setError("Unable to reach the SF9 service.");
+          setEditorDetail(null);
+        }
+      } finally {
+        if (!cancelled) setLoadingEditorDetail(false);
+      }
+    }
+
+    void loadEditorSample();
+    return () => {
+      cancelled = true;
+    };
+  }, [layoutEditorOpen, selectedSectionId, editorSampleId]);
+
   const selectedSection = sections.find(
     (section) => section.id === selectedSectionId
   );
 
   const sectionStudents = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    return students
-      .filter((student) => student.section_id === selectedSectionId)
-      .filter((student) => {
+    return allSectionStudents.filter((student) => {
         if (!needle) return true;
         return [student.full_name, student.lrn ?? "", student.tve_major ?? ""].some(
           (value) => value.toLowerCase().includes(needle)
         );
       });
-  }, [students, selectedSectionId, search]);
+  }, [allSectionStudents, search]);
 
   function toggleStudent(studentId: string) {
     setSelectedIds((current) => {
@@ -257,17 +319,8 @@ export default function Sf9Page() {
   }
 
   function toggleLayoutEditor() {
-    const opening = !layoutEditorOpen;
-    setLayoutEditorOpen(opening);
+    setLayoutEditorOpen((current) => !current);
     setLayoutMessage("");
-    if (opening && selectedIds.length === 0) {
-      const sampleStudent = students.find(
-        (student) => student.section_id === selectedSectionId
-      );
-      if (sampleStudent) {
-        setSelectedIds([sampleStudent.id]);
-      }
-    }
   }
 
   function handlePreviewBlockClick(event: ReactMouseEvent<HTMLDivElement>) {
@@ -732,27 +785,42 @@ export default function Sf9Page() {
                     <div>
                       <strong>Editable Report Card Preview</strong>
                       <span>
-                        Click any text, table, signature area, or section directly
-                        on the SF9 below.
+                        Choose a sample learner, then click any text, table,
+                        signature area, or section directly on the SF9 below.
                       </span>
                     </div>
-                    {detail?.cards?.[0] && (
-                      <span className={styles.previewLearnerName}>
-                        Previewing: {detail.cards[0].full_name}
-                      </span>
-                    )}
+                    <label className={styles.sampleLearnerPicker}>
+                      <span>Sample Learner</span>
+                      <select
+                        value={editorSampleId}
+                        disabled={allSectionStudents.length === 0}
+                        onChange={(event) =>
+                          setEditorSampleId(event.target.value)
+                        }
+                      >
+                        {allSectionStudents.length === 0 ? (
+                          <option value="">No Learners Available</option>
+                        ) : (
+                          allSectionStudents.map((student) => (
+                            <option key={student.id} value={student.id}>
+                              {student.full_name}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                    </label>
                   </div>
 
-                  {selectedIds.length === 0 ? (
+                  {allSectionStudents.length === 0 ? (
                     <div className={styles.inlineEditorEmpty}>
                       <MousePointer2 size={28} />
-                      <strong>Select a learner to load the report card.</strong>
+                      <strong>No active learner is available in this section.</strong>
                       <span>
-                        Choose any learner in the section below. The saved layout
-                        will still apply to all learners.
+                        Choose another section with enrolled learners to preview
+                        and edit the SF9 layout.
                       </span>
                     </div>
-                  ) : loadingDetail || !detail ? (
+                  ) : loadingEditorDetail || !editorDetail ? (
                     <div className={styles.inlineEditorEmpty}>
                       Preparing the editable report card…
                     </div>
@@ -768,7 +836,7 @@ export default function Sf9Page() {
                         onClickCapture={handlePreviewBlockClick}
                       >
                         <Sf9PrintForms
-                          detail={detail}
+                          detail={editorDetail}
                           layoutSettings={layoutSettings}
                         />
                       </div>
