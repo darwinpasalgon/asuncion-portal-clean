@@ -126,11 +126,20 @@ export async function GET(request: NextRequest) {
       major: string | null;
     }) => {
       const subject = subjectMap.get(assignment.subject_id);
-      const studentCount = (enrollments ?? []).filter(
-        (enrollment: { section_id: string | null; tve_major?: string | null }) =>
-          enrollment.section_id === assignment.section_id &&
-          (!assignment.major || enrollment.tve_major === assignment.major)
+      const sectionEnrollments = (enrollments ?? []).filter(
+        (enrollment: { section_id: string | null }) =>
+          enrollment.section_id === assignment.section_id
+      );
+      const studentCount = sectionEnrollments.filter(
+        (enrollment: { tve_major?: string | null }) =>
+          !assignment.major || enrollment.tve_major === assignment.major
       ).length;
+      const pendingTveMajorCount = assignment.major
+        ? sectionEnrollments.filter(
+            (enrollment: { tve_major?: string | null }) =>
+              !String(enrollment.tve_major ?? "").trim()
+          ).length
+        : 0;
 
       return {
         id: assignment.id,
@@ -139,6 +148,8 @@ export async function GET(request: NextRequest) {
         subject: subject?.name ?? "Unknown subject",
         major: assignment.major ?? null,
         student_count: studentCount,
+        section_student_count: sectionEnrollments.length,
+        pending_tve_major_count: pendingTveMajorCount,
       };
     }
   );
@@ -175,6 +186,8 @@ export async function GET(request: NextRequest) {
       subject: "Technical Vocational Education",
       major: grade7TveMajorLabel(majorCode),
       student_count: studentCount,
+      section_student_count: studentCount,
+      pending_tve_major_count: 0,
     });
   }
 
