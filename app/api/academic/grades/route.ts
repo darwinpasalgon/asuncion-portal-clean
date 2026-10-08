@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
         getRows(
           `teacher_assignments?school_year_id=eq.${encodeURIComponent(
             activeYear.id
-          )}&is_active=eq.true&select=id,teacher_id,grade_level,section_id,subject_id,major&order=grade_level.asc`,
+          )}&is_active=eq.true&select=id,teacher_id,co_teacher_ids,grade_level,section_id,subject_id,major&order=grade_level.asc`,
           token
         ),
         getRows(
@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
         getRows(
           `student_term_grades?school_year_id=eq.${encodeURIComponent(
             activeYear.id
-          )}&select=id,student_id,teacher_assignment_id,school_year_id,term_no,term_grade,status,published_at,updated_at&order=term_no.asc`,
+          )}&select=id,student_id,teacher_assignment_id,school_year_id,term_no,term_grade,music_arts_grade,pe_health_grade,status,published_at,updated_at&order=term_no.asc`,
           token
         ),
         profile.role === "teacher"
@@ -498,6 +498,8 @@ export async function POST(request: NextRequest) {
 
       let termGrade: number;
       let componentPayload: Record<string, number | null> = {
+        music_arts_grade: null,
+        pe_health_grade: null,
         music_grade: null,
         arts_grade: null,
         physical_education_grade: null,
@@ -505,36 +507,27 @@ export async function POST(request: NextRequest) {
       };
 
       if (isMapehSubject) {
-        const music = wholeGrade(record?.components?.music);
-        const arts = wholeGrade(record?.components?.arts);
-        const physicalEducation = wholeGrade(
-          record?.components?.physicalEducation
-        );
-        const health = wholeGrade(record?.components?.health);
+        const musicArts = wholeGrade(record?.components?.musicArts);
+        const peHealth = wholeGrade(record?.components?.peHealth);
 
-        if (
-          music === null ||
-          arts === null ||
-          physicalEducation === null ||
-          health === null
-        ) {
+        if (musicArts === null || peHealth === null) {
           return NextResponse.json(
             {
               error:
-                "Enter complete whole-number MAPEH component grades from 0 to 100 for every learner before saving all.",
+                "Enter complete whole-number grades from 0 to 100 for Music and Arts, and Physical Education and Health, for every learner before saving all.",
             },
             { status: 400 }
           );
         }
 
-        termGrade = Math.round(
-          (music + arts + physicalEducation + health) / 4
-        );
+        termGrade = Math.round((musicArts + peHealth) / 2);
         componentPayload = {
-          music_grade: music,
-          arts_grade: arts,
-          physical_education_grade: physicalEducation,
-          health_grade: health,
+          music_arts_grade: musicArts,
+          pe_health_grade: peHealth,
+          music_grade: null,
+          arts_grade: null,
+          physical_education_grade: null,
+          health_grade: null,
         };
       } else {
         const directGrade = wholeGrade(record?.termGrade);
@@ -714,6 +707,8 @@ export async function POST(request: NextRequest) {
 
     let termGrade: number;
     let componentPayload: Record<string, number | null> = {
+      music_arts_grade: null,
+      pe_health_grade: null,
       music_grade: null,
       arts_grade: null,
       physical_education_grade: null,
@@ -721,32 +716,27 @@ export async function POST(request: NextRequest) {
     };
 
     if (isMapehSubject) {
-      const music = wholeGrade(body?.components?.music);
-      const arts = wholeGrade(body?.components?.arts);
-      const physicalEducation = wholeGrade(body?.components?.physicalEducation);
-      const health = wholeGrade(body?.components?.health);
+      const musicArts = wholeGrade(body?.components?.musicArts);
+      const peHealth = wholeGrade(body?.components?.peHealth);
 
-      if (
-        music === null ||
-        arts === null ||
-        physicalEducation === null ||
-        health === null
-      ) {
+      if (musicArts === null || peHealth === null) {
         return NextResponse.json(
           {
             error:
-              "Enter whole-number grades from 0 to 100 for Music, Arts, Physical Education, and Health.",
+              "Enter whole-number grades from 0 to 100 for Music and Arts, and Physical Education and Health.",
           },
           { status: 400 }
         );
       }
 
-      termGrade = Math.round((music + arts + physicalEducation + health) / 4);
+      termGrade = Math.round((musicArts + peHealth) / 2);
       componentPayload = {
-        music_grade: music,
-        arts_grade: arts,
-        physical_education_grade: physicalEducation,
-        health_grade: health,
+        music_arts_grade: musicArts,
+        pe_health_grade: peHealth,
+        music_grade: null,
+        arts_grade: null,
+        physical_education_grade: null,
+        health_grade: null,
       };
     } else {
       const directGrade = wholeGrade(body?.termGrade);
@@ -914,7 +904,7 @@ export async function POST(request: NextRequest) {
     const grades = await getRows(
       `student_term_grades?teacher_assignment_id=in.${encodeURIComponent(
         inFilter
-      )}&term_no=eq.${termNo}&select=id,student_id,teacher_assignment_id,status,music_grade,arts_grade,physical_education_grade,health_grade`,
+      )}&term_no=eq.${termNo}&select=id,student_id,teacher_assignment_id,status,music_arts_grade,pe_health_grade`,
       token
     ).catch(() => []);
 
@@ -947,10 +937,8 @@ export async function POST(request: NextRequest) {
             (item: {
               student_id: string;
               teacher_assignment_id: string;
-              music_grade?: number | null;
-              arts_grade?: number | null;
-              physical_education_grade?: number | null;
-              health_grade?: number | null;
+              music_arts_grade?: number | null;
+              pe_health_grade?: number | null;
             }) =>
               item.student_id === enrollment.student_id &&
               item.teacher_assignment_id === expectedAssignmentId
@@ -959,12 +947,9 @@ export async function POST(request: NextRequest) {
           if (!grade) return true;
 
           if (isMapehSubject) {
-            return [
-              grade.music_grade,
-              grade.arts_grade,
-              grade.physical_education_grade,
-              grade.health_grade,
-            ].some((value) => value === null || value === undefined);
+            return [grade.music_arts_grade, grade.pe_health_grade].some(
+              (value) => value === null || value === undefined
+            );
           }
 
           return false;
@@ -974,7 +959,7 @@ export async function POST(request: NextRequest) {
       if (missing.length > 0) {
         return NextResponse.json(
           {
-            error: `Complete and save ${isMapehSubject ? "all four MAPEH components" : "Term Grades"} for all enrolled students before publishing. Missing: ${missing.length}.`,
+            error: `Complete and save ${isMapehSubject ? "both MAPEH components" : "Term Grades"} for all enrolled students before publishing. Missing: ${missing.length}.`,
           },
           { status: 409 }
         );
