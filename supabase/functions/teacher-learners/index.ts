@@ -181,6 +181,9 @@ Deno.serve(async (req) => {
         (item) => String(item.section_id) === sectionId
       );
 
+      const rawSectionEnrollments = (enrollments ?? []).filter(
+        (item) => String(item.section_id) === sectionId
+      );
       const sectionLearners = eligibleEnrollments
         .filter((item) => String(item.section_id) === sectionId)
         .map((enrollment) => {
@@ -230,11 +233,22 @@ Deno.serve(async (req) => {
           return String(a.major ?? "").localeCompare(String(b.major ?? ""));
         });
 
+      const hasMajorSpecificAssignment = sectionAssignments.some(
+        (assignment) => Boolean(String(assignment.major ?? "").trim())
+      );
+      const pendingTveMajorCount = hasMajorSpecificAssignment
+        ? rawSectionEnrollments.filter(
+            (enrollment) => !String(enrollment.tve_major ?? "").trim()
+          ).length
+        : 0;
+
       return {
         id: section.id,
         grade_level: section.grade_level,
         name: section.name,
         learner_count: sectionLearners.length,
+        section_enrollment_count: rawSectionEnrollments.length,
+        pending_tve_major_count: pendingTveMajorCount,
         subjects: subjectsForSection,
         learners: sectionLearners,
       };
