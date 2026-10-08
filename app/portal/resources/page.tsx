@@ -19,7 +19,7 @@ import styles from "./resources.module.css";
 type Role="student"|"teacher"|"administrator";
 type Profile={id:string;full_name:string;role:Role};
 type Year={id:string;name:string};
-type Assignment={id:string;teacher_id:string;grade_level:number;section_id:string;subject_id:string};
+type Assignment={id:string;teacher_id:string;grade_level:number;section_id:string;subject_id:string;major:string|null};
 type Section={id:string;grade_level:number;name:string};
 type Subject={id:string;grade_level:number;name:string;code:string|null};
 type Resource={
@@ -112,7 +112,7 @@ export default function ResourcesPage(){
   function assignmentLabel(a:Assignment){
     const s=sectionMap.get(a.section_id);
     const subject=subjectMap.get(a.subject_id);
-    return "Grade "+a.grade_level+" · "+(s?.name??"Section")+" · "+(subject?.name??"Subject")+(subject?.code?" ("+subject.code+")":"");
+    return "Grade "+a.grade_level+" · "+(s?.name??"Section")+" · "+(subject?.name??"Subject")+(a.major?" · "+a.major:"")+(subject?.code?" ("+subject.code+")":"");
   }
 
   const subjectOptions=useMemo(()=>{
@@ -219,7 +219,9 @@ export default function ResourcesPage(){
             <span>Assigned Class</span>
             <select name="assignmentId" required defaultValue="">
               <option value="" disabled>Select Class</option>
-              {assignments.map(a=><option key={a.id} value={a.id}>{assignmentLabel(a)}</option>)}
+              {assignments.length===0
+                ? <option value="" disabled>No Active Teaching Assignments</option>
+                : assignments.map(a=><option key={a.id} value={a.id}>{assignmentLabel(a)}</option>)}
             </select>
           </label>}
 
@@ -273,7 +275,7 @@ export default function ResourcesPage(){
         <p className={styles.formHint}>Add at least one file or external link. You may include both.</p>
 
         <div className={styles.formActions}>
-          <button type="submit" disabled={working==="create"}><Send size={16}/>{working==="create"?"Posting…":"Post Resource"}</button>
+          <button type="submit" disabled={working==="create"||(profile?.role==="teacher"&&assignments.length===0)}><Send size={16}/>{working==="create"?"Posting…":"Post Resource"}</button>
         </div>
       </form>
     </section>}
