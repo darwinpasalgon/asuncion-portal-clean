@@ -161,6 +161,8 @@ export async function GET(request: NextRequest) {
     subject: string;
     major: string | null;
     student_count: number;
+    section_student_count: number;
+    pending_tve_major_count: number;
   }>();
 
   for (const rotation of grade7TveRotations ?? []) {
