@@ -67,6 +67,8 @@ type TeacherAssignment = {
   subject: string;
   major: string | null;
   student_count: number;
+  section_student_count?: number;
+  pending_tve_major_count?: number;
 };
 
 type AdviserSection = {
@@ -89,6 +91,8 @@ type TeacherLearnerSection = {
   grade_level: number;
   name: string;
   learner_count: number;
+  section_enrollment_count?: number;
+  pending_tve_major_count?: number;
   subjects: Array<{
     assignment_id: string;
     subject: string;
@@ -2439,8 +2443,11 @@ export default function PortalPage() {
                         </strong>
                       </div>
                       <span>
-                        {assignment.student_count} enrolled student
-                        {assignment.student_count === 1 ? "" : "s"}
+                        {assignment.major && (assignment.pending_tve_major_count ?? 0) > 0
+                          ? assignment.student_count > 0
+                            ? `${assignment.student_count} assigned · ${assignment.pending_tve_major_count} awaiting TVE major`
+                            : `${assignment.section_student_count ?? 0} learners in section · TVE major assignment pending`
+                          : `${assignment.student_count} enrolled student${assignment.student_count === 1 ? "" : "s"}`}
                       </span>
                     </article>
                   ))}
