@@ -2236,8 +2236,11 @@ export default function PortalPage() {
                                 Grade {section.grade_level} · {section.name}
                               </span>
                               <strong>
-                                {section.learner_count} learner
-                                {section.learner_count === 1 ? "" : "s"}
+                                {(section.pending_tve_major_count ?? 0) > 0
+                                  ? section.learner_count > 0
+                                    ? `${section.learner_count} assigned · ${section.pending_tve_major_count} pending TVE major`
+                                    : `${section.section_enrollment_count ?? 0} in section · TVE major pending`
+                                  : `${section.learner_count} learner${section.learner_count === 1 ? "" : "s"}`}
                               </strong>
                             </div>
                             <div className="real-my-learners-subjects">
