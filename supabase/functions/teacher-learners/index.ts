@@ -13,6 +13,26 @@ const json = (body: Record<string, unknown>, status = 200) =>
     headers: { ...cors, "Content-Type": "application/json" },
   });
 
+function manilaDate() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function grade7TveMajorLabel(code?: string | null) {
+  switch (String(code ?? "")) {
+    case "AGRI-CROP": return "Agriculture Crop Production";
+    case "ANIMAL": return "Animal Production";
+    case "CSS": return "Computer Systems Servicing";
+    case "EIM": return "Electrical Installation and Maintenance";
+    case "FOOD": return "Food Processing";
+    default: return String(code ?? "");
+  }
+}
+
 function sexRank(value: string | null) {
   const normalized = String(value ?? "").trim().toLowerCase();
   if (normalized === "m" || normalized === "male") return 0;
@@ -74,24 +94,39 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { data: assignmentRows, error: assignmentError } = await admin
-    .from("teacher_assignments")
-    .select("id,teacher_id,co_teacher_ids,grade_level,section_id,subject_id,major")
-    .eq("school_year_id", year.id)
-    .eq("is_active", true)
-    .order("grade_level");
+  const today = manilaDate();
+  const [
+    { data: assignmentRows, error: assignmentError },
+    { data: rotationRows, error: rotationError },
+  ] = await Promise.all([
+    admin
+      .from("teacher_assignments")
+      .select("id,teacher_id,co_teacher_ids,grade_level,section_id,subject_id,major")
+      .eq("school_year_id", year.id)
+      .eq("is_active", true)
+      .order("grade_level"),
+    admin
+      .from("grade7_tve_rotations")
+      .select("id,group_label,section_id,major_code,starts_on,ends_on,teacher_id")
+      .eq("school_year_id", year.id)
+      .eq("teacher_id", userId)
+      .eq("is_active", true)
+      .lte("starts_on", today)
+      .gte("ends_on", today),
+  ]);
 
   const assignments = (assignmentRows ?? []).filter(
     (item) =>
       item.teacher_id === userId ||
       (item.co_teacher_ids ?? []).includes(userId)
   );
+  const rotations = rotationRows ?? [];
 
-  if (assignmentError) {
+  if (assignmentError || rotationError) {
     return json({ error: "Unable to load teaching assignments." }, 500);
   }
 
-  if (!(assignments ?? []).length) {
+  if (!(assignments ?? []).length && !rotations.length) {
     return json({
       activeYear: year,
       sections: [],
@@ -101,7 +136,12 @@ Deno.serve(async (req) => {
   }
 
   const sectionIds = Array.from(
-    new Set((assignments ?? []).map((item) => String(item.section_id)))
+    new Set([
+      ...(assignments ?? []).map((item) => String(item.section_id)),
+      ...rotations
+        .filter((item) => Boolean(item.section_id))
+        .map((item) => String(item.section_id)),
+    ])
   );
   const subjectIds = Array.from(
     new Set((assignments ?? []).map((item) => String(item.subject_id)))
@@ -131,12 +171,18 @@ Deno.serve(async (req) => {
     return json({ error: "Unable to load assigned learners." }, 500);
   }
 
-  const eligibleEnrollments = (enrollments ?? []).filter((enrollment) =>
-    (assignments ?? []).some(
-      (assignment) =>
-        assignment.section_id === enrollment.section_id &&
-        (!assignment.major || assignment.major === enrollment.tve_major)
-    )
+  const eligibleEnrollments = (enrollments ?? []).filter(
+    (enrollment) =>
+      (assignments ?? []).some(
+        (assignment) =>
+          assignment.section_id === enrollment.section_id &&
+          (!assignment.major || assignment.major === enrollment.tve_major)
+      ) ||
+      rotations.some(
+        (rotation) =>
+          rotation.section_id &&
+          rotation.section_id === enrollment.section_id
+      )
   );
 
   const studentIds = Array.from(
@@ -180,6 +226,9 @@ Deno.serve(async (req) => {
       const sectionAssignments = (assignments ?? []).filter(
         (item) => String(item.section_id) === sectionId
       );
+      const sectionRotations = rotations.filter(
+        (item) => String(item.section_id ?? "") === sectionId
+      );
 
       const rawSectionEnrollments = (enrollments ?? []).filter(
         (item) => String(item.section_id) === sectionId
@@ -216,22 +265,27 @@ Deno.serve(async (req) => {
           );
         });
 
-      const subjectsForSection = sectionAssignments
-        .map((assignment) => {
+      const subjectsForSection = [
+        ...sectionAssignments.map((assignment) => {
           const subject = subjectMap.get(String(assignment.subject_id));
           return {
             assignment_id: assignment.id,
             subject: subject?.name ?? "Unknown Subject",
             major: assignment.major ?? null,
           };
-        })
-        .sort((a, b) => {
-          const bySubject = a.subject.localeCompare(b.subject, undefined, {
-            sensitivity: "base",
-          });
-          if (bySubject !== 0) return bySubject;
-          return String(a.major ?? "").localeCompare(String(b.major ?? ""));
+        }),
+        ...sectionRotations.map((rotation) => ({
+          assignment_id: `g7-tve-${rotation.id}`,
+          subject: "Technical Vocational Education",
+          major: grade7TveMajorLabel(rotation.major_code),
+        })),
+      ].sort((a, b) => {
+        const bySubject = a.subject.localeCompare(b.subject, undefined, {
+          sensitivity: "base",
         });
+        if (bySubject !== 0) return bySubject;
+        return String(a.major ?? "").localeCompare(String(b.major ?? ""));
+      });
 
       const hasMajorSpecificAssignment = sectionAssignments.some(
         (assignment) => Boolean(String(assignment.major ?? "").trim())
@@ -259,10 +313,36 @@ Deno.serve(async (req) => {
       return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
     });
 
+  const mixedRotationGroups = rotations
+    .filter((rotation) => !rotation.section_id)
+    .map((rotation) => ({
+      id: `g7-rotation-${rotation.id}`,
+      grade_level: 7,
+      name: `${rotation.group_label || "MIX"} Group`,
+      learner_count: 0,
+      section_enrollment_count: 0,
+      pending_tve_major_count: 0,
+      roster_note:
+        "This Grade 7 exploratory rotation uses a mixed group. Individual learner membership is not stored in the current rotation record.",
+      subjects: [
+        {
+          assignment_id: `g7-tve-${rotation.id}`,
+          subject: "Technical Vocational Education",
+          major: grade7TveMajorLabel(rotation.major_code),
+        },
+      ],
+      learners: [],
+    }));
+
+  const visibleSections = [...grouped, ...mixedRotationGroups].sort((a, b) => {
+    if (a.grade_level !== b.grade_level) return a.grade_level - b.grade_level;
+    return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+  });
+
   return json({
     activeYear: year,
-    sections: grouped,
-    totalSections: grouped.length,
+    sections: visibleSections,
+    totalSections: visibleSections.length,
     totalLearners: new Set(
       eligibleEnrollments.map((item) => String(item.student_id))
     ).size,
