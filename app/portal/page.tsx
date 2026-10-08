@@ -451,6 +451,12 @@ function DashboardHome({
               href: "/portal/sf9",
               icon: FileSpreadsheet,
             },
+            {
+              label: "SF10 Permanent Records",
+              description: "View and print SF10 permanent records for your advisory learners.",
+              href: "/portal/sf10",
+              icon: FileSpreadsheet,
+            },
           ]
         : []),
       {
@@ -2364,6 +2370,19 @@ export default function PortalPage() {
               </div>
 
               <div className="real-school-forms-list">
+                {adviserSections.length > 0 && (
+                  <article>
+                    <strong>SF10 · Learner Permanent Record</strong>
+                    <p>
+                      Advisers can view and print the SF10 of learners in their
+                      current advisory section. Permanent-record editing remains
+                      restricted to authorized records personnel.
+                    </p>
+                    <a href="/portal/sf10" className="real-school-forms-status">
+                      Open SF10
+                    </a>
+                  </article>
+                )}
                 <article>
                   <strong>SF1 · School Register</strong>
                   <p>
