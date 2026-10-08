@@ -94,6 +94,7 @@ type TeacherLearnerSection = {
   learner_count: number;
   section_enrollment_count?: number;
   pending_tve_major_count?: number;
+  roster_note?: string;
   subjects: Array<{
     assignment_id: string;
     subject: string;
@@ -2237,11 +2238,13 @@ export default function PortalPage() {
                                 Grade {section.grade_level} · {section.name}
                               </span>
                               <strong>
-                                {(section.pending_tve_major_count ?? 0) > 0
-                                  ? section.learner_count > 0
-                                    ? `${section.learner_count} assigned · ${section.pending_tve_major_count} pending TVE major`
-                                    : `${section.section_enrollment_count ?? 0} in section · TVE major pending`
-                                  : `${section.learner_count} learner${section.learner_count === 1 ? "" : "s"}`}
+                                {section.roster_note
+                                  ? "Current Grade 7 TVE rotation"
+                                  : (section.pending_tve_major_count ?? 0) > 0
+                                    ? section.learner_count > 0
+                                      ? `${section.learner_count} assigned · ${section.pending_tve_major_count} pending TVE major`
+                                      : `${section.section_enrollment_count ?? 0} in section · TVE major pending`
+                                    : `${section.learner_count} learner${section.learner_count === 1 ? "" : "s"}`}
                               </strong>
                             </div>
                             <div className="real-my-learners-subjects">
@@ -2257,13 +2260,17 @@ export default function PortalPage() {
                             </div>
                           </summary>
                           <div className="real-my-learners-roster">
-                            {section.learners.map((learner, index) => (
-                              <div key={learner.student_id}>
-                                <span>{index + 1}</span>
-                                <strong>{learner.full_name}</strong>
-                                <small>{learner.lrn ? `LRN ${learner.lrn}` : "LRN Not Recorded"}</small>
-                              </div>
-                            ))}
+                            {section.roster_note && section.learners.length === 0 ? (
+                              <p className="real-assignment-empty">{section.roster_note}</p>
+                            ) : (
+                              section.learners.map((learner, index) => (
+                                <div key={learner.student_id}>
+                                  <span>{index + 1}</span>
+                                  <strong>{learner.full_name}</strong>
+                                  <small>{learner.lrn ? `LRN ${learner.lrn}` : "LRN Not Recorded"}</small>
+                                </div>
+                              ))
+                            )}
                           </div>
                           <a
                             className="real-my-learners-section-link"
@@ -2309,8 +2316,11 @@ export default function PortalPage() {
                             </strong>
                           </div>
                           <span>
-                            {assignment.student_count} student
-                            {assignment.student_count === 1 ? "" : "s"}
+                            {assignment.major && (assignment.pending_tve_major_count ?? 0) > 0
+                              ? assignment.student_count > 0
+                                ? `${assignment.student_count} assigned · ${assignment.pending_tve_major_count} pending TVE major`
+                                : `${assignment.section_student_count ?? 0} in section · TVE major pending`
+                              : `${assignment.student_count} student${assignment.student_count === 1 ? "" : "s"}`}
                           </span>
                         </article>
                       ))}
