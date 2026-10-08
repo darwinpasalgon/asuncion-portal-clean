@@ -118,10 +118,15 @@ function validExternalUrl(value: string) {
 }
 
 async function removeStorageObject(path: string, token: string) {
-  await fetch(
-    `${SUPABASE_URL}/storage/v1/object/learning-resources/${encodeStoragePath(path)}`,
-    { method: "DELETE", headers: authHeaders(token), cache: "no-store" }
-  ).catch(() => null);
+  await fetch(`${SUPABASE_URL}/storage/v1/object/learning-resources`, {
+    method: "DELETE",
+    headers: {
+      ...authHeaders(token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ prefixes: [path] }),
+    cache: "no-store",
+  }).catch(() => null);
 }
 
 export async function GET(request: NextRequest) {
