@@ -172,6 +172,10 @@
 .inlineEditorPreviewHeader strong{color:#2b536b;font-size:.72rem}
 .inlineEditorPreviewHeader span{color:#7d8f99;font-size:.62rem;line-height:1.4}
 .previewLearnerName{flex:none;padding:5px 8px;border-radius:6px;background:#f3f8fb;color:#52758a!important;font-weight:800}
+.sampleLearnerPicker{display:grid;gap:4px;min-width:260px;flex:none}
+.sampleLearnerPicker>span{font-size:.56rem!important;letter-spacing:.05em;text-transform:uppercase;color:#738792!important;font-weight:850}
+.sampleLearnerPicker select{height:36px;border:1px solid #cedce4;border-radius:7px;background:#fff;color:#294e65;padding:0 9px;font-size:.7rem;font-weight:750}
+.sampleLearnerPicker select:disabled{opacity:.55}
 .inlineEditorCanvas{max-width:100%;overflow:auto;padding:14px;min-height:260px}
 .inlineEditorEmpty{min-height:240px;display:grid;place-items:center;align-content:center;gap:7px;padding:24px;text-align:center;color:#788d99}
 .inlineEditorEmpty strong{color:#466779;font-size:.78rem}
@@ -221,6 +225,7 @@
   .toolbarCompactField input{width:100%}
   .inlineEditorPreviewHeader{align-items:flex-start;flex-direction:column}
   .previewLearnerName{flex:none}
+  .sampleLearnerPicker{width:100%;min-width:0}
 }
 @media print{
   @page{size:A4 landscape;margin:0}
