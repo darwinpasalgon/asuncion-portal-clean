@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
+function manilaDate() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 function grade7TveMajorLabel(code?: string | null) {
   switch (String(code ?? "")) {
     case "AGRI-CROP": return "Agriculture Crop Production";
@@ -100,7 +109,11 @@ export async function GET(request: NextRequest) {
         activeYear.id
       )}&teacher_id=eq.${encodeURIComponent(
         userId
-      )}&is_active=eq.true&select=id,group_label,section_id,major_code,starts_on,ends_on`,
+      )}&is_active=eq.true&starts_on=lte.${encodeURIComponent(
+        manilaDate()
+      )}&ends_on=gte.${encodeURIComponent(
+        manilaDate()
+      )}&select=id,group_label,section_id,major_code,starts_on,ends_on`,
       token
     ).catch(() => []),
   ]);
