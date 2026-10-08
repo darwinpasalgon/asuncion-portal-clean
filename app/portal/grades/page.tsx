@@ -1284,13 +1284,11 @@ export default function GradesPage() {
                               <strong>{term.term_grade}</strong>
                               <small>{descriptor(term.term_grade)}</small>
                               {isMapeh(subject?.name) &&
-                                term.music_grade !== null &&
-                                term.arts_grade !== null &&
-                                term.physical_education_grade !== null &&
-                                term.health_grade !== null && (
+                                term.music_arts_grade !== null &&
+                                term.pe_health_grade !== null && (
                                   <span className={styles.componentSummary}>
-                                    Music {term.music_grade} · Arts {term.arts_grade} ·
-                                    PE {term.physical_education_grade} · Health {term.health_grade}
+                                    Music and Arts {term.music_arts_grade} ·
+                                    Physical Education and Health {term.pe_health_grade}
                                   </span>
                                 )}
                               {term.term_grade < 75 && <em>Intervention needed</em>}
