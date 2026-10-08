@@ -2439,8 +2439,8 @@ export default function PortalPage() {
               <div className="real-school-forms-note">
                 <FileSpreadsheet size={18} />
                 <span>
-                  SF9 is available now. The other School Forms remain under
-                  development.
+                  SF9 and SF10 are available now. The remaining School Forms
+                  are still under development.
                 </span>
               </div>
             </section>
