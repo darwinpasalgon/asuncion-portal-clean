@@ -17,6 +17,7 @@ import {
   LogOut,
   Megaphone,
   MessageCircle,
+  Printer,
   Settings2,
   ShieldCheck,
   UserRound,
@@ -2470,9 +2471,22 @@ export default function PortalPage() {
                       official published class schedule
                     </p>
                   </div>
-                  <span className="tag blue">
-                    {classSchedules.length} entr{classSchedules.length === 1 ? "y" : "ies"}
-                  </span>
+                  <div className="real-schedule-heading-actions">
+                    <span className="tag blue">
+                      {classSchedules.length} entr{classSchedules.length === 1 ? "y" : "ies"}
+                    </span>
+                    {profile.role === "teacher" && (
+                      <a
+                        className="real-schedule-print-link"
+                        href="/portal/my-schedule/print"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <Printer size={15} />
+                        Print Schedule
+                      </a>
+                    )}
+                  </div>
                 </div>
 
                 {classSchedulesLoading ? (
