@@ -42,5 +42,20 @@ test("community interface exposes room directory and super admin room view", () 
   assert.match(page, /Grade-Wide/);
   assert.match(page, /Sections/);
   assert.match(page, /Super Admin view · all rooms/);
-  assert.match(page, /You can open and moderate every grade and section chatroom/);
+  assert.match(page, /Section chats are limited to enrolled students and the assigned adviser/);
+});
+
+test("section chat access excludes subject teachers and grade heads", () => {
+  const sql = read("supabase/migrations/20261012093413_community_section_adviser_only.sql");
+  const api = read("app/api/community/route.ts");
+
+  assert.match(sql, /if v_role = 'teacher'/);
+  assert.match(sql, /return exists \(\s*select 1\s*from public\.section_advisers sa/s);
+  assert.doesNotMatch(
+    sql,
+    /return\s+exists \(\s*select 1\s*from public\.teacher_assignments ta[\s\S]*?p_room_type = 'section'/
+  );
+
+  assert.match(api, /for \(const row of assignments \?\? \[\]\) \{\s*const grade = Number\(row\.grade_level\);\s*if \(Number\.isInteger\(grade\)\) allowedGrades\.add\(grade\);\s*\}/s);
+  assert.match(api, /for \(const row of adviserRows \?\? \[\]\) \{\s*if \(row\.section_id\) allowedSections\.add\(String\(row\.section_id\)\);\s*\}/s);
 });
