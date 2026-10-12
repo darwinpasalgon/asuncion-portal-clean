@@ -1,0 +1,339 @@
+.page{
+  min-height:100vh;
+  background:#eef3f0;
+  color:#24372f;
+  padding:24px;
+}
+.shell{max-width:1500px;margin:0 auto}
+.topBar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:16px;
+}
+.backLink,.printButton,.loadButton{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  border:1px solid #cbd9d1;
+  border-radius:9px;
+  background:#fff;
+  color:#31536a;
+  padding:10px 14px;
+  font:inherit;
+  font-size:.82rem;
+  font-weight:800;
+  text-decoration:none;
+  cursor:pointer;
+}
+.printButton,.loadButton{background:#315f4a;color:#fff;border-color:#315f4a}
+.printButton:disabled,.loadButton:disabled{opacity:.5;cursor:not-allowed}
+.header{
+  display:flex;
+  justify-content:space-between;
+  gap:20px;
+  align-items:flex-start;
+  background:#fff;
+  border:1px solid #dbe5df;
+  border-radius:14px;
+  padding:20px;
+  margin-bottom:14px;
+}
+.eyebrow{font-size:.7rem;font-weight:900;letter-spacing:.09em;color:#5f786a}
+.header h1{margin:5px 0 6px;font-size:1.45rem}
+.header p{margin:0;color:#6d7f75;font-size:.88rem;max-width:760px;line-height:1.5}
+.yearCard{display:grid;gap:3px;text-align:right}
+.yearCard span{font-size:.66rem;font-weight:800;color:#788980}
+.yearCard strong{font-size:.92rem}
+.controls{
+  display:grid;
+  grid-template-columns:minmax(220px,1.2fr) minmax(180px,.8fr) auto;
+  gap:12px;
+  align-items:end;
+  background:#fff;
+  border:1px solid #dbe5df;
+  border-radius:14px;
+  padding:16px;
+  margin-bottom:14px;
+}
+.controls label{display:grid;gap:6px}
+.controls label span{font-size:.72rem;font-weight:900;color:#60766a}
+.controls select,.controls input{
+  min-height:42px;
+  border:1px solid #cbd8d1;
+  border-radius:8px;
+  padding:0 11px;
+  background:#fff;
+  color:#263d33;
+  font:inherit;
+}
+.notice,.warning,.error{
+  border-radius:10px;
+  padding:11px 14px;
+  margin:0 0 14px;
+  font-size:.82rem;
+  line-height:1.45;
+}
+.notice{background:#f7faf8;border:1px solid #dce7e1;color:#52685d}
+.warning{background:#fff8e8;border:1px solid #ead8a8;color:#765c20}
+.error{background:#fff0f0;border:1px solid #edcaca;color:#8a3434}
+.previewFrame{
+  overflow:auto;
+  background:#dfe5e1;
+  border:1px solid #cfd9d3;
+  border-radius:14px;
+  padding:18px;
+}
+.empty{
+  min-height:260px;
+  display:grid;
+  place-items:center;
+  text-align:center;
+  color:#718078;
+  background:#fff;
+  border-radius:12px;
+}
+@media(max-width:800px){
+  .page{padding:12px}
+  .header{flex-direction:column}
+  .yearCard{text-align:left}
+  .controls{grid-template-columns:1fr}
+  .topBar{align-items:stretch;flex-direction:column}
+}
+
+/* Official SF2 print geometry based on the uploaded Excel template. */
+:global(.sf2-print-document){
+  width:max-content;
+  margin:0 auto;
+  font-family:"Arial Narrow",Arial,sans-serif;
+  color:#000;
+}
+:global(.sf2-report-set){width:max-content}
+:global(.sf2-sheet){
+  width:288.618mm;
+  min-height:200.6mm;
+  box-sizing:border-box;
+  background:#fff;
+  margin:0 auto 12mm;
+  padding:0;
+  font-family:"Arial Narrow",Arial,sans-serif;
+  color:#000;
+  overflow:hidden;
+  page-break-after:always;
+  break-after:page;
+}
+:global(.sf2-title-block){text-align:center;padding-top:1.5mm;margin-bottom:2mm}
+:global(.sf2-title-block h1){
+  margin:0;
+  font-size:16.5pt;
+  line-height:1.05;
+  font-weight:700;
+}
+:global(.sf2-title-block p){
+  margin:.8mm 0 0;
+  font-size:9pt;
+  line-height:1;
+  font-style:italic;
+}
+:global(.sf2-meta-grid){
+  display:grid;
+  grid-template-columns:25mm 29mm 23mm 29mm 42mm 40mm 24mm 46.618mm;
+  grid-template-rows:10mm 10mm;
+  align-items:center;
+  font-size:11pt;
+  margin-bottom:2mm;
+}
+:global(.sf2-meta-grid label){text-align:right;padding-right:2mm;white-space:nowrap}
+:global(.sf2-meta-grid > div){
+  border:1px solid #000;
+  min-height:7.7mm;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 1.5mm;
+  box-sizing:border-box;
+  font-size:10pt;
+}
+:global(.school-id-label){grid-column:1}
+:global(.school-id-value){grid-column:2}
+:global(.school-year-label){grid-column:3}
+:global(.school-year-value){grid-column:4}
+:global(.month-label){grid-column:5 / span 2}
+:global(.month-value){grid-column:7 / span 2}
+:global(.school-name-label){grid-column:1}
+:global(.school-name-value){grid-column:2 / span 3;justify-content:flex-start!important}
+:global(.grade-label){grid-column:5}
+:global(.grade-value){grid-column:6}
+:global(.section-label){grid-column:7}
+:global(.section-value){grid-column:8}
+
+:global(.sf2-attendance-table){
+  width:288.618mm;
+  border-collapse:collapse;
+  table-layout:fixed;
+  font-family:"Arial Narrow",Arial,sans-serif;
+  font-size:7.5pt;
+}
+:global(.sf2-attendance-table th),
+:global(.sf2-attendance-table td){
+  border:0.25mm solid #000;
+  box-sizing:border-box;
+  padding:0;
+  vertical-align:middle;
+}
+:global(.sf2-head-top th){height:5.8mm}
+:global(.sf2-date-row th){height:4.6mm;font-size:7.2pt}
+:global(.sf2-day-row th){height:4.6mm;font-size:6.8pt}
+:global(.sf2-name-head){
+  font-size:10pt;
+  font-weight:700;
+  line-height:1.12;
+  text-align:center;
+}
+:global(.sf2-name-head span){display:block;font-size:9pt;margin-top:1mm}
+:global(.sf2-days-title){font-size:7.4pt;font-weight:700;text-align:center}
+:global(.sf2-month-total-head){font-size:7.2pt;font-weight:700;line-height:1.05}
+:global(.sf2-remarks-head){font-size:6.6pt;font-weight:500;line-height:1.15;text-align:center;padding:0 .8mm!important}
+:global(.sf2-learner-row td){height:4.25mm}
+:global(.sf2-no){font-size:6.8pt;text-align:center}
+:global(.sf2-learner-name){
+  padding-left:1.3mm!important;
+  font-size:7.3pt;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+:global(.sf2-learner-remarks){
+  padding:0 .8mm!important;
+  font-size:6.1pt;
+  line-height:1.05;
+  white-space:normal;
+  overflow:hidden;
+}
+:global(.sf2-small-total){text-align:center;font-size:7pt}
+:global(.sf2-att-cell){
+  position:relative;
+  text-align:center;
+  font-size:8pt;
+  font-weight:700;
+  background-image:linear-gradient(
+    to bottom right,
+    transparent 49.2%,
+    #858585 49.5%,
+    #858585 50.5%,
+    transparent 50.8%
+  );
+}
+:global(.sf2-half-upper){
+  background:
+    linear-gradient(to bottom right,rgba(0,0,0,.55) 49.3%,transparent 49.6%),
+    linear-gradient(to bottom right,transparent 49.2%,#444 49.5%,#444 50.5%,transparent 50.8%);
+}
+:global(.sf2-half-lower){
+  background:
+    linear-gradient(to bottom right,transparent 50.4%,rgba(0,0,0,.55) 50.7%),
+    linear-gradient(to bottom right,transparent 49.2%,#444 49.5%,#444 50.5%,transparent 50.8%);
+}
+:global(.sf2-not-enrolled){background:#fff}
+:global(.sf2-unrecorded){
+  background:#f3f3f3;
+  color:#999;
+  font-size:6pt;
+}
+:global(.sf2-sex-total td){
+  height:4.6mm;
+  border-top:.55mm double #000;
+  border-bottom:.45mm solid #000;
+  text-align:center;
+  font-size:7.2pt;
+  font-weight:700;
+}
+:global(.sf2-page-one .sf2-sex-total td:first-child),
+:global(.sf2-page-two .sf2-sex-total td:first-child){
+  font-size:7.5pt;
+  letter-spacing:.01em;
+}
+:global(.sf2-page-two){padding-top:1.2mm}
+:global(.sf2-page-two .sf2-attendance-table){margin-bottom:1.2mm}
+
+:global(.sf2-bottom-grid){
+  display:grid;
+  grid-template-columns:42.5% 24.5% 33%;
+  gap:1.6mm;
+  min-height:73mm;
+  font-size:6.15pt;
+  line-height:1.12;
+}
+:global(.sf2-guidelines){padding:.5mm .5mm 0 0}
+:global(.sf2-guidelines strong),
+:global(.sf2-codes > strong){font-size:6.8pt}
+:global(.sf2-guidelines p),
+:global(.sf2-codes p){margin:.45mm 0}
+:global(.sf2-formula){
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:1.1mm;
+  margin:.55mm 0 .8mm 4mm;
+}
+:global(.sf2-formula .frac){text-align:center;line-height:1.25}
+:global(.sf2-codes){
+  border:.25mm solid #000;
+  padding:1mm;
+}
+:global(.sf2-summary-wrap){font-size:6.1pt}
+:global(.sf2-summary-table){
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+}
+:global(.sf2-summary-table th),
+:global(.sf2-summary-table td){
+  border:.25mm solid #000;
+  height:5.2mm;
+  padding:.4mm .6mm;
+  box-sizing:border-box;
+  text-align:center;
+  line-height:1.08;
+}
+:global(.sf2-summary-table td:first-child){text-align:center}
+:global(.sf2-certification){padding:2mm 2mm 0;font-size:6.4pt}
+:global(.sf2-certification p){margin:1.5mm 0 2mm}
+:global(.sf2-sign-line){
+  min-height:5.5mm;
+  border-bottom:.25mm solid #000;
+  text-align:center;
+  font-weight:700;
+  padding-top:1.2mm;
+  box-sizing:border-box;
+}
+:global(.sf2-certification small){display:block;text-align:center;font-size:5.4pt;font-style:italic;margin-top:.6mm}
+:global(.sf2-attested){margin-top:4mm!important}
+:global(.sf2-page-footer){
+  margin-top:1mm;
+  font-size:6.2pt;
+  text-align:left;
+}
+
+@page{
+  size:A4 landscape;
+  margin:4.572mm 4.064mm 4.826mm 4.318mm;
+}
+@media print{
+  .page{background:#fff;padding:0}
+  .topBar,.header,.controls,.notice,.warning,.error{display:none!important}
+  .previewFrame{border:0;padding:0;background:#fff;overflow:visible}
+  :global(.sf2-sheet){
+    margin:0;
+    width:288.618mm;
+    min-height:200.6mm;
+    box-shadow:none;
+  }
+  :global(.sf2-unrecorded){color:transparent;background:#fff}
+  :global(.sf2-report-set:last-child .sf2-sheet:last-child){
+    page-break-after:auto;
+    break-after:auto;
+  }
+}
