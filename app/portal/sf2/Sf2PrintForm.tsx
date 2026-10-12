@@ -30,6 +30,7 @@ export type Sf2Learner = {
 type Trio = { M: number; F: number; total: number };
 
 export type Sf2ReportData = {
+  school_year: string;
   school: {
     school_name: string;
     school_id: string;
@@ -237,7 +238,7 @@ function TopInformation({ report }: { report: Sf2ReportData }) {
         <label className="school-id-label">School ID</label>
         <div className="school-id-value">{report.school.school_id}</div>
         <label className="school-year-label">School Year</label>
-        <div className="school-year-value">{report.section ? report.month.slice(0,4) === String(Number(report.month.slice(0,4))) ? "" : "" : ""}{report.month ? "" : ""}</div>
+        <div className="school-year-value">{report.school_year}</div>
         <label className="month-label">Report for the Month of</label>
         <div className="month-value">{report.month_label}</div>
 
