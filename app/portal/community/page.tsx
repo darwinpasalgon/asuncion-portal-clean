@@ -7,7 +7,10 @@ import {
   Circle,
   Clock3,
   Flag,
+  GraduationCap,
+  Hash,
   MessageCircle,
+  School,
   Send,
   Shield,
   ShieldAlert,
@@ -31,6 +34,17 @@ import {
 import styles from "./community.module.css";
 
 type Role = "student" | "teacher" | "administrator" | "staff_administrator";
+type RoomType = "school" | "grade" | "section";
+
+type Room = {
+  key: string;
+  type: RoomType;
+  label: string;
+  description: string;
+  grade_level: number | null;
+  section_id: string | null;
+  unread_count: number;
+};
 
 type Member = {
   user_id: string;
@@ -45,6 +59,9 @@ type Message = {
   sender_name: string;
   sender_role: Role;
   body: string;
+  room_type: RoomType;
+  grade_level: number | null;
+  section_id: string | null;
   created_at: string;
 };
 
@@ -65,6 +82,8 @@ type Report = {
   message_body: string;
   reason: string;
   status: "pending";
+  room_key: string;
+  room_label: string;
   created_at: string;
 };
 
@@ -75,6 +94,8 @@ type CommunityState = {
     role: Role;
     is_admin: boolean;
   };
+  room: Room;
+  rooms: Room[];
   messages: Message[];
   online: Member[];
   muted: Mute | null;
@@ -82,6 +103,7 @@ type CommunityState = {
   reports: Report[];
   unread_count: number;
   read_state: {
+    room_key: string;
     last_read_at: string;
   };
 };
@@ -133,10 +155,18 @@ function messageDate(value: string) {
   }).format(date);
 }
 
+function RoomIcon({ type }: { type: RoomType }) {
+  if (type === "school") return <School size={15} />;
+  if (type === "grade") return <GraduationCap size={15} />;
+  return <Hash size={15} />;
+}
+
 export default function CommunityPage() {
   const [community, setCommunity] = useState<CommunityState | null>(null);
+  const [selectedRoomKey, setSelectedRoomKey] = useState("school");
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(true);
+  const [switchingRoom, setSwitchingRoom] = useState(false);
   const [sending, setSending] = useState(false);
   const [working, setWorking] = useState("");
   const [error, setError] = useState("");
@@ -147,31 +177,44 @@ export default function CommunityPage() {
   const [reportReason, setReportReason] = useState("");
   const [reporting, setReporting] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
-  const initializedRef = useRef(false);
-  const readBoundaryRef = useRef<string | null>(null);
-  const lastMarkedReadRef = useRef<string | null>(null);
+  const initializedRoomRef = useRef("");
+  const readBoundaryRoomRef = useRef("");
+  const lastMarkedReadRef = useRef("");
 
-  const markRead = useCallback(async (messages: Message[]) => {
+  const markRead = useCallback(async (messages: Message[], roomKey: string) => {
     const latest = messages[messages.length - 1]?.created_at;
-    if (!latest || latest === lastMarkedReadRef.current) return;
-    lastMarkedReadRef.current = latest;
+    const marker = `${roomKey}:${latest ?? ""}`;
+    if (!latest || marker === lastMarkedReadRef.current) return;
+    lastMarkedReadRef.current = marker;
 
     try {
       await fetch("/api/community", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "mark_read", lastReadAt: latest }),
+        body: JSON.stringify({
+          action: "mark_read",
+          roomKey,
+          lastReadAt: latest,
+        }),
         cache: "no-store",
       });
     } catch {
-      // Read state is best-effort and will retry on the next update.
+      // Read state is best-effort and retries on the next refresh.
     }
   }, []);
 
   const loadCommunity = useCallback(
     async (quiet = false) => {
+      if (!quiet) {
+        if (community) setSwitchingRoom(true);
+        else setLoading(true);
+      }
+
       try {
-        const response = await fetch("/api/community", { cache: "no-store" });
+        const response = await fetch(
+          `/api/community?room=${encodeURIComponent(selectedRoomKey)}`,
+          { cache: "no-store" }
+        );
         const result = await response.json().catch(() => ({}));
         if (!response.ok) {
           if (!quiet) setError(result.error ?? "Unable to load My Community.");
@@ -180,9 +223,14 @@ export default function CommunityPage() {
         }
 
         const next = result as CommunityState;
-        if (!readBoundaryRef.current) {
-          const boundary = next.read_state?.last_read_at ?? new Date().toISOString();
-          readBoundaryRef.current = boundary;
+        if (next.room.key !== selectedRoomKey) {
+          setSelectedRoomKey(next.room.key);
+        }
+
+        if (readBoundaryRoomRef.current !== next.room.key) {
+          const boundary =
+            next.read_state?.last_read_at ?? new Date().toISOString();
+          readBoundaryRoomRef.current = next.room.key;
           setReadBoundary(boundary);
         }
 
@@ -191,26 +239,34 @@ export default function CommunityPage() {
         if (!quiet) setError("");
 
         if (document.visibilityState === "visible") {
-          void markRead(next.messages ?? []);
+          void markRead(next.messages ?? [], next.room.key);
         }
       } catch {
         setConnected(false);
         if (!quiet) setError("Unable to reach My Community.");
       } finally {
-        if (!quiet) setLoading(false);
+        if (!quiet) {
+          setLoading(false);
+          setSwitchingRoom(false);
+        }
       }
     },
-    [markRead]
+    [community, markRead, selectedRoomKey]
   );
 
   useEffect(() => {
+    readBoundaryRoomRef.current = "";
+    lastMarkedReadRef.current = "";
+    initializedRoomRef.current = "";
+    setReadBoundary(null);
+    setDraft("");
     void loadCommunity();
 
     const poll = window.setInterval(() => {
       if (document.visibilityState === "visible") {
         void loadCommunity(true);
       }
-    }, 2000);
+    }, 3000);
 
     const onVisibility = () => {
       if (document.visibilityState === "visible") {
@@ -224,17 +280,17 @@ export default function CommunityPage() {
       window.clearInterval(poll);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [loadCommunity]);
+  }, [selectedRoomKey]);
 
   useEffect(() => {
-    if (!community?.messages.length) return;
-    if (!initializedRef.current) {
-      initializedRef.current = true;
+    if (!community || community.room.key !== selectedRoomKey) return;
+    if (initializedRoomRef.current !== selectedRoomKey) {
+      initializedRoomRef.current = selectedRoomKey;
       bottomRef.current?.scrollIntoView();
       return;
     }
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [community?.messages.length]);
+  }, [community?.messages.length, community?.room.key, selectedRoomKey]);
 
   const mutedUserIds = useMemo(() => {
     const now = Date.now();
@@ -270,6 +326,15 @@ export default function CommunityPage() {
     return groups;
   }, [community?.messages]);
 
+  const roomGroups = useMemo(() => {
+    const rooms = community?.rooms ?? [];
+    return {
+      school: rooms.filter((room) => room.type === "school"),
+      grade: rooms.filter((room) => room.type === "grade"),
+      section: rooms.filter((room) => room.type === "section"),
+    };
+  }, [community?.rooms]);
+
   const firstUnreadId = useMemo(() => {
     if (!community?.me.id || !readBoundary) return null;
     const boundary = new Date(readBoundary).getTime();
@@ -285,7 +350,7 @@ export default function CommunityPage() {
   async function sendMessage(event?: FormEvent) {
     event?.preventDefault();
     const message = draft.trim();
-    if (!message || sending || activeMute) return;
+    if (!message || sending || activeMute || !community?.room) return;
 
     setSending(true);
     setError("");
@@ -294,7 +359,11 @@ export default function CommunityPage() {
       const response = await fetch("/api/community", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "send", message }),
+        body: JSON.stringify({
+          action: "send",
+          message,
+          roomKey: community.room.key,
+        }),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -439,7 +508,14 @@ export default function CommunityPage() {
     }
   }
 
-  if (loading) {
+  function selectRoom(room: Room) {
+    if (room.key === selectedRoomKey) return;
+    setNotice("");
+    setError("");
+    setSelectedRoomKey(room.key);
+  }
+
+  if (loading && !community) {
     return (
       <main className={styles.loading}>
         <MessageCircle size={32} />
@@ -465,7 +541,7 @@ export default function CommunityPage() {
               <div>
                 <span>MY COMMUNITY</span>
                 <h1>ANHS Community Chat</h1>
-                <p>School-only conversation for active portal members.</p>
+                <p>School-wide, grade-wide, and section conversations in one place.</p>
               </div>
             </div>
           </div>
@@ -485,26 +561,104 @@ export default function CommunityPage() {
         )}
 
         <div className={styles.communityGrid}>
-          <section className={styles.chatPanel}>
-            <div className={styles.roomHeader}>
+          <aside className={styles.roomsPanel}>
+            <div className={styles.roomsHeading}>
               <div>
-                <strong># General Community</strong>
-                <span>
-                  Be respectful. Messages are visible to authenticated ANHS portal members.
-                </span>
-              </div>
-              <div className={styles.roomOnline}>
-                <Users size={15} />
-                {community?.online.length ?? 0} online
+                <Hash size={18} />
+                <div>
+                  <strong>Chatrooms</strong>
+                  <span>
+                    {community?.me.is_admin
+                      ? "Super Admin view · all rooms"
+                      : "Rooms available to your account"}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className={styles.messages}>
+            <div className={styles.roomList}>
+              {([
+                ["School-Wide", roomGroups.school],
+                ["Grade-Wide", roomGroups.grade],
+                ["Sections", roomGroups.section],
+              ] as Array<[string, Room[]]>).map(([group, rooms]) =>
+                rooms.length ? (
+                  <div className={styles.roomGroup} key={group}>
+                    <span className={styles.roomGroupLabel}>{group}</span>
+                    {rooms.map((room) => (
+                      <button
+                        type="button"
+                        key={room.key}
+                        className={
+                          selectedRoomKey === room.key
+                            ? styles.roomButtonActive
+                            : styles.roomButton
+                        }
+                        onClick={() => selectRoom(room)}
+                      >
+                        <span className={styles.roomButtonIcon}>
+                          <RoomIcon type={room.type} />
+                        </span>
+                        <span className={styles.roomButtonText}>
+                          <strong>{room.label}</strong>
+                          <small>{room.description}</small>
+                        </span>
+                        {room.unread_count > 0 && (
+                          <span className={styles.roomUnread}>
+                            {room.unread_count > 99 ? "99+" : room.unread_count}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                ) : null
+              )}
+            </div>
+
+            {community?.me.is_admin && (
+              <div className={styles.roomAdminHint}>
+                <Shield size={15} />
+                <span>
+                  You can open and moderate every grade and section chatroom.
+                </span>
+              </div>
+            )}
+          </aside>
+
+          <section className={styles.chatPanel}>
+            <div className={styles.roomHeader}>
+              <div className={styles.currentRoom}>
+                <span className={styles.currentRoomIcon}>
+                  <RoomIcon type={community?.room.type ?? "school"} />
+                </span>
+                <div>
+                  <strong># {community?.room.label ?? "School-Wide"}</strong>
+                  <span>
+                    {community?.room.description ??
+                      "All active ANHS portal members"}
+                  </span>
+                </div>
+              </div>
+              <div className={styles.roomOnline}>
+                <Users size={15} />
+                {community?.online.length ?? 0} community online
+              </div>
+            </div>
+
+            <div
+              className={
+                switchingRoom
+                  ? `${styles.messages} ${styles.messagesSwitching}`
+                  : styles.messages
+              }
+            >
               {(community?.messages.length ?? 0) === 0 ? (
                 <div className={styles.emptyMessages}>
                   <MessageCircle size={32} />
                   <strong>No Messages Yet</strong>
-                  <span>Start the first conversation in the ANHS Community.</span>
+                  <span>
+                    Start the first conversation in this chatroom.
+                  </span>
                 </div>
               ) : (
                 groupedMessages.map((group) => (
@@ -586,7 +740,9 @@ export default function CommunityPage() {
                                   {canMute && (
                                     <button
                                       type="button"
-                                      disabled={working === `mute:${message.user_id}`}
+                                      disabled={
+                                        working === `mute:${message.user_id}`
+                                      }
                                       onClick={() =>
                                         void toggleMute(message.user_id, muted)
                                       }
@@ -640,21 +796,26 @@ export default function CommunityPage() {
                   rows={2}
                   maxLength={1000}
                   value={draft}
-                  disabled={sending || Boolean(activeMute)}
+                  disabled={sending || Boolean(activeMute) || switchingRoom}
                   onChange={(event) => setDraft(event.target.value)}
                   onKeyDown={handleComposerKeyDown}
                   placeholder={
                     activeMute
                       ? "You are temporarily muted."
-                      : "Write a message to the ANHS Community…"
+                      : `Write a message to #${community?.room.label ?? "School-Wide"}…`
                   }
                 />
                 <div className={styles.composerFooter}>
-                  <span>{draft.length}/1000 · Enter to send · Shift+Enter for new line</span>
+                  <span>
+                    {draft.length}/1000 · Enter to send · Shift+Enter for new line
+                  </span>
                   <button
                     type="submit"
                     disabled={
-                      sending || Boolean(activeMute) || !draft.trim()
+                      sending ||
+                      switchingRoom ||
+                      Boolean(activeMute) ||
+                      !draft.trim()
                     }
                   >
                     <Send size={16} />
@@ -670,7 +831,7 @@ export default function CommunityPage() {
               <div>
                 <Users size={18} />
                 <div>
-                  <strong>Online Now</strong>
+                  <strong>Online in Community</strong>
                   <span>{community?.online.length ?? 0} active member(s)</span>
                 </div>
               </div>
@@ -727,6 +888,7 @@ export default function CommunityPage() {
                           <strong>{report.sender_name}</strong>
                           <span>{roleLabel[report.sender_role]}</span>
                         </div>
+                        <div className={styles.reportRoom}>{report.room_label}</div>
                         <p>{report.message_body}</p>
                         <div className={styles.reportReason}>
                           <AlertTriangle size={13} />
@@ -782,8 +944,8 @@ export default function CommunityPage() {
                 <div>
                   <strong>Moderator Mode</strong>
                   <span>
-                    Reports are private. You can dismiss them, remove reported
-                    messages, or temporarily mute members.
+                    You can view every room, review reports, remove messages,
+                    and temporarily mute members.
                   </span>
                 </div>
               </div>
@@ -808,7 +970,9 @@ export default function CommunityPage() {
                 <Flag size={18} />
                 <div>
                   <strong>Report Message</strong>
-                  <span>This report is visible only to the Super Administrator.</span>
+                  <span>
+                    This report is visible only to the Super Administrator.
+                  </span>
                 </div>
               </div>
               <button
