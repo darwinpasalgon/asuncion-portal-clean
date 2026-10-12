@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
   try {
     const [profiles, sections, years, learnerInformation] = await Promise.all([
       getAllProfiles(token),
-      getRows("sections?is_active=eq.true&select=id,grade_level,name&order=grade_level.asc,name.asc", token),
+      getRows("sections?is_active=eq.true&select=id,grade_level,name,program_type&order=grade_level.asc,name.asc", token),
       getRows("school_years?is_active=eq.true&select=id,name&limit=1", token),
       getRows(
         "learner_information?select=student_id,last_name,first_name,middle_name,name_extension,sex,birth_date,mother_tongue,is_indigenous_peoples,ethnic_group,religion,address_house_street_purok,address_barangay,address_municipality_city,address_province,father_name,mother_maiden_name,guardian_name,guardian_relationship,guardian_contact_number,learning_modality,remarks",
