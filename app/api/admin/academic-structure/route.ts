@@ -28,6 +28,12 @@ async function isAdmin(token: string) {
   return hasAdminPermission(token, "school_setup.manage");
 }
 
+const SHS_PROGRAM_TYPES = new Set(["Regular SHS", "ALS-SHS"]);
+
+function validShsProgramType(value: unknown) {
+  return SHS_PROGRAM_TYPES.has(String(value ?? "").trim());
+}
+
 async function restJson(url: string, token: string) {
   const response = await fetch(url, { headers: headers(token), cache: "no-store" });
   if (!response.ok) throw new Error("Academic structure query failed.");
@@ -80,7 +86,7 @@ export async function GET(request: NextRequest) {
         token
       ),
       restJson(
-        `${SUPABASE_URL}/rest/v1/sections?select=id,grade_level,name,is_active&order=grade_level.asc,name.asc`,
+        `${SUPABASE_URL}/rest/v1/sections?select=id,grade_level,name,is_active,program_type&order=grade_level.asc,name.asc`,
         token
       ),
     ]);
