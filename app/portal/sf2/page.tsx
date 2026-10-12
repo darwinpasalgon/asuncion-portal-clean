@@ -216,7 +216,7 @@ export default function Sf2Page() {
           </div>
         )}
 
-        <div className={styles.previewFrame}>
+        <div className={`${styles.previewFrame} ${styles.printScope}`}>
           {loadingBase || loadingReport ? (
             <div className={styles.empty}>Generating the monthly SF2 report…</div>
           ) : report ? (
