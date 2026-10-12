@@ -258,6 +258,58 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  if (action === "set_section_program_type") {
+    const id = String(body?.id ?? "");
+    const programType = String(body?.programType ?? "").trim();
+    if (!id || !validShsProgramType(programType)) {
+      return NextResponse.json(
+        { error: "Choose a Senior High section and a valid Program Type." },
+        { status: 400 }
+      );
+    }
+
+    const rows = await restJson(
+      `${SUPABASE_URL}/rest/v1/sections?id=eq.${encodeURIComponent(
+        id
+      )}&select=id,grade_level,name&limit=1`,
+      token
+    ).catch(() => []);
+
+    const section = rows?.[0];
+    if (!section || ![11, 12].includes(Number(section.grade_level))) {
+      return NextResponse.json(
+        { error: "Program Type can only be changed for Grade 11 or Grade 12 sections." },
+        { status: 400 }
+      );
+    }
+
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/sections?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        headers: {
+          ...headers(token),
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify({
+          program_type: programType,
+          updated_at: new Date().toISOString(),
+        }),
+        cache: "no-store",
+      }
+    );
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result?.[0]) {
+      return NextResponse.json(
+        { error: "Unable to update the section Program Type." },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ ok: true, section: result[0] });
+  }
+
   if (action === "set_section_active") {
     const id = String(body?.id ?? "");
     const isActive = Boolean(body?.isActive);
