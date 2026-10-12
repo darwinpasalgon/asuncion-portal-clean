@@ -1152,7 +1152,7 @@ export default function BulkAccountImportPage() {
                       <td>{index + 1}</td>
                       <td><strong>{row.full_name || "—"}</strong></td>
                       <td>{personType === "student" ? row.lrn : row.email}</td>
-                      {personType === "student" && <><td>{row.grade_level ?? "—"}</td><td>{row.section || "—"}</td>{selectedGrade === "12" && <><td>{row.shs_track === "Technical-Vocational-Livelihood" ? "TVL" : row.shs_track || "—"}</td><td>{SHS_STRANDS[row.shs_track]?.find((item) => item.value === row.shs_strand_program)?.label ?? row.shs_strand_program || "—"}</td></>}</>}
+                      {personType === "student" && <><td>{row.grade_level ?? "—"}</td><td>{row.section || "—"}</td>{selectedGrade === "12" && <><td>{row.shs_track === "Technical-Vocational-Livelihood" ? "TVL" : row.shs_track || "—"}</td><td>{(SHS_STRANDS[row.shs_track]?.find((item) => item.value === row.shs_strand_program)?.label ?? row.shs_strand_program) || "—"}</td></>}</>}
                       <td>{row.valid ? <span className={styles.ready}>Ready</span> : <span className={styles.invalid}>{row.error}</span>}</td>
                     </tr>
                   ))}</tbody>
