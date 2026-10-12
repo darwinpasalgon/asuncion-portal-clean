@@ -419,6 +419,52 @@ export async function GET(request: NextRequest) {
       ? await reportsResponse.json().catch(() => [])
       : [];
 
+  const visibleUserIds = Array.from(
+    new Set<string>([
+      userId,
+      ...(messages ?? []).map((item: { user_id?: string }) =>
+        String(item.user_id ?? "")
+      ),
+      ...(online ?? []).map((item: { user_id?: string }) =>
+        String(item.user_id ?? "")
+      ),
+    ].filter(Boolean))
+  );
+
+  const photoResponse =
+    visibleUserIds.length > 0
+      ? await rest(
+          `profile_photos?user_id=in.(${visibleUserIds
+            .map((id) => encodeURIComponent(id))
+            .join(",")})&select=user_id,updated_at`,
+          token
+        )
+      : null;
+  const photoRows = photoResponse?.ok
+    ? await photoResponse.json().catch(() => [])
+    : [];
+  const photoMap = new Map<string, string>(
+    (photoRows ?? []).map((item: { user_id: string; updated_at: string }) => [
+      String(item.user_id),
+      String(item.updated_at),
+    ])
+  );
+
+  const messagesWithPhotos = (messages ?? []).map(
+    (item: { user_id: string; [key: string]: unknown }) => ({
+      ...item,
+      has_profile_photo: photoMap.has(String(item.user_id)),
+      profile_photo_updated_at: photoMap.get(String(item.user_id)) ?? null,
+    })
+  );
+  const onlineWithPhotos = (online ?? []).map(
+    (item: { user_id: string; [key: string]: unknown }) => ({
+      ...item,
+      has_profile_photo: photoMap.has(String(item.user_id)),
+      profile_photo_updated_at: photoMap.get(String(item.user_id)) ?? null,
+    })
+  );
+
   const ownMute = (mutes ?? []).find(
     (item: { user_id?: string }) => item.user_id === userId
   );
@@ -456,14 +502,16 @@ export async function GET(request: NextRequest) {
       full_name: profile.full_name,
       role: profile.role,
       is_admin: profile.role === "administrator",
+      has_profile_photo: photoMap.has(userId),
+      profile_photo_updated_at: photoMap.get(userId) ?? null,
     },
     room: selectedRoom,
     rooms: rooms.map((room) => ({
       ...room,
       unread_count: counts.get(room.key) ?? 0,
     })),
-    messages: (messages ?? []).reverse(),
-    online: online ?? [],
+    messages: messagesWithPhotos.reverse(),
+    online: onlineWithPhotos,
     muted: activeMute,
     mutes: profile.role === "administrator" ? mutes ?? [] : [],
     reports,

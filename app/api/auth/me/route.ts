@@ -142,6 +142,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Your account is not active." }, { status: 403 });
   }
 
+  const profilePhotoRows = await getRows(
+    `${SUPABASE_URL}/rest/v1/profile_photos?user_id=eq.${encodeURIComponent(
+      userId
+    )}&select=updated_at&limit=1`,
+    token
+  );
+  const profilePhoto = profilePhotoRows?.[0] ?? null;
+  profile.has_profile_photo = Boolean(profilePhoto);
+  profile.profile_photo_updated_at = profilePhoto?.updated_at ?? null;
+
   let academicContext: {
     school_year: string | null;
     school_year_id: string | null;

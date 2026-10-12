@@ -9,6 +9,7 @@ import {
   Flag,
   GraduationCap,
   Hash,
+  ImageOff,
   MessageCircle,
   School,
   Send,
@@ -31,6 +32,7 @@ import {
   useRef,
   useState,
 } from "react";
+import ProfileAvatar from "@/components/profile-avatar";
 import styles from "./community.module.css";
 
 type Role = "student" | "teacher" | "administrator" | "staff_administrator";
@@ -51,6 +53,8 @@ type Member = {
   display_name: string;
   role: Role;
   last_seen: string;
+  has_profile_photo?: boolean;
+  profile_photo_updated_at?: string | null;
 };
 
 type Message = {
@@ -63,6 +67,8 @@ type Message = {
   grade_level: number | null;
   section_id: string | null;
   created_at: string;
+  has_profile_photo?: boolean;
+  profile_photo_updated_at?: string | null;
 };
 
 type Mute = {
@@ -114,17 +120,6 @@ const roleLabel: Record<Role, string> = {
   administrator: "Super Administrator",
   staff_administrator: "Administrator",
 };
-
-function initials(name: string) {
-  return (
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join("") || "AN"
-  );
-}
 
 function messageTime(value: string) {
   const date = new Date(value);
@@ -478,6 +473,32 @@ export default function CommunityPage() {
     }
   }
 
+  async function removeProfilePhoto(userId: string) {
+    if (!community?.me.is_admin) return;
+    if (!window.confirm("Remove this user's profile photo?")) return;
+
+    setWorking(`photo:${userId}`);
+    setError("");
+    setNotice("");
+    try {
+      const response = await fetch("/api/profile-photo", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(result.error ?? "Unable to remove the profile photo.");
+        return;
+      }
+
+      setNotice("Profile photo removed by Super Administrator.");
+      await loadCommunity(true);
+    } finally {
+      setWorking("");
+    }
+  }
+
   async function toggleMute(userId: string, isMuted: boolean) {
     setWorking(`mute:${userId}`);
     setError("");
@@ -677,6 +698,10 @@ export default function CommunityPage() {
                         !mine &&
                         message.sender_role !== "administrator";
                       const canReport = !mine;
+                      const canRemovePhoto =
+                        Boolean(community?.me.is_admin) &&
+                        !mine &&
+                        Boolean(message.has_profile_photo);
                       const muted = mutedUserIds.has(message.user_id);
 
                       return (
@@ -691,9 +716,14 @@ export default function CommunityPage() {
                             className={mine ? styles.messageOwn : styles.message}
                           >
                             {!mine && (
-                              <div className={styles.avatar}>
-                                {initials(message.sender_name)}
-                              </div>
+                              <ProfileAvatar
+                                userId={message.user_id}
+                                name={message.sender_name}
+                                hasPhoto={Boolean(message.has_profile_photo)}
+                                version={message.profile_photo_updated_at}
+                                size={31}
+                                className={styles.avatar}
+                              />
                             )}
 
                             <div className={styles.messageContent}>
@@ -712,7 +742,7 @@ export default function CommunityPage() {
                                 <p>{message.body}</p>
                               </div>
 
-                              {(canDelete || canMute || canReport) && (
+                              {(canDelete || canMute || canReport || canRemovePhoto) && (
                                 <div className={styles.messageActions}>
                                   {canReport && (
                                     <button
@@ -755,6 +785,20 @@ export default function CommunityPage() {
                                         <VolumeX size={12} />
                                       )}
                                       {muted ? "Unmute" : "Mute 1 Hour"}
+                                    </button>
+                                  )}
+                                  {canRemovePhoto && (
+                                    <button
+                                      type="button"
+                                      disabled={
+                                        working === `photo:${message.user_id}`
+                                      }
+                                      onClick={() =>
+                                        void removeProfilePhoto(message.user_id)
+                                      }
+                                    >
+                                      <ImageOff size={12} />
+                                      Remove Photo
                                     </button>
                                   )}
                                 </div>
@@ -848,14 +892,34 @@ export default function CommunityPage() {
                   const muted = mutedUserIds.has(member.user_id);
                   return (
                     <div className={styles.member} key={member.user_id}>
-                      <div className={styles.memberAvatar}>
-                        {initials(member.display_name)}
-                        <span />
+                      <div className={styles.memberAvatarWrap}>
+                        <ProfileAvatar
+                          userId={member.user_id}
+                          name={member.display_name}
+                          hasPhoto={Boolean(member.has_profile_photo)}
+                          version={member.profile_photo_updated_at}
+                          size={31}
+                          className={styles.memberAvatar}
+                        />
+                        <span className={styles.onlineDot} />
                       </div>
                       <div className={styles.memberInfo}>
                         <strong>{mine ? "You" : member.display_name}</strong>
                         <span>{roleLabel[member.role]}</span>
                       </div>
+                      {community.me.is_admin &&
+                        !mine &&
+                        member.has_profile_photo && (
+                          <button
+                            type="button"
+                            className={styles.memberPhotoAction}
+                            title="Remove profile photo"
+                            disabled={working === `photo:${member.user_id}`}
+                            onClick={() => void removeProfilePhoto(member.user_id)}
+                          >
+                            <ImageOff size={13} />
+                          </button>
+                        )}
                       {muted && (
                         <span className={styles.mutedIcon} title="Muted">
                           <VolumeX size={13} />

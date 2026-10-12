@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import styles from "./teacher-profile.module.css";
 import ActionWaitOverlay from "@/app/components/action-wait-overlay";
+import ProfileAvatar from "@/components/profile-avatar";
 
 type Details = Record<string, string>;
 type ServiceRecord = Details;
@@ -270,11 +271,21 @@ export default function MyTeacherProfilePage() {
         </nav>
 
         <header className={styles.header}>
-          <div className={styles.avatar}><UserRound size={30} /></div>
+          {teacher ? (
+            <ProfileAvatar
+              userId={teacher.id}
+              name={teacher.full_name}
+              size={58}
+              className={styles.avatar}
+            />
+          ) : (
+            <div className={styles.avatar}><UserRound size={30} /></div>
+          )}
           <div className={styles.headerCopy}>
             <span>{personnelType === "non_teaching" ? "MY PERSONNEL PROFILE" : "MY TEACHER PROFILE"}</span>
             <h1>{teacher?.full_name || "Personnel Profile"}</h1>
             <p>Asuncion National High School personnel profile</p>
+            <a className={styles.photoLink} href="/portal/profile">Manage Display Photo</a>
           </div>
         </header>
 
