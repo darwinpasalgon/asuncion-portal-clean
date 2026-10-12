@@ -235,7 +235,7 @@ export default function LearnerManagementPage() {
   const [gradeFilter, setGradeFilter] = useState("");
   const [sectionFilter, setSectionFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [missingFilter, setMissingFilter] = useState<"all"|"required"|"tve_major">("all");
+  const [missingFilter, setMissingFilter] = useState<"all"|"required"|"tve_major"|"shs_track_strand">("all");
   const [requestedStudentId, setRequestedStudentId] = useState("");
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -286,7 +286,11 @@ export default function LearnerManagementPage() {
 
     if (grade && /^\d+$/.test(grade)) setGradeFilter(grade);
     if (section) setSectionFilter(section);
-    if (missing === "required" || missing === "tve_major") {
+    if (
+      missing === "required" ||
+      missing === "tve_major" ||
+      missing === "shs_track_strand"
+    ) {
       setMissingFilter(missing);
     }
     if (student) setRequestedStudentId(student);
@@ -346,6 +350,17 @@ export default function LearnerManagementPage() {
           enrollment.grade_level < 8 ||
           enrollment.grade_level > 10 ||
           String(enrollment.tve_major ?? "").trim()
+        ) {
+          return [];
+        }
+      }
+
+      if (missingFilter === "shs_track_strand") {
+        if (
+          enrollment.grade_level < 11 ||
+          enrollment.grade_level > 12 ||
+          (String(enrollment.shs_track ?? "").trim() &&
+            String(enrollment.shs_strand_program ?? "").trim())
         ) {
           return [];
         }
@@ -744,6 +759,8 @@ export default function LearnerManagementPage() {
   const selectedCredentialSection =
     sections.find((section) => section.id === sectionFilter) ?? null;
   const seniorHighSelected = gradeFilter === "11" || gradeFilter === "12";
+  const programColumnLabel =
+    !gradeFilter || gradeFilter === "7" ? "Program / Major" : "TVE Major";
 
   return (
     <main className={styles.page}>
@@ -767,8 +784,8 @@ export default function LearnerManagementPage() {
               <span>ACADEMIC RECORDS</span>
               <h1>Learner Management</h1>
               <p>
-                Manage class placement, enrollment status, TVE majors, learner history,
-                and school-year transitions from one organized workspace.
+                Manage class placement, enrollment status, JHS TVE majors, Senior High Track and Strand,
+                learner history, and school-year transitions from one organized workspace.
               </p>
             </div>
           </div>
@@ -851,7 +868,7 @@ export default function LearnerManagementPage() {
               value={missingFilter}
               onChange={(event) =>
                 setMissingFilter(
-                  event.target.value as "all"|"required"|"tve_major"
+                  event.target.value as "all"|"required"|"tve_major"|"shs_track_strand"
                 )
               }
               aria-label="Data Completeness"
@@ -859,6 +876,7 @@ export default function LearnerManagementPage() {
               <option value="all">All Data Records</option>
               <option value="required">Missing Required Information</option>
               <option value="tve_major">Missing TVE Major</option>
+              <option value="shs_track_strand">Missing SHS Track / Strand</option>
             </select>
 
           </div>
@@ -963,7 +981,7 @@ export default function LearnerManagementPage() {
                         <th>Strand</th>
                       </>
                     ) : (
-                      <th>TVE Major</th>
+                      <th>{programColumnLabel}</th>
                     )}
                     <th>Status</th>
                     <th>Adviser</th>
@@ -1038,6 +1056,10 @@ export default function LearnerManagementPage() {
                                 </option>
                               ))}
                             </select>
+                          ) : [11, 12].includes(enrollment.grade_level) ? (
+                            <span className={styles.notApplicable}>
+                              {shsTrackLabel(enrollment.shs_track)} · {shsStrandLabel(enrollment.shs_strand_program)}
+                            </span>
                           ) : (
                             <span className={styles.notApplicable}>
                               {enrollment.grade_level === 7 ? "Exploratory" : "—"}
