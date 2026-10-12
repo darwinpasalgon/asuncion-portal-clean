@@ -541,7 +541,7 @@ export default function CommunityPage() {
               <div>
                 <span>MY COMMUNITY</span>
                 <h1>ANHS Community Chat</h1>
-                <p>School-wide, grade-wide, and section conversations in one place.</p>
+                <p>Organized school, grade, and adviser-managed section conversations.</p>
               </div>
             </div>
           </div>
@@ -570,7 +570,9 @@ export default function CommunityPage() {
                   <span>
                     {community?.me.is_admin
                       ? "Super Admin view · all rooms"
-                      : "Rooms available to your account"}
+                      : community?.me.role === "teacher"
+                        ? "Section rooms appear only when you are the adviser"
+                        : "Rooms available to your account"}
                   </span>
                 </div>
               </div>
@@ -619,7 +621,7 @@ export default function CommunityPage() {
               <div className={styles.roomAdminHint}>
                 <Shield size={15} />
                 <span>
-                  You can open and moderate every grade and section chatroom.
+                  You can open and moderate every room. Section chats are limited to enrolled students and the assigned adviser.
                 </span>
               </div>
             )}
