@@ -375,7 +375,7 @@ export async function GET(request: NextRequest) {
   const rooms = await accessibleRooms(token, userId, profile);
   const requestedRoom = request.nextUrl.searchParams.get("room") ?? "school";
   const selectedRoom =
-    rooms.find((room) => room.key === requestedRoom) ?? rooms[0];
+    rooms.find((room) => room.key === requestedRoom) ?? rooms[0]!;
 
   const readState = await ensureReadState(token, userId, selectedRoom);
   const lastReadAt = readState?.last_read_at ?? new Date().toISOString();
