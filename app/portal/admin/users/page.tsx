@@ -436,7 +436,7 @@ export default function UsersAccountsPage() {
             Back to Portal
           </a>
           <div>
-            <a href="/portal/admin/accounts">Pending Approvals</a>
+            <a href="/portal/admin/users">Pending Approvals</a>
             <a href="/portal/admin/masterlist">Bulk Account Import</a>
             <a href="/portal/admin/password-resets">Password Resets</a>
           </div>
@@ -592,7 +592,7 @@ export default function UsersAccountsPage() {
                           )}
 
                           {user.account_status === "pending" && (
-                            <a href="/portal/admin/accounts">Review</a>
+                            <a href="/portal/admin/users">Review</a>
                           )}
 
                           <button
