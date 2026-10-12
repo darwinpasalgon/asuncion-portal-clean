@@ -1061,7 +1061,12 @@ export default function BulkAccountImportPage() {
                     {selectedGrade ? "Select section" : "Select Grade Level first"}
                   </option>
                   {sectionOptions.map((section) => (
-                    <option key={section.id} value={section.name}>{section.name}</option>
+                    <option key={section.id} value={section.name}>
+                      {section.name}
+                      {[11, 12].includes(section.grade_level)
+                        ? ` · ${section.program_type ?? "Program Type Not Set"}`
+                        : ""}
+                    </option>
                   ))}
                 </select>
               </label>
@@ -1115,11 +1120,15 @@ export default function BulkAccountImportPage() {
 
               <div className={styles.classNote}>
                 {selectedGrade && selectedSection
-                  ? selectedGrade === "12"
-                    ? selectedShsTrack && selectedShsStrand
-                      ? <>All learners in this file will be placed in <strong>Grade 12 - {selectedSection}</strong> under <strong>{selectedShsTrack === "Technical-Vocational-Livelihood" ? "TVL" : selectedShsTrack} · {shsStrandOptions.find((item) => item.value === selectedShsStrand)?.label ?? selectedShsStrand}</strong>.</>
-                      : "For Grade 12, choose the Track and Strand / Program before uploading the SF1 file."
-                    : <>All learners in this file will be placed in <strong>Grade {selectedGrade} - {selectedSection}</strong>.</>
+                  ? !seniorHighProgramReady
+                    ? <>This Senior High section has no Program Type yet. Set <strong>Regular SHS</strong> or <strong>ALS-SHS</strong> in <a href="/portal/admin/school-setup">School Setup</a> before importing learners.</>
+                    : selectedGrade === "12"
+                      ? selectedShsTrack && selectedShsStrand
+                        ? <>All learners in this file will be placed in <strong>Grade 12 - {selectedSection}</strong> as <strong>{selectedSectionRecord?.program_type}</strong>, under <strong>{selectedShsTrack === "Technical-Vocational-Livelihood" ? "TVL" : selectedShsTrack} · {shsStrandOptions.find((item) => item.value === selectedShsStrand)?.label ?? selectedShsStrand}</strong>.</>
+                        : <>Section <strong>{selectedSection}</strong> is classified as <strong>{selectedSectionRecord?.program_type}</strong>. Choose the Track and Strand / Program before uploading the SF1 file.</>
+                      : selectedGrade === "11"
+                        ? <>All learners in this file will be placed in <strong>Grade 11 - {selectedSection}</strong> as <strong>{selectedSectionRecord?.program_type}</strong>.</>
+                        : <>All learners in this file will be placed in <strong>Grade {selectedGrade} - {selectedSection}</strong>.</>
                   : "Choose a Grade Level and Section first, then upload the original SF1 .xls/.xlsx file. Age is calculated automatically from Birth Date."}
               </div>
             </div>
@@ -1139,9 +1148,11 @@ export default function BulkAccountImportPage() {
                 <strong>
                   {file?.name ??
                     (personType === "student" && !studentClassReady
-                      ? selectedGrade === "12"
-                        ? "Select Grade, Section, Track and Strand first"
-                        : "Select Grade and Section first"
+                      ? ["11", "12"].includes(selectedGrade) && selectedSection && !seniorHighProgramReady
+                        ? "Set Section Program Type in School Setup first"
+                        : selectedGrade === "12"
+                          ? "Select Grade, Section, Track and Strand first"
+                          : "Select Grade and Section first"
                       : personType === "student"
                         ? "Choose SF1 Excel file"
                         : "Choose Teacher CSV file")}
