@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Save, Search, UserRound } from "lucide-react";
+import { ArrowLeft, KeyRound, Save, Search, UserRound } from "lucide-react";
 import styles from "./non-teaching-profiles.module.css";
 
 type Details = Record<string, string>;
@@ -53,6 +53,7 @@ export default function NonTeachingProfilesPage() {
   const [loading, setLoading] = useState(true);
   const [loadingRecord, setLoadingRecord] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -148,6 +149,45 @@ export default function NonTeachingProfilesPage() {
     setPersonal((current) => ({ ...current, [key]: value }));
   }
 
+  async function requestPasswordReset() {
+    if (!person?.portal_user_id) {
+      setError("This Non-Teaching Personnel record is not linked to a portal account yet.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Create a password reset request for ${person.full_name}? You will be taken to Password Resets to verify the account and issue a temporary password.`
+    );
+    if (!confirmed) return;
+
+    setResetting(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/admin/password-resets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: person.portal_user_id }),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(result.error ?? "Unable to create the password reset request.");
+      }
+
+      window.location.href = "/portal/admin/password-resets";
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to reach the password reset service."
+      );
+    } finally {
+      setResetting(false);
+    }
+  }
+
   async function save() {
     if (!selectedId) return;
     setSaving(true);
@@ -235,7 +275,28 @@ export default function NonTeachingProfilesPage() {
               <>
                 <div className={styles.personHeading}>
                   <div><span>NON-TEACHING PERSONNEL</span><h2>{person.full_name}</h2><p>{person.position || "Position not set"} · {person.email || "No email"}</p></div>
-                  <button onClick={() => void save()} disabled={saving}><Save size={16} />{saving ? "Saving..." : "Save Profile"}</button>
+                  <div className={styles.headingActions}>
+                    <button
+                      className={styles.resetButton}
+                      onClick={() => void requestPasswordReset()}
+                      disabled={resetting || !person.portal_user_id}
+                      title={
+                        person.portal_user_id
+                          ? "Create a password reset request"
+                          : "This personnel record is not linked to a portal account"
+                      }
+                    >
+                      <KeyRound size={16} />
+                      {resetting
+                        ? "Creating Request..."
+                        : person.portal_user_id
+                          ? "Reset Password"
+                          : "No Portal Account"}
+                    </button>
+                    <button onClick={() => void save()} disabled={saving}>
+                      <Save size={16} />{saving ? "Saving..." : "Save Profile"}
+                    </button>
+                  </div>
                 </div>
 
                 <div className={styles.formGrid}>
