@@ -635,6 +635,7 @@ export async function GET(request: NextRequest) {
       sections,
       defaultMonth,
       report: {
+        school_year: String(activeYear.name ?? ""),
         school: {
           school_name: String(school.school_name ?? "Asuncion National High School"),
           school_id: String(school.school_id ?? "304217"),
