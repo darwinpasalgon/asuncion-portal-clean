@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
       getRows(
         `student_enrollments?school_year_id=eq.${encodeURIComponent(
           year.id
-        )}&enrollment_status=eq.active&select=id,student_id,grade_level,section_id,tve_major,learner_status&order=grade_level.asc,enrolled_at.asc`,
+        )}&enrollment_status=eq.active&select=id,student_id,grade_level,section_id,tve_major,shs_track,shs_strand_program,learner_status&order=grade_level.asc,enrolled_at.asc`,
         auth.token
       ),
       getRows(
@@ -163,6 +163,8 @@ export async function GET(request: NextRequest) {
           grade_level: number;
           section_id: string;
           tve_major: string | null;
+          shs_track: string | null;
+          shs_strand_program: string | null;
           learner_status: string;
         }) => {
           const profile = profileMap.get(enrollment.student_id) as
@@ -224,6 +226,8 @@ export async function GET(request: NextRequest) {
             section_id: enrollment.section_id,
             section: sectionMap.get(enrollment.section_id) ?? "Unknown section",
             tve_major: enrollment.tve_major ?? null,
+            shs_track: enrollment.shs_track ?? null,
+            shs_strand_program: enrollment.shs_strand_program ?? null,
             learner_status: enrollment.learner_status,
           };
         }
