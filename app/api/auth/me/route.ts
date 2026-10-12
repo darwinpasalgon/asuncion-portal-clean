@@ -149,6 +149,8 @@ export async function GET(request: NextRequest) {
     section: string | null;
     enrollment_status: string | null;
     tve_major: string | null;
+    shs_track: string | null;
+    shs_strand_program: string | null;
     sex: string | null;
   } = {
     school_year: null,
@@ -157,6 +159,8 @@ export async function GET(request: NextRequest) {
     section: null,
     enrollment_status: null,
     tve_major: null,
+    shs_track: null,
+    shs_strand_program: null,
     sex: null,
   };
 
@@ -176,7 +180,7 @@ export async function GET(request: NextRequest) {
           userId
         )}&school_year_id=eq.${encodeURIComponent(
           activeYear.id
-        )}&select=grade_level,section_id,enrollment_status,tve_major&limit=1`,
+        )}&select=grade_level,section_id,enrollment_status,tve_major,shs_track,shs_strand_program&limit=1`,
         token
       );
 
@@ -185,6 +189,8 @@ export async function GET(request: NextRequest) {
         academicContext.grade_level = enrollment.grade_level;
         academicContext.enrollment_status = enrollment.enrollment_status;
         academicContext.tve_major = enrollment.tve_major ?? null;
+        academicContext.shs_track = enrollment.shs_track ?? null;
+        academicContext.shs_strand_program = enrollment.shs_strand_program ?? null;
 
         const learnerRows = await getRows(
           `${SUPABASE_URL}/rest/v1/learner_information?student_id=eq.${encodeURIComponent(
