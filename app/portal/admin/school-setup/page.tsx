@@ -33,6 +33,7 @@ type Section = {
   grade_level: number;
   name: string;
   is_active: boolean;
+  program_type: string | null;
 };
 
 type Enrollment = {
@@ -53,6 +54,8 @@ export default function SchoolSetupPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [newSchoolYearStart, setNewSchoolYearStart] = useState("");
+  const [newSectionGrade, setNewSectionGrade] = useState("");
+  const [newSectionProgramType, setNewSectionProgramType] = useState("");
 
   async function load(background = false) {
     const scrollY = captureRefreshScroll(background);
@@ -171,13 +174,19 @@ export default function SchoolSetupPage() {
     const data = new FormData(form);
     const gradeLevel = Number(data.get("gradeLevel") ?? 0);
     const name = String(data.get("sectionName") ?? "").trim();
+    const programType = String(data.get("programType") ?? "").trim();
 
     setWorking("add");
     try {
       const response = await fetch("/api/admin/academic-structure", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "add_section", gradeLevel, name }),
+        body: JSON.stringify({
+          action: "add_section",
+          gradeLevel,
+          name,
+          programType,
+        }),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -189,7 +198,45 @@ export default function SchoolSetupPage() {
         `Section ${name} added to ${gradeLevel === 0 ? "ALS A&E" : `Grade ${gradeLevel}`}.`
       );
       form.reset();
+      setNewSectionGrade("");
+      setNewSectionProgramType("");
       await load(true);
+    } catch {
+      setError("Unable to reach the school setup service.");
+    } finally {
+      setWorking("");
+    }
+  }
+
+  async function setSectionProgramType(section: Section, programType: string) {
+    if (![11, 12].includes(section.grade_level) || !programType) return;
+
+    setWorking(`program-${section.id}`);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch("/api/admin/academic-structure", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "set_section_program_type",
+          id: section.id,
+          programType,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(result.error ?? "Unable to update the section Program Type.");
+        return;
+      }
+
+      setSections((current) =>
+        current.map((item) =>
+          item.id === section.id ? { ...item, program_type: programType } : item
+        )
+      );
+      setSuccess(`${section.name} is now classified as ${programType}.`);
     } catch {
       setError("Unable to reach the school setup service.");
     } finally {
