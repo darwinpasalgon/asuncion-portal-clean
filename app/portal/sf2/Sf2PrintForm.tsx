@@ -213,8 +213,10 @@ function SexTotalRow({
   totals: number[];
   dayColumns: Sf2DayColumn[];
 }) {
+  const combined = label.startsWith("Combined");
+
   return (
-    <tr className="sf2-sex-total">
+    <tr className={combined ? "sf2-sex-total sf2-combined-total" : "sf2-sex-total"}>
       <td colSpan={3} className="sf2-sex-label">
         <span className="sf2-arrow">←</span>
         {label}
@@ -232,7 +234,7 @@ function SexTotalRow({
 
 function OfficialHeading({ report }: { report: Sf2ReportData }) {
   return (
-    <>
+    <div className="sf2-top-block">
       <div className="sf2-official-heading">
         <img
           className="sf2-deped-seal"
@@ -268,7 +270,7 @@ function OfficialHeading({ report }: { report: Sf2ReportData }) {
         <label className="section-label">Section</label>
         <div className="section-value">{report.section.name}</div>
       </div>
-    </>
+    </div>
   );
 }
 
