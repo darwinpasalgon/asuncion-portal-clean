@@ -174,17 +174,19 @@ function LearnerRows({
   rows,
   capacity,
   dayColumns,
+  startIndex = 0,
 }: {
   rows: Sf2Learner[];
   capacity: number;
   dayColumns: Sf2DayColumn[];
+  startIndex?: number;
 }) {
   const normalized = padded(rows, capacity);
   return (
     <>
       {normalized.map((learner, index) => (
         <tr className="sf2-learner-row" key={learner?.student_id ?? `blank-${index}`}>
-          <td className="sf2-no">{learner ? index + 1 : ""}</td>
+          <td className="sf2-no">{learner ? startIndex + index + 1 : ""}</td>
           <td colSpan={2} className="sf2-learner-name">
             {learner?.name ?? ""}
           </td>
@@ -386,10 +388,12 @@ function PageOne({
   report,
   males,
   maleTotals,
+  startIndex = 0,
 }: {
   report: Sf2ReportData;
   males: Sf2Learner[];
   maleTotals: number[];
+  startIndex?: number;
 }) {
   return (
     <section className="sf2-sheet sf2-page-one">
@@ -398,7 +402,12 @@ function PageOne({
         <AttendanceColGroup />
         <AttendanceHeader days={report.day_columns} />
         <tbody>
-          <LearnerRows rows={males} capacity={21} dayColumns={report.day_columns} />
+          <LearnerRows
+            rows={males}
+            capacity={21}
+            dayColumns={report.day_columns}
+            startIndex={startIndex}
+          />
           <SexTotalRow
             label="MALE  | TOTAL Per Day"
             totals={maleTotals}
@@ -415,11 +424,13 @@ function PageTwo({
   females,
   femaleTotals,
   combinedTotals,
+  startIndex = 0,
 }: {
   report: Sf2ReportData;
   females: Sf2Learner[];
   femaleTotals: number[];
   combinedTotals: number[];
+  startIndex?: number;
 }) {
   return (
     <section className="sf2-sheet sf2-page-two">
@@ -427,7 +438,12 @@ function PageTwo({
         <AttendanceColGroup />
         <AttendanceHeader days={report.day_columns} />
         <tbody>
-          <LearnerRows rows={females} capacity={25} dayColumns={report.day_columns} />
+          <LearnerRows
+            rows={females}
+            capacity={25}
+            dayColumns={report.day_columns}
+            startIndex={startIndex}
+          />
           <SexTotalRow
             label="FEMALE  | TOTAL Per Day"
             totals={femaleTotals}
@@ -452,11 +468,8 @@ function PageTwo({
 }
 
 export function Sf2PrintForm({ report }: { report: Sf2ReportData }) {
-  const pageSets = Math.max(
-    1,
-    Math.ceil(report.learners.male.length / 21),
-    Math.ceil(report.learners.female.length / 25)
-  );
+  const malePages = Math.max(1, Math.ceil(report.learners.male.length / 21));
+  const femalePages = Math.max(1, Math.ceil(report.learners.female.length / 25));
 
   const maleTotals = report.day_columns.map((day) => {
     if (!day) return 0;
@@ -473,20 +486,24 @@ export function Sf2PrintForm({ report }: { report: Sf2ReportData }) {
 
   return (
     <div className="sf2-print-document">
-      {Array.from({ length: pageSets }, (_, index) => (
-        <div className="sf2-report-set" key={index}>
-          <PageOne
-            report={report}
-            males={splitRows(report.learners.male, 21, index)}
-            maleTotals={maleTotals}
-          />
-          <PageTwo
-            report={report}
-            females={splitRows(report.learners.female, 25, index)}
-            femaleTotals={femaleTotals}
-            combinedTotals={combinedTotals}
-          />
-        </div>
+      {Array.from({ length: malePages }, (_, index) => (
+        <PageOne
+          key={`male-${index}`}
+          report={report}
+          males={splitRows(report.learners.male, 21, index)}
+          maleTotals={maleTotals}
+          startIndex={index * 21}
+        />
+      ))}
+      {Array.from({ length: femalePages }, (_, index) => (
+        <PageTwo
+          key={`female-${index}`}
+          report={report}
+          females={splitRows(report.learners.female, 25, index)}
+          femaleTotals={femaleTotals}
+          combinedTotals={combinedTotals}
+          startIndex={index * 25}
+        />
       ))}
     </div>
   );
