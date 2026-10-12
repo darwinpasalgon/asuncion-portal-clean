@@ -37,3 +37,13 @@ test("learner import blocks unclassified Senior High sections on client and serv
   assert.match(edge, /select\("id,name,program_type"\)/);
   assert.match(edge, /Set this Senior High section's Program Type in School Setup before importing learners/);
 });
+
+
+test("school readiness flags Senior High sections with no program type", () => {
+  const api = read("app/api/admin/readiness/route.ts");
+  const page = read("app/portal/admin/readiness/page.tsx");
+  assert.match(api, /missingShsProgramTypes/);
+  assert.match(api, /select=id,grade_level,name,program_type/);
+  assert.match(page, /SHS Sections Missing Program Type/);
+  assert.match(page, /Set Program Type/);
+});
