@@ -305,8 +305,8 @@ const navigation: Record<Role, NavigationItem[]> = {
   ],
   teacher: [
     commonItems.overview,
-    commonItems.students,
     commonItems.grades,
+    commonItems.students,
     { ...commonItems.attendance, group: "ADVISER TOOLS" },
     commonItems.schoolForms,
     commonItems.myLearners,
@@ -1012,7 +1012,7 @@ function SideNav({
         {(profile.role === "administrator" || profile.role === "staff_administrator") && (
           <>
             {(profile.role === "administrator" ||
-              ["sf10.manage", "reports.view", "teaching.manage", "attendance.manage"].some((permission) =>
+              ["teaching.manage", "attendance.manage"].some((permission) =>
                 adminPermissions.includes(permission)
               )) && (
               <div className="nav-group-section">
@@ -1028,32 +1028,6 @@ function SideNav({
                       >
                         <GraduationCap size={19} />
                         <span>Learner Management</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-                  {profile.role === "administrator" && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        className="nav-button"
-                        onClick={() => {
-                          window.location.href = "/portal/sf9";
-                        }}
-                      >
-                        <FileSpreadsheet size={19} />
-                        <span>SF9 Report Cards</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-                  {(profile.role === "administrator" || adminPermissions.includes("sf10.manage")) && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        className="nav-button"
-                        onClick={() => {
-                          window.location.href = "/portal/admin/sf10";
-                        }}
-                      >
-                        <FileSpreadsheet size={19} />
-                        <span>SF10 Records</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
@@ -1080,6 +1054,58 @@ function SideNav({
                       >
                         <ClipboardCheck size={19} />
                         <span>Attendance</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                </SidebarMenu>
+              </div>
+            )}
+
+            {(profile.role === "administrator" ||
+              ["attendance.manage", "reports.view", "sf10.manage"].some((permission) =>
+                adminPermissions.includes(permission)
+              )) && (
+              <div className="nav-group-section">
+                <p className="nav-label">SCHOOL FORMS</p>
+                <SidebarMenu>
+                  {(profile.role === "administrator" ||
+                    adminPermissions.includes("attendance.manage") ||
+                    adminPermissions.includes("reports.view")) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        className="nav-button"
+                        onClick={() => {
+                          window.location.href = "/portal/sf2";
+                        }}
+                      >
+                        <FileSpreadsheet size={19} />
+                        <span>SF2 Monthly Attendance</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {profile.role === "administrator" && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        className="nav-button"
+                        onClick={() => {
+                          window.location.href = "/portal/sf9";
+                        }}
+                      >
+                        <FileSpreadsheet size={19} />
+                        <span>SF9 Report Cards</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {(profile.role === "administrator" || adminPermissions.includes("sf10.manage")) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        className="nav-button"
+                        onClick={() => {
+                          window.location.href = "/portal/admin/sf10";
+                        }}
+                      >
+                        <FileSpreadsheet size={19} />
+                        <span>SF10 Records</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
@@ -1148,7 +1174,7 @@ function SideNav({
                 adminPermissions.includes(permission)
               )) && (
               <div className="nav-group-section">
-                <p className="nav-label">ACCOUNTS</p>
+                <p className="nav-label">ACCOUNTS & ACCESS</p>
                 <SidebarMenu>
                   {(profile.role === "administrator" || adminPermissions.includes("users.manage")) && (
                     <SidebarMenuItem>
@@ -1249,31 +1275,22 @@ function SideNav({
               </div>
             )}
 
-            {profile.role === "administrator" && (
+            {(profile.role === "administrator" ||
+              adminPermissions.includes("reports.view") ||
+              adminPermissions.includes("school_setup.manage")) && (
               <div className="nav-group-section">
-                <p className="nav-label">SYSTEM</p>
+                <p className="nav-label">REPORTS & SETUP</p>
                 <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      className="nav-button"
-                      onClick={() => {
-                        window.location.href = "/portal/admin/readiness";
-                      }}
-                    >
-                      <CheckCircle2 size={19} />
-                      <span>School Readiness</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  {(profile.role === "administrator" || adminPermissions.includes("school_setup.manage")) && (
+                  {profile.role === "administrator" && (
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         className="nav-button"
                         onClick={() => {
-                          window.location.href = "/portal/admin/school-setup";
+                          window.location.href = "/portal/admin/readiness";
                         }}
                       >
-                        <Settings2 size={19} />
-                        <span>School Setup</span>
+                        <CheckCircle2 size={19} />
+                        <span>School Readiness</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
@@ -1287,6 +1304,19 @@ function SideNav({
                       >
                         <BarChart3 size={19} />
                         <span>Reports & Analytics</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {(profile.role === "administrator" || adminPermissions.includes("school_setup.manage")) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        className="nav-button"
+                        onClick={() => {
+                          window.location.href = "/portal/admin/school-setup";
+                        }}
+                      >
+                        <Settings2 size={19} />
+                        <span>School Setup</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
@@ -1331,7 +1361,7 @@ function EmptySection({ page, role }: { page: Page; role: Role }) {
       : "Your advisory students will appear here after a Section Adviser assignment is configured.",
     "My learners": "Your assigned class rosters are available from the dedicated My Learners page.",
     "Teaching assignments": "Your active Subject Teacher assignments will appear here.",
-    "School forms": "School Forms are not available yet. This module is still under development.",
+    "School forms": "SF2, SF9, and SF10 are available to active Section Advisers. Other School Forms remain under development.",
     "School setup": "School year, grade levels, sections, subjects, and assignments will be configured in the next phase.",
   };
 
@@ -2365,104 +2395,79 @@ export default function PortalPage() {
 
           {profile.role === "teacher" && page === "School forms" && (
             <section className="panel real-school-forms-unavailable">
-              <div className="real-school-forms-warning">
-                <span className="real-school-forms-icon">
-                  <FileSpreadsheet size={22} />
-                </span>
-                <div>
-                  <span className="real-school-forms-kicker">AVAILABLE NOW</span>
-                  <h2>SF9 · Learner&apos;s Progress Report Card</h2>
-                  <p>
-                    Section Advisers can now select one or two learners and print
-                    their SF9 on one A4 landscape sheet, front and back.
-                  </p>
-                </div>
-                <a
-                  className="real-school-forms-status"
-                  href="/portal/sf9"
-                  style={{ textDecoration: "none" }}
-                >
-                  Open SF9
-                </a>
-              </div>
-
-              <div className="real-school-forms-list">
-                {adviserSections.length > 0 && (
-                  <article>
-                    <strong>SF10 · Learner Permanent Record</strong>
+              {adviserSections.length === 0 ? (
+                <div className="real-school-forms-warning">
+                  <span className="real-school-forms-icon">
+                    <FileSpreadsheet size={22} />
+                  </span>
+                  <div>
+                    <span className="real-school-forms-kicker">SECTION ADVISER ACCESS</span>
+                    <h2>School Forms</h2>
                     <p>
-                      Advisers can view and print the SF10 of learners in their
-                      current advisory section. Permanent-record editing remains
-                      restricted to authorized records personnel.
+                      SF2, SF9, and SF10 are available to active Section Advisers.
+                      No active advisory section is assigned to this account.
                     </p>
-                    <a href="/portal/sf10" className="real-school-forms-status">
-                      Open SF10
-                    </a>
-                  </article>
-                )}
-                <article>
-                  <strong>SF1 · School Register</strong>
-                  <p>
-                    Official master list of enrolled learners in the section,
-                    including demographic and background information.
-                  </p>
-                </article>
-                <article>
-                  <strong>SF2 · Daily Attendance Report of Learners · Available</strong>
-                  <p>
-                    Generate the official monthly SF2 using recorded attendance,
-                    Male/Female daily totals, monthly summary, and learner remarks.
-                  </p>
-                  <a href="/portal/sf2" className="real-school-forms-status">
-                    Open Monthly SF2
-                  </a>
-                </article>
-                <article>
-                  <strong>SF3 · Books Issued and Returned</strong>
-                  <p>
-                    Record of textbooks and instructional materials issued to and
-                    returned by learners.
-                  </p>
-                </article>
-                <article>
-                  <strong>SF5 · Report on Promotion and Level of Proficiency</strong>
-                  <p>
-                    End-of-school-year report showing learner promotion, retention,
-                    and proficiency status. Senior High School uses SF5A/SF5B
-                    variants.
-                  </p>
-                </article>
-                <article>
-                  <strong>SF8 · Learner&apos;s Basic Health and Nutrition Profile</strong>
-                  <p>
-                    Learner health and nutrition record, including height, weight,
-                    and BMI-related information.
-                  </p>
-                </article>
-                <article>
-                  <strong>SF9 · Learner&apos;s Progress Report Card · Available</strong>
-                  <p>
-                    Print one or two learner cards per A4 sheet with aligned front
-                    and back pages using published grades and recorded attendance.
-                  </p>
-                  <a href="/portal/sf9">Open SF9 Report Cards</a>
-                </article>
-                <article>
-                  <strong>SF10 · Learner&apos;s Permanent Academic Record</strong>
-                  <p>
-                    Comprehensive cumulative academic record of the learner across
-                    school years.
-                  </p>
-                </article>
-              </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="real-school-forms-warning">
+                    <span className="real-school-forms-icon">
+                      <FileSpreadsheet size={22} />
+                    </span>
+                    <div>
+                      <span className="real-school-forms-kicker">AVAILABLE NOW</span>
+                      <h2>School Forms</h2>
+                      <p>
+                        Use the official forms below for your current advisory section.
+                      </p>
+                    </div>
+                    <span className="real-school-forms-status">3 Available</span>
+                  </div>
 
-              <div className="real-school-forms-note">
-                <FileSpreadsheet size={18} />
-                <span>
-                  SF2, SF9, and SF10 are available now. The remaining School Forms
-                  are still under development.
-                </span>
-              </div>
+                  <div className="real-school-forms-list">
+                    <article>
+                      <strong>SF2 · Daily Attendance Report of Learners</strong>
+                      <p>
+                        Generate the monthly attendance report with Male/Female daily
+                        totals, monthly summary, and learner remarks.
+                      </p>
+                      <a href="/portal/sf2" className="real-school-forms-status">
+                        Open SF2
+                      </a>
+                    </article>
+
+                    <article>
+                      <strong>SF9 · Learner&apos;s Progress Report Card</strong>
+                      <p>
+                        Print one or two learner report cards on A4 landscape using
+                        published grades and recorded attendance.
+                      </p>
+                      <a href="/portal/sf9" className="real-school-forms-status">
+                        Open SF9
+                      </a>
+                    </article>
+
+                    <article>
+                      <strong>SF10 · Learner Permanent Record</strong>
+                      <p>
+                        View and print the permanent record of learners in your current
+                        advisory section. Editing remains restricted to authorized records personnel.
+                      </p>
+                      <a href="/portal/sf10" className="real-school-forms-status">
+                        Open SF10
+                      </a>
+                    </article>
+                  </div>
+
+                  <div className="real-school-forms-note">
+                    <FileSpreadsheet size={18} />
+                    <span>
+                      SF1, SF3, SF5, SF8, and the remaining School Forms are still under development.
+                    </span>
+                  </div>
+                </>
+              )}
             </section>
           )}
 
