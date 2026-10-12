@@ -180,6 +180,11 @@ function firstStatusDate(rows: AttendanceRow[], statuses: string[]) {
   return matching[0] ?? null;
 }
 
+function earliestDate(...values: Array<string | null | undefined>) {
+  const dates = values.filter((value): value is string => Boolean(value)).sort();
+  return dates[0] ?? null;
+}
+
 function addSexSummary(target: { M: number; F: number }, sex: string) {
   if (sex === "M") target.M += 1;
   if (sex === "F") target.F += 1;
@@ -345,10 +350,21 @@ export async function GET(request: NextRequest) {
     ]);
 
     const enrollments = (enrollmentRows ?? []) as EnrollmentRow[];
+    const attendance = (attendanceRows ?? []) as AttendanceRow[];
+    const attendanceStudentIds = new Set(
+      attendance.map((row) => String(row.student_id))
+    );
     const studentIds = Array.from(
       new Set(
         enrollments
-          .filter((row) => dateOnly(row.enrolled_at)! <= cutoff)
+          .filter((row) => {
+            const portalEnrollmentDate = dateOnly(row.enrolled_at);
+            return (
+              !portalEnrollmentDate ||
+              portalEnrollmentDate <= cutoff ||
+              attendanceStudentIds.has(String(row.student_id))
+            );
+          })
           .map((row) => String(row.student_id))
       )
     );
@@ -387,7 +403,6 @@ export async function GET(request: NextRequest) {
       ])
     );
 
-    const attendance = (attendanceRows ?? []) as AttendanceRow[];
     const attendanceByStudent = new Map<string, AttendanceRow[]>();
     const attendanceByStudentDate = new Map<string, AttendanceRow>();
     for (const row of attendance) {
@@ -428,7 +443,15 @@ export async function GET(request: NextRequest) {
             ? statusChanged
             : null);
 
-        const effectiveInDate = transferInDate || dateOnly(enrollment.enrolled_at);
+        const portalEnrollmentDate = dateOnly(enrollment.enrolled_at);
+        const firstRecordedAttendanceDate =
+          rows.map((row) => row.attendance_date).sort()[0] ?? null;
+        // Bulk import timestamps reflect when a learner was added to the portal,
+        // not necessarily the learner's real first day in the class. If official
+        // attendance exists earlier, SF2 must honor that earlier school record.
+        const effectiveInDate =
+          transferInDate ||
+          earliestDate(portalEnrollmentDate, firstRecordedAttendanceDate);
 
         const remarks: string[] = [];
         const transferInRow = rows.find((row) => row.status === "transferred_in");
