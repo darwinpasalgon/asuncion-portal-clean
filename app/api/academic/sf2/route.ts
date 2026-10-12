@@ -237,14 +237,19 @@ export async function GET(request: NextRequest) {
         )
       );
 
-      if (sectionIds.length) {
-        sections = await getRows(
-          `sections?id=in.${encodeURIComponent(
-            inFilter(sectionIds)
-          )}&is_active=eq.true&select=id,grade_level,name&order=grade_level.asc,name.asc`,
-          token
+      if (!sectionIds.length) {
+        return NextResponse.json(
+          { error: "Only active Section Advisers can generate SF2." },
+          { status: 403 }
         );
       }
+
+      sections = await getRows(
+        `sections?id=in.${encodeURIComponent(
+          inFilter(sectionIds)
+        )}&is_active=eq.true&select=id,grade_level,name&order=grade_level.asc,name.asc`,
+        token
+      );
     } else {
       const allowed =
         (await hasAdminPermission(token, "attendance.manage")) ||
