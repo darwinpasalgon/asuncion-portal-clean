@@ -242,16 +242,40 @@ function SexTotalRow({
 function TopInformation({ report }: { report: Sf2ReportData }) {
   return (
     <div className="sf2-top-block">
-      <img
-        className="sf2-deped-seal"
-        src="/sf2/deped-seal.webp"
-        alt="Department of Education seal"
-      />
-      <img
-        className="sf2-deped-wordmark"
-        src="/sf2/deped-wordmark.webp"
-        alt="Department of Education"
-      />
+      <div className="sf2-logo-row" aria-hidden="true">
+        <div className="sf2-deped-seal-frame">
+          <img
+            className="sf2-deped-seal"
+            src="https://upload.wikimedia.org/wikipedia/commons/2/20/Department_of_Education.svg"
+            alt=""
+            loading="eager"
+            decoding="sync"
+            referrerPolicy="no-referrer"
+            onError={(event) => {
+              const image = event.currentTarget;
+              if (image.dataset.fallbackUsed === "1") return;
+              image.dataset.fallbackUsed = "1";
+              image.src = "/sf2/deped-seal.webp";
+            }}
+          />
+        </div>
+        <div className="sf2-deped-wordmark-frame">
+          <img
+            className="sf2-deped-wordmark"
+            src="https://upload.wikimedia.org/wikipedia/commons/8/8c/Department_of_Education_%28DepEd%29.svg"
+            alt=""
+            loading="eager"
+            decoding="sync"
+            referrerPolicy="no-referrer"
+            onError={(event) => {
+              const image = event.currentTarget;
+              if (image.dataset.fallbackUsed === "1") return;
+              image.dataset.fallbackUsed = "1";
+              image.src = "/sf2/deped-wordmark.webp";
+            }}
+          />
+        </div>
+      </div>
 
       <header className="sf2-title-block">
         <h1>School Form 2 (SF2) Daily Attendance Report of Learners</h1>
