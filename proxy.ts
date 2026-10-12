@@ -7,6 +7,7 @@ type AccessState = {
   role: "student" | "teacher" | "administrator" | "staff_administrator" | null;
   accountStatus: string | null;
   permissions: string[];
+  gradeLevelHead: boolean;
 };
 
 async function accessState(token: string): Promise<AccessState> {
@@ -19,11 +20,11 @@ async function accessState(token: string): Promise<AccessState> {
   });
 
   if (!userResponse.ok) {
-    return { valid: false, mustChangePassword: false, role: null, accountStatus: null, permissions: [] };
+    return { valid: false, mustChangePassword: false, role: null, accountStatus: null, permissions: [], gradeLevelHead: false };
   }
   const user = await userResponse.json().catch(() => null);
   if (!user?.id) {
-    return { valid: false, mustChangePassword: false, role: null, accountStatus: null, permissions: [] };
+    return { valid: false, mustChangePassword: false, role: null, accountStatus: null, permissions: [], gradeLevelHead: false };
   }
 
   const profileResponse = await fetch(
@@ -38,7 +39,7 @@ async function accessState(token: string): Promise<AccessState> {
   );
 
   if (!profileResponse.ok) {
-    return { valid: false, mustChangePassword: false, role: null, accountStatus: null, permissions: [] };
+    return { valid: false, mustChangePassword: false, role: null, accountStatus: null, permissions: [], gradeLevelHead: false };
   }
   const profiles = await profileResponse.json().catch(() => []);
   const profile = profiles?.[0];
@@ -64,12 +65,33 @@ async function accessState(token: string): Promise<AccessState> {
     }
   }
 
+  let gradeLevelHead = false;
+  if (profile?.role === "teacher") {
+    const headResponse = await fetch(
+      `${SUPABASE_URL}/rest/v1/grade_level_heads?profile_id=eq.${encodeURIComponent(
+        user.id
+      )}&is_active=eq.true&select=id&limit=1`,
+      {
+        headers: {
+          apikey: SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${token}`,
+        },
+        cache: "no-store",
+      }
+    );
+    if (headResponse.ok) {
+      const rows = await headResponse.json().catch(() => []);
+      gradeLevelHead = Boolean(rows?.[0]?.id);
+    }
+  }
+
   return {
     valid: profile?.account_status === "active" && Boolean(profile?.role),
     mustChangePassword: Boolean(profile?.must_change_password),
     role: profile?.role ?? null,
     accountStatus: profile?.account_status ?? null,
     permissions,
+    gradeLevelHead,
   };
 }
 
@@ -103,6 +125,7 @@ const adminPagePermissions: Array<[string, string]> = [
   ["/portal/admin/password-resets", "password_resets.manage"],
   ["/portal/admin/sf10", "sf10.manage"],
   ["/portal/admin/teacher-profiles", "hr.manage"],
+  ["/portal/admin/non-teaching-profiles", "hr.manage"],
 ];
 
 function delegatedPermissionFor(pathname: string) {
@@ -179,12 +202,54 @@ function destination(request: NextRequest, state: AccessState) {
     return NextResponse.redirect(url);
   }
 
+  if (pathname === "/portal/sf2") {
+    const allowed =
+      state.role === "teacher" ||
+      state.role === "administrator" ||
+      (state.role === "staff_administrator" &&
+        (state.permissions.includes("attendance.manage") ||
+          state.permissions.includes("reports.view")));
+    if (!allowed) {
+      const url = new URL("/portal", request.url);
+      url.searchParams.set("reason", "forbidden");
+      return NextResponse.redirect(url);
+    }
+  }
+
+  if (pathname === "/portal/sf9") {
+    if (state.role !== "teacher" && state.role !== "administrator") {
+      const url = new URL("/portal", request.url);
+      url.searchParams.set("reason", "forbidden");
+      return NextResponse.redirect(url);
+    }
+  }
+
+  if (pathname === "/portal/sf10") {
+    const allowed =
+      state.role === "teacher" ||
+      state.role === "administrator" ||
+      (state.role === "staff_administrator" &&
+        state.permissions.includes("sf10.manage"));
+    if (!allowed) {
+      const url = new URL("/portal", request.url);
+      url.searchParams.set("reason", "forbidden");
+      return NextResponse.redirect(url);
+    }
+  }
+
   if (onAdminPage && state.role !== "administrator") {
     const requiredPermission = delegatedPermissionFor(pathname);
-    const allowed =
+    const delegatedAdminAllowed =
       state.role === "staff_administrator" &&
       Boolean(requiredPermission) &&
       state.permissions.includes(String(requiredPermission));
+    const gradeLevelHeadAllowed =
+      state.role === "teacher" &&
+      state.gradeLevelHead &&
+      ["/portal/admin/attendance", "/portal/admin/schedules", "/portal/admin/reports"].some(
+        (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
+      );
+    const allowed = delegatedAdminAllowed || gradeLevelHeadAllowed;
 
     if (!allowed) {
       const url = new URL("/portal", request.url);
