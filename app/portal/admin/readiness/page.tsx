@@ -380,7 +380,7 @@ export default function SchoolReadinessPage() {
                       <a
                         key={item.section_id}
                         href={`/portal/admin/learners?grade=${item.grade_level}&section=${encodeURIComponent(item.section_id)}&missing=shs_track_strand`}
-                        className={styles.compactRow}
+                        className={styles.compactLink}
                       >
                         <div>
                           <strong>Grade {item.grade_level} · {item.section}</strong>
