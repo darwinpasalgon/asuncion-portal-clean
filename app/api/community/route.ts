@@ -1,15 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
+type Role = "student" | "teacher" | "administrator" | "staff_administrator";
+type RoomType = "school" | "grade" | "section";
+
 type Profile = {
   id: string;
   full_name: string;
-  role: "student" | "teacher" | "administrator" | "staff_administrator";
+  role: Role;
   account_status: string;
+};
+
+type Room = {
+  key: string;
+  type: RoomType;
+  label: string;
+  description: string;
+  grade_level: number | null;
+  section_id: string | null;
+  unread_count?: number;
 };
 
 type ReadState = {
   user_id: string;
+  room_key: string;
+  room_type: RoomType;
+  grade_level: number | null;
+  section_id: string | null;
   last_read_at: string;
   updated_at: string;
 };
@@ -52,11 +69,7 @@ async function identity(request: NextRequest) {
   return { token, userId, profile };
 }
 
-async function rest(
-  path: string,
-  token: string,
-  init: RequestInit = {}
-) {
+async function rest(path: string, token: string, init: RequestInit = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...init,
     headers: {
@@ -73,14 +86,233 @@ function validUuid(value: string) {
   );
 }
 
+function roomKey(type: RoomType, gradeLevel: number | null, sectionId: string | null) {
+  if (type === "school") return "school";
+  if (type === "grade") return `grade:${gradeLevel}`;
+  return `section:${sectionId}`;
+}
+
+function gradeLabel(gradeLevel: number, labels: Map<number, string>) {
+  return labels.get(gradeLevel) ?? (gradeLevel === 0 ? "ALS A&E" : `Grade ${gradeLevel}`);
+}
+
+async function activeSchoolYearId(token: string) {
+  const response = await rest(
+    "school_years?is_active=eq.true&select=id&order=start_year.desc&limit=1",
+    token
+  );
+  const rows = response.ok ? await response.json().catch(() => []) : [];
+  return String(rows?.[0]?.id ?? "");
+}
+
+async function accessibleRooms(
+  token: string,
+  userId: string,
+  profile: Profile
+): Promise<Room[]> {
+  const [gradesResponse, sectionsResponse] = await Promise.all([
+    rest(
+      "grade_levels?select=grade_level,label,sort_order&order=sort_order.asc,grade_level.asc",
+      token
+    ),
+    rest(
+      "sections?is_active=eq.true&select=id,grade_level,name&order=grade_level.asc,name.asc",
+      token
+    ),
+  ]);
+
+  const grades = gradesResponse.ok
+    ? ((await gradesResponse.json().catch(() => [])) as Array<{
+        grade_level: number;
+        label: string;
+      }>)
+    : [];
+  const sections = sectionsResponse.ok
+    ? ((await sectionsResponse.json().catch(() => [])) as Array<{
+        id: string;
+        grade_level: number;
+        name: string;
+      }>)
+    : [];
+
+  const labels = new Map(
+    grades.map((item) => [Number(item.grade_level), String(item.label)] as const)
+  );
+  const allowedGrades = new Set<number>();
+  const allowedSections = new Set<string>();
+
+  if (profile.role === "administrator") {
+    for (const grade of grades) allowedGrades.add(Number(grade.grade_level));
+    for (const section of sections) allowedSections.add(section.id);
+  } else {
+    const schoolYearId = await activeSchoolYearId(token);
+
+    if (schoolYearId && profile.role === "student") {
+      const response = await rest(
+        `student_enrollments?student_id=eq.${encodeURIComponent(
+          userId
+        )}&school_year_id=eq.${encodeURIComponent(
+          schoolYearId
+        )}&enrollment_status=eq.active&select=grade_level,section_id`,
+        token
+      );
+      const rows = response.ok ? await response.json().catch(() => []) : [];
+      for (const row of rows ?? []) {
+        const grade = Number(row.grade_level);
+        if (Number.isInteger(grade)) allowedGrades.add(grade);
+        if (row.section_id) allowedSections.add(String(row.section_id));
+      }
+    }
+
+    if (schoolYearId && profile.role === "teacher") {
+      const [assignmentsResponse, adviserResponse, headResponse] =
+        await Promise.all([
+          rest(
+            `teacher_assignments?school_year_id=eq.${encodeURIComponent(
+              schoolYearId
+            )}&is_active=eq.true&select=grade_level,section_id`,
+            token
+          ),
+          rest(
+            `section_advisers?school_year_id=eq.${encodeURIComponent(
+              schoolYearId
+            )}&is_active=eq.true&select=section_id`,
+            token
+          ),
+          rest(
+            `grade_level_heads?profile_id=eq.${encodeURIComponent(
+              userId
+            )}&select=grade_level`,
+            token
+          ),
+        ]);
+
+      const assignments = assignmentsResponse.ok
+        ? await assignmentsResponse.json().catch(() => [])
+        : [];
+      const adviserRows = adviserResponse.ok
+        ? await adviserResponse.json().catch(() => [])
+        : [];
+      const headRows = headResponse.ok
+        ? await headResponse.json().catch(() => [])
+        : [];
+
+      for (const row of assignments ?? []) {
+        const grade = Number(row.grade_level);
+        if (Number.isInteger(grade)) allowedGrades.add(grade);
+        if (row.section_id) allowedSections.add(String(row.section_id));
+      }
+      for (const row of adviserRows ?? []) {
+        if (row.section_id) allowedSections.add(String(row.section_id));
+      }
+      for (const row of headRows ?? []) {
+        const grade = Number(row.grade_level);
+        if (Number.isInteger(grade)) allowedGrades.add(grade);
+      }
+
+      for (const section of sections) {
+        if (allowedSections.has(section.id)) {
+          allowedGrades.add(Number(section.grade_level));
+        }
+      }
+
+      for (const section of sections) {
+        if (
+          allowedGrades.has(Number(section.grade_level)) &&
+          (headRows ?? []).some(
+            (row: { grade_level?: number }) =>
+              Number(row.grade_level) === Number(section.grade_level)
+          )
+        ) {
+          allowedSections.add(section.id);
+        }
+      }
+    }
+  }
+
+  const rooms: Room[] = [
+    {
+      key: "school",
+      type: "school",
+      label: "School-Wide",
+      description: "All active ANHS portal members",
+      grade_level: null,
+      section_id: null,
+    },
+  ];
+
+  for (const grade of grades) {
+    const level = Number(grade.grade_level);
+    if (!allowedGrades.has(level)) continue;
+    const label = gradeLabel(level, labels);
+    rooms.push({
+      key: roomKey("grade", level, null),
+      type: "grade",
+      label,
+      description: `${label} grade-wide chat`,
+      grade_level: level,
+      section_id: null,
+    });
+  }
+
+  for (const section of sections) {
+    if (!allowedSections.has(section.id)) continue;
+    const level = Number(section.grade_level);
+    const grade = gradeLabel(level, labels);
+    rooms.push({
+      key: roomKey("section", level, section.id),
+      type: "section",
+      label: section.name,
+      description: `${grade} · ${section.name}`,
+      grade_level: level,
+      section_id: section.id,
+    });
+  }
+
+  return rooms;
+}
+
+function roomParams(room: Room) {
+  return {
+    room_type: room.type,
+    grade_level: room.grade_level,
+    section_id: room.section_id,
+  };
+}
+
+async function unreadCounts(token: string) {
+  const response = await rest("rpc/community_room_unread_counts", token, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) return new Map<string, number>();
+
+  const rows = (await response.json().catch(() => [])) as Array<{
+    room_type: RoomType;
+    grade_level: number | null;
+    section_id: string | null;
+    unread_count: number | string;
+  }>;
+
+  return new Map(
+    (rows ?? []).map((row) => [
+      roomKey(row.room_type, row.grade_level, row.section_id),
+      Number(row.unread_count) || 0,
+    ])
+  );
+}
+
 async function ensureReadState(
   token: string,
-  userId: string
+  userId: string,
+  room: Room
 ): Promise<ReadState | null> {
   const currentResponse = await rest(
-    `community_read_state?user_id=eq.${encodeURIComponent(
+    `community_room_read_state?user_id=eq.${encodeURIComponent(
       userId
-    )}&select=user_id,last_read_at,updated_at&limit=1`,
+    )}&room_key=eq.${encodeURIComponent(
+      room.key
+    )}&select=user_id,room_key,room_type,grade_level,section_id,last_read_at,updated_at&limit=1`,
     token
   );
   const current = currentResponse.ok
@@ -91,7 +323,7 @@ async function ensureReadState(
 
   const now = new Date().toISOString();
   const insertResponse = await rest(
-    "community_read_state?on_conflict=user_id",
+    "community_room_read_state?on_conflict=user_id,room_key",
     token,
     {
       method: "POST",
@@ -101,46 +333,26 @@ async function ensureReadState(
       body: JSON.stringify([
         {
           user_id: userId,
+          ...roomParams(room),
           last_read_at: now,
           updated_at: now,
         },
       ]),
     }
   );
+  if (!insertResponse.ok) return null;
   const inserted = await insertResponse.json().catch(() => []);
-  return inserted?.[0] ?? {
-    user_id: userId,
-    last_read_at: now,
-    updated_at: now,
-  };
+  return (inserted?.[0] as ReadState | undefined) ?? null;
 }
 
-async function unreadCount(
-  token: string,
-  userId: string,
-  lastReadAt: string
-) {
-  const response = await rest(
-    `community_messages?created_at=gt.${encodeURIComponent(
-      lastReadAt
-    )}&user_id=neq.${encodeURIComponent(userId)}&select=id`,
-    token,
-    {
-      headers: {
-        Prefer: "count=exact",
-        Range: "0-0",
-      },
-    }
-  );
-
-  if (!response.ok) return 0;
-
-  const contentRange = response.headers.get("content-range") ?? "";
-  const match = contentRange.match(/\/(\d+)$/);
-  if (match) return Number(match[1]) || 0;
-
-  const rows = await response.json().catch(() => []);
-  return Array.isArray(rows) ? rows.length : 0;
+function roomFilter(room: Room) {
+  if (room.type === "school") return "room_type=eq.school";
+  if (room.type === "grade") {
+    return `room_type=eq.grade&grade_level=eq.${room.grade_level}`;
+  }
+  return `room_type=eq.section&section_id=eq.${encodeURIComponent(
+    room.section_id ?? ""
+  )}`;
 }
 
 export async function GET(request: NextRequest) {
@@ -150,22 +362,30 @@ export async function GET(request: NextRequest) {
   }
 
   const { token, userId, profile } = auth;
-  const readState = await ensureReadState(token, userId);
-  const lastReadAt = readState?.last_read_at ?? new Date().toISOString();
-  const unread = await unreadCount(token, userId, lastReadAt);
+  const counts = await unreadCounts(token);
+  const totalUnread = Array.from(counts.values()).reduce(
+    (sum, value) => sum + value,
+    0
+  );
 
   if (request.nextUrl.searchParams.get("summary") === "1") {
-    return NextResponse.json({
-      unread_count: unread,
-      last_read_at: lastReadAt,
-    });
+    return NextResponse.json({ unread_count: totalUnread });
   }
 
+  const rooms = await accessibleRooms(token, userId, profile);
+  const requestedRoom = request.nextUrl.searchParams.get("room") ?? "school";
+  const selectedRoom =
+    rooms.find((room) => room.key === requestedRoom) ?? rooms[0];
+
+  const readState = await ensureReadState(token, userId, selectedRoom);
+  const lastReadAt = readState?.last_read_at ?? new Date().toISOString();
   const onlineSince = new Date(Date.now() - 60_000).toISOString();
 
   const requests = [
     rest(
-      "community_messages?select=id,user_id,sender_name,sender_role,body,created_at&order=created_at.desc&limit=100",
+      `community_messages?${roomFilter(
+        selectedRoom
+      )}&select=id,user_id,sender_name,sender_role,body,room_type,grade_level,section_id,created_at&order=created_at.desc&limit=100`,
       token
     ),
     rest(
@@ -183,7 +403,7 @@ export async function GET(request: NextRequest) {
   if (profile.role === "administrator") {
     requests.push(
       rest(
-        "community_reports?status=eq.pending&select=id,message_id,reported_user_id,reporter_id,reporter_name,sender_name,sender_role,message_body,reason,status,created_at&order=created_at.desc&limit=50",
+        "community_reports?status=eq.pending&select=id,message_id,reported_user_id,reporter_id,reporter_name,sender_name,sender_role,message_body,reason,status,room_type,grade_level,section_id,created_at&order=created_at.desc&limit=50",
         token
       )
     );
@@ -205,7 +425,7 @@ export async function GET(request: NextRequest) {
   const mutes = muteResponse.ok
     ? await muteResponse.json().catch(() => [])
     : [];
-  const reports =
+  const rawReports =
     profile.role === "administrator" && reportsResponse?.ok
       ? await reportsResponse.json().catch(() => [])
       : [];
@@ -220,6 +440,27 @@ export async function GET(request: NextRequest) {
       ? ownMute
       : null;
 
+  const roomMap = new Map(rooms.map((room) => [room.key, room] as const));
+  const reports = (rawReports ?? []).map(
+    (report: {
+      room_type: RoomType;
+      grade_level: number | null;
+      section_id: string | null;
+      [key: string]: unknown;
+    }) => {
+      const key = roomKey(
+        report.room_type,
+        report.grade_level,
+        report.section_id
+      );
+      return {
+        ...report,
+        room_key: key,
+        room_label: roomMap.get(key)?.description ?? "Community Chat",
+      };
+    }
+  );
+
   return NextResponse.json({
     me: {
       id: userId,
@@ -227,13 +468,19 @@ export async function GET(request: NextRequest) {
       role: profile.role,
       is_admin: profile.role === "administrator",
     },
+    room: selectedRoom,
+    rooms: rooms.map((room) => ({
+      ...room,
+      unread_count: counts.get(room.key) ?? 0,
+    })),
     messages: (messages ?? []).reverse(),
     online: online ?? [],
     muted: activeMute,
     mutes: profile.role === "administrator" ? mutes ?? [] : [],
     reports,
-    unread_count: unread,
+    unread_count: totalUnread,
     read_state: {
+      room_key: selectedRoom.key,
       last_read_at: lastReadAt,
     },
   });
@@ -286,6 +533,16 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === "mark_read") {
+    const rooms = await accessibleRooms(token, userId, profile);
+    const requestedRoom = String(body?.roomKey ?? "school");
+    const room = rooms.find((item) => item.key === requestedRoom);
+    if (!room) {
+      return NextResponse.json(
+        { error: "You do not have access to this chatroom." },
+        { status: 403 }
+      );
+    }
+
     const supplied = String(body?.lastReadAt ?? "");
     const suppliedDate = new Date(supplied);
     if (!supplied || Number.isNaN(suppliedDate.getTime())) {
@@ -295,7 +552,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const state = await ensureReadState(token, userId);
+    const state = await ensureReadState(token, userId, room);
     const currentDate = new Date(
       state?.last_read_at ?? "1970-01-01T00:00:00.000Z"
     );
@@ -306,7 +563,9 @@ export async function POST(request: NextRequest) {
       candidate.getTime() > currentDate.getTime() ? candidate : currentDate;
 
     const response = await rest(
-      `community_read_state?user_id=eq.${encodeURIComponent(userId)}`,
+      `community_room_read_state?user_id=eq.${encodeURIComponent(
+        userId
+      )}&room_key=eq.${encodeURIComponent(room.key)}`,
       token,
       {
         method: "PATCH",
@@ -325,7 +584,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ ok: true, last_read_at: nextDate.toISOString() });
+    return NextResponse.json({
+      ok: true,
+      room_key: room.key,
+      last_read_at: nextDate.toISOString(),
+    });
   }
 
   if (action === "send") {
@@ -334,6 +597,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Message must contain 1 to 1000 characters." },
         { status: 400 }
+      );
+    }
+
+    const rooms = await accessibleRooms(token, userId, profile);
+    const requestedRoom = String(body?.roomKey ?? "school");
+    const room = rooms.find((item) => item.key === requestedRoom);
+    if (!room) {
+      return NextResponse.json(
+        { error: "You do not have access to this chatroom." },
+        { status: 403 }
       );
     }
 
@@ -346,6 +619,7 @@ export async function POST(request: NextRequest) {
           sender_name: profile.full_name,
           sender_role: profile.role,
           body: message,
+          ...roomParams(room),
         },
       ]),
     });
@@ -355,15 +629,18 @@ export async function POST(request: NextRequest) {
       const text = JSON.stringify(result).toLowerCase();
       const muted = text.includes("muted");
       const rateLimited = text.includes("rate limit");
+      const denied = text.includes("access denied");
       return NextResponse.json(
         {
           error: muted
             ? "You are temporarily muted from Community Chat."
             : rateLimited
               ? "You are sending messages too quickly. Please try again shortly."
-              : "Unable to send the message.",
+              : denied
+                ? "You do not have access to this chatroom."
+                : "Unable to send the message.",
         },
-        { status: muted ? 403 : 400 }
+        { status: muted || denied ? 403 : 400 }
       );
     }
 
@@ -561,7 +838,10 @@ export async function POST(request: NextRequest) {
       );
       return response.ok
         ? NextResponse.json({ ok: true })
-        : NextResponse.json({ error: "Unable to unmute this user." }, { status: 400 });
+        : NextResponse.json(
+            { error: "Unable to unmute this user." },
+            { status: 400 }
+          );
     }
 
     const minutes = Math.min(1440, Math.max(5, Number(body?.minutes ?? 60)));
