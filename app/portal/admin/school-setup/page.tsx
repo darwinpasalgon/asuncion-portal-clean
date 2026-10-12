@@ -246,7 +246,7 @@ export default function SchoolSetupPage() {
           <a href="/portal" className={styles.topLink}>
             <ArrowLeft size={16} /> Back to portal
           </a>
-          <a href="/portal/admin/accounts" className={styles.topLink}>
+          <a href="/portal/admin/users" className={styles.topLink}>
             Account approvals
           </a>
         </nav>
