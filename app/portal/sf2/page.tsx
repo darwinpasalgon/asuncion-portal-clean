@@ -104,13 +104,10 @@ export default function Sf2Page() {
     return current < schoolYearEnd ? current : schoolYearEnd;
   }, [activeYear]);
 
-  const pageSets = report
-    ? Math.max(
-        1,
-        Math.ceil(report.learners.male.length / 21),
-        Math.ceil(report.learners.female.length / 25)
-      )
-    : 1;
+  const printPages = report
+    ? Math.max(1, Math.ceil(report.learners.male.length / 21)) +
+      Math.max(1, Math.ceil(report.learners.female.length / 25))
+    : 2;
 
   return (
     <main className={styles.page}>
@@ -208,11 +205,10 @@ export default function Sf2Page() {
           </div>
         )}
 
-        {report && pageSets > 1 && (
+        {report && printPages > 2 && (
           <div className={styles.notice}>
             This section exceeds the learner slots in the uploaded SF2 template. The portal
-            automatically creates {pageSets} SF2 page set{pageSets === 1 ? "" : "s"} so no learner
-            is omitted.
+            automatically creates {printPages} print pages so no learner is omitted.
           </div>
         )}
 
