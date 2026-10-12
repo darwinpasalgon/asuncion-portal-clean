@@ -68,6 +68,15 @@
   margin: 0;
   color: #61736a;
 }
+.photoLink{
+  display:inline-flex;
+  margin-top:7px;
+  color:#236f91;
+  font-size:.72rem;
+  font-weight:800;
+  text-decoration:none;
+}
+.photoLink:hover{text-decoration:underline}
 .error,
 .success {
   border-radius: 14px;
