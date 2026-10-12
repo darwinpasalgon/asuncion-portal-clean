@@ -103,6 +103,7 @@ const adminPagePermissions: Array<[string, string]> = [
   ["/portal/admin/password-resets", "password_resets.manage"],
   ["/portal/admin/sf10", "sf10.manage"],
   ["/portal/admin/teacher-profiles", "hr.manage"],
+  ["/portal/admin/non-teaching-profiles", "hr.manage"],
 ];
 
 function delegatedPermissionFor(pathname: string) {
@@ -121,7 +122,11 @@ function destination(request: NextRequest, state: AccessState) {
   const personnelProfilePage = pathname === "/portal/teacher-profile";
   const teacherOnly =
     pathname === "/portal/my-students" ||
-    pathname === "/portal/my-learners";
+    pathname === "/portal/my-learners" ||
+    pathname === "/portal/my-schedule/print";
+  const sf2Page = pathname === "/portal/sf2";
+  const sf9Page = pathname === "/portal/sf9";
+  const sf10Page = pathname === "/portal/sf10";
   const announcementsPage = pathname === "/portal/announcements";
   const resourcesPage = pathname === "/portal/resources";
 
@@ -147,6 +152,45 @@ function destination(request: NextRequest, state: AccessState) {
     const url = new URL("/portal", request.url);
     url.searchParams.set("reason", "forbidden");
     return NextResponse.redirect(url);
+  }
+
+  if (sf2Page) {
+    const allowed =
+      state.role === "teacher" ||
+      state.role === "administrator" ||
+      (state.role === "staff_administrator" &&
+        (state.permissions.includes("attendance.manage") ||
+          state.permissions.includes("reports.view")));
+
+    if (!allowed) {
+      const url = new URL("/portal", request.url);
+      url.searchParams.set("reason", "forbidden");
+      return NextResponse.redirect(url);
+    }
+  }
+
+  if (
+    sf9Page &&
+    state.role !== "teacher" &&
+    state.role !== "administrator"
+  ) {
+    const url = new URL("/portal", request.url);
+    url.searchParams.set("reason", "forbidden");
+    return NextResponse.redirect(url);
+  }
+
+  if (sf10Page) {
+    const allowed =
+      state.role === "teacher" ||
+      state.role === "administrator" ||
+      (state.role === "staff_administrator" &&
+        state.permissions.includes("sf10.manage"));
+
+    if (!allowed) {
+      const url = new URL("/portal", request.url);
+      url.searchParams.set("reason", "forbidden");
+      return NextResponse.redirect(url);
+    }
   }
 
   if (
