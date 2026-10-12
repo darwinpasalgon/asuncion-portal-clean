@@ -446,6 +446,12 @@ function DashboardHome({
               icon: ClipboardCheck,
             },
             {
+              label: "SF2 Monthly Attendance",
+              description: "Generate and print the official monthly Daily Attendance Report of Learners.",
+              href: "/portal/sf2",
+              icon: FileSpreadsheet,
+            },
+            {
               label: "SF9 Report Cards",
               description: "Print one or two learner report cards on A4 front and back.",
               href: "/portal/sf9",
@@ -532,6 +538,16 @@ function DashboardHome({
     ];
   } else {
     actions = [
+      ...(can("attendance.manage") || can("reports.view")
+        ? [
+            {
+              label: "SF2 Monthly Attendance",
+              description: "Generate monthly SF2 attendance reports by section.",
+              href: "/portal/sf2",
+              icon: FileSpreadsheet,
+            },
+          ]
+        : []),
       ...(profile.role === "administrator"
         ? [
             {
@@ -1355,6 +1371,7 @@ export default function PortalPage() {
     const open = new URLSearchParams(window.location.search).get("open");
     if (open === "schedule") setPage("Class schedule");
     if (open === "assignments") setPage("Teaching assignments");
+    if (open === "school-forms") setPage("School forms");
   }, []);
   const [teacherAssignments, setTeacherAssignments] = useState<TeacherAssignment[]>([]);
   const [teacherAssignmentsLoading, setTeacherAssignmentsLoading] = useState(false);
@@ -2391,11 +2408,14 @@ export default function PortalPage() {
                   </p>
                 </article>
                 <article>
-                  <strong>SF2 · Learner&apos;s Daily Class Attendance</strong>
+                  <strong>SF2 · Daily Attendance Report of Learners · Available</strong>
                   <p>
-                    Daily record of learner attendance, including presence and
-                    absence information.
+                    Generate the official monthly SF2 using recorded attendance,
+                    Male/Female daily totals, monthly summary, and learner remarks.
                   </p>
+                  <a href="/portal/sf2" className="real-school-forms-status">
+                    Open Monthly SF2
+                  </a>
                 </article>
                 <article>
                   <strong>SF3 · Books Issued and Returned</strong>
@@ -2439,7 +2459,7 @@ export default function PortalPage() {
               <div className="real-school-forms-note">
                 <FileSpreadsheet size={18} />
                 <span>
-                  SF9 and SF10 are available now. The remaining School Forms
+                  SF2, SF9, and SF10 are available now. The remaining School Forms
                   are still under development.
                 </span>
               </div>
