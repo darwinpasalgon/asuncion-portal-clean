@@ -3,6 +3,30 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
 type JsonRow = Record<string, any>;
 
+function learnerSexRank(value: unknown) {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (normalized === "M" || normalized === "MALE") return 0;
+  if (normalized === "F" || normalized === "FEMALE") return 1;
+  return 2;
+}
+
+function compareLearnerRoster(
+  a: { full_name?: unknown; last_name?: unknown; first_name?: unknown; sex?: unknown },
+  b: { full_name?: unknown; last_name?: unknown; first_name?: unknown; sex?: unknown }
+) {
+  const bySex = learnerSexRank(a.sex) - learnerSexRank(b.sex);
+  if (bySex !== 0) return bySex;
+
+  const aLast = String(a.last_name ?? "").trim() || String(a.full_name ?? "").trim();
+  const bLast = String(b.last_name ?? "").trim() || String(b.full_name ?? "").trim();
+  const byLast = aLast.localeCompare(bLast, undefined, { sensitivity: "base" });
+  if (byLast !== 0) return byLast;
+
+  const aFirst = String(a.first_name ?? "").trim() || String(a.full_name ?? "").trim();
+  const bFirst = String(b.first_name ?? "").trim() || String(b.full_name ?? "").trim();
+  return aFirst.localeCompare(bFirst, undefined, { sensitivity: "base" });
+}
+
 const MONTHS = [
   { key: "Jun", month: 6 },
   { key: "Jul", month: 7 },
@@ -503,17 +527,31 @@ export async function GET(request: NextRequest) {
       const studentIds = (enrollments ?? []).map((row: JsonRow) =>
         String(row.student_id)
       );
-      const profiles = studentIds.length
-        ? await getRows(
-            `profiles?id=in.${encodeURIComponent(
-              inFilter(studentIds)
-            )}&role=eq.student&account_status=eq.active&select=id,full_name,lrn`,
-            token
-          ).catch(() => [])
-        : [];
+      const [profiles, learnerInformation] = studentIds.length
+        ? await Promise.all([
+            getRows(
+              `profiles?id=in.${encodeURIComponent(
+                inFilter(studentIds)
+              )}&role=eq.student&account_status=eq.active&select=id,full_name,lrn`,
+              token
+            ).catch(() => []),
+            getRows(
+              `learner_information?student_id=in.${encodeURIComponent(
+                inFilter(studentIds)
+              )}&select=student_id,last_name,first_name,sex`,
+              token
+            ).catch(() => []),
+          ])
+        : [[], []];
 
       const profileMap = new Map<string, JsonRow>(
         (profiles ?? []).map((row: JsonRow) => [String(row.id), row])
+      );
+      const learnerInfoMap = new Map<string, JsonRow>(
+        (learnerInformation ?? []).map((row: JsonRow) => [
+          String(row.student_id),
+          row,
+        ])
       );
       const sectionMap = new Map<string, JsonRow>(
         sections.map((row: JsonRow) => [String(row.id), row])
@@ -524,10 +562,14 @@ export async function GET(request: NextRequest) {
           const student = profileMap.get(String(row.student_id));
           const section = sectionMap.get(String(row.section_id));
           if (!student || !section) return null;
+          const info = learnerInfoMap.get(String(row.student_id)) ?? {};
           return {
             id: student.id,
             full_name: student.full_name,
             lrn: student.lrn ?? null,
+            last_name: info.last_name ?? null,
+            first_name: info.first_name ?? null,
+            sex: info.sex ?? null,
             grade_level: row.grade_level,
             section_id: row.section_id,
             section: section.name,
@@ -535,11 +577,7 @@ export async function GET(request: NextRequest) {
           };
         })
         .filter(Boolean)
-        .sort((a: any, b: any) =>
-          String(a.full_name).localeCompare(String(b.full_name), undefined, {
-            sensitivity: "base",
-          })
-        );
+        .sort((a: any, b: any) => compareLearnerRoster(a, b));
 
       return NextResponse.json({
         activeYear,
