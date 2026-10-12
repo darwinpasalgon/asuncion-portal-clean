@@ -108,8 +108,8 @@ export default function PasswordResetRequestsPage() {
             <ArrowLeft size={16} />
             <span>Back to Portal</span>
           </a>
-          <a className={styles.topLink} href="/portal/admin/accounts">
-            <span>Account Approvals</span>
+          <a className={styles.topLink} href="/portal/admin/users">
+            <span>Users & Accounts</span>
           </a>
         </nav>
 
