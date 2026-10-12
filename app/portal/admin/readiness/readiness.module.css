@@ -425,6 +425,36 @@
   font-size: 0.75rem;
 }
 
+.compactLink {
+  background: #fff;
+  padding: 13px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.compactLink:hover {
+  background: #f9fbfa;
+}
+
+.compactLink strong,
+.compactLink span {
+  display: block;
+}
+
+.compactLink strong {
+  margin-bottom: 4px;
+  font-size: 0.84rem;
+}
+
+.compactLink span {
+  color: #75827c;
+  font-size: 0.75rem;
+}
+
 .gradeGrid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
