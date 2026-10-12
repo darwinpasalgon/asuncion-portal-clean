@@ -47,17 +47,88 @@ Deno.serve(async (req) => {
     .eq("id", callerId)
     .maybeSingle();
 
-  if (
-    !caller ||
-    caller.role !== "administrator" ||
-    caller.account_status !== "active" ||
-    caller.admin_role !== "super_administrator"
-  ) {
-    return json({ error: "Super Administrator access required." }, 403);
+  const superAdmin =
+    caller?.role === "administrator" &&
+    caller?.account_status === "active" &&
+    caller?.admin_role === "super_administrator";
+
+  let delegated = false;
+  if (caller?.role === "staff_administrator" && caller?.account_status === "active") {
+    const { data: permission } = await admin
+      .from("administrator_permissions")
+      .select("permission")
+      .eq("administrator_id", callerId)
+      .eq("permission", "password_resets.manage")
+      .limit(1)
+      .maybeSingle();
+    delegated = Boolean(permission);
+  }
+
+  if (!superAdmin && !delegated) {
+    return json({ error: "Password Reset permission required." }, 403);
   }
 
   const body = await req.json().catch(() => ({}));
   const action = String(body.action ?? "list");
+
+  if (action === "request") {
+    const userId = String(body.user_id ?? "");
+    if (!userId) return json({ error: "User account is required." }, 400);
+
+    const { data: target, error: targetError } = await admin
+      .from("profiles")
+      .select("id,full_name,account_status")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (targetError) {
+      return json({ error: "Could not verify the account." }, 500);
+    }
+    if (!target) {
+      return json({ error: "User account not found." }, 404);
+    }
+    if (target.account_status !== "active") {
+      return json({ error: "Only active accounts can request a password reset." }, 400);
+    }
+
+    const { data: existing, error: existingError } = await admin
+      .from("password_reset_requests")
+      .select("id,requested_at")
+      .eq("user_id", userId)
+      .eq("status", "pending")
+      .limit(1)
+      .maybeSingle();
+
+    if (existingError) {
+      return json({ error: "Could not check existing password reset requests." }, 500);
+    }
+
+    if (existing) {
+      return json({
+        ok: true,
+        request_id: existing.id,
+        already_pending: true,
+        message: "A password reset request is already pending for this account.",
+      });
+    }
+
+    const { data: created, error: createError } = await admin
+      .from("password_reset_requests")
+      .insert({ user_id: userId })
+      .select("id,requested_at")
+      .single();
+
+    if (createError || !created) {
+      return json({ error: "Could not create the password reset request." }, 500);
+    }
+
+    return json({
+      ok: true,
+      request_id: created.id,
+      already_pending: false,
+      message: `Password reset request created for ${target.full_name ?? "this user"}.`,
+    });
+  }
 
   if (action === "list") {
     const { data: requests, error } = await admin
