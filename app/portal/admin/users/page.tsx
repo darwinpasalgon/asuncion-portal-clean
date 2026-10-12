@@ -221,18 +221,26 @@ export default function UsersAccountsPage() {
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    return users.filter((user) => {
-      if (personTypeOf(user) !== personType) return false;
-      if (status !== "all" && user.account_status !== status) return false;
-      if (!needle) return true;
-      return [
-        user.full_name,
-        user.email,
-        user.lrn ?? "",
-        user.section ?? "",
-        user.position ?? "",
-      ].some((value) => value.toLowerCase().includes(needle));
-    });
+    return users
+      .filter((user) => {
+        if (personTypeOf(user) !== personType) return false;
+        if (status !== "all" && user.account_status !== status) return false;
+        if (!needle) return true;
+        return [
+          user.full_name,
+          user.email,
+          user.lrn ?? "",
+          user.section ?? "",
+          user.position ?? "",
+        ].some((value) => value.toLowerCase().includes(needle));
+      })
+      .sort((a, b) =>
+        personType === "student"
+          ? compareStudentAccounts(a, b)
+          : a.full_name.localeCompare(b.full_name, undefined, {
+              sensitivity: "base",
+            })
+      );
   }, [users, personType, status, search]);
 
   function openEdit(user: UserRecord) {
