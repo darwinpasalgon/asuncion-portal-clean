@@ -12,9 +12,6 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "Asuncion NHS | Academic Portal",
   description: "Academic portal for the Asuncion National High School community.",
-  other: {
-    "codex-preview": "development",
-  },
   icons: {
     icon: "/school-logo.png",
     shortcut: "/school-logo.png",
