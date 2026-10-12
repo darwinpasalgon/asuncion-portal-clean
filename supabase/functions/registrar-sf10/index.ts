@@ -122,6 +122,30 @@ function profileComplete(record: Record<string, unknown> | null) {
   );
 }
 
+function learnerSexRank(value: unknown) {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (normalized === "M" || normalized === "MALE") return 0;
+  if (normalized === "F" || normalized === "FEMALE") return 1;
+  return 2;
+}
+
+function compareLearnerRoster(
+  a: Record<string, unknown>,
+  b: Record<string, unknown>
+) {
+  const bySex = learnerSexRank(a.sex) - learnerSexRank(b.sex);
+  if (bySex !== 0) return bySex;
+
+  const aLast = String(a.last_name ?? "").trim() || String(a.full_name ?? "").trim();
+  const bLast = String(b.last_name ?? "").trim() || String(b.full_name ?? "").trim();
+  const byLast = aLast.localeCompare(bLast, undefined, { sensitivity: "base" });
+  if (byLast !== 0) return byLast;
+
+  const aFirst = String(a.first_name ?? "").trim() || String(a.full_name ?? "").trim();
+  const bFirst = String(b.first_name ?? "").trim() || String(b.full_name ?? "").trim();
+  return aFirst.localeCompare(bFirst, undefined, { sensitivity: "base" });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "Method not allowed." }, 405);
@@ -170,29 +194,39 @@ Deno.serve(async (req) => {
         return json({ ok: true, access_mode: "adviser", students: [] });
       }
 
-      const [{ data: students, error: studentError }, { data: permanentRows }, { data: sectionRows }] =
-        await Promise.all([
-          admin
-            .from("profiles")
-            .select("id,full_name,lrn")
-            .in("id", studentIds)
-            .eq("role", "student")
-            .eq("account_status", "active")
-            .order("full_name"),
-          admin
-            .from("learner_permanent_records")
-            .select("student_id,last_name,first_name,birth_date,sex")
-            .in("student_id", studentIds),
-          admin
-            .from("sections")
-            .select("id,name")
-            .in("id", caller.adviserSectionIds),
-        ]);
+      const [
+        { data: students, error: studentError },
+        { data: permanentRows },
+        { data: learnerInfoRows },
+        { data: sectionRows },
+      ] = await Promise.all([
+        admin
+          .from("profiles")
+          .select("id,full_name,lrn")
+          .in("id", studentIds)
+          .eq("role", "student")
+          .eq("account_status", "active"),
+        admin
+          .from("learner_permanent_records")
+          .select("student_id,last_name,first_name,birth_date,sex")
+          .in("student_id", studentIds),
+        admin
+          .from("learner_information")
+          .select("student_id,last_name,first_name,sex")
+          .in("student_id", studentIds),
+        admin
+          .from("sections")
+          .select("id,name")
+          .in("id", caller.adviserSectionIds),
+      ]);
 
       if (studentError) return json({ error: "Unable to load advisory learners." }, 500);
 
       const records = new Map(
         (permanentRows ?? []).map((item) => [String(item.student_id), item])
+      );
+      const learnerInfoMap = new Map(
+        (learnerInfoRows ?? []).map((item) => [String(item.student_id), item])
       );
       const enrollmentMap = new Map(
         (enrollmentRows ?? []).map((item) => [String(item.student_id), item])
@@ -204,50 +238,74 @@ Deno.serve(async (req) => {
       return json({
         ok: true,
         access_mode: "adviser",
-        students: (students ?? []).map((student) => {
-          const enrollment = enrollmentMap.get(String(student.id));
-          return {
-            ...student,
-            grade_level: enrollment?.grade_level ?? null,
-            section: enrollment?.section_id
-              ? sectionMap.get(String(enrollment.section_id)) ?? null
-              : null,
-            sf10_profile_complete: profileComplete(
-              (records.get(String(student.id)) ?? null) as Record<string, unknown> | null
-            ),
-          };
-        }),
+        students: (students ?? [])
+          .map((student) => {
+            const enrollment = enrollmentMap.get(String(student.id));
+            const permanent = (records.get(String(student.id)) ?? {}) as Record<string, unknown>;
+            const learnerInfo = (learnerInfoMap.get(String(student.id)) ?? {}) as Record<string, unknown>;
+            return {
+              ...student,
+              last_name: permanent.last_name ?? learnerInfo.last_name ?? null,
+              first_name: permanent.first_name ?? learnerInfo.first_name ?? null,
+              sex: permanent.sex ?? learnerInfo.sex ?? null,
+              grade_level: enrollment?.grade_level ?? null,
+              section: enrollment?.section_id
+                ? sectionMap.get(String(enrollment.section_id)) ?? null
+                : null,
+              sf10_profile_complete: profileComplete(
+                (records.get(String(student.id)) ?? null) as Record<string, unknown> | null
+              ),
+            };
+          })
+          .sort(compareLearnerRoster),
       });
     }
 
-    const [{ data: students, error: studentError }, { data: permanentRows }] =
-      await Promise.all([
-        admin
-          .from("profiles")
-          .select("id,full_name,lrn,grade_level,section")
-          .eq("role", "student")
-          .eq("account_status", "active")
-          .order("full_name"),
-        admin
-          .from("learner_permanent_records")
-          .select("student_id,last_name,first_name,birth_date,sex"),
-      ]);
+    const [
+      { data: students, error: studentError },
+      { data: permanentRows },
+      { data: learnerInfoRows },
+    ] = await Promise.all([
+      admin
+        .from("profiles")
+        .select("id,full_name,lrn,grade_level,section")
+        .eq("role", "student")
+        .eq("account_status", "active"),
+      admin
+        .from("learner_permanent_records")
+        .select("student_id,last_name,first_name,birth_date,sex"),
+      admin
+        .from("learner_information")
+        .select("student_id,last_name,first_name,sex"),
+    ]);
 
     if (studentError) return json({ error: "Unable to load learners." }, 500);
 
     const records = new Map(
       (permanentRows ?? []).map((item) => [String(item.student_id), item])
     );
+    const learnerInfoMap = new Map(
+      (learnerInfoRows ?? []).map((item) => [String(item.student_id), item])
+    );
 
     return json({
       ok: true,
       access_mode: "admin",
-      students: (students ?? []).map((student) => ({
-        ...student,
-        sf10_profile_complete: profileComplete(
-          (records.get(String(student.id)) ?? null) as Record<string, unknown> | null
-        ),
-      })),
+      students: (students ?? [])
+        .map((student) => {
+          const permanent = (records.get(String(student.id)) ?? {}) as Record<string, unknown>;
+          const learnerInfo = (learnerInfoMap.get(String(student.id)) ?? {}) as Record<string, unknown>;
+          return {
+            ...student,
+            last_name: permanent.last_name ?? learnerInfo.last_name ?? null,
+            first_name: permanent.first_name ?? learnerInfo.first_name ?? null,
+            sex: permanent.sex ?? learnerInfo.sex ?? null,
+            sf10_profile_complete: profileComplete(
+              (records.get(String(student.id)) ?? null) as Record<string, unknown> | null
+            ),
+          };
+        })
+        .sort(compareLearnerRoster),
     });
   }
 

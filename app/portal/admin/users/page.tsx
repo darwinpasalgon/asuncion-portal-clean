@@ -150,6 +150,29 @@ function statusLabel(status: UserStatus) {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
+function studentSexRank(value: string | null | undefined) {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (normalized === "M" || normalized === "MALE") return 0;
+  if (normalized === "F" || normalized === "FEMALE") return 1;
+  return 2;
+}
+
+function compareStudentAccounts(a: UserRecord, b: UserRecord) {
+  const aInfo = learnerInfoOf(a);
+  const bInfo = learnerInfoOf(b);
+  const bySex = studentSexRank(aInfo.sex) - studentSexRank(bInfo.sex);
+  if (bySex !== 0) return bySex;
+
+  const aLast = String(aInfo.last_name ?? "").trim() || a.full_name;
+  const bLast = String(bInfo.last_name ?? "").trim() || b.full_name;
+  const byLast = aLast.localeCompare(bLast, undefined, { sensitivity: "base" });
+  if (byLast !== 0) return byLast;
+
+  const aFirst = String(aInfo.first_name ?? "").trim() || a.full_name;
+  const bFirst = String(bInfo.first_name ?? "").trim() || b.full_name;
+  return aFirst.localeCompare(bFirst, undefined, { sensitivity: "base" });
+}
+
 export default function UsersAccountsPage() {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
@@ -198,18 +221,26 @@ export default function UsersAccountsPage() {
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    return users.filter((user) => {
-      if (personTypeOf(user) !== personType) return false;
-      if (status !== "all" && user.account_status !== status) return false;
-      if (!needle) return true;
-      return [
-        user.full_name,
-        user.email,
-        user.lrn ?? "",
-        user.section ?? "",
-        user.position ?? "",
-      ].some((value) => value.toLowerCase().includes(needle));
-    });
+    return users
+      .filter((user) => {
+        if (personTypeOf(user) !== personType) return false;
+        if (status !== "all" && user.account_status !== status) return false;
+        if (!needle) return true;
+        return [
+          user.full_name,
+          user.email,
+          user.lrn ?? "",
+          user.section ?? "",
+          user.position ?? "",
+        ].some((value) => value.toLowerCase().includes(needle));
+      })
+      .sort((a, b) =>
+        personType === "student"
+          ? compareStudentAccounts(a, b)
+          : a.full_name.localeCompare(b.full_name, undefined, {
+              sensitivity: "base",
+            })
+      );
   }, [users, personType, status, search]);
 
   function openEdit(user: UserRecord) {
