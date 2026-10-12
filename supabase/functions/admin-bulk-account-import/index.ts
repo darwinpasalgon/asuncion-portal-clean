@@ -47,6 +47,20 @@ type ImportRow = {
   guardian_contact_number?: string;
   learning_modality?: string;
   remarks?: string;
+  shs_track?: string;
+  shs_strand_program?: string;
+};
+
+const shsPrograms: Record<string, Set<string>> = {
+  Academic: new Set([
+    "Science, Technology, Engineering, and Mathematics",
+    "Humanities and Social Sciences",
+    "Accountancy, Business, and Management",
+  ]),
+  "Technical-Vocational-Livelihood": new Set([
+    "Organic Agriculture Production",
+    "Food Processing",
+  ]),
 };
 
 function temporaryPassword() {
@@ -324,6 +338,8 @@ Deno.serve(async (req) => {
     let identifier = "";
     let gradeLevel: number | null = null;
     let section = "";
+    let shsTrack: string | null = null;
+    let shsStrandProgram: string | null = null;
     let position = "";
 
     if (personType === "student") {
@@ -338,6 +354,29 @@ Deno.serve(async (req) => {
       if (!Number.isInteger(gradeLevel) || gradeLevel < 7 || gradeLevel > 12) {
         failures.push({ row_number: rowNumber, name: fullName, error: "Grade Level must be 7–12." });
         continue;
+      }
+
+      const requestedTrack = String(source.shs_track ?? "").trim();
+      const requestedProgram = String(source.shs_strand_program ?? "").trim();
+      if (gradeLevel === 12 && (requestedTrack || requestedProgram)) {
+        if (!requestedTrack || !requestedProgram) {
+          failures.push({
+            row_number: rowNumber,
+            name: fullName,
+            error: "Grade 12 Track and Strand / Program must be supplied together.",
+          });
+          continue;
+        }
+        if (!shsPrograms[requestedTrack]?.has(requestedProgram)) {
+          failures.push({
+            row_number: rowNumber,
+            name: fullName,
+            error: "Select a valid Grade 12 Track and Strand / Program.",
+          });
+          continue;
+        }
+        shsTrack = requestedTrack;
+        shsStrandProgram = requestedProgram;
       }
 
       const { data: validSection } = await admin
@@ -442,6 +481,10 @@ Deno.serve(async (req) => {
       metadata.lrn = identifier;
       metadata.grade_level = gradeLevel;
       metadata.section = section;
+      if (shsTrack && shsStrandProgram) {
+        metadata.shs_track = shsTrack;
+        metadata.shs_strand_program = shsStrandProgram;
+      }
     } else {
       metadata.position = position;
     }
@@ -491,6 +534,32 @@ Deno.serve(async (req) => {
     }
 
     if (personType === "student") {
+      if (gradeLevel === 12 && shsTrack && shsStrandProgram) {
+        const { data: classifiedEnrollment, error: classificationError } = await admin
+          .from("student_enrollments")
+          .update({
+            shs_track: shsTrack,
+            shs_strand_program: shsStrandProgram,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("student_id", created.user.id)
+          .eq("school_year_id", activeYear.id)
+          .eq("enrollment_status", "active")
+          .select("id")
+          .maybeSingle();
+
+        if (classificationError || !classifiedEnrollment) {
+          await admin.auth.admin.deleteUser(created.user.id);
+          failures.push({
+            row_number: rowNumber,
+            name: fullName,
+            identifier,
+            error: "Senior High Track and Strand / Program could not be saved, so the partial account was removed.",
+          });
+          continue;
+        }
+      }
+
       const learnerInformation = {
         student_id: created.user.id,
         last_name: String(source.last_name ?? "").trim() || null,
@@ -556,6 +625,8 @@ Deno.serve(async (req) => {
       identifier,
       grade_level: gradeLevel,
       section: personType === "student" ? section : null,
+      shs_track: personType === "student" ? shsTrack : null,
+      shs_strand_program: personType === "student" ? shsStrandProgram : null,
       position: personType === "teacher" ? position : null,
       temporary_password: password,
       credential_status: "new",

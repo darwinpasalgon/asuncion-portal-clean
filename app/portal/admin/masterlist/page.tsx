@@ -46,9 +46,28 @@ type PreviewRow = {
   guardian_relationship: string;
   learning_modality: string;
   remarks: string;
+  shs_track: string;
+  shs_strand_program: string;
   valid: boolean;
   error: string;
 };
+const SHS_TRACKS = [
+  { value: "Academic", label: "Academic" },
+  { value: "Technical-Vocational-Livelihood", label: "TVL" },
+] as const;
+
+const SHS_STRANDS: Record<string, Array<{ value: string; label: string }>> = {
+  Academic: [
+    { value: "Science, Technology, Engineering, and Mathematics", label: "STEM" },
+    { value: "Humanities and Social Sciences", label: "HUMSS" },
+    { value: "Accountancy, Business, and Management", label: "ABM" },
+  ],
+  "Technical-Vocational-Livelihood": [
+    { value: "Organic Agriculture Production", label: "OAP" },
+    { value: "Food Processing", label: "FP" },
+  ],
+};
+
 type Credential = {
   full_name: string;
   identifier: string;
@@ -301,6 +320,8 @@ export default function BulkAccountImportPage() {
   const [year, setYear] = useState("");
   const [selectedGrade, setSelectedGrade] = useState("");
   const [selectedSection, setSelectedSection] = useState("");
+  const [selectedShsTrack, setSelectedShsTrack] = useState("");
+  const [selectedShsStrand, setSelectedShsStrand] = useState("");
   const [recoveryGrade, setRecoveryGrade] = useState("");
   const [recoverySection, setRecoverySection] = useState("");
   const [recoveryWorking, setRecoveryWorking] = useState(false);
@@ -351,8 +372,14 @@ export default function BulkAccountImportPage() {
     [sections, recoveryGrade]
   );
 
+  const shsStrandOptions = SHS_STRANDS[selectedShsTrack] ?? [];
+  const grade12ClassificationReady =
+    selectedGrade !== "12" ||
+    Boolean(selectedShsTrack && selectedShsStrand);
+
   const studentClassReady =
-    personType !== "student" || Boolean(selectedGrade && selectedSection);
+    personType !== "student" ||
+    Boolean(selectedGrade && selectedSection && grade12ClassificationReady);
 
   function resetImport() {
     setRows([]);
@@ -663,6 +690,8 @@ export default function BulkAccountImportPage() {
         guardian_relationship: data.guardian_relationship ?? "",
         learning_modality: data.learning_modality ?? "",
         remarks: data.remarks ?? "",
+        shs_track: grade === 12 ? selectedShsTrack : "",
+        shs_strand_program: grade === 12 ? selectedShsStrand : "",
         valid: problems.length === 0,
         error: problems.join(" "),
       });
@@ -671,7 +700,7 @@ export default function BulkAccountImportPage() {
     setRows(preview);
     setMessage(
       personType === "student"
-        ? `${sf1Label ? `SF1 detected: ${sf1Label}. ` : ""}Validation complete for Grade ${selectedGrade} - ${selectedSection}. Review all rows before importing.`
+        ? `${sf1Label ? `SF1 detected: ${sf1Label}. ` : ""}Validation complete for Grade ${selectedGrade} - ${selectedSection}${selectedGrade === "12" ? ` · ${selectedShsTrack === "Technical-Vocational-Livelihood" ? "TVL" : selectedShsTrack} · ${shsStrandOptions.find((item) => item.value === selectedShsStrand)?.label ?? selectedShsStrand}` : ""}. Review all rows before importing.`
         : "Validation complete. Review all rows before importing."
     );
   }
@@ -972,6 +1001,8 @@ export default function BulkAccountImportPage() {
                   onChange={(event) => {
                     setSelectedGrade(event.target.value);
                     setSelectedSection("");
+                    setSelectedShsTrack("");
+                    setSelectedShsStrand("");
                     resetImport();
                   }}
                 >
@@ -989,6 +1020,8 @@ export default function BulkAccountImportPage() {
                   disabled={!selectedGrade}
                   onChange={(event) => {
                     setSelectedSection(event.target.value);
+                    setSelectedShsTrack("");
+                    setSelectedShsStrand("");
                     resetImport();
                   }}
                 >
@@ -1001,9 +1034,60 @@ export default function BulkAccountImportPage() {
                 </select>
               </label>
 
+              {selectedGrade === "12" && (
+                <>
+                  <label className={styles.classField}>
+                    <span>3. Track</span>
+                    <select
+                      value={selectedShsTrack}
+                      disabled={!selectedSection}
+                      onChange={(event) => {
+                        setSelectedShsTrack(event.target.value);
+                        setSelectedShsStrand("");
+                        resetImport();
+                      }}
+                    >
+                      <option value="">
+                        {selectedSection ? "Select Track" : "Select Section First"}
+                      </option>
+                      {SHS_TRACKS.map((track) => (
+                        <option key={track.value} value={track.value}>
+                          {track.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className={styles.classField}>
+                    <span>4. Strand / Program</span>
+                    <select
+                      value={selectedShsStrand}
+                      disabled={!selectedShsTrack}
+                      onChange={(event) => {
+                        setSelectedShsStrand(event.target.value);
+                        resetImport();
+                      }}
+                    >
+                      <option value="">
+                        {selectedShsTrack ? "Select Strand / Program" : "Select Track First"}
+                      </option>
+                      {shsStrandOptions.map((strand) => (
+                        <option key={strand.value} value={strand.value}>
+                          {strand.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              )}
+
               <div className={styles.classNote}>
                 {selectedGrade && selectedSection
-                  ? <>All learners in this file will be placed in <strong>Grade {selectedGrade} - {selectedSection}</strong>.</>
+                  ? selectedGrade === "12"
+                    ? selectedShsTrack && selectedShsStrand
+                      ? <>All learners in this file will be placed in <strong>Grade 12 - {selectedSection}</strong> under <strong>{selectedShsTrack === "Technical-Vocational-Livelihood" ? "TVL" : selectedShsTrack} · {shsStrandOptions.find((item) => item.value === selectedShsStrand)?.label ?? selectedShsStrand}</strong>.</>
+                      : "For Grade 12, choose the Track and Strand / Program before uploading the SF1 file."
+                    : <>All learners in this file will be placed in <strong>Grade {selectedGrade} - {selectedSection}</strong>.</>
                   : "Choose a Grade Level and Section first, then upload the original SF1 .xls/.xlsx file. Age is calculated automatically from Birth Date."}
               </div>
             </div>
@@ -1023,7 +1107,9 @@ export default function BulkAccountImportPage() {
                 <strong>
                   {file?.name ??
                     (personType === "student" && !studentClassReady
-                      ? "Select Grade and Section first"
+                      ? selectedGrade === "12"
+                        ? "Select Grade, Section, Track and Strand first"
+                        : "Select Grade and Section first"
                       : personType === "student"
                         ? "Choose SF1 Excel file"
                         : "Choose Teacher CSV file")}
@@ -1060,13 +1146,13 @@ export default function BulkAccountImportPage() {
 
               <div className={styles.tableWrap}>
                 <table>
-                  <thead><tr><th aria-label="Number"></th><th>Name</th><th>{personType === "student" ? "LRN" : "Email"}</th>{personType === "student" && <><th>Grade</th><th>Section</th></>}<th>Status</th></tr></thead>
+                  <thead><tr><th aria-label="Number"></th><th>Name</th><th>{personType === "student" ? "LRN" : "Email"}</th>{personType === "student" && <><th>Grade</th><th>Section</th>{selectedGrade === "12" && <><th>Track</th><th>Strand</th></>}</>}<th>Status</th></tr></thead>
                   <tbody>{rows.map((row, index) => (
                     <tr key={row.row_number} className={!row.valid ? styles.invalidRow : ""}>
                       <td>{index + 1}</td>
                       <td><strong>{row.full_name || "—"}</strong></td>
                       <td>{personType === "student" ? row.lrn : row.email}</td>
-                      {personType === "student" && <><td>{row.grade_level ?? "—"}</td><td>{row.section || "—"}</td></>}
+                      {personType === "student" && <><td>{row.grade_level ?? "—"}</td><td>{row.section || "—"}</td>{selectedGrade === "12" && <><td>{row.shs_track === "Technical-Vocational-Livelihood" ? "TVL" : row.shs_track || "—"}</td><td>{(SHS_STRANDS[row.shs_track]?.find((item) => item.value === row.shs_strand_program)?.label ?? row.shs_strand_program) || "—"}</td></>}</>}
                       <td>{row.valid ? <span className={styles.ready}>Ready</span> : <span className={styles.invalid}>{row.error}</span>}</td>
                     </tr>
                   ))}</tbody>

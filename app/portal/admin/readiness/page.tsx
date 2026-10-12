@@ -51,6 +51,16 @@ type ReadinessData = {
     count: number;
     byGrade: Array<{ grade_level: number; count: number }>;
   };
+  missingShs: {
+    count: number;
+    byGrade: Array<{ grade_level: number; count: number }>;
+    bySection: Array<{
+      section_id: string;
+      grade_level: number;
+      section: string;
+      count: number;
+    }>;
+  };
   incompleteLearners: {
     count: number;
     samples: Array<{
@@ -186,6 +196,7 @@ export default function SchoolReadinessPage() {
       setup?.unassigned_count ?? null,
       setup?.unscheduled_count ?? null,
       data.missingTve.count,
+      data.missingShs.count,
       data.incompleteLearners.count,
       data.sectionsWithoutAdviser.length,
       data.emptyGradeLevels.length,
@@ -328,6 +339,14 @@ export default function SchoolReadinessPage() {
                   icon={GraduationCap}
                 />
                 <HealthCard
+                  title="Learners Missing SHS Track / Strand"
+                  description="Active Grade 11–12 learners without a saved Senior High Track and Strand / Program."
+                  count={data.missingShs.count}
+                  href="/portal/admin/learners?missing=shs_track_strand"
+                  action="Review Senior High Learners"
+                  icon={GraduationCap}
+                />
+                <HealthCard
                   title="Sections Without Adviser"
                   description="Sections with active learners but no active adviser assignment."
                   count={data.sectionsWithoutAdviser.length}
@@ -344,6 +363,35 @@ export default function SchoolReadinessPage() {
                   icon={Users}
                 />
               </div>
+
+              {data.missingShs.bySection.length > 0 && (
+                <div className={styles.detailPanel}>
+                  <div className={styles.detailHeading}>
+                    <div>
+                      <h3>Senior High Classification Needing Attention</h3>
+                      <p>Sections with active Grade 11–12 learners still missing Track or Strand / Program.</p>
+                    </div>
+                    <a href="/portal/admin/learners?missing=shs_track_strand">
+                      View All <ChevronRight size={15} />
+                    </a>
+                  </div>
+                  <div className={styles.compactGrid}>
+                    {data.missingShs.bySection.map((item) => (
+                      <a
+                        key={item.section_id}
+                        href={`/portal/admin/learners?grade=${item.grade_level}&section=${encodeURIComponent(item.section_id)}&missing=shs_track_strand`}
+                        className={styles.compactLink}
+                      >
+                        <div>
+                          <strong>Grade {item.grade_level} · {item.section}</strong>
+                          <span>{item.count} learner{item.count === 1 ? "" : "s"} missing classification</span>
+                        </div>
+                        <ChevronRight size={16} />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
             </section>
 
             <section className={styles.section}>

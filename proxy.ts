@@ -92,7 +92,8 @@ async function refreshSession(refreshToken: string) {
 }
 
 const adminPagePermissions: Array<[string, string]> = [
-  ["/portal/admin/accounts", "accounts.manage"],
+  ["/portal/admin/accounts", "users.manage"],
+  ["/portal/admin/learners/apitong-credentials", "bulk_import.manage"],
   ["/portal/admin/users", "users.manage"],
   ["/portal/admin/masterlist", "bulk_import.manage"],
   ["/portal/admin/school-setup", "school_setup.manage"],

@@ -73,6 +73,8 @@ type Enrollment = {
   grade_level: number;
   section_id: string;
   tve_major: string | null;
+  shs_track: string | null;
+  shs_strand_program: string | null;
 };
 
 type Section = {
@@ -178,6 +180,7 @@ export async function GET(request: NextRequest) {
         totalLearners: 0,
         gradeCounts: [],
         missingTve: { count: 0, byGrade: [] },
+        missingShs: { count: 0, byGrade: [], bySection: [] },
         incompleteLearners: { count: 0, samples: [] },
         sectionsWithoutAdviser: [],
         attendanceGaps: [],
@@ -209,7 +212,7 @@ export async function GET(request: NextRequest) {
       getAllRows(
         `student_enrollments?school_year_id=eq.${encodeURIComponent(
           activeYear.id
-        )}&enrollment_status=eq.active&grade_level=gte.7&grade_level=lte.12&select=student_id,grade_level,section_id,tve_major`,
+        )}&enrollment_status=eq.active&grade_level=gte.7&grade_level=lte.12&select=student_id,grade_level,section_id,tve_major,shs_track,shs_strand_program`,
         token
       ),
       getRows(
@@ -294,6 +297,26 @@ export async function GET(request: NextRequest) {
       grade_level: gradeLevel,
       count: missingTveRows.filter((row) => row.grade_level === gradeLevel).length,
     }));
+
+    const missingShsRows = enrollments.filter(
+      (enrollment) =>
+        enrollment.grade_level >= 11 &&
+        enrollment.grade_level <= 12 &&
+        (blank(enrollment.shs_track) || blank(enrollment.shs_strand_program))
+    );
+    const missingShsByGrade = [11, 12].map((gradeLevel) => ({
+      grade_level: gradeLevel,
+      count: missingShsRows.filter((row) => row.grade_level === gradeLevel).length,
+    }));
+    const missingShsBySection = sections
+      .filter((section) => section.grade_level === 11 || section.grade_level === 12)
+      .map((section) => ({
+        section_id: section.id,
+        grade_level: section.grade_level,
+        section: section.name,
+        count: missingShsRows.filter((row) => row.section_id === section.id).length,
+      }))
+      .filter((item) => item.count > 0);
 
     const incompleteLearnerSamples: Array<Record<string, unknown>> = [];
     let incompleteLearnerCount = 0;
@@ -400,6 +423,11 @@ export async function GET(request: NextRequest) {
       missingTve: {
         count: missingTveRows.length,
         byGrade: missingTveByGrade,
+      },
+      missingShs: {
+        count: missingShsRows.length,
+        byGrade: missingShsByGrade,
+        bySection: missingShsBySection,
       },
       incompleteLearners: {
         count: incompleteLearnerCount,
