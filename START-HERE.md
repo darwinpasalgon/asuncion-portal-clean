@@ -1,59 +1,102 @@
-# Asuncion NHS Academic Portal: Vercel migration package
+# Asuncion NHS Academic Portal
 
-This is a portable copy of your blue-and-green portal, with your official logo and Grade 7–12 options. Sections remain unspecified.
+This repository contains the production Academic Portal of Asuncion National High School.
 
-## What this package does
+## Production architecture
 
-It runs the existing interactive demonstration on standard Next.js and can be deployed on Vercel. It no longer needs ChatGPT hosting or Cloudflare's Sites runtime. Your original private demo is unchanged.
+- **Frontend / application:** Next.js on Vercel
+- **Database, authentication, storage, and server functions:** Supabase
+- **Production URL:** `https://asuncion-nhs.vercel.app`
+- **Production branch:** `main`
+- **Package manager:** pnpm
+- **Node.js:** use the version declared in `package.json`
 
-## What it does not do yet
+The portal uses school-managed accounts. Public registration is closed.
 
-Real email/password login, permanent academic records, protected student accounts, account approval enforcement and private file storage are NOT implemented in this package. The role selector still previews demo roles. Changes reset on refresh. Do not use this package for real student records.
+## Current functional areas
 
-Moving a website changes its hosting address; it does not automatically add a database or secure accounts.
+The production portal includes:
 
-## Next steps with the assistant
-
-1. Install/connect the Vercel and Supabase integrations offered in this conversation, using accounts you or the school control. If you need accounts, create them directly with the providers. Never paste passwords, access tokens, service-role keys or recovery codes into chat.
-2. Tell the assistant when both connections are ready. The assistant can inspect the available projects and prepare a concrete setup. Do not select a project containing unrelated data.
-3. Confirm the intended new or empty Supabase project and Vercel project. Costs or paid upgrades require your explicit approval.
-4. Implement email verification, password reset, server/database-enforced roles and an approval workflow. Student self-registration must never grant teacher or administrator permissions. The first administrator must be assigned through an authorized administrator procedure.
-5. Implement persistent grades, attendance, schedules, notices and private resources. Restrict student reads to their records, teacher writes to assigned classes, and resource access to authorized users. Sections can be added later.
-6. Test with fictional accounts: each role's normal actions, access to another student's record, unassigned teacher access, disabled users and direct database/API requests. Test backup and recovery, and the approved school's data-retention process.
-7. Publish the verified version under the Vercel-generated address. The exact address is assigned during deployment; no preferred name is guaranteed available. The address can later use a school-owned domain.
-
-## Deploy only this demonstration manually
-
-1. Extract the ZIP into a new folder. The folder containing package.json is the project root.
-2. Put that folder in a private Git repository you control, then import it into Vercel. Alternatively use Vercel's CLI from the project root if you already use it.
-3. Select Next.js as the framework. Use Node.js 22.x, pnpm from package.json, and the committed pnpm lockfile. The included vercel.json supplies installation and build commands. Do not set a static output directory.
-4. Keep preview/deployment access restricted using the controls available on your account. Do not distribute the demonstration as a student login portal.
-5. Deploy. Confirm that the logo loads, all six grade levels appear in the administrator registration form, and the role selector still clearly says it is a demonstration.
-
-No account credentials or production records are included. No Supabase project has been configured and this package does not connect to a database.
+- Student, Teacher, Section Adviser, delegated Administrator, Registrar, Human Resources, and Super Administrator access
+- School-managed learner and personnel accounts
+- Bulk learner and teacher imports with temporary credentials
+- Persistent sign-in with secure refresh-token cookies
+- Learner information and enrollment management
+- Grade 7-10 TVE majors and Grade 7 exploratory TVE rotations
+- Senior High School Track and Strand/Program fields
+- Section Adviser and Subject Teacher assignments
+- Class and teacher schedules with conflict checking
+- Attendance and SF2
+- Grades and publication controls
+- SF9 report cards
+- SF10 permanent records
+- Personnel profiles
+- Announcements, Learning Resources, and Community Chat
+- School readiness, reports, and grade-level administration
 
 ## Local development
 
-Use Node.js 22.13 or newer in the 22.x line. Install the pnpm version declared in package.json, then run:
+Install the exact package-manager version declared in `package.json`, then run:
 
 ```sh
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Production checks:
+Before opening a pull request or merging a production change:
 
 ```sh
 pnpm typecheck
+pnpm test
 pnpm build
-pnpm start
 ```
 
-The dependency lockfile is retained from the original portal for reproducibility. Some unused starter dependencies remain; no Sites configuration, hosted identifiers, source credentials, node_modules or build output is included.
+Do not place Supabase service-role keys, Vercel tokens, passwords, recovery codes, or other secrets in the repository.
 
-## Provider instructions
+## Production change workflow
 
-- Vercel projects: https://vercel.com/docs/projects/overview
-- Vercel domains: https://vercel.com/docs/domains/working-with-domains/add-a-domain
-- Supabase authentication: https://supabase.com/docs/guides/auth
-- Supabase database access rules: https://supabase.com/docs/guides/database/postgres/row-level-security
+1. Create a branch from the latest `main`.
+2. Make the smallest necessary change.
+3. Run type checking, automated tests, and a production build.
+4. Verify the Vercel preview deployment.
+5. For database changes, review the SQL carefully and verify Supabase security/performance advisors.
+6. Merge only after the preview is healthy.
+7. Verify the new production deployment and review runtime errors.
+
+## Database migration caution
+
+The live Supabase project has historical migration entries that do not perfectly match every migration filename currently stored in this repository. Do **not** rename, replay, delete, or mark historical migrations as applied merely to make the lists look identical.
+
+Before any migration-history cleanup:
+
+- compare the live schema with the repository,
+- preserve production data,
+- identify migrations that were applied under a different timestamp or directly,
+- create a documented baseline/reconciliation plan, and
+- test restoration on a non-production database first.
+
+New schema changes should continue to be committed as migrations so the repository remains reproducible going forward.
+
+## Access and data rules
+
+- Students may access only their authorized academic information.
+- Subject Teachers may see learners for their assigned classes but cannot publish adviser-only grades.
+- Section Advisers manage their advisory learners within the permissions already enforced by the portal.
+- Delegated administrators receive only the permissions assigned to them.
+- Super Administrator access should remain limited.
+- Public registration must remain disabled.
+- Supabase Row Level Security and server-side authorization must be preserved.
+
+## Senior High School data
+
+Grade 11 and Grade 12 learner imports use the learner's Track and Strand/Program. Do not infer missing values from a learner's name or from an unrelated section.
+
+ALS-SHS classification needs to remain distinguishable from ordinary SHS when its final section/program data model is implemented. Do not hard-code a section name as the only authorization or reporting rule.
+
+## Useful files
+
+- `RELEASE_CHECKLIST.md` - production release checklist
+- `proxy.ts` - protected portal route authorization
+- `next.config.ts` - application headers and redirects
+- `supabase/migrations/` - committed database migrations
+- `tests/` - regression tests
