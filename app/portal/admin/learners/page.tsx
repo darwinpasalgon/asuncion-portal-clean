@@ -80,6 +80,8 @@ type Enrollment = {
   section_id: string | null;
   section: string;
   tve_major: string | null;
+  shs_track: string | null;
+  shs_strand_program: string | null;
   enrollment_status: string;
   learner_status: LearnerStatus;
   status_note: string | null;
@@ -153,6 +155,26 @@ const statusLabels: Record<LearnerStatus, string> = {
 
 function academicLevelLabel(gradeLevel: number) {
   return gradeLevel === 0 ? "ALS A&E" : `Grade ${gradeLevel}`;
+}
+
+function shsTrackLabel(value: string | null | undefined) {
+  const track = String(value ?? "").trim();
+  if (!track) return "—";
+  if (track === "Technical-Vocational-Livelihood" || track === "TVL") return "TVL";
+  return track;
+}
+
+function shsStrandLabel(value: string | null | undefined) {
+  const strand = String(value ?? "").trim();
+  if (!strand) return "—";
+  const labels: Record<string, string> = {
+    "Science, Technology, Engineering, and Mathematics": "STEM",
+    "Humanities and Social Sciences": "HUMSS",
+    "Accountancy, Business, and Management": "ABM",
+    "Organic Agriculture Production": "OAP",
+    "Food Processing": "FP",
+  };
+  return labels[strand] ?? strand;
 }
 
 function display(value: unknown) {
@@ -355,6 +377,8 @@ export default function LearnerManagementPage() {
           enrollment.section,
           enrollment.adviser_name,
           enrollment.tve_major,
+          enrollment.shs_track,
+          enrollment.shs_strand_program,
         ]
           .map((item) => String(item ?? "").toLowerCase())
           .some((item) => item.includes(query));
@@ -687,6 +711,8 @@ export default function LearnerManagementPage() {
         "Grade Level",
         "Section",
         "TVE Major",
+        "Track",
+        "Strand",
         "Learner Status",
         "Adviser",
         "Guardian",
@@ -700,6 +726,8 @@ export default function LearnerManagementPage() {
         enrollment.grade_level,
         enrollment.section,
         enrollment.tve_major ?? "",
+        shsTrackLabel(enrollment.shs_track) === "—" ? "" : shsTrackLabel(enrollment.shs_track),
+        shsStrandLabel(enrollment.shs_strand_program) === "—" ? "" : shsStrandLabel(enrollment.shs_strand_program),
         statusLabels[enrollment.learner_status ?? "active"],
         enrollment.adviser_name,
         learner.learner_info?.guardian_name ?? "",
@@ -715,6 +743,7 @@ export default function LearnerManagementPage() {
 
   const selectedCredentialSection =
     sections.find((section) => section.id === sectionFilter) ?? null;
+  const seniorHighSelected = gradeFilter === "11" || gradeFilter === "12";
 
   return (
     <main className={styles.page}>
@@ -928,7 +957,14 @@ export default function LearnerManagementPage() {
                     <th>LRN</th>
                     <th>Sex</th>
                     <th>Class</th>
-                    <th>TVE Major</th>
+                    {seniorHighSelected ? (
+                      <>
+                        <th>Track</th>
+                        <th>Strand</th>
+                      </>
+                    ) : (
+                      <th>TVE Major</th>
+                    )}
                     <th>Status</th>
                     <th>Adviser</th>
                     <th>Actions</th>
@@ -966,34 +1002,49 @@ export default function LearnerManagementPage() {
                         <strong>{academicLevelLabel(enrollment.grade_level)}</strong>
                         <small className={styles.blockText}>{enrollment.section || "No section"}</small>
                       </td>
-                      <td>
-                        {[8, 9, 10].includes(enrollment.grade_level) ? (
-                          <select
-                            className={styles.majorSelect}
-                            value={enrollment.tve_major ?? ""}
-                            disabled={majorSaving === enrollment.id}
-                            aria-label={`TVE Major for ${learner.full_name}`}
-                            onChange={(event) =>
-                              void saveTveMajor(
-                                learner.id,
-                                enrollment.id,
-                                event.target.value
-                              )
-                            }
-                          >
-                            <option value="">Not Assigned</option>
-                            {TECHNICAL_VOCATIONAL_MAJORS.map((major) => (
-                              <option key={major} value={major}>
-                                {major}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span className={styles.notApplicable}>
-                            {enrollment.grade_level === 7 ? "Exploratory" : "—"}
-                          </span>
-                        )}
-                      </td>
+                      {seniorHighSelected ? (
+                        <>
+                          <td>
+                            <span className={styles.notApplicable}>
+                              {shsTrackLabel(enrollment.shs_track)}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={styles.notApplicable}>
+                              {shsStrandLabel(enrollment.shs_strand_program)}
+                            </span>
+                          </td>
+                        </>
+                      ) : (
+                        <td>
+                          {[8, 9, 10].includes(enrollment.grade_level) ? (
+                            <select
+                              className={styles.majorSelect}
+                              value={enrollment.tve_major ?? ""}
+                              disabled={majorSaving === enrollment.id}
+                              aria-label={`TVE Major for ${learner.full_name}`}
+                              onChange={(event) =>
+                                void saveTveMajor(
+                                  learner.id,
+                                  enrollment.id,
+                                  event.target.value
+                                )
+                              }
+                            >
+                              <option value="">Not Assigned</option>
+                              {TECHNICAL_VOCATIONAL_MAJORS.map((major) => (
+                                <option key={major} value={major}>
+                                  {major}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className={styles.notApplicable}>
+                              {enrollment.grade_level === 7 ? "Exploratory" : "—"}
+                            </span>
+                          )}
+                        </td>
+                      )}
                       <td>
                         <span className={`${styles.status} ${styles[enrollment.learner_status ?? "active"]}`}>
                           {statusLabels[enrollment.learner_status ?? "active"]}
@@ -1075,6 +1126,18 @@ export default function LearnerManagementPage() {
                   <span>TVE Major</span>
                   <strong>{display(enrollmentForYear(detailLearner)?.tve_major)}</strong>
                 </div>
+              )}
+              {[11, 12].includes(enrollmentForYear(detailLearner)?.grade_level ?? 0) && (
+                <>
+                  <div>
+                    <span>Track</span>
+                    <strong>{shsTrackLabel(enrollmentForYear(detailLearner)?.shs_track)}</strong>
+                  </div>
+                  <div>
+                    <span>Strand</span>
+                    <strong>{shsStrandLabel(enrollmentForYear(detailLearner)?.shs_strand_program)}</strong>
+                  </div>
+                </>
               )}
             </div>
 

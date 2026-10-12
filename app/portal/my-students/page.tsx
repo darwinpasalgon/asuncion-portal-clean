@@ -52,6 +52,8 @@ type Learner = {
   section_id: string;
   section: string;
   tve_major: string | null;
+  shs_track: string | null;
+  shs_strand_program: string | null;
   learner_status: string;
 };
 
@@ -60,6 +62,26 @@ function sexGroup(value: string | null) {
   if (normalized === "m" || normalized === "male") return "Male";
   if (normalized === "f" || normalized === "female") return "Female";
   return "Unspecified";
+}
+
+function shsTrackLabel(value: string | null | undefined) {
+  const track = String(value ?? "").trim();
+  if (!track) return "Not Assigned";
+  if (track === "Technical-Vocational-Livelihood" || track === "TVL") return "TVL";
+  return track;
+}
+
+function shsStrandLabel(value: string | null | undefined) {
+  const strand = String(value ?? "").trim();
+  if (!strand) return "Not Assigned";
+  const labels: Record<string, string> = {
+    "Science, Technology, Engineering, and Mathematics": "STEM",
+    "Humanities and Social Sciences": "HUMSS",
+    "Accountancy, Business, and Management": "ABM",
+    "Organic Agriculture Production": "OAP",
+    "Food Processing": "FP",
+  };
+  return labels[strand] ?? strand;
 }
 
 function displayName(learner: Learner) {
@@ -136,6 +158,9 @@ export default function MyStudentsPage() {
         learner.lrn,
         learner.section,
         learner.guardian_name,
+        learner.tve_major,
+        learner.shs_track,
+        learner.shs_strand_program,
       ].some((value) => String(value ?? "").toLowerCase().includes(needle));
     });
   }, [learners, search, sectionFilter]);
@@ -164,9 +189,23 @@ export default function MyStudentsPage() {
         (learner) =>
           [8, 9, 10].includes(learner.grade_level) && Boolean(learner.tve_major)
       ).length,
+      shsAssigned: learners.filter(
+        (learner) =>
+          [11, 12].includes(learner.grade_level) &&
+          Boolean(learner.shs_track) &&
+          Boolean(learner.shs_strand_program)
+      ).length,
     }),
     [learners]
   );
+
+  const selectedSectionGrade = sectionFilter
+    ? sections.find((section) => section.id === sectionFilter)?.grade_level ?? null
+    : null;
+  const seniorHighView =
+    selectedSectionGrade !== null
+      ? [11, 12].includes(selectedSectionGrade)
+      : sections.length > 0 && sections.every((section) => [11, 12].includes(section.grade_level));
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -311,8 +350,8 @@ export default function MyStudentsPage() {
           </article>
           <article>
             <BookOpenCheck size={20} />
-            <span>TVE Major Assigned</span>
-            <strong>{counts.tveAssigned}</strong>
+            <span>{seniorHighView ? "Track / Strand Assigned" : "TVE Major Assigned"}</span>
+            <strong>{seniorHighView ? counts.shsAssigned : counts.tveAssigned}</strong>
           </article>
         </section>
 
@@ -626,7 +665,11 @@ export default function MyStudentsPage() {
                   <section className={styles.formSection}>
                     <div className={styles.sectionHeading}>
                       <h3>Academic Information</h3>
-                      <p>Placement fields are protected; Adviser-managed TVE Major remains editable.</p>
+                      <p>
+                        {[11, 12].includes(selected.grade_level)
+                          ? "Senior High Track and Strand are shown from the official enrollment record."
+                          : "Placement fields are protected; Adviser-managed TVE Major remains editable."}
+                      </p>
                     </div>
                     <div className={styles.formGrid}>
                       <label>
@@ -657,6 +700,21 @@ export default function MyStudentsPage() {
                             ))}
                           </select>
                         </label>
+                      )}
+                      {[11, 12].includes(selected.grade_level) && (
+                        <>
+                          <label>
+                            <span>Track</span>
+                            <input value={shsTrackLabel(selected.shs_track)} readOnly />
+                          </label>
+                          <label>
+                            <span>Strand</span>
+                            <input
+                              value={shsStrandLabel(selected.shs_strand_program)}
+                              readOnly
+                            />
+                          </label>
+                        </>
                       )}
                       <label className={styles.full}>
                         <span>Remarks</span>

@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
         admin
           .from("student_enrollments")
           .select(
-            "id,student_id,school_year_id,grade_level,section_id,tve_major,enrollment_status,learner_status,status_note,status_changed_at,enrolled_at,source_enrollment_id"
+            "id,student_id,school_year_id,grade_level,section_id,tve_major,shs_track,shs_strand_program,enrollment_status,learner_status,status_note,status_changed_at,enrolled_at,source_enrollment_id"
           )
           .order("enrolled_at", { ascending: false })
           .range(from, to)

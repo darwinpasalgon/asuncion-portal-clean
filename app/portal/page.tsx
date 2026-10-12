@@ -57,6 +57,8 @@ type AcademicContext = {
   section: string | null;
   enrollment_status: string | null;
   tve_major: string | null;
+  shs_track: string | null;
+  shs_strand_program: string | null;
   sex: string | null;
 };
 
@@ -337,6 +339,26 @@ function pageDisplayTitle(page: Page, role: Role) {
   if (page === "Learning resources") return "Learning Resources";
   if (page === "School setup") return "School Setup";
   return page;
+}
+
+function shsTrackLabel(value: string | null | undefined) {
+  const track = String(value ?? "").trim();
+  if (!track) return "Not Assigned Yet";
+  if (track === "Technical-Vocational-Livelihood" || track === "TVL") return "TVL";
+  return track;
+}
+
+function shsStrandLabel(value: string | null | undefined) {
+  const strand = String(value ?? "").trim();
+  if (!strand) return "Not Assigned Yet";
+  const labels: Record<string, string> = {
+    "Science, Technology, Engineering, and Mathematics": "STEM",
+    "Humanities and Social Sciences": "HUMSS",
+    "Accountancy, Business, and Management": "ABM",
+    "Organic Agriculture Production": "OAP",
+    "Food Processing": "FP",
+  };
+  return labels[strand] ?? strand;
 }
 
 function administratorLabel(profile: Profile, adminPermissions: string[] = []) {
@@ -728,11 +750,19 @@ function DashboardHome({
               </strong>
             </div>
             <div>
-              <span>{academicContext?.grade_level && [8, 9, 10].includes(academicContext.grade_level) ? "TVE Major" : "Account"}</span>
+              <span>
+                {academicContext?.grade_level && [8, 9, 10].includes(academicContext.grade_level)
+                  ? "TVE Major"
+                  : academicContext?.grade_level && [11, 12].includes(academicContext.grade_level)
+                    ? "Track / Strand"
+                    : "Account"}
+              </span>
               <strong>
                 {academicContext?.grade_level && [8, 9, 10].includes(academicContext.grade_level)
                   ? academicContext.tve_major || "Not Assigned Yet"
-                  : "Active Student"}
+                  : academicContext?.grade_level && [11, 12].includes(academicContext.grade_level)
+                    ? `${shsTrackLabel(academicContext.shs_track)} · ${shsStrandLabel(academicContext.shs_strand_program)}`
+                    : "Active Student"}
               </strong>
             </div>
           </>
@@ -2254,6 +2284,20 @@ export default function PortalPage() {
                         <dt>Technical Vocational Education Major</dt>
                         <dd>{academicContext.tve_major || "Not Assigned Yet"}</dd>
                       </div>
+                    )}
+                  {profile.role === "student" &&
+                    academicContext?.grade_level &&
+                    [11, 12].includes(academicContext.grade_level) && (
+                      <>
+                        <div>
+                          <dt>Track</dt>
+                          <dd>{shsTrackLabel(academicContext.shs_track)}</dd>
+                        </div>
+                        <div>
+                          <dt>Strand</dt>
+                          <dd>{shsStrandLabel(academicContext.shs_strand_program)}</dd>
+                        </div>
+                      </>
                     )}
                   <div><dt>Email</dt><dd>{profile.email}</dd></div>
                 </dl>
