@@ -1,6 +1,9 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import {
+  DEPED_SEAL_DATA_URL,
+  DEPED_WORDMARK_DATA_URL,
+} from "./logoData";
 
 export type Sf2DayColumn = {
   date: string;
@@ -171,45 +174,33 @@ function AttendanceCell({
   );
 }
 
-function LearnerRows({
-  rows,
+function LearnerRow({
+  learner,
+  index,
   dayColumns,
 }: {
-  rows: Sf2Learner[];
+  learner: Sf2Learner;
+  index: number;
   dayColumns: Sf2DayColumn[];
 }) {
   return (
-    <>
-      {rows.map((learner, index) => (
-        <tr className="sf2-learner-row" key={learner.student_id}>
-          <td className="sf2-no">{index + 1}</td>
-          <td colSpan={2} className="sf2-learner-name">
-            {learner.name}
-          </td>
-          {dayColumns.map((day, dayIndex) => (
-            <AttendanceCell
-              key={dayIndex}
-              cell={day ? learner.cells?.[dayIndex] : undefined}
-            />
-          ))}
-          <td className="sf2-small-total">{learner.absent}</td>
-          <td className="sf2-small-total">{learner.tardy}</td>
-          <td colSpan={6} className="sf2-learner-remarks">
-            {learner.remarks}
-          </td>
-        </tr>
+    <tr className="sf2-learner-row">
+      <td className="sf2-no">{index + 1}</td>
+      <td colSpan={2} className="sf2-learner-name">
+        {learner.name}
+      </td>
+      {dayColumns.map((day, dayIndex) => (
+        <AttendanceCell
+          key={dayIndex}
+          cell={day ? learner.cells?.[dayIndex] : undefined}
+        />
       ))}
-    </>
-  );
-}
-
-function TotalLabel({ label }: { label: string }) {
-  return (
-    <span className="sf2-total-label">
-      <span className="sf2-arrow">◀</span>
-      <span>{label}</span>
-      <span className="sf2-arrow">▶</span>
-    </span>
+      <td className="sf2-small-total">{learner.absent}</td>
+      <td className="sf2-small-total">{learner.tardy}</td>
+      <td colSpan={6} className="sf2-learner-remarks">
+        {learner.remarks}
+      </td>
+    </tr>
   );
 }
 
@@ -217,17 +208,17 @@ function SexTotalRow({
   label,
   totals,
   dayColumns,
-  combined = false,
 }: {
   label: string;
   totals: number[];
   dayColumns: Sf2DayColumn[];
-  combined?: boolean;
 }) {
   return (
-    <tr className={combined ? "sf2-sex-total sf2-combined-total" : "sf2-sex-total"}>
-      <td colSpan={3}>
-        <TotalLabel label={label} />
+    <tr className="sf2-sex-total">
+      <td colSpan={3} className="sf2-sex-label">
+        <span className="sf2-arrow">←</span>
+        {label}
+        <span className="sf2-arrow">→</span>
       </td>
       {dayColumns.map((day, index) => (
         <td key={index}>{day ? totals[index] ?? "" : ""}</td>
@@ -239,24 +230,28 @@ function SexTotalRow({
   );
 }
 
-function TopInformation({ report }: { report: Sf2ReportData }) {
+function OfficialHeading({ report }: { report: Sf2ReportData }) {
   return (
-    <div className="sf2-top-block">
-      <img
-        className="sf2-deped-seal"
-        src="/sf2/deped-seal.webp"
-        alt="Department of Education seal"
-      />
-      <img
-        className="sf2-deped-wordmark"
-        src="/sf2/deped-wordmark.webp"
-        alt="Department of Education"
-      />
-
-      <header className="sf2-title-block">
-        <h1>School Form 2 (SF2) Daily Attendance Report of Learners</h1>
-        <p>(This replaced Form 1, Form 2 &amp; STS Form 4 - Absenteeism and Dropout Profile)</p>
-      </header>
+    <>
+      <div className="sf2-official-heading">
+        <img
+          className="sf2-deped-seal"
+          src={DEPED_SEAL_DATA_URL}
+          alt="Department of Education seal"
+        />
+        <div className="sf2-title-block">
+          <h1>School Form 2 (SF2) Daily Attendance Report of Learners</h1>
+          <p>
+            (This replaced Form 1, Form 2 &amp; STS Form 4 - Absenteeism and
+            Dropout Profile)
+          </p>
+        </div>
+        <img
+          className="sf2-deped-wordmark"
+          src={DEPED_WORDMARK_DATA_URL}
+          alt="Department of Education"
+        />
+      </div>
 
       <div className="sf2-meta-grid">
         <label className="school-id-label">School ID</label>
@@ -273,7 +268,7 @@ function TopInformation({ report }: { report: Sf2ReportData }) {
         <label className="section-label">Section</label>
         <div className="section-value">{report.section.name}</div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -347,27 +342,60 @@ function Guidelines() {
   return (
     <div className="sf2-guidelines">
       <strong>GUIDELINES:</strong>
-      <p>1. The attendance shall be accomplished daily. Refer to the codes for checking learners&apos; attendance.</p>
-      <p>2. Dates shall be written in the preceding columns beside Learner&apos;s Name.</p>
+      <p>
+        1. The attendance shall be accomplished daily. Refer to the codes for
+        checking learners&apos; attendance.
+      </p>
+      <p>
+        2. Dates shall be written in the preceding columns beside Learner&apos;s
+        Name.
+      </p>
       <p>3. To compute the following:</p>
       <div className="sf2-formula">
         <span>a. Percentage of Enrolment =</span>
-        <span className="frac"><u>Registered Learner as of End of the Month</u><br />Enrolment as of 1st Friday of June</span>
+        <span className="frac">
+          <u>Registered Learner as of End of the Month</u>
+          <br />
+          Enrolment as of 1st Friday of June
+        </span>
         <span>x 100</span>
       </div>
       <div className="sf2-formula">
         <span>b. Average Daily Attendance =</span>
-        <span className="frac"><u>Total Daily Attendance</u><br />Number of School Days in reporting month</span>
+        <span className="frac">
+          <u>Total Daily Attendance</u>
+          <br />
+          Number of School Days in reporting month
+        </span>
       </div>
       <div className="sf2-formula">
         <span>c. Percentage of Attendance for the month =</span>
-        <span className="frac"><u>Average daily attendance</u><br />Registered Learner as of End of the month</span>
+        <span className="frac">
+          <u>Average daily attendance</u>
+          <br />
+          Registered Learner as of End of the month
+        </span>
         <span>x 100</span>
       </div>
-      <p>4. Every End of the month, the class adviser will submit this form to the office of the principal for recording of summary table into the School Form 4. Once signed by the principal, this form should be returned to the adviser.</p>
-      <p>5. The adviser will extend necessary intervention including but not limited to home visitation to learner/s that committed 5 consecutive days of absences or those with potentials of dropping out.</p>
-      <p>6. Attendance performance of learner is expected to reflect in Form 137 and Form 138 every grading period.</p>
-      <p>* Beginning of School Year cut-off report is every 1st Friday of School Calendar Days.</p>
+      <p>
+        4. Every End of the month, the class adviser will submit this form to the
+        office of the principal for recording of summary table into the School
+        Form 4. Once signed by the principal, this form should be returned to the
+        adviser.
+      </p>
+      <p>
+        5. The adviser will extend necessary intervention including but not
+        limited to home visitation to learner/s that committed 5 consecutive days
+        of absences or those with potentials of dropping out.
+      </p>
+      <p>
+        6. Attendance performance of learner is expected to reflect in Form 137
+        and Form 138 every grading period.
+      </p>
+      <p>
+        * Beginning of School Year cut-off report is every 1st Friday of School
+        Calendar Days.
+      </p>
     </div>
   );
 }
@@ -376,7 +404,10 @@ function Codes() {
   return (
     <div className="sf2-codes">
       <strong>1. CODES FOR CHECKING ATTENDANCE</strong>
-      <p>blank- Present; &nbsp; (x)- Absent; Tardy (half shaded= Upper for Late Comer, Lower for Cutting Classes)</p>
+      <p>
+        blank- Present; &nbsp; (x)- Absent; Tardy (half shaded= Upper for Late
+        Comer, Lower for Cutting Classes)
+      </p>
       <strong>2. REASONS/CAUSES OF DROP-OUTS</strong>
       <p><b>a. Domestic-Related Factors</b></p>
       <p>a.1. Had to take care of siblings</p>
@@ -420,30 +451,39 @@ export function Sf2PrintForm({ report }: { report: Sf2ReportData }) {
     return report.daily_totals.find((item) => item.date === day.date)?.total ?? 0;
   });
 
-  const learnerCount = report.learners.male.length + report.learners.female.length;
-  const rosterRowHeight = learnerCount > 46 ? "4.35mm" : "4.68mm";
-  const style = {
-    "--sf2-roster-row-height": rosterRowHeight,
-  } as CSSProperties;
-
   return (
-    <div className="sf2-print-document" style={style}>
+    <div className="sf2-print-document">
       <div className="sf2-flow-sheet">
-        <TopInformation report={report} />
+        <OfficialHeading report={report} />
 
         <table className="sf2-attendance-table">
           <AttendanceColGroup />
           <AttendanceHeader days={report.day_columns} />
           <tbody>
-            <LearnerRows rows={report.learners.male} dayColumns={report.day_columns} />
+            {report.learners.male.map((learner, index) => (
+              <LearnerRow
+                key={learner.student_id}
+                learner={learner}
+                index={index}
+                dayColumns={report.day_columns}
+              />
+            ))}
             <SexTotalRow
-              label="MALE | TOTAL Per Day"
+              label="MALE  | TOTAL Per Day"
               totals={maleTotals}
               dayColumns={report.day_columns}
             />
-            <LearnerRows rows={report.learners.female} dayColumns={report.day_columns} />
+
+            {report.learners.female.map((learner, index) => (
+              <LearnerRow
+                key={learner.student_id}
+                learner={learner}
+                index={index}
+                dayColumns={report.day_columns}
+              />
+            ))}
             <SexTotalRow
-              label="FEMALE | TOTAL Per Day"
+              label="FEMALE  | TOTAL Per Day"
               totals={femaleTotals}
               dayColumns={report.day_columns}
             />
@@ -451,17 +491,16 @@ export function Sf2PrintForm({ report }: { report: Sf2ReportData }) {
               label="Combined TOTAL PER DAY"
               totals={combinedTotals}
               dayColumns={report.day_columns}
-              combined
             />
           </tbody>
         </table>
 
-        <div className="sf2-bottom-spacer" />
         <div className="sf2-bottom-grid">
           <Guidelines />
           <Codes />
           <SummaryTable report={report} />
         </div>
+
         <div className="sf2-page-footer">School Form 2: Page 2 of ________</div>
       </div>
     </div>
