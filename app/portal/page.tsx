@@ -23,6 +23,7 @@ import {
   UserRound,
   Users,
 } from "lucide-react";
+import ProfileAvatar from "@/components/profile-avatar";
 import {
   Sidebar,
   SidebarContent,
@@ -219,6 +220,8 @@ type Profile = {
   position: string | null;
   account_status: "active";
   must_change_password: boolean;
+  has_profile_photo?: boolean;
+  profile_photo_updated_at?: string | null;
 };
 
 type GradeLevelHead = {
@@ -818,15 +821,6 @@ function DashboardHome({
   );
 }
 
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("") || "AN";
-}
-
 function SideNav({
   profile,
   page,
@@ -1020,10 +1014,21 @@ function SideNav({
           </SidebarMenu>
         </div>
 
-        {hasPersonnelProfile && (
-          <div className="nav-group-section">
-            <p className="nav-label">PROFILE</p>
-            <SidebarMenu>
+        <div className="nav-group-section">
+          <p className="nav-label">PROFILE</p>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                className="nav-button"
+                onClick={() => {
+                  window.location.href = "/portal/profile";
+                }}
+              >
+                <UserRound size={19} />
+                <span>My Profile</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            {hasPersonnelProfile && (
               <SidebarMenuItem>
                 <SidebarMenuButton
                   className="nav-button"
@@ -1035,9 +1040,9 @@ function SideNav({
                   <span>{profile.role === "teacher" ? "My Teacher Profile" : "My Personnel Profile"}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            </SidebarMenu>
-          </div>
-        )}
+            )}
+          </SidebarMenu>
+        </div>
 
         {(profile.role === "administrator" || profile.role === "staff_administrator") && (
           <>
@@ -1756,32 +1761,13 @@ export default function PortalPage() {
           </div>
 
           <div className="real-user-badge">
-            <div
-              aria-hidden="true"
-              style={{
-                width: 38,
-                height: 38,
-                minWidth: 38,
-                minHeight: 38,
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-                padding: 0,
-                margin: 0,
-                lineHeight: 1,
-                textAlign: "center",
-                boxSizing: "border-box",
-                background: "#e3eee7",
-                border: "1px solid #d5e3d9",
-                color: "#386348",
-                fontSize: "0.8rem",
-                fontWeight: 700,
-              }}
-            >
-              {initials(profile.full_name)}
-            </div>
+            <ProfileAvatar
+              userId={profile.id}
+              name={profile.full_name}
+              hasPhoto={Boolean(profile.has_profile_photo)}
+              version={profile.profile_photo_updated_at}
+              size={38}
+            />
             <div>
               <strong>{profile.full_name}</strong>
               <span>{displayRole}</span>
