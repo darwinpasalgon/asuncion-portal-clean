@@ -229,8 +229,12 @@ export async function GET(request: NextRequest) {
         token
       ).catch(() => []);
 
-      const sectionIds = Array.from(
-        new Set((adviserRows ?? []).map((row: { section_id: string }) => row.section_id))
+      const sectionIds: string[] = Array.from(
+        new Set<string>(
+          (adviserRows ?? []).map((row: { section_id: string }) =>
+            String(row.section_id)
+          )
+        )
       );
 
       if (sectionIds.length) {
@@ -371,11 +375,10 @@ export async function GET(request: NextRequest) {
         : Promise.resolve([]),
     ]);
 
-    const peopleMap = new Map(
-      (people ?? []).map((person: { id: string; full_name: string }) => [
-        String(person.id),
-        String(person.full_name),
-      ])
+    const peopleMap = new Map<string, string>(
+      ((people ?? []) as Array<{ id: string; full_name: string }>).map(
+        (person) => [String(person.id), String(person.full_name)]
+      )
     );
     const learnerInfoMap = new Map<string, LearnerInfo>(
       ((learnerInformation ?? []) as LearnerInfo[]).map((item) => [
