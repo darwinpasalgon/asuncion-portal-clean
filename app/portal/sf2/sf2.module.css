@@ -133,16 +133,14 @@
 .printScope :global(.sf2-logo-row){
   position:absolute;
   z-index:3;
-  left:0;
-  right:31.345mm;
-  top:.62mm;
-  height:21.2mm;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
+  inset:0 0 auto 0;
+  height:22mm;
   pointer-events:none;
 }
 .printScope :global(.sf2-deped-seal-frame){
+  position:absolute;
+  left:0;
+  top:.62mm;
   width:21.205mm;
   height:21.135mm;
   display:flex;
@@ -151,11 +149,14 @@
   overflow:hidden;
 }
 .printScope :global(.sf2-deped-wordmark-frame){
+  position:absolute;
+  right:0;
+  top:0;
   width:46.718mm;
   height:21.135mm;
   display:flex;
-  align-items:center;
-  justify-content:center;
+  align-items:flex-start;
+  justify-content:flex-end;
   overflow:hidden;
 }
 .printScope :global(.sf2-deped-seal),
