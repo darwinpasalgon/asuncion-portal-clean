@@ -130,23 +130,50 @@
   height:35.105mm;
   overflow:hidden;
 }
-.printScope :global(.sf2-deped-seal){
+.printScope :global(.sf2-logo-row){
   position:absolute;
-  z-index:2;
+  z-index:3;
   left:0;
-  top:.615mm;
+  right:31.345mm;
+  top:.62mm;
+  height:21.2mm;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  pointer-events:none;
+}
+.printScope :global(.sf2-deped-seal-frame){
   width:21.205mm;
   height:21.135mm;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.printScope :global(.sf2-deped-wordmark-frame){
+  width:46.718mm;
+  height:21.135mm;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.printScope :global(.sf2-deped-seal),
+.printScope :global(.sf2-deped-wordmark){
+  display:block;
+  width:100%;
+  height:100%;
+  max-width:none;
+  max-height:none;
+  margin:0;
+  filter:none;
+  image-rendering:auto;
+}
+.printScope :global(.sf2-deped-seal){
   object-fit:contain;
 }
 .printScope :global(.sf2-deped-wordmark){
-  position:absolute;
-  z-index:2;
-  left:210.55mm;
-  top:.821mm;
-  width:46.718mm;
-  height:21.733mm;
-  object-fit:contain;
+  object-fit:fill;
 }
 .printScope :global(.sf2-title-block){
   position:absolute;
