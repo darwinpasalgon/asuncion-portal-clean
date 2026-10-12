@@ -570,13 +570,18 @@
   border-radius:8px;
 }
 .member:hover{background:#f5f9fa}
-.memberAvatar{
+.memberAvatarWrap{
   position:relative;
+  width:31px;
+  height:31px;
+  flex:none;
+}
+.memberAvatar{
   width:31px;
   height:31px;
   font-size:.55rem;
 }
-.memberAvatar>span{
+.onlineDot{
   position:absolute;
   right:-1px;
   bottom:-1px;
