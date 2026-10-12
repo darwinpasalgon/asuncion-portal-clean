@@ -195,6 +195,7 @@ export async function POST(request: NextRequest) {
 
     const isAlsAe = gradeLevel === 0;
     const isRegularGrade = gradeLevel >= 7 && gradeLevel <= 12;
+    const requestedProgramType = String(body?.programType ?? "").trim();
     if (!Number.isInteger(gradeLevel) || (!isAlsAe && !isRegularGrade)) {
       return NextResponse.json(
         { error: "Select a valid Grade Level or ALS A&E." },
@@ -209,13 +210,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let programType: string | null = null;
+    if (isAlsAe) {
+      programType = "ALS A&E";
+    } else if (gradeLevel === 11 || gradeLevel === 12) {
+      if (!validShsProgramType(requestedProgramType)) {
+        return NextResponse.json(
+          { error: "Select Regular SHS or ALS-SHS for a Senior High section." },
+          { status: 400 }
+        );
+      }
+      programType = requestedProgramType;
+    }
+
     const response = await fetch(`${SUPABASE_URL}/rest/v1/sections`, {
       method: "POST",
       headers: {
         ...headers(token),
         Prefer: "return=representation",
       },
-      body: JSON.stringify({ grade_level: gradeLevel, name, is_active: true }),
+      body: JSON.stringify({
+        grade_level: gradeLevel,
+        name,
+        is_active: true,
+        program_type: programType,
+      }),
       cache: "no-store",
     });
 
