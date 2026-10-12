@@ -200,11 +200,12 @@ async function accessibleRooms(
       for (const row of assignments ?? []) {
         const grade = Number(row.grade_level);
         if (Number.isInteger(grade)) allowedGrades.add(grade);
-        if (row.section_id) allowedSections.add(String(row.section_id));
       }
+
       for (const row of adviserRows ?? []) {
         if (row.section_id) allowedSections.add(String(row.section_id));
       }
+
       for (const row of headRows ?? []) {
         const grade = Number(row.grade_level);
         if (Number.isInteger(grade)) allowedGrades.add(grade);
@@ -213,18 +214,6 @@ async function accessibleRooms(
       for (const section of sections) {
         if (allowedSections.has(section.id)) {
           allowedGrades.add(Number(section.grade_level));
-        }
-      }
-
-      for (const section of sections) {
-        if (
-          allowedGrades.has(Number(section.grade_level)) &&
-          (headRows ?? []).some(
-            (row: { grade_level?: number }) =>
-              Number(row.grade_level) === Number(section.grade_level)
-          )
-        ) {
-          allowedSections.add(section.id);
         }
       }
     }
