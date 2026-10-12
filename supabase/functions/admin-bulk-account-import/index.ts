@@ -381,7 +381,7 @@ Deno.serve(async (req) => {
 
       const { data: validSection } = await admin
         .from("sections")
-        .select("id,name")
+        .select("id,name,program_type")
         .eq("grade_level", gradeLevel)
         .eq("name", section)
         .eq("is_active", true)
@@ -389,6 +389,18 @@ Deno.serve(async (req) => {
 
       if (!validSection) {
         failures.push({ row_number: rowNumber, name: fullName, error: "Section does not match an active section for the Grade Level." });
+        continue;
+      }
+
+      if (
+        [11, 12].includes(gradeLevel) &&
+        !["Regular SHS", "ALS-SHS"].includes(String(validSection.program_type ?? ""))
+      ) {
+        failures.push({
+          row_number: rowNumber,
+          name: fullName,
+          error: "Set this Senior High section's Program Type in School Setup before importing learners.",
+        });
         continue;
       }
 
