@@ -128,7 +128,14 @@
   position:relative;
   width:var(--sf2-print-width);
   height:35.105mm;
-  overflow:hidden;
+  overflow:visible;
+  break-inside:avoid;
+  page-break-inside:avoid;
+}
+.printScope :global(.sf2-official-heading){
+  position:absolute;
+  inset:0 0 auto 0;
+  height:13.6mm;
 }
 .printScope :global(.sf2-deped-seal){
   position:absolute;
@@ -152,9 +159,11 @@
   position:absolute;
   z-index:1;
   top:2.95mm;
-  left:22mm;
-  right:29mm;
+  left:0;
+  right:0;
   text-align:center;
+  padding:0 50mm;
+  box-sizing:border-box;
 }
 .printScope :global(.sf2-title-block h1){
   margin:0;
@@ -300,7 +309,7 @@
 /* The original row is 21.95pt. 4.68mm is the browser-calibrated
    equivalent that preserves the workbook's two-page A4 flow with repeated headers. */
 .printScope :global(.sf2-learner-row td){
-  height:var(--sf2-roster-row-height,4.68mm);
+  height:var(--sf2-roster-row-height,4.62mm);
 }
 .printScope :global(.sf2-no){
   font-size:6.5pt;
@@ -355,7 +364,7 @@
   font-size:6pt;
 }
 .printScope :global(.sf2-sex-total td){
-  height:var(--sf2-roster-row-height,4.68mm);
+  height:var(--sf2-roster-row-height,4.62mm);
   border-top:.34mm solid #000;
   border-bottom:.28mm solid #000;
   text-align:center;
@@ -366,14 +375,11 @@
   font-size:8.68pt;
   font-weight:700;
 }
-.printScope :global(.sf2-total-label){
-  width:100%;
+.printScope :global(.sf2-sex-label){
   display:grid;
   grid-template-columns:9mm 1fr 9mm;
   align-items:center;
   gap:1mm;
-}
-.printScope :global(.sf2-total-label > span:nth-child(2)){
   text-align:center;
 }
 .printScope :global(.sf2-arrow){
@@ -392,6 +398,8 @@
    A:O guidelines | P gap | Q:Z codes | AA gap | AB:AJ summary. */
 .printScope :global(.sf2-bottom-grid){
   width:var(--sf2-print-width);
+  break-before:auto;
+  page-break-before:auto;
   min-height:107.284mm;
   display:grid;
   grid-template-columns:137.421mm 6.061mm 60.609mm 6.061mm 78.462mm;
