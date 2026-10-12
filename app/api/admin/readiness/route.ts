@@ -81,6 +81,7 @@ type Section = {
   id: string;
   grade_level: number;
   name: string;
+  program_type: string | null;
 };
 
 type LearnerInfo = {
@@ -181,6 +182,7 @@ export async function GET(request: NextRequest) {
         gradeCounts: [],
         missingTve: { count: 0, byGrade: [] },
         missingShs: { count: 0, byGrade: [], bySection: [] },
+        missingShsProgramTypes: [],
         incompleteLearners: { count: 0, samples: [] },
         sectionsWithoutAdviser: [],
         attendanceGaps: [],
@@ -206,7 +208,7 @@ export async function GET(request: NextRequest) {
       passwordResets,
     ] = await Promise.all([
       getRows(
-        "sections?is_active=eq.true&grade_level=gte.7&grade_level=lte.12&select=id,grade_level,name&order=grade_level.asc,name.asc",
+        "sections?is_active=eq.true&grade_level=gte.7&grade_level=lte.12&select=id,grade_level,name,program_type&order=grade_level.asc,name.asc",
         token
       ),
       getAllRows(
@@ -317,6 +319,18 @@ export async function GET(request: NextRequest) {
         count: missingShsRows.filter((row) => row.section_id === section.id).length,
       }))
       .filter((item) => item.count > 0);
+
+    const missingShsProgramTypes = sections
+      .filter(
+        (section) =>
+          (section.grade_level === 11 || section.grade_level === 12) &&
+          blank(section.program_type)
+      )
+      .map((section) => ({
+        id: section.id,
+        grade_level: section.grade_level,
+        name: section.name,
+      }));
 
     const incompleteLearnerSamples: Array<Record<string, unknown>> = [];
     let incompleteLearnerCount = 0;
@@ -429,6 +443,7 @@ export async function GET(request: NextRequest) {
         byGrade: missingShsByGrade,
         bySection: missingShsBySection,
       },
+      missingShsProgramTypes,
       incompleteLearners: {
         count: incompleteLearnerCount,
         samples: incompleteLearnerSamples,
