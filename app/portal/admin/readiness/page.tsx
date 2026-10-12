@@ -14,6 +14,7 @@ import {
   GraduationCap,
   KeyRound,
   RefreshCw,
+  School,
   ShieldCheck,
   UserRound,
   Users,
