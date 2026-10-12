@@ -475,6 +475,7 @@ export default function CommunityPage() {
 
   async function removeProfilePhoto(userId: string) {
     if (!community?.me.is_admin) return;
+    if (!window.confirm("Remove this user's profile photo?")) return;
 
     setWorking(`photo:${userId}`);
     setError("");
@@ -906,6 +907,19 @@ export default function CommunityPage() {
                         <strong>{mine ? "You" : member.display_name}</strong>
                         <span>{roleLabel[member.role]}</span>
                       </div>
+                      {community.me.is_admin &&
+                        !mine &&
+                        member.has_profile_photo && (
+                          <button
+                            type="button"
+                            className={styles.memberPhotoAction}
+                            title="Remove profile photo"
+                            disabled={working === `photo:${member.user_id}`}
+                            onClick={() => void removeProfilePhoto(member.user_id)}
+                          >
+                            <ImageOff size={13} />
+                          </button>
+                        )}
                       {muted && (
                         <span className={styles.mutedIcon} title="Muted">
                           <VolumeX size={13} />
