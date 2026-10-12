@@ -497,6 +497,8 @@ export function Sf2PrintForm({ report }: { report: Sf2ReportData }) {
           </tbody>
         </table>
 
+        <div className="sf2-bottom-spacer" aria-hidden="true" />
+
         <div className="sf2-bottom-grid">
           <Guidelines />
           <Codes />
