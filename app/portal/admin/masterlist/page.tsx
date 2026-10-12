@@ -412,6 +412,12 @@ export default function BulkAccountImportPage() {
         setError("Select the Grade Level and Section before downloading the learner template.");
         return;
       }
+      if (!seniorHighProgramReady) {
+        setError(
+          "Set this Senior High section's Program Type in School Setup before downloading or importing learner data."
+        );
+        return;
+      }
       setError("");
       downloadCsv(
         `ANHS_Grade_${selectedGrade}_${selectedSection.replace(/\s+/g, "_")}_Learner_Import.csv`,
@@ -477,6 +483,15 @@ export default function BulkAccountImportPage() {
     if (personType === "student" && (!selectedGrade || !selectedSection)) {
       setFile(null);
       setError("Select the Grade Level and Section before choosing a learner SF1 file.");
+      event.target.value = "";
+      return;
+    }
+
+    if (personType === "student" && !seniorHighProgramReady) {
+      setFile(null);
+      setError(
+        "Set this Senior High section's Program Type in School Setup before uploading learner data."
+      );
       event.target.value = "";
       return;
     }
