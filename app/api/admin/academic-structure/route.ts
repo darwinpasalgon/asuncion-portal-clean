@@ -28,6 +28,12 @@ async function isAdmin(token: string) {
   return hasAdminPermission(token, "school_setup.manage");
 }
 
+const SHS_PROGRAM_TYPES = new Set(["Regular SHS", "ALS-SHS"]);
+
+function validShsProgramType(value: unknown) {
+  return SHS_PROGRAM_TYPES.has(String(value ?? "").trim());
+}
+
 async function restJson(url: string, token: string) {
   const response = await fetch(url, { headers: headers(token), cache: "no-store" });
   if (!response.ok) throw new Error("Academic structure query failed.");
@@ -80,7 +86,7 @@ export async function GET(request: NextRequest) {
         token
       ),
       restJson(
-        `${SUPABASE_URL}/rest/v1/sections?select=id,grade_level,name,is_active&order=grade_level.asc,name.asc`,
+        `${SUPABASE_URL}/rest/v1/sections?select=id,grade_level,name,is_active,program_type&order=grade_level.asc,name.asc`,
         token
       ),
     ]);
@@ -189,6 +195,7 @@ export async function POST(request: NextRequest) {
 
     const isAlsAe = gradeLevel === 0;
     const isRegularGrade = gradeLevel >= 7 && gradeLevel <= 12;
+    const requestedProgramType = String(body?.programType ?? "").trim();
     if (!Number.isInteger(gradeLevel) || (!isAlsAe && !isRegularGrade)) {
       return NextResponse.json(
         { error: "Select a valid Grade Level or ALS A&E." },
@@ -203,13 +210,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let programType: string | null = null;
+    if (isAlsAe) {
+      programType = "ALS A&E";
+    } else if (gradeLevel === 11 || gradeLevel === 12) {
+      if (!validShsProgramType(requestedProgramType)) {
+        return NextResponse.json(
+          { error: "Select Regular SHS or ALS-SHS for a Senior High section." },
+          { status: 400 }
+        );
+      }
+      programType = requestedProgramType;
+    }
+
     const response = await fetch(`${SUPABASE_URL}/rest/v1/sections`, {
       method: "POST",
       headers: {
         ...headers(token),
         Prefer: "return=representation",
       },
-      body: JSON.stringify({ grade_level: gradeLevel, name, is_active: true }),
+      body: JSON.stringify({
+        grade_level: gradeLevel,
+        name,
+        is_active: true,
+        program_type: programType,
+      }),
       cache: "no-store",
     });
 
@@ -231,6 +256,58 @@ export async function POST(request: NextRequest) {
       section: result?.[0] ?? null,
       levelLabel: isAlsAe ? "ALS A&E" : `Grade ${gradeLevel}`,
     });
+  }
+
+  if (action === "set_section_program_type") {
+    const id = String(body?.id ?? "");
+    const programType = String(body?.programType ?? "").trim();
+    if (!id || !validShsProgramType(programType)) {
+      return NextResponse.json(
+        { error: "Choose a Senior High section and a valid Program Type." },
+        { status: 400 }
+      );
+    }
+
+    const rows = await restJson(
+      `${SUPABASE_URL}/rest/v1/sections?id=eq.${encodeURIComponent(
+        id
+      )}&select=id,grade_level,name&limit=1`,
+      token
+    ).catch(() => []);
+
+    const section = rows?.[0];
+    if (!section || ![11, 12].includes(Number(section.grade_level))) {
+      return NextResponse.json(
+        { error: "Program Type can only be changed for Grade 11 or Grade 12 sections." },
+        { status: 400 }
+      );
+    }
+
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/sections?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        headers: {
+          ...headers(token),
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify({
+          program_type: programType,
+          updated_at: new Date().toISOString(),
+        }),
+        cache: "no-store",
+      }
+    );
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result?.[0]) {
+      return NextResponse.json(
+        { error: "Unable to update the section Program Type." },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ ok: true, section: result[0] });
   }
 
   if (action === "set_section_active") {

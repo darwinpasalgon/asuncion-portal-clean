@@ -33,6 +33,7 @@ type Section = {
   grade_level: number;
   name: string;
   is_active: boolean;
+  program_type: string | null;
 };
 
 type Enrollment = {
@@ -53,6 +54,8 @@ export default function SchoolSetupPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [newSchoolYearStart, setNewSchoolYearStart] = useState("");
+  const [newSectionGrade, setNewSectionGrade] = useState("");
+  const [newSectionProgramType, setNewSectionProgramType] = useState("");
 
   async function load(background = false) {
     const scrollY = captureRefreshScroll(background);
@@ -171,13 +174,19 @@ export default function SchoolSetupPage() {
     const data = new FormData(form);
     const gradeLevel = Number(data.get("gradeLevel") ?? 0);
     const name = String(data.get("sectionName") ?? "").trim();
+    const programType = String(data.get("programType") ?? "").trim();
 
     setWorking("add");
     try {
       const response = await fetch("/api/admin/academic-structure", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "add_section", gradeLevel, name }),
+        body: JSON.stringify({
+          action: "add_section",
+          gradeLevel,
+          name,
+          programType,
+        }),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -189,7 +198,45 @@ export default function SchoolSetupPage() {
         `Section ${name} added to ${gradeLevel === 0 ? "ALS A&E" : `Grade ${gradeLevel}`}.`
       );
       form.reset();
+      setNewSectionGrade("");
+      setNewSectionProgramType("");
       await load(true);
+    } catch {
+      setError("Unable to reach the school setup service.");
+    } finally {
+      setWorking("");
+    }
+  }
+
+  async function setSectionProgramType(section: Section, programType: string) {
+    if (![11, 12].includes(section.grade_level) || !programType) return;
+
+    setWorking(`program-${section.id}`);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch("/api/admin/academic-structure", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "set_section_program_type",
+          id: section.id,
+          programType,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(result.error ?? "Unable to update the section Program Type.");
+        return;
+      }
+
+      setSections((current) =>
+        current.map((item) =>
+          item.id === section.id ? { ...item, program_type: programType } : item
+        )
+      );
+      setSuccess(`${section.name} is now classified as ${programType}.`);
     } catch {
       setError("Unable to reach the school setup service.");
     } finally {
@@ -411,22 +458,49 @@ export default function SchoolSetupPage() {
                       <div className={styles.sectionList}>
                         {gradeSections.map((section) => (
                           <div className={styles.sectionRow} key={section.id}>
-                            <div>
+                            <div className={styles.sectionInfo}>
                               <strong>{section.name}</strong>
                               <span>
                                 {countForSection(section.id)} student
                                 {countForSection(section.id) === 1 ? "" : "s"}
                               </span>
+                              {section.program_type && (
+                                <span className={styles.programBadge}>
+                                  {section.program_type}
+                                </span>
+                              )}
                             </div>
-                            <button
-                              className={section.is_active ? styles.active : styles.inactive}
-                              disabled={working === section.id}
-                              onClick={() =>
-                                void setSectionActive(section, !section.is_active)
-                              }
-                            >
-                              {section.is_active ? "Active" : "Inactive"}
-                            </button>
+                            <div className={styles.sectionActions}>
+                              {[11, 12].includes(section.grade_level) && (
+                                <select
+                                  className={styles.programSelect}
+                                  value={section.program_type ?? ""}
+                                  disabled={working === `program-${section.id}`}
+                                  onChange={(event) =>
+                                    void setSectionProgramType(
+                                      section,
+                                      event.target.value
+                                    )
+                                  }
+                                  aria-label={`Program Type for ${section.name}`}
+                                >
+                                  <option value="" disabled>
+                                    Program Type Not Set
+                                  </option>
+                                  <option value="Regular SHS">Regular SHS</option>
+                                  <option value="ALS-SHS">ALS-SHS</option>
+                                </select>
+                              )}
+                              <button
+                                className={section.is_active ? styles.active : styles.inactive}
+                                disabled={working === section.id}
+                                onClick={() =>
+                                  void setSectionActive(section, !section.is_active)
+                                }
+                              >
+                                {section.is_active ? "Active" : "Inactive"}
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -452,7 +526,15 @@ export default function SchoolSetupPage() {
           <form className={styles.addForm} onSubmit={addSection}>
             <label>
               <span>Grade Level</span>
-              <select name="gradeLevel" required defaultValue="">
+              <select
+                name="gradeLevel"
+                required
+                value={newSectionGrade}
+                onChange={(event) => {
+                  setNewSectionGrade(event.target.value);
+                  setNewSectionProgramType("");
+                }}
+              >
                 <option value="" disabled>Select Grade Level / Program</option>
                 {gradeLevels.map((grade) => (
                   <option key={grade.grade_level} value={grade.grade_level}>
@@ -461,6 +543,22 @@ export default function SchoolSetupPage() {
                 ))}
               </select>
             </label>
+
+            {(newSectionGrade === "11" || newSectionGrade === "12") && (
+              <label>
+                <span>Program Type</span>
+                <select
+                  name="programType"
+                  required
+                  value={newSectionProgramType}
+                  onChange={(event) => setNewSectionProgramType(event.target.value)}
+                >
+                  <option value="" disabled>Select Program Type</option>
+                  <option value="Regular SHS">Regular SHS</option>
+                  <option value="ALS-SHS">ALS-SHS</option>
+                </select>
+              </label>
+            )}
 
             <label>
               <span>Section Name</span>

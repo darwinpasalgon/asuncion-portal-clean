@@ -30,14 +30,18 @@
 .sectionList{padding:7px 16px}
 .sectionRow{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 2px;border-bottom:1px solid #e9eef1}
 .sectionRow:last-child{border-bottom:0}
-.sectionRow>div strong,.sectionRow>div span{display:block}
-.sectionRow>div strong{font-size:.87rem;color:#34586d}
-.sectionRow>div span{font-size:.72rem;color:#8596a0;margin-top:4px}
+.sectionInfo strong,.sectionInfo span{display:block}
+.sectionInfo strong{font-size:.87rem;color:#34586d}
+.sectionInfo>span{font-size:.72rem;color:#8596a0;margin-top:4px}
+.sectionActions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.programBadge{width:max-content;margin-top:6px!important;padding:4px 8px;border-radius:999px;background:#eef4fb;color:#2d648a!important;font-size:.63rem!important;font-weight:800}
+.programSelect{min-height:34px;border:1px solid #cfdde5;border-radius:8px;background:#fff;color:#2e6786;padding:0 9px;font-size:.68rem;font-weight:700}
+.programSelect:disabled{opacity:.55}
 .active,.inactive{border:0;border-radius:999px;padding:6px 10px;font-size:.68rem;font-weight:750}
 .active{background:#e9f6ee;color:#26734e}
 .inactive{background:#f1f3f4;color:#7a858b}
 .noSections{padding:28px 18px;color:#80919b;font-size:.82rem;text-align:center}
-.addForm{display:grid;grid-template-columns:180px 1fr auto;gap:14px;align-items:end;padding:24px 26px}
+.addForm{display:grid;grid-template-columns:180px repeat(2,minmax(180px,1fr)) auto;gap:14px;align-items:end;padding:24px 26px}
 .addForm label{display:flex;flex-direction:column;gap:7px}
 .addForm label span{font-size:.75rem;font-weight:700;color:#526c7b}
 .addForm select,.addForm input{min-height:42px;border:1px solid #d6e1e7;border-radius:8px;background:#fff;padding:0 11px;color:#294d64}
@@ -47,7 +51,7 @@
 .error{border:1px solid #efcccc;background:#fff4f4;color:#9a3f3f}
 .success{border:1px solid #cce7d5;background:#f0faf3;color:#287052}
 @media(max-width:850px){.header{align-items:flex-start;flex-direction:column}.summary{grid-template-columns:1fr 1fr}.gradeGrid{grid-template-columns:1fr}.addForm{grid-template-columns:1fr}}
-@media(max-width:520px){.page{padding-inline:14px}.summary{grid-template-columns:1fr}.topActions{align-items:flex-start;flex-direction:column;gap:10px}.topLink+.topLink{padding-left:0;border-left:0}.panelHeading{align-items:flex-start;flex-direction:column}.gradeGrid{padding:14px}.addForm{padding:20px}}
+@media(max-width:520px){.page{padding-inline:14px}.summary{grid-template-columns:1fr}.topActions{align-items:flex-start;flex-direction:column;gap:10px}.topLink+.topLink{padding-left:0;border-left:0}.panelHeading{align-items:flex-start;flex-direction:column}.gradeGrid{padding:14px}.sectionRow{align-items:flex-start;flex-direction:column}.sectionActions{width:100%;justify-content:flex-start}.programSelect{flex:1;min-width:180px}.addForm{padding:20px}}
 
 .schoolYearList{display:grid;gap:9px;padding:20px 24px 8px}
 .schoolYearRow{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 14px;border:1px solid #e1e9ed;border-radius:10px;background:#fbfdfe}

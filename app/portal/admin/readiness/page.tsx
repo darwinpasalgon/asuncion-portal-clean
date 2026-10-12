@@ -14,6 +14,7 @@ import {
   GraduationCap,
   KeyRound,
   RefreshCw,
+  School,
   ShieldCheck,
   UserRound,
   Users,
@@ -61,6 +62,11 @@ type ReadinessData = {
       count: number;
     }>;
   };
+  missingShsProgramTypes: Array<{
+    id: string;
+    grade_level: number;
+    name: string;
+  }>;
   incompleteLearners: {
     count: number;
     samples: Array<{
@@ -197,6 +203,7 @@ export default function SchoolReadinessPage() {
       setup?.unscheduled_count ?? null,
       data.missingTve.count,
       data.missingShs.count,
+      data.missingShsProgramTypes.length,
       data.incompleteLearners.count,
       data.sectionsWithoutAdviser.length,
       data.emptyGradeLevels.length,
@@ -345,6 +352,14 @@ export default function SchoolReadinessPage() {
                   href="/portal/admin/learners?missing=shs_track_strand"
                   action="Review Senior High Learners"
                   icon={GraduationCap}
+                />
+                <HealthCard
+                  title="SHS Sections Missing Program Type"
+                  description="Grade 11–12 sections that still need to be classified as Regular SHS or ALS-SHS."
+                  count={data.missingShsProgramTypes.length}
+                  href="/portal/admin/school-setup"
+                  action="Set Program Type"
+                  icon={School}
                 />
                 <HealthCard
                   title="Sections Without Adviser"
