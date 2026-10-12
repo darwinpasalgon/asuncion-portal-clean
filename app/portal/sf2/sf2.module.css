@@ -95,6 +95,9 @@
   background:#fff;
   border-radius:12px;
 }
+.printScope{
+  --sf2-print-width:288.6134mm;
+}
 @media(max-width:800px){
   .page{padding:12px}
   .header{flex-direction:column}
@@ -103,187 +106,335 @@
   .topBar{align-items:stretch;flex-direction:column}
 }
 
-/* Official SF2 print geometry based on the uploaded Excel template. */
+/* Exact print geometry follows the uploaded SF2 workbook:
+   A4 landscape, 62% Excel scale, L/R/T/B = .17/.16/.18/.19 inch. */
 .printScope :global(.sf2-print-document){
-  width:max-content;
+  width:var(--sf2-print-width);
   margin:0 auto;
-  font-family:"Arial Narrow",Arial,sans-serif;
+  background:#fff;
   color:#000;
+  font-family:"Arial Narrow",Arial,sans-serif;
 }
-.printScope :global(.sf2-report-set){width:max-content}
-.printScope :global(.sf2-sheet){
-  width:288.618mm;
-  min-height:200.6mm;
+.printScope :global(.sf2-flow-sheet){
+  width:var(--sf2-print-width);
   box-sizing:border-box;
   background:#fff;
-  margin:0 auto 12mm;
-  padding:0;
-  font-family:"Arial Narrow",Arial,sans-serif;
   color:#000;
-  overflow:hidden;
-  page-break-after:always;
-  break-after:page;
+  overflow:visible;
 }
-.printScope :global(.sf2-title-block){text-align:center;padding-top:1.5mm;margin-bottom:2mm}
+
+/* Rows 1-9 of the workbook: 160.5 pt x 62% = 35.105 mm. */
+.printScope :global(.sf2-top-block){
+  position:relative;
+  width:var(--sf2-print-width);
+  height:35.105mm;
+  overflow:hidden;
+}
+.printScope :global(.sf2-deped-seal){
+  position:absolute;
+  z-index:2;
+  left:0;
+  top:.615mm;
+  width:21.205mm;
+  height:21.135mm;
+  object-fit:contain;
+}
+.printScope :global(.sf2-deped-wordmark){
+  position:absolute;
+  z-index:2;
+  left:210.55mm;
+  top:.821mm;
+  width:46.718mm;
+  height:21.733mm;
+  object-fit:contain;
+}
+.printScope :global(.sf2-title-block){
+  position:absolute;
+  z-index:1;
+  top:2.95mm;
+  left:22mm;
+  right:29mm;
+  text-align:center;
+}
 .printScope :global(.sf2-title-block h1){
   margin:0;
-  font-size:16.5pt;
-  line-height:1.05;
+  font-size:13.64pt;
+  line-height:1.02;
   font-weight:700;
+  white-space:nowrap;
 }
 .printScope :global(.sf2-title-block p){
-  margin:.8mm 0 0;
-  font-size:9pt;
+  margin:.55mm 0 0;
+  font-size:7.44pt;
   line-height:1;
   font-style:italic;
+  white-space:nowrap;
 }
+
+/* Metadata is positioned from the workbook's actual column coordinates. */
 .printScope :global(.sf2-meta-grid){
-  display:grid;
-  grid-template-columns:25mm 29mm 23mm 29mm 42mm 40mm 24mm 46.618mm;
-  grid-template-rows:10mm 10mm;
-  align-items:center;
-  font-size:11pt;
-  margin-bottom:2mm;
+  position:absolute;
+  left:0;
+  right:0;
+  top:14.435mm;
+  height:19.358mm;
+  font-size:9.92pt;
 }
-.printScope :global(.sf2-meta-grid label){text-align:right;padding-right:2mm;white-space:nowrap}
+.printScope :global(.sf2-meta-grid label),
 .printScope :global(.sf2-meta-grid > div){
-  border:1px solid #000;
-  min-height:7.7mm;
+  position:absolute;
+  box-sizing:border-box;
   display:flex;
   align-items:center;
-  justify-content:center;
-  padding:0 1.5mm;
-  box-sizing:border-box;
-  font-size:10pt;
+  line-height:1;
 }
-.printScope :global(.school-id-label){grid-column:1}
-.printScope :global(.school-id-value){grid-column:2}
-.printScope :global(.school-year-label){grid-column:3}
-.printScope :global(.school-year-value){grid-column:4}
-.printScope :global(.month-label){grid-column:5 / span 2}
-.printScope :global(.month-value){grid-column:7 / span 2}
-.printScope :global(.school-name-label){grid-column:1}
-.printScope :global(.school-name-value){grid-column:2 / span 3;justify-content:flex-start!important}
-.printScope :global(.grade-label){grid-column:5}
-.printScope :global(.grade-value){grid-column:6}
-.printScope :global(.section-label){grid-column:7}
-.printScope :global(.section-value){grid-column:8}
+.printScope :global(.sf2-meta-grid label){
+  justify-content:flex-end;
+  padding-right:1.25mm;
+  white-space:nowrap;
+}
+.printScope :global(.sf2-meta-grid > div){
+  justify-content:center;
+  border:.18mm solid #000;
+  padding:0 1mm;
+  overflow:hidden;
+  white-space:nowrap;
+  font-size:9.3pt;
+}
+.printScope :global(.school-id-label){
+  left:5.327mm;top:0;width:41.170mm;height:8.859mm;
+}
+.printScope :global(.school-id-value){
+  left:46.497mm;top:0;width:30.315mm;height:8.859mm;
+}
+.printScope :global(.school-year-label){
+  left:76.812mm;top:0;width:30.304mm;height:8.859mm;
+}
+.printScope :global(.school-year-value){
+  left:107.116mm;top:0;width:30.305mm;height:8.859mm;
+}
+.printScope :global(.month-label){
+  left:143.482mm;top:0;width:42.426mm;height:8.859mm;
+}
+.printScope :global(.month-value){
+  left:185.908mm;top:0;width:41.144mm;height:8.859mm;
+}
+.printScope :global(.school-name-label){
+  left:5.327mm;top:10.335mm;width:41.170mm;height:9.023mm;
+}
+.printScope :global(.school-name-value){
+  left:46.497mm;top:10.335mm;width:90.924mm;height:9.023mm;
+  justify-content:flex-start!important;
+  padding-left:2mm!important;
+}
+.printScope :global(.grade-label){
+  left:161.665mm;top:10.335mm;width:24.244mm;height:9.023mm;
+}
+.printScope :global(.grade-value){
+  left:185.908mm;top:10.335mm;width:12.122mm;height:9.023mm;
+}
+.printScope :global(.section-label){
+  left:198.030mm;top:10.335mm;width:18.183mm;height:9.023mm;
+}
+.printScope :global(.section-value){
+  left:216.213mm;top:10.335mm;width:56.781mm;height:9.023mm;
+}
 
+/* Attendance table uses the workbook's measured column widths. */
 .printScope :global(.sf2-attendance-table){
-  width:288.618mm;
+  width:var(--sf2-print-width);
   border-collapse:collapse;
   table-layout:fixed;
   font-family:"Arial Narrow",Arial,sans-serif;
-  font-size:7.5pt;
+  font-size:7.44pt;
+}
+.printScope :global(.sf2-attendance-table thead){
+  display:table-header-group;
 }
 .printScope :global(.sf2-attendance-table th),
 .printScope :global(.sf2-attendance-table td){
-  border:0.25mm solid #000;
+  border:.18mm solid #000;
   box-sizing:border-box;
   padding:0;
   vertical-align:middle;
 }
-.printScope :global(.sf2-head-top th){height:5.8mm}
-.printScope :global(.sf2-date-row th){height:4.6mm;font-size:7.2pt}
-.printScope :global(.sf2-day-row th){height:4.6mm;font-size:6.8pt}
+.printScope :global(.sf2-attendance-table tr){
+  break-inside:avoid;
+  page-break-inside:avoid;
+}
+.printScope :global(.sf2-head-top th){height:4.429mm}
+.printScope :global(.sf2-date-row th){height:4.265mm;font-size:7.44pt}
+.printScope :global(.sf2-day-row th){height:6.726mm;font-size:7.1pt}
 .printScope :global(.sf2-name-head){
-  font-size:10pt;
+  font-size:9.92pt;
   font-weight:700;
-  line-height:1.12;
+  line-height:1.05;
+  text-align:left;
+  padding-left:1mm!important;
+}
+.printScope :global(.sf2-name-head span){
+  display:block;
+  text-align:center;
+  font-size:9.92pt;
+  margin-top:.4mm;
+}
+.printScope :global(.sf2-days-title){
+  font-size:7.44pt;
+  font-weight:700;
   text-align:center;
 }
-.printScope :global(.sf2-name-head span){display:block;font-size:9pt;margin-top:1mm}
-.printScope :global(.sf2-days-title){font-size:7.4pt;font-weight:700;text-align:center}
-.printScope :global(.sf2-month-total-head){font-size:7.2pt;font-weight:700;line-height:1.05}
-.printScope :global(.sf2-remarks-head){font-size:6.6pt;font-weight:500;line-height:1.15;text-align:center;padding:0 .8mm!important}
-.printScope :global(.sf2-learner-row td){height:4.25mm}
-.printScope :global(.sf2-no){font-size:6.8pt;text-align:center}
+.printScope :global(.sf2-month-total-head){
+  font-size:7.44pt;
+  font-weight:700;
+  line-height:1.02;
+  text-align:center;
+}
+.printScope :global(.sf2-remarks-head){
+  font-size:6.65pt;
+  font-weight:500;
+  line-height:1.05;
+  text-align:center;
+  padding:0 .7mm!important;
+}
+
+/* The original row is 21.95pt. 4.68mm is the browser-calibrated
+   equivalent that preserves the workbook's two-page A4 flow with repeated headers. */
+.printScope :global(.sf2-learner-row td){
+  height:var(--sf2-roster-row-height,4.68mm);
+}
+.printScope :global(.sf2-no){
+  font-size:6.5pt;
+  text-align:center;
+}
 .printScope :global(.sf2-learner-name){
-  padding-left:1.3mm!important;
-  font-size:7.3pt;
+  padding-left:1.2mm!important;
+  font-size:7.2pt;
+  line-height:1;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
 }
 .printScope :global(.sf2-learner-remarks){
-  padding:0 .8mm!important;
-  font-size:6.1pt;
-  line-height:1.05;
+  padding:0 .65mm!important;
+  font-size:5.8pt;
+  line-height:1.02;
   white-space:normal;
   overflow:hidden;
 }
-.printScope :global(.sf2-small-total){text-align:center;font-size:7pt}
+.printScope :global(.sf2-small-total){
+  text-align:center;
+  font-size:7pt;
+}
 .printScope :global(.sf2-att-cell){
   position:relative;
   text-align:center;
-  font-size:8pt;
+  font-size:7.5pt;
   font-weight:700;
   background-image:linear-gradient(
     to bottom right,
-    transparent 49.2%,
-    #858585 49.5%,
-    #858585 50.5%,
-    transparent 50.8%
+    transparent 49.1%,
+    #777 49.45%,
+    #777 50.55%,
+    transparent 50.9%
   );
 }
 .printScope :global(.sf2-half-upper){
   background:
-    linear-gradient(to bottom right,rgba(0,0,0,.55) 49.3%,transparent 49.6%),
-    linear-gradient(to bottom right,transparent 49.2%,#444 49.5%,#444 50.5%,transparent 50.8%);
+    linear-gradient(to bottom right,rgba(0,0,0,.58) 49.35%,transparent 49.65%),
+    linear-gradient(to bottom right,transparent 49.1%,#444 49.45%,#444 50.55%,transparent 50.9%);
 }
 .printScope :global(.sf2-half-lower){
   background:
-    linear-gradient(to bottom right,transparent 50.4%,rgba(0,0,0,.55) 50.7%),
-    linear-gradient(to bottom right,transparent 49.2%,#444 49.5%,#444 50.5%,transparent 50.8%);
+    linear-gradient(to bottom right,transparent 50.35%,rgba(0,0,0,.58) 50.65%),
+    linear-gradient(to bottom right,transparent 49.1%,#444 49.45%,#444 50.55%,transparent 50.9%);
 }
 .printScope :global(.sf2-not-enrolled){background:#fff}
 .printScope :global(.sf2-unrecorded){
   background:#f3f3f3;
-  color:#999;
+  color:#888;
   font-size:6pt;
 }
 .printScope :global(.sf2-sex-total td){
-  height:4.6mm;
-  border-top:.55mm double #000;
-  border-bottom:.45mm solid #000;
+  height:var(--sf2-roster-row-height,4.68mm);
+  border-top:.34mm solid #000;
+  border-bottom:.28mm solid #000;
   text-align:center;
-  font-size:7.2pt;
+  font-size:7.1pt;
   font-weight:700;
 }
-.printScope :global(.sf2-page-one .sf2-sex-total td:first-child),
-.printScope :global(.sf2-page-two .sf2-sex-total td:first-child){
-  font-size:7.5pt;
-  letter-spacing:.01em;
+.printScope :global(.sf2-combined-total td){
+  font-size:8.68pt;
+  font-weight:700;
 }
-.printScope :global(.sf2-page-two){padding-top:1.2mm}
-.printScope :global(.sf2-page-two .sf2-attendance-table){margin-bottom:1.2mm}
-
-.printScope :global(.sf2-bottom-grid){
+.printScope :global(.sf2-total-label){
+  width:100%;
   display:grid;
-  grid-template-columns:42.5% 24.5% 33%;
-  gap:1.6mm;
-  min-height:73mm;
-  font-size:6.15pt;
-  line-height:1.12;
+  grid-template-columns:9mm 1fr 9mm;
+  align-items:center;
+  gap:1mm;
 }
-.printScope :global(.sf2-guidelines){padding:.5mm .5mm 0 0}
+.printScope :global(.sf2-total-label > span:nth-child(2)){
+  text-align:center;
+}
+.printScope :global(.sf2-arrow){
+  display:block;
+  font-size:8pt;
+  line-height:1;
+  text-align:center;
+}
+
+/* Workbook row 63: small spacer between Combined Total and Guidelines. */
+.printScope :global(.sf2-bottom-spacer){
+  height:1.476mm;
+}
+
+/* Rows 64-93. Exact horizontal blocks:
+   A:O guidelines | P gap | Q:Z codes | AA gap | AB:AJ summary. */
+.printScope :global(.sf2-bottom-grid){
+  width:var(--sf2-print-width);
+  min-height:107.284mm;
+  display:grid;
+  grid-template-columns:137.421mm 6.061mm 60.609mm 6.061mm 78.462mm;
+  align-items:start;
+  font-size:5.7pt;
+  line-height:1.12;
+  break-inside:avoid;
+  page-break-inside:avoid;
+}
+.printScope :global(.sf2-guidelines){
+  grid-column:1;
+  padding:0 .7mm 0 0;
+}
 .printScope :global(.sf2-guidelines strong),
-.printScope :global(.sf2-codes > strong){font-size:6.8pt}
+.printScope :global(.sf2-codes > strong){
+  font-size:7.44pt;
+}
 .printScope :global(.sf2-guidelines p),
-.printScope :global(.sf2-codes p){margin:.45mm 0}
+.printScope :global(.sf2-codes p){
+  margin:.38mm 0;
+}
 .printScope :global(.sf2-formula){
   display:grid;
   grid-template-columns:auto 1fr auto;
   align-items:center;
-  gap:1.1mm;
-  margin:.55mm 0 .8mm 4mm;
+  gap:.8mm;
+  margin:.45mm 0 .65mm 3.5mm;
 }
-.printScope :global(.sf2-formula .frac){text-align:center;line-height:1.25}
+.printScope :global(.sf2-formula .frac){
+  text-align:center;
+  line-height:1.18;
+}
 .printScope :global(.sf2-codes){
-  border:.25mm solid #000;
-  padding:1mm;
+  grid-column:3;
+  border:.18mm solid #000;
+  padding:.75mm;
+  box-sizing:border-box;
+  min-height:80mm;
 }
-.printScope :global(.sf2-summary-wrap){font-size:6.1pt}
+.printScope :global(.sf2-summary-wrap){
+  grid-column:5;
+  font-size:5.7pt;
+}
 .printScope :global(.sf2-summary-table){
   width:100%;
   border-collapse:collapse;
@@ -291,30 +442,47 @@
 }
 .printScope :global(.sf2-summary-table th),
 .printScope :global(.sf2-summary-table td){
-  border:.25mm solid #000;
-  height:5.2mm;
-  padding:.4mm .6mm;
+  border:.18mm solid #000;
+  height:4.85mm;
+  padding:.3mm .45mm;
   box-sizing:border-box;
   text-align:center;
-  line-height:1.08;
+  line-height:1.04;
 }
-.printScope :global(.sf2-summary-table td:first-child){text-align:center}
-.printScope :global(.sf2-certification){padding:2mm 2mm 0;font-size:6.4pt}
-.printScope :global(.sf2-certification p){margin:1.5mm 0 2mm}
+.printScope :global(.sf2-summary-table td:first-child){
+  text-align:center;
+}
+.printScope :global(.sf2-certification){
+  padding:1.5mm 1.4mm 0;
+  font-size:5.65pt;
+}
+.printScope :global(.sf2-certification p){
+  margin:1.2mm 0 1.7mm;
+}
 .printScope :global(.sf2-sign-line){
-  min-height:5.5mm;
-  border-bottom:.25mm solid #000;
+  min-height:4.7mm;
+  border-bottom:.18mm solid #000;
   text-align:center;
   font-weight:700;
-  padding-top:1.2mm;
+  padding-top:.8mm;
   box-sizing:border-box;
+  white-space:nowrap;
 }
-.printScope :global(.sf2-certification small){display:block;text-align:center;font-size:5.4pt;font-style:italic;margin-top:.6mm}
-.printScope :global(.sf2-attested){margin-top:4mm!important}
+.printScope :global(.sf2-certification small){
+  display:block;
+  text-align:center;
+  font-size:5.1pt;
+  font-style:italic;
+  margin-top:.4mm;
+}
+.printScope :global(.sf2-attested){
+  margin-top:3.2mm!important;
+}
 .printScope :global(.sf2-page-footer){
-  margin-top:1mm;
-  font-size:6.2pt;
+  margin-top:-5mm;
+  font-size:5.7pt;
   text-align:left;
+  white-space:nowrap;
 }
 
 @page{
@@ -322,18 +490,38 @@
   margin:4.572mm 4.064mm 4.826mm 4.318mm;
 }
 @media print{
-  .page{background:#fff;padding:0}
-  .topBar,.header,.controls,.notice,.warning,.error{display:none!important}
-  .previewFrame{border:0;padding:0;background:#fff;overflow:visible}
-  .printScope :global(.sf2-sheet){
+  .page{
+    min-height:0;
+    background:#fff;
+    padding:0;
     margin:0;
-    width:288.618mm;
-    min-height:200.6mm;
-    box-shadow:none;
   }
-  .printScope :global(.sf2-unrecorded){color:transparent;background:#fff}
-  .printScope :global(.sf2-report-set:last-child .sf2-sheet:last-child){
-    page-break-after:auto;
-    break-after:auto;
+  .shell{max-width:none;margin:0}
+  .topBar,.header,.controls,.notice,.warning,.error{display:none!important}
+  .previewFrame{
+    overflow:visible;
+    border:0;
+    border-radius:0;
+    padding:0;
+    margin:0;
+    background:#fff;
+  }
+  .printScope{width:var(--sf2-print-width)}
+  .printScope :global(.sf2-print-document),
+  .printScope :global(.sf2-flow-sheet){
+    width:var(--sf2-print-width);
+    margin:0;
+    padding:0;
+    background:#fff;
+    box-shadow:none;
+    overflow:visible;
+  }
+  .printScope :global(.sf2-attendance-table thead){
+    display:table-header-group;
+  }
+  .printScope :global(.sf2-attendance-table tr),
+  .printScope :global(.sf2-bottom-grid){
+    break-inside:avoid;
+    page-break-inside:avoid;
   }
 }

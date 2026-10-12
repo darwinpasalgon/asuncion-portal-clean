@@ -104,11 +104,6 @@ export default function Sf2Page() {
     return current < schoolYearEnd ? current : schoolYearEnd;
   }, [activeYear]);
 
-  const printPages = report
-    ? Math.max(1, Math.ceil(report.learners.male.length / 21)) +
-      Math.max(1, Math.ceil(report.learners.female.length / 25))
-    : 2;
-
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
@@ -202,13 +197,6 @@ export default function Sf2Page() {
           <div className={styles.notice}>
             <FileSpreadsheet size={15} style={{ verticalAlign: "middle", marginRight: 7 }} />
             Monthly attendance is complete. SF2 is ready for official printing.
-          </div>
-        )}
-
-        {report && printPages > 2 && (
-          <div className={styles.notice}>
-            This section exceeds the learner slots in the uploaded SF2 template. The portal
-            automatically creates {printPages} print pages so no learner is omitted.
           </div>
         )}
 

@@ -1,5 +1,7 @@
 "use client";
 
+import type { CSSProperties } from "react";
+
 export type Sf2DayColumn = {
   date: string;
   date_no: number;
@@ -66,27 +68,26 @@ export type Sf2ReportData = {
 };
 
 const COL_WIDTHS_MM = [
-  5.3272, 41.1701, 18.1928,
+  5.3272,
+  41.1701,
+  18.1928,
   ...Array.from({ length: 25 }, () => 6.0609),
-  10.8394, 9.7389, 11.5781, 9.0052, 8.4530, 7.1666, 7.1666, 8.4530,
+  10.8394,
+  9.7389,
+  11.5781,
+  9.0052,
+  8.453,
+  7.1666,
+  7.1666,
+  8.453,
 ];
 
 function pct(value: number) {
-  if (!Number.isFinite(value)) return "";
-  return value.toFixed(2);
+  return Number.isFinite(value) ? value.toFixed(2) : "";
 }
 
 function avg(value: number) {
-  if (!Number.isFinite(value)) return "";
-  return value.toFixed(2);
-}
-
-function splitRows<T>(rows: T[], size: number, index: number) {
-  return rows.slice(index * size, index * size + size);
-}
-
-function padded<T>(rows: T[], size: number): Array<T | null> {
-  return [...rows, ...Array.from({ length: Math.max(0, size - rows.length) }, () => null)].slice(0, size);
+  return Number.isFinite(value) ? value.toFixed(2) : "";
 }
 
 function AttendanceColGroup() {
@@ -172,34 +173,29 @@ function AttendanceCell({
 
 function LearnerRows({
   rows,
-  capacity,
   dayColumns,
-  startIndex = 0,
 }: {
   rows: Sf2Learner[];
-  capacity: number;
   dayColumns: Sf2DayColumn[];
-  startIndex?: number;
 }) {
-  const normalized = padded(rows, capacity);
   return (
     <>
-      {normalized.map((learner, index) => (
-        <tr className="sf2-learner-row" key={learner?.student_id ?? `blank-${index}`}>
-          <td className="sf2-no">{learner ? startIndex + index + 1 : ""}</td>
+      {rows.map((learner, index) => (
+        <tr className="sf2-learner-row" key={learner.student_id}>
+          <td className="sf2-no">{index + 1}</td>
           <td colSpan={2} className="sf2-learner-name">
-            {learner?.name ?? ""}
+            {learner.name}
           </td>
           {dayColumns.map((day, dayIndex) => (
             <AttendanceCell
               key={dayIndex}
-              cell={day ? learner?.cells?.[dayIndex] : undefined}
+              cell={day ? learner.cells?.[dayIndex] : undefined}
             />
           ))}
-          <td className="sf2-small-total">{learner?.absent ?? ""}</td>
-          <td className="sf2-small-total">{learner?.tardy ?? ""}</td>
+          <td className="sf2-small-total">{learner.absent}</td>
+          <td className="sf2-small-total">{learner.tardy}</td>
           <td colSpan={6} className="sf2-learner-remarks">
-            {learner?.remarks ?? ""}
+            {learner.remarks}
           </td>
         </tr>
       ))}
@@ -207,35 +203,61 @@ function LearnerRows({
   );
 }
 
+function TotalLabel({ label }: { label: string }) {
+  return (
+    <span className="sf2-total-label">
+      <span className="sf2-arrow">◀</span>
+      <span>{label}</span>
+      <span className="sf2-arrow">▶</span>
+    </span>
+  );
+}
+
 function SexTotalRow({
   label,
   totals,
   dayColumns,
+  combined = false,
 }: {
   label: string;
   totals: number[];
   dayColumns: Sf2DayColumn[];
+  combined?: boolean;
 }) {
   return (
-    <tr className="sf2-sex-total">
-      <td colSpan={3}>{label}</td>
+    <tr className={combined ? "sf2-sex-total sf2-combined-total" : "sf2-sex-total"}>
+      <td colSpan={3}>
+        <TotalLabel label={label} />
+      </td>
       {dayColumns.map((day, index) => (
         <td key={index}>{day ? totals[index] ?? "" : ""}</td>
       ))}
-      <td></td>
-      <td></td>
-      <td colSpan={6}></td>
+      <td />
+      <td />
+      <td colSpan={6} />
     </tr>
   );
 }
 
 function TopInformation({ report }: { report: Sf2ReportData }) {
   return (
-    <>
+    <div className="sf2-top-block">
+      <img
+        className="sf2-deped-seal"
+        src="/sf2/deped-seal.webp"
+        alt="Department of Education seal"
+      />
+      <img
+        className="sf2-deped-wordmark"
+        src="/sf2/deped-wordmark.webp"
+        alt="Department of Education"
+      />
+
       <header className="sf2-title-block">
         <h1>School Form 2 (SF2) Daily Attendance Report of Learners</h1>
         <p>(This replaced Form 1, Form 2 &amp; STS Form 4 - Absenteeism and Dropout Profile)</p>
       </header>
+
       <div className="sf2-meta-grid">
         <label className="school-id-label">School ID</label>
         <div className="school-id-value">{report.school.school_id}</div>
@@ -251,7 +273,7 @@ function TopInformation({ report }: { report: Sf2ReportData }) {
         <label className="section-label">Section</label>
         <div className="section-value">{report.section.name}</div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -288,7 +310,7 @@ function SummaryTable({ report }: { report: Sf2ReportData }) {
             <th colSpan={3}>Summary for the Month</th>
           </tr>
           <tr>
-            <td colSpan={4}></td>
+            <td colSpan={4} />
             <th>M</th>
             <th>F</th>
             <th>TOTAL</th>
@@ -330,16 +352,16 @@ function Guidelines() {
       <p>3. To compute the following:</p>
       <div className="sf2-formula">
         <span>a. Percentage of Enrolment =</span>
-        <span className="frac"><u>Registered Learner as of End of the Month</u><br/>Enrolment as of 1st Friday of June</span>
+        <span className="frac"><u>Registered Learner as of End of the Month</u><br />Enrolment as of 1st Friday of June</span>
         <span>x 100</span>
       </div>
       <div className="sf2-formula">
         <span>b. Average Daily Attendance =</span>
-        <span className="frac"><u>Total Daily Attendance</u><br/>Number of School Days in reporting month</span>
+        <span className="frac"><u>Total Daily Attendance</u><br />Number of School Days in reporting month</span>
       </div>
       <div className="sf2-formula">
         <span>c. Percentage of Attendance for the month =</span>
-        <span className="frac"><u>Average daily attendance</u><br/>Registered Learner as of End of the month</span>
+        <span className="frac"><u>Average daily attendance</u><br />Registered Learner as of End of the month</span>
         <span>x 100</span>
       </div>
       <p>4. Every End of the month, the class adviser will submit this form to the office of the principal for recording of summary table into the School Form 4. Once signed by the principal, this form should be returned to the adviser.</p>
@@ -384,93 +406,7 @@ function Codes() {
   );
 }
 
-function PageOne({
-  report,
-  males,
-  maleTotals,
-  startIndex = 0,
-}: {
-  report: Sf2ReportData;
-  males: Sf2Learner[];
-  maleTotals: number[];
-  startIndex?: number;
-}) {
-  return (
-    <section className="sf2-sheet sf2-page-one">
-      <TopInformation report={report} />
-      <table className="sf2-attendance-table">
-        <AttendanceColGroup />
-        <AttendanceHeader days={report.day_columns} />
-        <tbody>
-          <LearnerRows
-            rows={males}
-            capacity={21}
-            dayColumns={report.day_columns}
-            startIndex={startIndex}
-          />
-          <SexTotalRow
-            label="MALE  | TOTAL Per Day"
-            totals={maleTotals}
-            dayColumns={report.day_columns}
-          />
-        </tbody>
-      </table>
-    </section>
-  );
-}
-
-function PageTwo({
-  report,
-  females,
-  femaleTotals,
-  combinedTotals,
-  startIndex = 0,
-}: {
-  report: Sf2ReportData;
-  females: Sf2Learner[];
-  femaleTotals: number[];
-  combinedTotals: number[];
-  startIndex?: number;
-}) {
-  return (
-    <section className="sf2-sheet sf2-page-two">
-      <table className="sf2-attendance-table">
-        <AttendanceColGroup />
-        <AttendanceHeader days={report.day_columns} />
-        <tbody>
-          <LearnerRows
-            rows={females}
-            capacity={25}
-            dayColumns={report.day_columns}
-            startIndex={startIndex}
-          />
-          <SexTotalRow
-            label="FEMALE  | TOTAL Per Day"
-            totals={femaleTotals}
-            dayColumns={report.day_columns}
-          />
-          <SexTotalRow
-            label="Combined TOTAL PER DAY"
-            totals={combinedTotals}
-            dayColumns={report.day_columns}
-          />
-        </tbody>
-      </table>
-
-      <div className="sf2-bottom-grid">
-        <Guidelines />
-        <Codes />
-        <SummaryTable report={report} />
-      </div>
-      <div className="sf2-page-footer">School Form 2: Page 2 of ________</div>
-    </section>
-  );
-}
-
 export function Sf2PrintForm({ report }: { report: Sf2ReportData }) {
-  const malePages = Math.max(1, Math.ceil(report.learners.male.length / 21));
-  const femalePages = Math.max(1, Math.ceil(report.learners.female.length / 25));
-
   const maleTotals = report.day_columns.map((day) => {
     if (!day) return 0;
     return report.daily_totals.find((item) => item.date === day.date)?.male ?? 0;
@@ -484,27 +420,50 @@ export function Sf2PrintForm({ report }: { report: Sf2ReportData }) {
     return report.daily_totals.find((item) => item.date === day.date)?.total ?? 0;
   });
 
+  const learnerCount = report.learners.male.length + report.learners.female.length;
+  const rosterRowHeight = learnerCount > 46 ? "4.35mm" : "4.68mm";
+  const style = {
+    "--sf2-roster-row-height": rosterRowHeight,
+  } as CSSProperties;
+
   return (
-    <div className="sf2-print-document">
-      {Array.from({ length: malePages }, (_, index) => (
-        <PageOne
-          key={`male-${index}`}
-          report={report}
-          males={splitRows(report.learners.male, 21, index)}
-          maleTotals={maleTotals}
-          startIndex={index * 21}
-        />
-      ))}
-      {Array.from({ length: femalePages }, (_, index) => (
-        <PageTwo
-          key={`female-${index}`}
-          report={report}
-          females={splitRows(report.learners.female, 25, index)}
-          femaleTotals={femaleTotals}
-          combinedTotals={combinedTotals}
-          startIndex={index * 25}
-        />
-      ))}
+    <div className="sf2-print-document" style={style}>
+      <div className="sf2-flow-sheet">
+        <TopInformation report={report} />
+
+        <table className="sf2-attendance-table">
+          <AttendanceColGroup />
+          <AttendanceHeader days={report.day_columns} />
+          <tbody>
+            <LearnerRows rows={report.learners.male} dayColumns={report.day_columns} />
+            <SexTotalRow
+              label="MALE | TOTAL Per Day"
+              totals={maleTotals}
+              dayColumns={report.day_columns}
+            />
+            <LearnerRows rows={report.learners.female} dayColumns={report.day_columns} />
+            <SexTotalRow
+              label="FEMALE | TOTAL Per Day"
+              totals={femaleTotals}
+              dayColumns={report.day_columns}
+            />
+            <SexTotalRow
+              label="Combined TOTAL PER DAY"
+              totals={combinedTotals}
+              dayColumns={report.day_columns}
+              combined
+            />
+          </tbody>
+        </table>
+
+        <div className="sf2-bottom-spacer" />
+        <div className="sf2-bottom-grid">
+          <Guidelines />
+          <Codes />
+          <SummaryTable report={report} />
+        </div>
+        <div className="sf2-page-footer">School Form 2: Page 2 of ________</div>
+      </div>
     </div>
   );
 }
