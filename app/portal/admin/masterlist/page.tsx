@@ -17,7 +17,12 @@ type UserRecord = {
   lrn: string | null;
   email: string;
 };
-type Section = { id: string; grade_level: number; name: string };
+type Section = {
+  id: string;
+  grade_level: number;
+  name: string;
+  program_type: string | null;
+};
 type PreviewRow = {
   row_number: number;
   full_name: string;
@@ -372,14 +377,26 @@ export default function BulkAccountImportPage() {
     [sections, recoveryGrade]
   );
 
+  const selectedSectionRecord = useMemo(
+    () => sectionOptions.find((section) => section.name === selectedSection) ?? null,
+    [sectionOptions, selectedSection]
+  );
   const shsStrandOptions = SHS_STRANDS[selectedShsTrack] ?? [];
+  const seniorHighProgramReady =
+    !["11", "12"].includes(selectedGrade) ||
+    Boolean(selectedSectionRecord?.program_type);
   const grade12ClassificationReady =
     selectedGrade !== "12" ||
     Boolean(selectedShsTrack && selectedShsStrand);
 
   const studentClassReady =
     personType !== "student" ||
-    Boolean(selectedGrade && selectedSection && grade12ClassificationReady);
+    Boolean(
+      selectedGrade &&
+        selectedSection &&
+        seniorHighProgramReady &&
+        grade12ClassificationReady
+    );
 
   function resetImport() {
     setRows([]);
