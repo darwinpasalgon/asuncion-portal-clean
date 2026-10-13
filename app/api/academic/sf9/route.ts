@@ -1309,7 +1309,11 @@ export async function POST(request: NextRequest) {
         };
       })
       .filter(
-        (item) =>
+        (item: {
+          termNo: number;
+          remark: string;
+          source: "automatic" | "manual";
+        }) =>
           Number.isInteger(item.termNo) &&
           item.termNo >= 1 &&
           item.termNo <= 3 &&
