@@ -37,9 +37,17 @@ type Personnel = {
   role: string;
 };
 
-function days(value: number | null | undefined) {
+function formatDays(value: number | null | undefined) {
   if (value === null || value === undefined) return "Not Recorded";
-  return `${Number(value).toFixed(2)} days`;
+  return Number(value).toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
+  });
+}
+
+function days(value: number | null | undefined) {
+  const formatted = formatDays(value);
+  return formatted === "Not Recorded" ? formatted : `${formatted} days`;
 }
 
 function formatDate(value: string) {
@@ -147,8 +155,8 @@ export default function ServiceCreditsPage() {
 
             {tab === "service_credit" && (
               <section className={styles.metrics}>
-                <div><span>Total Earned</span><strong>+{Number(summary?.total_service_credits_earned ?? 0).toFixed(2)}</strong></div>
-                <div><span>Total Used</span><strong>-{Number(summary?.total_service_credits_used ?? 0).toFixed(2)}</strong></div>
+                <div><span>Total Earned</span><strong>+{formatDays(summary?.total_service_credits_earned ?? 0)}</strong></div>
+                <div><span>Total Used</span><strong>-{formatDays(summary?.total_service_credits_used ?? 0)}</strong></div>
                 <div><span>Transactions</span><strong>{summary?.transaction_count ?? 0}</strong></div>
               </section>
             )}
@@ -177,10 +185,10 @@ export default function ServiceCreditsPage() {
                       </div>
                       <div className={styles.amounts}>
                         {item.service_credits_earned > 0 && (
-                          <span className={styles.credit}>+{item.service_credits_earned.toFixed(2)}</span>
+                          <span className={styles.credit}>+{formatDays(item.service_credits_earned)}</span>
                         )}
                         {item.service_credits_used > 0 && (
-                          <span className={styles.debit}>-{item.service_credits_used.toFixed(2)}</span>
+                          <span className={styles.debit}>-{formatDays(item.service_credits_used)}</span>
                         )}
                         {item.transaction_kind === "opening_balance" && (
                           <span className={styles.opening}>Opening</span>
@@ -188,7 +196,7 @@ export default function ServiceCreditsPage() {
                       </div>
                       <div className={styles.runningBalance}>
                         <span>Balance</span>
-                        <strong>{item.balance_after.toFixed(2)}</strong>
+                        <strong>{formatDays(item.balance_after)}</strong>
                       </div>
                     </article>
                   ))}
