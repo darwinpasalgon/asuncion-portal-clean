@@ -812,7 +812,7 @@ function DashboardHome({
                 {serviceCreditSummary?.service_credit_balance === null ||
                 serviceCreditSummary?.service_credit_balance === undefined
                   ? "Not Recorded"
-                  : `${Number(serviceCreditSummary.service_credit_balance).toFixed(2)} days`}
+                  : `${Number(serviceCreditSummary.service_credit_balance).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 4 })} days`}
               </strong>
             </div>
           </>
@@ -837,7 +837,7 @@ function DashboardHome({
                   {serviceCreditSummary?.service_credit_balance === null ||
                   serviceCreditSummary?.service_credit_balance === undefined
                     ? "Not Recorded"
-                    : `${Number(serviceCreditSummary.service_credit_balance).toFixed(2)} days`}
+                    : `${Number(serviceCreditSummary.service_credit_balance).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 4 })} days`}
                 </strong>
               </div>
             )}
