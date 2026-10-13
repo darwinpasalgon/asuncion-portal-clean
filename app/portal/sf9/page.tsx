@@ -369,6 +369,11 @@ export default function Sf9Page() {
     window.print();
   }
 
+  function remarkSource(text: string, suggestion: string): RemarkDraft["source"] {
+    if (!text.trim()) return "pending";
+    return text.trim() === suggestion.trim() ? "automatic" : "manual";
+  }
+
   function patchRemark(studentId: string, termIndex: number, text: string) {
     setRemarkDrafts((current) => {
       const existing = current[studentId] ?? [];
@@ -377,12 +382,7 @@ export default function Sf9Page() {
           ? {
               ...item,
               text,
-              source:
-                text.trim() && text.trim() === item.suggestion.trim()
-                  ? "automatic"
-                  : text.trim()
-                    ? "manual"
-                    : "pending",
+              source: remarkSource(text, item.suggestion),
               saved: false,
             }
           : item
@@ -404,12 +404,10 @@ export default function Sf9Page() {
                 ? {
                     ...item,
                     text,
-                    source:
-                      text.trim() && text.trim() === String(item.suggestion ?? "").trim()
-                        ? "automatic"
-                        : text.trim()
-                          ? "manual"
-                          : "pending",
+                    source: remarkSource(
+                      text,
+                      String(item.suggestion ?? "")
+                    ),
                     saved: false,
                   }
                 : item
@@ -464,13 +462,7 @@ export default function Sf9Page() {
         [studentId]: (current[studentId] ?? []).map((item) => ({
           ...item,
           saved: Boolean(item.text.trim()),
-          source:
-            item.text.trim() &&
-            item.text.trim() === item.suggestion.trim()
-              ? "automatic"
-              : item.text.trim()
-                ? "manual"
-                : "pending",
+          source: remarkSource(item.text, item.suggestion),
         })),
       }));
       setRemarkMessage("SF9 remarks saved. The current preview is ready to print.");
