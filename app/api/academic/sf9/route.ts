@@ -560,24 +560,6 @@ export async function GET(request: NextRequest) {
           ])
         : [[], []];
 
-      const savedRemarks = requestedStudentIds.length
-      ? await getRows(
-          `sf9_teacher_remarks?school_year_id=eq.${encodeURIComponent(
-            activeYear.id
-          )}&student_id=in.${encodeURIComponent(
-            inFilter(requestedStudentIds)
-          )}&select=student_id,term_no,remark,source,updated_at`,
-          token
-        ).catch(() => [])
-      : [];
-
-    const savedRemarkMap = new Map<string, JsonRow>(
-      (savedRemarks ?? []).map((row: JsonRow) => [
-        `${String(row.student_id)}|${Number(row.term_no)}`,
-        row,
-      ])
-    );
-
     const profileMap = new Map<string, JsonRow>(
         (profiles ?? []).map((row: JsonRow) => [String(row.id), row])
       );
@@ -750,6 +732,24 @@ export async function GET(request: NextRequest) {
             token
           ).catch(() => [])
         : [];
+
+    const savedRemarks = requestedStudentIds.length
+      ? await getRows(
+          `sf9_teacher_remarks?school_year_id=eq.${encodeURIComponent(
+            activeYear.id
+          )}&student_id=in.${encodeURIComponent(
+            inFilter(requestedStudentIds)
+          )}&select=student_id,term_no,remark,source,updated_at`,
+          token
+        ).catch(() => [])
+      : [];
+
+    const savedRemarkMap = new Map<string, JsonRow>(
+      (savedRemarks ?? []).map((row: JsonRow) => [
+        `${String(row.student_id)}|${Number(row.term_no)}`,
+        row,
+      ])
+    );
 
     const profileMap = new Map<string, JsonRow>(
       (selectedProfiles ?? []).map((row: JsonRow) => [String(row.id), row])
@@ -1292,16 +1292,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const normalized = remarks
+    const normalized: Array<{
+      termNo: number;
+      remark: string;
+      source: "automatic" | "manual";
+    }> = remarks
       .map((item: any) => {
         const termNo = Number(item?.termNo);
         const remark = String(item?.remark ?? "").trim();
         const source =
           String(item?.source ?? "") === "automatic" ? "automatic" : "manual";
-        return { termNo, remark, source };
+        return {
+          termNo,
+          remark,
+          source: source as "automatic" | "manual",
+        };
       })
       .filter(
-        (item: { termNo: number; remark: string; source: string }) =>
+        (item) =>
           Number.isInteger(item.termNo) &&
           item.termNo >= 1 &&
           item.termNo <= 3 &&
