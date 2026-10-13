@@ -1177,49 +1177,206 @@ export async function POST(request: NextRequest) {
   }
 
   const { token, userId, profile } = identity;
-  if (profile.role !== "administrator") {
-    return NextResponse.json(
-      { error: "Only the full Administrator can edit the SF9 layout." },
-      { status: 403 }
-    );
-  }
-
   const body = await request.json().catch(() => null);
-  if (String(body?.action ?? "") !== "save_layout") {
-    return NextResponse.json({ error: "Unsupported SF9 action." }, { status: 400 });
-  }
+  const action = String(body?.action ?? "");
 
-  const settings = sanitizeLayoutSettings(body?.settings);
-  const response = await fetch(
-    `${SUPABASE_URL}/rest/v1/sf9_layout_settings?on_conflict=id`,
-    {
-      method: "POST",
-      headers: {
-        ...headers(token),
-        Prefer: "resolution=merge-duplicates,return=representation",
-      },
-      body: JSON.stringify([
-        {
-          id: true,
-          settings,
-          updated_by: userId,
-          updated_at: new Date().toISOString(),
-        },
-      ]),
-      cache: "no-store",
+  if (action === "save_layout") {
+    if (profile.role !== "administrator") {
+      return NextResponse.json(
+        { error: "Only the full Administrator can edit the SF9 layout." },
+        { status: 403 }
+      );
     }
-  );
 
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok || !Array.isArray(result) || !result[0]) {
-    return NextResponse.json(
-      { error: "Unable to save the SF9 layout settings." },
-      { status: 400 }
+    const settings = sanitizeLayoutSettings(body?.settings);
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/sf9_layout_settings?on_conflict=id`,
+      {
+        method: "POST",
+        headers: {
+          ...headers(token),
+          Prefer: "resolution=merge-duplicates,return=representation",
+        },
+        body: JSON.stringify([
+          {
+            id: true,
+            settings,
+            updated_by: userId,
+            updated_at: new Date().toISOString(),
+          },
+        ]),
+        cache: "no-store",
+      }
     );
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !Array.isArray(result) || !result[0]) {
+      return NextResponse.json(
+        { error: "Unable to save the SF9 layout settings." },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      settings: sanitizeLayoutSettings(result[0].settings),
+    });
   }
 
-  return NextResponse.json({
-    ok: true,
-    settings: sanitizeLayoutSettings(result[0].settings),
-  });
+  if (action === "save_remarks") {
+    if (!["administrator", "teacher"].includes(String(profile.role))) {
+      return NextResponse.json(
+        { error: "Only Administrators and Section Advisers can save SF9 remarks." },
+        { status: 403 }
+      );
+    }
+
+    const sectionId = String(body?.sectionId ?? "").trim();
+    const studentId = String(body?.studentId ?? "").trim();
+    const remarks = Array.isArray(body?.remarks) ? body.remarks.slice(0, 3) : [];
+
+    if (!sectionId || !studentId || remarks.length === 0) {
+      return NextResponse.json(
+        { error: "Learner, section, and remarks are required." },
+        { status: 400 }
+      );
+    }
+
+    const years = await getRows(
+      "school_years?is_active=eq.true&select=id&limit=1",
+      token
+    ).catch(() => []);
+    const activeYear = years?.[0];
+    if (!activeYear?.id) {
+      return NextResponse.json(
+        { error: "No active school year is configured." },
+        { status: 400 }
+      );
+    }
+
+    const enrollments = await getRows(
+      `student_enrollments?school_year_id=eq.${encodeURIComponent(
+        activeYear.id
+      )}&section_id=eq.${encodeURIComponent(
+        sectionId
+      )}&student_id=eq.${encodeURIComponent(
+        studentId
+      )}&enrollment_status=eq.active&select=student_id&limit=1`,
+      token
+    ).catch(() => []);
+
+    if (!enrollments?.length) {
+      return NextResponse.json(
+        { error: "The learner is not actively enrolled in this section." },
+        { status: 400 }
+      );
+    }
+
+    if (profile.role === "teacher") {
+      const adviserRows = await getRows(
+        `section_advisers?school_year_id=eq.${encodeURIComponent(
+          activeYear.id
+        )}&section_id=eq.${encodeURIComponent(
+          sectionId
+        )}&teacher_id=eq.${encodeURIComponent(
+          userId
+        )}&is_active=eq.true&select=id&limit=1`,
+        token
+      ).catch(() => []);
+
+      if (!adviserRows?.length) {
+        return NextResponse.json(
+          { error: "Only the assigned Section Adviser can save these SF9 remarks." },
+          { status: 403 }
+        );
+      }
+    }
+
+    const normalized = remarks
+      .map((item: any) => {
+        const termNo = Number(item?.termNo);
+        const remark = String(item?.remark ?? "").trim();
+        const source =
+          String(item?.source ?? "") === "automatic" ? "automatic" : "manual";
+        return { termNo, remark, source };
+      })
+      .filter(
+        (item: { termNo: number; remark: string; source: string }) =>
+          Number.isInteger(item.termNo) &&
+          item.termNo >= 1 &&
+          item.termNo <= 3 &&
+          item.remark.length <= 500
+      );
+
+    if (normalized.length !== remarks.length) {
+      return NextResponse.json(
+        { error: "Each SF9 remark must use Term 1–3 and contain at most 500 characters." },
+        { status: 400 }
+      );
+    }
+
+    const toSave = normalized.filter((item) => item.remark.length > 0);
+    const toDelete = normalized.filter((item) => item.remark.length === 0);
+
+    if (toSave.length > 0) {
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/sf9_teacher_remarks?on_conflict=school_year_id,student_id,term_no`,
+        {
+          method: "POST",
+          headers: {
+            ...headers(token),
+            Prefer: "resolution=merge-duplicates,return=representation",
+          },
+          body: JSON.stringify(
+            toSave.map((item) => ({
+              school_year_id: activeYear.id,
+              student_id: studentId,
+              term_no: item.termNo,
+              remark: item.remark,
+              source: item.source,
+              updated_by: userId,
+              updated_at: new Date().toISOString(),
+            }))
+          ),
+          cache: "no-store",
+        }
+      );
+
+      if (!response.ok) {
+        return NextResponse.json(
+          { error: "Unable to save the SF9 remarks." },
+          { status: response.status === 403 ? 403 : 400 }
+        );
+      }
+    }
+
+    for (const item of toDelete) {
+      const response = await fetch(
+        `${SUPABASE_URL}/rest/v1/sf9_teacher_remarks?school_year_id=eq.${encodeURIComponent(
+          activeYear.id
+        )}&student_id=eq.${encodeURIComponent(
+          studentId
+        )}&term_no=eq.${item.termNo}`,
+        {
+          method: "DELETE",
+          headers: {
+            ...headers(token),
+            Prefer: "return=minimal",
+          },
+          cache: "no-store",
+        }
+      );
+
+      if (!response.ok) {
+        return NextResponse.json(
+          { error: "Unable to clear the SF9 remark." },
+          { status: response.status === 403 ? 403 : 400 }
+        );
+      }
+    }
+
+    return NextResponse.json({ ok: true });
+  }
+
+  return NextResponse.json({ error: "Unsupported SF9 action." }, { status: 400 });
 }
