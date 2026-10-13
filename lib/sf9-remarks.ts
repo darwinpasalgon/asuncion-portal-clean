@@ -9,7 +9,7 @@ export type Sf9RemarkSignal = {
 };
 
 function clipped(value: string) {
-  return value.length <= 300 ? value : value.slice(0, 297).trimEnd() + "...";
+  return value.length <= 220 ? value : value.slice(0, 217).trimEnd() + "...";
 }
 
 function attendanceClause(rate: number | null) {
