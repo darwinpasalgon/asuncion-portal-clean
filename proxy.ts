@@ -105,6 +105,7 @@ const adminPagePermissions: Array<[string, string]> = [
   ["/portal/admin/sf10", "sf10.manage"],
   ["/portal/admin/teacher-profiles", "hr.manage"],
   ["/portal/admin/non-teaching-profiles", "hr.manage"],
+  ["/portal/admin/service-credits", "hr.manage"],
 ];
 
 function delegatedPermissionFor(pathname: string) {
@@ -121,6 +122,7 @@ function destination(request: NextRequest, state: AccessState) {
   const studentTeacherOnly =
     pathname === "/portal/grades" || pathname === "/portal/attendance";
   const personnelProfilePage = pathname === "/portal/teacher-profile";
+  const serviceCreditsPage = pathname === "/portal/service-credits";
   const teacherOnly =
     pathname === "/portal/my-students" ||
     pathname === "/portal/my-learners" ||
@@ -199,6 +201,12 @@ function destination(request: NextRequest, state: AccessState) {
     state.role !== "teacher" &&
     state.role !== "staff_administrator"
   ) {
+    const url = new URL("/portal", request.url);
+    url.searchParams.set("reason", "forbidden");
+    return NextResponse.redirect(url);
+  }
+
+  if (serviceCreditsPage && state.role === "student") {
     const url = new URL("/portal", request.url);
     url.searchParams.set("reason", "forbidden");
     return NextResponse.redirect(url);

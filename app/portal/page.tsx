@@ -171,6 +171,15 @@ type PersonnelProfileAttention = {
   total_incomplete: number;
 };
 
+type ServiceCreditSummary = {
+  service_credit_balance: number | null;
+  wellness_leave_balance: number | null;
+  total_service_credits_earned: number;
+  total_service_credits_used: number;
+  transaction_count: number;
+  wellness_transaction_count: number;
+};
+
 type AcademicSetupAttentionItem = {
   key: string;
   grade_level: number;
@@ -392,6 +401,7 @@ function DashboardHome({
   teacherLearnerSections,
   adviserSections,
   personnelAttention,
+  serviceCreditSummary,
   academicSetupAttention,
   communityUnread,
   gradeLevelHead,
@@ -404,6 +414,7 @@ function DashboardHome({
   teacherLearnerSections: TeacherLearnerSection[];
   adviserSections: AdviserSection[];
   personnelAttention: PersonnelProfileAttention | null;
+  serviceCreditSummary: ServiceCreditSummary | null;
   academicSetupAttention: AcademicSetupAttention | null;
   communityUnread: number;
   gradeLevelHead: GradeLevelHead | null;
@@ -522,6 +533,12 @@ function DashboardHome({
         description: "Open or manage class materials.",
         href: "/portal/resources",
         icon: FolderOpen,
+      },
+      {
+        label: "My Service Credits",
+        description: "View your current balance and posting history.",
+        href: "/portal/service-credits",
+        icon: ClipboardCheck,
       },
       {
         label: "Announcements",
@@ -661,6 +678,12 @@ function DashboardHome({
               href: "/portal/admin/teacher-profiles",
               icon: UserRound,
             },
+            {
+              label: "Service Credits",
+              description: "Add or deduct personnel Service Credits and review the ledger.",
+              href: "/portal/admin/service-credits",
+              icon: ClipboardCheck,
+            },
           ]
         : []),
       ...(can("announcements.manage")
@@ -783,6 +806,15 @@ function DashboardHome({
               <span>{gradeLevelHead ? "Grade Level Head" : "Adviser Sections"}</span>
               <strong>{gradeLevelHead ? `Grade ${gradeLevelHead.grade_level}` : adviserSections.length}</strong>
             </div>
+            <div>
+              <span>Service Credits</span>
+              <strong>
+                {serviceCreditSummary?.service_credit_balance === null ||
+                serviceCreditSummary?.service_credit_balance === undefined
+                  ? "Not Recorded"
+                  : `${Number(serviceCreditSummary.service_credit_balance).toFixed(2)} days`}
+              </strong>
+            </div>
           </>
         ) : (
           <>
@@ -798,6 +830,17 @@ function DashboardHome({
               <span>School Year</span>
               <strong>{academicContext?.school_year ?? "Current"}</strong>
             </div>
+            {profile.role === "staff_administrator" && (
+              <div>
+                <span>My Service Credits</span>
+                <strong>
+                  {serviceCreditSummary?.service_credit_balance === null ||
+                  serviceCreditSummary?.service_credit_balance === undefined
+                    ? "Not Recorded"
+                    : `${Number(serviceCreditSummary.service_credit_balance).toFixed(2)} days`}
+                </strong>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -1028,6 +1071,19 @@ function SideNav({
                 <span>My Profile</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
+            {(profile.role === "teacher" || profile.role === "staff_administrator") && (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="nav-button"
+                  onClick={() => {
+                    window.location.href = "/portal/service-credits";
+                  }}
+                >
+                  <ClipboardCheck size={19} />
+                  <span>My Service Credits</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
             {hasPersonnelProfile && (
               <SidebarMenuItem>
                 <SidebarMenuButton
@@ -1280,6 +1336,17 @@ function SideNav({
                       <span>Non-Teaching Personnel Profiles</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
+                        window.location.href = "/portal/admin/service-credits";
+                      }}
+                    >
+                      <ClipboardCheck size={19} />
+                      <span>Service Credits</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   {profile.role === "administrator" && (
                     <>
                       <SidebarMenuItem>
@@ -1453,6 +1520,7 @@ export default function PortalPage() {
   const [adviserAttentionLoading, setAdviserAttentionLoading] = useState(false);
   const [personnelAttention, setPersonnelAttention] = useState<PersonnelProfileAttention | null>(null);
   const [personnelAttentionLoading, setPersonnelAttentionLoading] = useState(false);
+  const [serviceCreditSummary, setServiceCreditSummary] = useState<ServiceCreditSummary | null>(null);
   const [academicSetupAttention, setAcademicSetupAttention] = useState<AcademicSetupAttention | null>(null);
   const [academicSetupAttentionLoading, setAcademicSetupAttentionLoading] = useState(false);
   const [communityUnread, setCommunityUnread] = useState(0);
@@ -1500,6 +1568,26 @@ export default function PortalPage() {
               }
             } finally {
               if (active) setPersonnelAttentionLoading(false);
+            }
+          }
+
+          if (
+            loadedProfile.role === "teacher" ||
+            loadedProfile.role === "staff_administrator"
+          ) {
+            try {
+              const creditsResponse = await fetch("/api/service-credits", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "self" }),
+                cache: "no-store",
+              });
+              const creditsResult = await creditsResponse.json().catch(() => ({}));
+              if (active && creditsResponse.ok) {
+                setServiceCreditSummary((creditsResult.summary ?? null) as ServiceCreditSummary | null);
+              }
+            } catch {
+              // Service Credits is a non-blocking dashboard summary.
             }
           }
 
@@ -2222,6 +2310,7 @@ export default function PortalPage() {
                 teacherLearnerSections={teacherLearnerSections}
                 adviserSections={adviserSections}
                 personnelAttention={personnelAttention}
+                serviceCreditSummary={serviceCreditSummary}
                 academicSetupAttention={academicSetupAttention}
                 communityUnread={communityUnread}
                 gradeLevelHead={gradeLevelHead}
