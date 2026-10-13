@@ -47,8 +47,17 @@ function formatDate(value: string) {
   return parsed.toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" });
 }
 
+function formatDays(value: number | null | undefined) {
+  if (value === null || value === undefined) return "Not Recorded";
+  return Number(value).toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
+  });
+}
+
 function moneyStyle(value: number | null | undefined) {
-  return value === null || value === undefined ? "Not Recorded" : `${Number(value).toFixed(2)} days`;
+  const formatted = formatDays(value);
+  return formatted === "Not Recorded" ? formatted : `${formatted} days`;
 }
 
 export default function AdminServiceCreditsPage() {
@@ -197,7 +206,7 @@ export default function AdminServiceCreditsPage() {
                     <strong>{item.full_name}</strong>
                     <small>{item.position || "Personnel"}</small>
                   </span>
-                  <b>{item.service_credit_balance === null || item.service_credit_balance === undefined ? "—" : Number(item.service_credit_balance).toFixed(2)}</b>
+                  <b>{item.service_credit_balance === null || item.service_credit_balance === undefined ? "—" : formatDays(item.service_credit_balance)}</b>
                 </button>
               ))}
             </div>
@@ -221,8 +230,8 @@ export default function AdminServiceCreditsPage() {
                 </div>
 
                 <div className={styles.metrics}>
-                  <div><span>Total Earned</span><strong>+{Number(summary?.total_service_credits_earned ?? 0).toFixed(2)}</strong></div>
-                  <div><span>Total Used</span><strong>-{Number(summary?.total_service_credits_used ?? 0).toFixed(2)}</strong></div>
+                  <div><span>Total Earned</span><strong>+{formatDays(summary?.total_service_credits_earned ?? 0)}</strong></div>
+                  <div><span>Total Used</span><strong>-{formatDays(summary?.total_service_credits_used ?? 0)}</strong></div>
                   <div><span>Transactions</span><strong>{summary?.transaction_count ?? 0}</strong></div>
                 </div>
 
@@ -257,11 +266,11 @@ export default function AdminServiceCreditsPage() {
                           <div><strong>{formatDate(item.posting_date)}</strong><span>{item.source === "excel_import" ? "Imported Excel" : item.created_by_name || "HR"}</span></div>
                           <div><strong>{item.particulars}</strong><span>{item.remarks || (item.absence_days > 0 ? `${item.absence_days.toFixed(2)} absence day(s)` : "No remarks")}</span></div>
                           <div className={styles.change}>
-                            {item.service_credits_earned > 0 && <b className={styles.credit}>+{item.service_credits_earned.toFixed(2)}</b>}
-                            {item.service_credits_used > 0 && <b className={styles.debit}>-{item.service_credits_used.toFixed(2)}</b>}
+                            {item.service_credits_earned > 0 && <b className={styles.credit}>+{formatDays(item.service_credits_earned)}</b>}
+                            {item.service_credits_used > 0 && <b className={styles.debit}>-{formatDays(item.service_credits_used)}</b>}
                             {item.transaction_kind === "opening_balance" && <b className={styles.opening}>Opening</b>}
                           </div>
-                          <div className={styles.rowBalance}><span>Balance</span><strong>{item.balance_after.toFixed(2)}</strong></div>
+                          <div className={styles.rowBalance}><span>Balance</span><strong>{formatDays(item.balance_after)}</strong></div>
                         </article>
                       ))}
                     </div>
