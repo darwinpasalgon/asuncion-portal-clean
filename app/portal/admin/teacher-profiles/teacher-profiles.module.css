@@ -195,6 +195,11 @@
   margin-bottom: 14px;
 }
 .panelHead h3 { margin: 0; font-size: 1rem; }
+.namePanelHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.namePanelHead .panelHead{margin-bottom:0}
+.nameSave{min-height:36px;border:0;border-radius:8px;padding:0 11px;display:inline-flex;align-items:center;gap:6px;background:#257953;color:#fff;font-size:.62rem;font-weight:800;cursor:pointer}
+.nameSave:disabled{opacity:.5;cursor:not-allowed}
+.nameHint{margin:7px 0 13px;color:#7c8e96;font-size:.64rem;line-height:1.45}
 .panelTitleRow {
   display: flex;
   justify-content: space-between;
@@ -728,4 +733,9 @@
   background:#fffdf7!important;
   box-shadow:0 0 0 4px rgba(211,147,33,.16)!important;
   outline:0!important;
+}
+
+@media(max-width:700px){
+  .namePanelHead{align-items:stretch;flex-direction:column}
+  .nameSave{width:100%;justify-content:center}
 }
