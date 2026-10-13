@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
+import { generateSf9Remark, type Sf9RemarkSignal } from "@/lib/sf9-remarks";
 
 type JsonRow = Record<string, any>;
 
@@ -423,6 +424,21 @@ function monthKey(date: string) {
   return MONTHS.find((item) => item.month === parsed.getMonth() + 1)?.key ?? null;
 }
 
+function dateOnly(value: unknown) {
+  const text = String(value ?? "");
+  return /^\d{4}-\d{2}-\d{2}/.test(text) ? text.slice(0, 10) : null;
+}
+
+function nextDate(value: string) {
+  const date = new Date(`${value}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function percent(value: number, total: number) {
+  return total > 0 ? Math.round((value / total) * 1000) / 10 : null;
+}
+
 export async function GET(request: NextRequest) {
   const identity = await getIdentity(request);
   if (!identity) {
@@ -544,7 +560,25 @@ export async function GET(request: NextRequest) {
           ])
         : [[], []];
 
-      const profileMap = new Map<string, JsonRow>(
+      const savedRemarks = requestedStudentIds.length
+      ? await getRows(
+          `sf9_teacher_remarks?school_year_id=eq.${encodeURIComponent(
+            activeYear.id
+          )}&student_id=in.${encodeURIComponent(
+            inFilter(requestedStudentIds)
+          )}&select=student_id,term_no,remark,source,updated_at`,
+          token
+        ).catch(() => [])
+      : [];
+
+    const savedRemarkMap = new Map<string, JsonRow>(
+      (savedRemarks ?? []).map((row: JsonRow) => [
+        `${String(row.student_id)}|${Number(row.term_no)}`,
+        row,
+      ])
+    );
+
+    const profileMap = new Map<string, JsonRow>(
         (profiles ?? []).map((row: JsonRow) => [String(row.id), row])
       );
       const learnerInfoMap = new Map<string, JsonRow>(
@@ -894,6 +928,111 @@ export async function GET(request: NextRequest) {
       return { rows, generalAverage };
     }
 
+    function buildTermRemarkSignal(
+      studentId: string,
+      rows: any[],
+      termNo: number
+    ): Sf9RemarkSignal & { cutoff: string | null } {
+      const mainRows = rows.filter(
+        (row) => row.include_in_general_average === true
+      );
+      const gradesForTerm = mainRows
+        .map((row) => ({
+          label: String(row.label ?? ""),
+          grade: row.terms?.[termNo - 1],
+        }))
+        .filter(
+          (row): row is { label: string; grade: number } =>
+            typeof row.grade === "number" && Number.isFinite(row.grade)
+        );
+
+      const gradeComplete =
+        mainRows.length > 0 && gradesForTerm.length === mainRows.length;
+      const termAverage = gradeComplete
+        ? roundAverage(gradesForTerm.map((row) => row.grade))
+        : null;
+
+      const lowest = gradesForTerm.length
+        ? gradesForTerm.reduce((current, row) =>
+            row.grade < current.grade ? row : current
+          )
+        : null;
+
+      const studentTermGrades = (grades ?? []).filter(
+        (grade: JsonRow) =>
+          String(grade.student_id) === studentId &&
+          Number(grade.term_no) === termNo &&
+          dateOnly(grade.published_at)
+      );
+      const cutoff =
+        studentTermGrades
+          .map((grade: JsonRow) => dateOnly(grade.published_at))
+          .filter((value: string | null): value is string => Boolean(value))
+          .sort()
+          .pop() ?? null;
+
+      if (!cutoff) {
+        return {
+          termAverage,
+          gradeComplete,
+          subjectCount: mainRows.length,
+          attendanceRate: null,
+          classDays: 0,
+          lowestSubject: lowest?.label ?? null,
+          lowestGrade: lowest?.grade ?? null,
+          cutoff: null,
+        };
+      }
+
+      let start = `${activeYear.start_year}-06-01`;
+      if (termNo > 1) {
+        const previousCutoffs = (grades ?? [])
+          .filter(
+            (grade: JsonRow) =>
+              String(grade.student_id) === studentId &&
+              Number(grade.term_no) === termNo - 1 &&
+              dateOnly(grade.published_at)
+          )
+          .map((grade: JsonRow) => dateOnly(grade.published_at))
+          .filter((value: string | null): value is string => Boolean(value))
+          .sort();
+        const previousCutoff = previousCutoffs.pop() ?? null;
+        if (previousCutoff) start = nextDate(previousCutoff);
+      }
+
+      const termClassDates = Array.from(classDates)
+        .filter((date) => date >= start && date <= cutoff)
+        .sort();
+      const studentRows = (studentAttendance ?? []).filter(
+        (row: JsonRow) =>
+          String(row.student_id) === studentId &&
+          String(row.attendance_date ?? "") >= start &&
+          String(row.attendance_date ?? "") <= cutoff
+      );
+      const presenceByDate = new Map<string, number>();
+      for (const row of studentRows) {
+        presenceByDate.set(
+          String(row.attendance_date),
+          attendancePresence(row.status)
+        );
+      }
+      const totalPresence = termClassDates.reduce(
+        (sum, date) => sum + (presenceByDate.get(date) ?? 0),
+        0
+      );
+
+      return {
+        termAverage,
+        gradeComplete,
+        subjectCount: mainRows.length,
+        attendanceRate: percent(totalPresence, termClassDates.length),
+        classDays: termClassDates.length,
+        lowestSubject: lowest?.label ?? null,
+        lowestGrade: lowest?.grade ?? null,
+        cutoff,
+      };
+    }
+
     function buildAttendance(studentId: string) {
       const classDaysByMonth = Object.fromEntries(
         MONTHS.map((item) => [item.key, 0])
@@ -950,6 +1089,31 @@ export async function GET(request: NextRequest) {
         String(enrollment.tve_major ?? "") || null
       );
 
+      const remarkDetails = [1, 2, 3].map((termNo) => {
+        const signal = buildTermRemarkSignal(
+          studentId,
+          gradesBuilt.rows,
+          termNo
+        );
+        const suggestion = generateSf9Remark(signal);
+        const saved = savedRemarkMap.get(`${studentId}|${termNo}`) ?? null;
+        return {
+          term_no: termNo,
+          text: saved?.remark ? String(saved.remark) : suggestion,
+          suggestion,
+          source: saved?.source ? String(saved.source) : suggestion ? "automatic" : "pending",
+          saved: Boolean(saved?.remark),
+          grade_average: signal.termAverage,
+          grade_complete: signal.gradeComplete,
+          subject_count: signal.subjectCount,
+          attendance_rate: signal.attendanceRate,
+          class_days: signal.classDays,
+          cutoff: signal.cutoff,
+          lowest_subject: signal.lowestSubject,
+          lowest_grade: signal.lowestGrade,
+        };
+      });
+
       return {
         id: studentId,
         full_name: student.full_name ?? "",
@@ -969,7 +1133,8 @@ export async function GET(request: NextRequest) {
         grade_rows: gradesBuilt.rows,
         general_average: gradesBuilt.generalAverage,
         attendance: buildAttendance(studentId),
-        comments: ["", "", ""],
+        comments: remarkDetails.map((item) => item.text),
+        comment_details: remarkDetails,
       };
     });
 
