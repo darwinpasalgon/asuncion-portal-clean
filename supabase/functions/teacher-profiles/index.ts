@@ -17,6 +17,35 @@ import { parseTeacherWorkbook } from "../_shared/teacher-workbook.ts";
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" } });
 
+const nameKeys = ["last_name", "first_name", "middle_name", "name_extension"] as const;
+
+function fallbackNameParts(fullName: string) {
+  const parts = String(fullName ?? "").trim().replace(/\s+/g, " ").split(" ").filter(Boolean);
+  let extension = "";
+  if (parts.length > 1 && /^(JR\.?|SR\.?|I|II|III|IV|V)$/i.test(parts[parts.length - 1] ?? "")) {
+    extension = parts.pop() ?? "";
+  }
+  if (parts.length === 0) {
+    return { last_name: "", first_name: "", middle_name: "", name_extension: extension };
+  }
+  if (parts.length === 1) {
+    return { last_name: "", first_name: parts[0], middle_name: "", name_extension: extension };
+  }
+  return {
+    first_name: parts[0] ?? "",
+    middle_name: parts.slice(1, -1).join(" "),
+    last_name: parts[parts.length - 1] ?? "",
+    name_extension: extension,
+  };
+}
+
+function submittedName(input: unknown) {
+  const source = (input ?? {}) as Record<string, unknown>;
+  const cleaned: Record<string, string> = {};
+  for (const key of nameKeys) cleaned[key] = String(source[key] ?? "").trim();
+  return normalizeTeacherNameFields(cleaned);
+}
+
 const teachingPositions = new Set([
   "TEACHER I", "TEACHER II", "TEACHER III", "TEACHER IV", "TEACHER V", "TEACHER VI", "TEACHER VII",
   "MASTER TEACHER I", "MASTER TEACHER II", "MASTER TEACHER III", "MASTER TEACHER IV", "MASTER TEACHER V",
@@ -30,7 +59,7 @@ Deno.serve(async req => {
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data: auth, error: authError } = await admin.auth.getUser(token);
   if (authError || !auth.user) return json({ error: "Unauthorized." }, 401);
-  const { data: caller } = await admin.from("profiles").select("id,role,admin_role,account_status,must_change_password").eq("id", auth.user.id).single();
+  const { data: caller } = await admin.from("profiles").select("id,full_name,role,requested_role,admin_role,account_status,must_change_password").eq("id", auth.user.id).single();
   if (!caller || caller.account_status !== "active") return json({ error: "An active account is required." }, 403);
   if (caller.must_change_password) return json({ error: "Change your temporary password before opening teacher records." }, 403);
   const superAdmin = caller.role === "administrator" && caller.admin_role === "super_administrator";
@@ -46,13 +75,211 @@ Deno.serve(async req => {
     .eq("is_active", true)
     .maybeSingle();
 
-  if (!canManage && caller.role !== "teacher" && !linkedNonTeaching) {
-    return json({ error: "Teaching, Non-Teaching, or Human Resources access required." }, 403);
-  }
-
   const body = await req.json().catch(() => null);
   if (!body) return json({ error: "Invalid request." }, 400);
   const action = String(body.action ?? "get");
+
+  async function savePortalName(options: {
+    targetUserId?: string;
+    personnelId?: string;
+    name: Record<string, string>;
+  }) {
+    const normalizedName = submittedName(options.name);
+    if (!normalizedName.first_name || !normalizedName.last_name) {
+      return { error: "First Name and Last Name are required.", status: 400 };
+    }
+
+    if (options.personnelId) {
+      const { data: person, error: readError } = await admin
+        .from("non_teaching_personnel")
+        .select("id,full_name,personal,portal_user_id,is_active")
+        .eq("id", options.personnelId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (readError || !person) {
+        return { error: "Non-Teaching Personnel record not found.", status: 404 };
+      }
+
+      const merged = normalizeTeacherNameFields({
+        ...((person.personal ?? {}) as Record<string, string>),
+        ...normalizedName,
+      });
+      const displayName = teacherDisplayName(merged, person.full_name);
+      const { data: saved, error: saveError } = await admin
+        .from("non_teaching_personnel")
+        .update({
+          personal: merged,
+          full_name: displayName,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", person.id)
+        .select("id,full_name,email,position,personal,official,portal_user_id,is_active,updated_at")
+        .single();
+
+      if (saveError || !saved) {
+        return { error: "Unable to update the personnel name.", status: 500 };
+      }
+
+      if (person.portal_user_id) {
+        const { error: profileError } = await admin
+          .from("profiles")
+          .update({ full_name: displayName, updated_at: new Date().toISOString() })
+          .eq("id", person.portal_user_id)
+          .neq("role", "student");
+        if (profileError) {
+          return { error: "Personnel name was saved, but the portal display name could not be updated.", status: 500 };
+        }
+      }
+
+      return { ok: true, full_name: displayName, name: normalizedName, personnel: saved };
+    }
+
+    const targetUserId = String(options.targetUserId ?? "");
+    if (!targetUserId) return { error: "Select a personnel account.", status: 400 };
+
+    const { data: target, error: targetError } = await admin
+      .from("profiles")
+      .select("id,full_name,role,requested_role,account_status")
+      .eq("id", targetUserId)
+      .maybeSingle();
+
+    if (targetError || !target) return { error: "Personnel account not found.", status: 404 };
+    if (target.role === "student" || target.requested_role === "student") {
+      return { error: "Learner names cannot be changed from personnel name editing.", status: 403 };
+    }
+
+    const { data: targetNonTeaching } = await admin
+      .from("non_teaching_personnel")
+      .select("id,full_name,personal,portal_user_id,is_active")
+      .eq("portal_user_id", targetUserId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    let displayName = teacherDisplayName(normalizedName, target.full_name);
+
+    if (targetNonTeaching) {
+      const merged = normalizeTeacherNameFields({
+        ...((targetNonTeaching.personal ?? {}) as Record<string, string>),
+        ...normalizedName,
+      });
+      displayName = teacherDisplayName(merged, targetNonTeaching.full_name);
+      const { error } = await admin
+        .from("non_teaching_personnel")
+        .update({
+          personal: merged,
+          full_name: displayName,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", targetNonTeaching.id);
+      if (error) return { error: "Unable to update the personnel record name.", status: 500 };
+    } else if (target.role === "teacher" || target.requested_role === "teacher") {
+      const { data: info, error: infoError } = await admin
+        .from("teacher_information")
+        .select("personal,version")
+        .eq("teacher_id", targetUserId)
+        .maybeSingle();
+      if (infoError) return { error: "Unable to read the Teacher name record.", status: 500 };
+
+      const merged = normalizeTeacherNameFields({
+        ...((info?.personal ?? {}) as Record<string, string>),
+        ...normalizedName,
+      });
+      displayName = teacherDisplayName(merged, target.full_name);
+      const nextVersion = Number(info?.version ?? 0) + 1;
+      const query = info
+        ? admin.from("teacher_information").update({
+            personal: merged,
+            version: nextVersion,
+            updated_by: caller.id,
+            updated_at: new Date().toISOString(),
+          }).eq("teacher_id", targetUserId)
+        : admin.from("teacher_information").insert({
+            teacher_id: targetUserId,
+            personal: merged,
+            version: nextVersion,
+            updated_by: caller.id,
+            updated_at: new Date().toISOString(),
+          });
+      const { error } = await query;
+      if (error) return { error: "Unable to update the Teacher name record.", status: 500 };
+    }
+
+    const { data: profileSaved, error: profileError } = await admin
+      .from("profiles")
+      .update({ full_name: displayName, updated_at: new Date().toISOString() })
+      .eq("id", targetUserId)
+      .neq("role", "student")
+      .select("id,full_name,role,requested_role")
+      .maybeSingle();
+
+    if (profileError || !profileSaved) {
+      return { error: "Unable to update the portal display name.", status: 500 };
+    }
+
+    return { ok: true, full_name: displayName, name: normalizedName, profile: profileSaved };
+  }
+
+  if (action === "get_name") {
+    if (caller.role === "student" || caller.requested_role === "student") {
+      return json({ error: "Learner names are managed by authorized school personnel." }, 403);
+    }
+
+    let name = fallbackNameParts(String(caller.full_name ?? ""));
+    if (linkedNonTeaching) {
+      const personal = (linkedNonTeaching.personal ?? {}) as Record<string, string>;
+      name = {
+        last_name: personal.last_name ?? "",
+        first_name: personal.first_name ?? "",
+        middle_name: personal.middle_name ?? "",
+        name_extension: personal.name_extension ?? "",
+      };
+    } else if (caller.role === "teacher" || caller.requested_role === "teacher") {
+      const { data: ownInfo } = await admin
+        .from("teacher_information")
+        .select("personal")
+        .eq("teacher_id", caller.id)
+        .maybeSingle();
+      if (ownInfo?.personal) {
+        const personal = ownInfo.personal as Record<string, string>;
+        name = {
+          last_name: personal.last_name ?? "",
+          first_name: personal.first_name ?? "",
+          middle_name: personal.middle_name ?? "",
+          name_extension: personal.name_extension ?? "",
+        };
+      }
+    }
+
+    return json({ ok: true, full_name: caller.full_name, name });
+  }
+
+  if (action === "save_name") {
+    if (caller.role === "student" || caller.requested_role === "student") {
+      return json({ error: "Learner names cannot be edited from My Profile." }, 403);
+    }
+    const result = await savePortalName({
+      targetUserId: caller.id,
+      name: (body.name ?? {}) as Record<string, string>,
+    });
+    if (!result.ok) return json({ error: result.error }, result.status ?? 400);
+    return json(result);
+  }
+
+  if (action === "save_personnel_name") {
+    if (!canManage) return json({ error: "Human Resources access required." }, 403);
+    const result = await savePortalName({
+      targetUserId: String(body.user_id ?? ""),
+      personnelId: String(body.personnel_id ?? ""),
+      name: (body.name ?? {}) as Record<string, string>,
+    });
+    if (!result.ok) return json({ error: result.error }, result.status ?? 400);
+    return json(result);
+  }
+
+  if (!canManage && caller.role !== "teacher" && !linkedNonTeaching) {
+    return json({ error: "Teaching, Non-Teaching, or Human Resources access required." }, 403);
+  }
 
   if (action === "profile_attention") {
     const incompleteTeachers: Array<Record<string, unknown>> = [];

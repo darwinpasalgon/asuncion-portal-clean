@@ -53,6 +53,7 @@ export default function NonTeachingProfilesPage() {
   const [loading, setLoading] = useState(true);
   const [loadingRecord, setLoadingRecord] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingName, setSavingName] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -188,6 +189,51 @@ export default function NonTeachingProfilesPage() {
     }
   }
 
+  async function saveName() {
+    if (!selectedId) return;
+    setSavingName(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/teacher-profiles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_personnel_name",
+          personnel_id: selectedId,
+          name: {
+            last_name: personal.last_name ?? "",
+            first_name: personal.first_name ?? "",
+            middle_name: personal.middle_name ?? "",
+            name_extension: personal.name_extension ?? "",
+          },
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error ?? "Unable to save the personnel name.");
+
+      const saved = (result.personnel ?? {}) as Personnel;
+      setPerson((current) =>
+        current ? { ...current, ...saved, full_name: result.full_name ?? current.full_name } : current
+      );
+      if (result.name) {
+        setPersonal((current) => ({ ...current, ...result.name }));
+      }
+      setPersonnel((current) =>
+        current.map((item) =>
+          item.id === selectedId
+            ? { ...item, ...saved, full_name: result.full_name ?? item.full_name }
+            : item
+        )
+      );
+      setMessage("Personnel name updated. Other incomplete profile fields were left unchanged.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to save the personnel name.");
+    } finally {
+      setSavingName(false);
+    }
+  }
+
   async function save() {
     if (!selectedId) return;
     setSaving(true);
@@ -296,6 +342,32 @@ export default function NonTeachingProfilesPage() {
                     <button onClick={() => void save()} disabled={saving}>
                       <Save size={16} />{saving ? "Saving..." : "Save Profile"}
                     </button>
+                  </div>
+                </div>
+
+                <div className={styles.namePanel}>
+                  <div className={styles.namePanelHead}>
+                    <div>
+                      <strong>Name</strong>
+                      <span>
+                        Save name corrections separately. You do not need to complete
+                        the rest of the personnel profile first.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void saveName()}
+                      disabled={savingName}
+                    >
+                      <Save size={15} />
+                      {savingName ? "Saving Name..." : "Save Name"}
+                    </button>
+                  </div>
+                  <div className={styles.formGrid}>
+                    <label><span>Last Name</span><input value={personal.last_name ?? ""} onChange={(event) => update("last_name", event.target.value)} /></label>
+                    <label><span>First Name</span><input value={personal.first_name ?? ""} onChange={(event) => update("first_name", event.target.value)} /></label>
+                    <label><span>Middle Name</span><input value={personal.middle_name ?? ""} onChange={(event) => update("middle_name", event.target.value)} /></label>
+                    <label><span>Name Extension</span><input value={personal.name_extension ?? ""} onChange={(event) => update("name_extension", event.target.value)} placeholder="JR., SR., III" /></label>
                   </div>
                 </div>
 

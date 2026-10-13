@@ -5,6 +5,7 @@ import {
   Camera,
   CheckCircle2,
   ImageOff,
+  Save,
   ShieldCheck,
   Upload,
   UserRound,
@@ -24,6 +25,13 @@ type Profile = {
   position: string | null;
   has_profile_photo?: boolean;
   profile_photo_updated_at?: string | null;
+};
+
+type NameFields = {
+  last_name: string;
+  first_name: string;
+  middle_name: string;
+  name_extension: string;
 };
 
 type AcademicContext = {
@@ -88,6 +96,13 @@ export default function MyProfilePage() {
   const [photoVersion, setPhotoVersion] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
+  const [savingName, setSavingName] = useState(false);
+  const [name, setName] = useState<NameFields>({
+    last_name: "",
+    first_name: "",
+    middle_name: "",
+    name_extension: "",
+  });
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -106,6 +121,24 @@ export default function MyProfilePage() {
       setAcademicContext((result.academicContext ?? null) as AcademicContext | null);
       setHasPhoto(Boolean(next.has_profile_photo));
       setPhotoVersion(next.profile_photo_updated_at ?? null);
+
+      if (next.role !== "student") {
+        const nameResponse = await fetch("/api/teacher-profiles", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "get_name" }),
+          cache: "no-store",
+        });
+        const nameResult = await nameResponse.json().catch(() => ({}));
+        if (nameResponse.ok && nameResult.name) {
+          setName({
+            last_name: String(nameResult.name.last_name ?? ""),
+            first_name: String(nameResult.name.first_name ?? ""),
+            middle_name: String(nameResult.name.middle_name ?? ""),
+            name_extension: String(nameResult.name.name_extension ?? ""),
+          });
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load your profile.");
     } finally {
@@ -152,6 +185,46 @@ export default function MyProfilePage() {
       );
     } finally {
       setWorking(false);
+    }
+  }
+
+  async function saveName() {
+    if (!profile || profile.role === "student" || savingName) return;
+    if (!name.first_name.trim() || !name.last_name.trim()) {
+      setError("First Name and Last Name are required.");
+      return;
+    }
+
+    setSavingName(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await fetch("/api/teacher-profiles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "save_name", name }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.error ?? "Unable to update your name.");
+      }
+
+      setProfile((current) =>
+        current ? { ...current, full_name: String(result.full_name ?? current.full_name) } : current
+      );
+      if (result.name) {
+        setName({
+          last_name: String(result.name.last_name ?? ""),
+          first_name: String(result.name.first_name ?? ""),
+          middle_name: String(result.name.middle_name ?? ""),
+          name_extension: String(result.name.name_extension ?? ""),
+        });
+      }
+      setNotice("Name updated across your personnel and portal profile.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to update your name.");
+    } finally {
+      setSavingName(false);
     }
   }
 
@@ -296,6 +369,73 @@ export default function MyProfilePage() {
             </div>
           </div>
         </section>
+
+        {profile.role !== "student" && (
+          <section className={styles.panel}>
+            <div className={styles.panelHead}>
+              <UserRound size={20} />
+              <div>
+                <h2>Name</h2>
+                <p>
+                  Personnel accounts may correct their own name. This updates the
+                  display name used across the portal.
+                </p>
+              </div>
+            </div>
+
+            <div className={styles.nameGrid}>
+              <label>
+                <span>Last Name</span>
+                <input
+                  value={name.last_name}
+                  onChange={(event) =>
+                    setName((current) => ({ ...current, last_name: event.target.value }))
+                  }
+                />
+              </label>
+              <label>
+                <span>First Name</span>
+                <input
+                  value={name.first_name}
+                  onChange={(event) =>
+                    setName((current) => ({ ...current, first_name: event.target.value }))
+                  }
+                />
+              </label>
+              <label>
+                <span>Middle Name</span>
+                <input
+                  value={name.middle_name}
+                  onChange={(event) =>
+                    setName((current) => ({ ...current, middle_name: event.target.value }))
+                  }
+                />
+              </label>
+              <label>
+                <span>Name Extension</span>
+                <input
+                  value={name.name_extension}
+                  onChange={(event) =>
+                    setName((current) => ({ ...current, name_extension: event.target.value }))
+                  }
+                  placeholder="JR., SR., III"
+                />
+              </label>
+            </div>
+
+            <div className={styles.nameActions}>
+              <button
+                type="button"
+                disabled={savingName}
+                onClick={() => void saveName()}
+              >
+                <Save size={16} />
+                {savingName ? "Saving Name…" : "Save Name"}
+              </button>
+              <span>Learner names remain locked from learner accounts.</span>
+            </div>
+          </section>
+        )}
 
         <section className={styles.panel}>
           <div className={styles.panelHead}>

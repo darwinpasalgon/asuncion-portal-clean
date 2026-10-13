@@ -160,6 +160,7 @@ export default function TeacherProfilesHrPage() {
   const [loading, setLoading] = useState(true);
   const [loadingRecord, setLoadingRecord] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingName, setSavingName] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [focusField, setFocusField] = useState("");
@@ -299,6 +300,49 @@ export default function TeacherProfilesHrPage() {
         )}
       </label>
     );
+  }
+
+  async function saveNameOnly() {
+    if (!selectedId) return;
+    setSavingName(true);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/teacher-profiles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_personnel_name",
+          user_id: selectedId,
+          name: {
+            last_name: personal.last_name ?? "",
+            first_name: personal.first_name ?? "",
+            middle_name: personal.middle_name ?? "",
+            name_extension: personal.name_extension ?? "",
+          },
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error ?? "Unable to save the Teacher name.");
+      setTeacher((current) =>
+        current ? { ...current, full_name: String(result.full_name ?? current.full_name) } : current
+      );
+      if (result.name) {
+        setPersonal((current) => ({ ...current, ...result.name }));
+      }
+      setTeachers((current) =>
+        current.map((item) =>
+          item.id === selectedId
+            ? { ...item, full_name: String(result.full_name ?? item.full_name) }
+            : item
+        )
+      );
+      setMessage("Teacher name updated. Other incomplete profile fields were left unchanged.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to save the Teacher name.");
+    } finally {
+      setSavingName(false);
+    }
   }
 
   async function saveRecord() {
@@ -463,7 +507,22 @@ export default function TeacherProfilesHrPage() {
                 </section>
 
                 <section className={styles.panel}>
-                  <div className={styles.panelHead}><UserRound size={20} /><h3>Name</h3></div>
+                  <div className={styles.namePanelHead}>
+                    <div className={styles.panelHead}><UserRound size={20} /><h3>Name</h3></div>
+                    <button
+                      type="button"
+                      className={styles.nameSave}
+                      disabled={savingName}
+                      onClick={() => void saveNameOnly()}
+                    >
+                      <Save size={15} />
+                      {savingName ? "Saving Name…" : "Save Name"}
+                    </button>
+                  </div>
+                  <p className={styles.nameHint}>
+                    Name corrections can be saved separately without completing the
+                    remaining HR profile fields.
+                  </p>
                   <div className={styles.grid}>
                     {nameFields.map(([key, label]) => personalField(key, label))}
                   </div>

@@ -52,6 +52,15 @@
 .buttons .remove{background:#fff4f1;color:#9a5846;border:1px solid #e8c9c0}
 .buttons button:disabled{opacity:.5;cursor:not-allowed}
 .fileInput{display:none}
+.nameGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}
+.nameGrid label{display:grid;gap:6px}
+.nameGrid span{font-size:.58rem;font-weight:800;color:#627d8b;text-transform:uppercase;letter-spacing:.05em}
+.nameGrid input{min-height:40px;border:1px solid #d6e2e7;border-radius:9px;background:#fbfdfd;padding:0 11px;color:#315d73;font:inherit;font-size:.72rem}
+.nameGrid input:focus{outline:0;border-color:#75a8c3;box-shadow:0 0 0 3px rgba(37,113,153,.07)}
+.nameActions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+.nameActions button{min-height:38px;border:0;border-radius:9px;padding:0 13px;display:inline-flex;align-items:center;gap:6px;background:#257953;color:#fff;font-size:.65rem;font-weight:800;cursor:pointer}
+.nameActions button:disabled{opacity:.5;cursor:not-allowed}
+.nameActions span{color:#81929a;font-size:.6rem}
 .details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0 0}
 .details div{padding:12px;border:1px solid #e5ecef;border-radius:10px;background:#fbfdfd}
 .details dt{color:#8a9aa2;font-size:.56rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
@@ -74,7 +83,7 @@
   .avatar{width:84px!important;height:84px!important;min-width:84px!important;min-height:84px!important}
   .cameraBadge{width:27px;height:27px}
   .photoControls{grid-template-columns:1fr;gap:14px}
-  .details{grid-template-columns:1fr}
+  .nameGrid,.details{grid-template-columns:1fr}
   .buttons{flex-direction:column}
   .buttons button{justify-content:center;width:100%}
 }
