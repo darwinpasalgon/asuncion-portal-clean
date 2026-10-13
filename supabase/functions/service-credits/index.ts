@@ -73,9 +73,9 @@ Deno.serve(async (req) => {
   const action = String(body.action ?? "self");
 
   const ledgerSelect =
-    "id,ledger_sequence,personnel_id,credit_type,posting_date,transaction_kind,previous_balance,service_credits_earned,particulars,absence_days,service_credits_used,balance_after,remarks,source,source_file,source_sheet,source_row,created_by,created_at";
+    "id,ledger_sequence,personnel_id,non_teaching_personnel_id,credit_type,posting_date,transaction_kind,previous_balance,service_credits_earned,particulars,absence_days,service_credits_used,balance_after,remarks,source,source_file,source_sheet,source_row,created_by,created_at";
 
-  async function loadLedger(personnelId: string) {
+  async function loadProfileLedger(personnelId: string) {
     const { data, error } = await admin
       .from("service_credit_transactions")
       .select(ledgerSelect)
@@ -84,6 +84,37 @@ Deno.serve(async (req) => {
       .limit(1000);
     if (error) throw new Error("Unable to load Service Credits transactions.");
     return data ?? [];
+  }
+
+  async function loadNonTeachingLedger(personnelId: string) {
+    const { data, error } = await admin
+      .from("service_credit_transactions")
+      .select(ledgerSelect)
+      .eq("non_teaching_personnel_id", personnelId)
+      .order("ledger_sequence", { ascending: false })
+      .limit(1000);
+    if (error) throw new Error("Unable to load Service Credits transactions.");
+    return data ?? [];
+  }
+
+  async function loadSelfLedger(profileId: string) {
+    const { data: linkedNonTeaching } = await admin
+      .from("non_teaching_personnel")
+      .select("id")
+      .eq("portal_user_id", profileId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    const [profileRows, nonTeachingRows] = await Promise.all([
+      loadProfileLedger(profileId),
+      linkedNonTeaching?.id
+        ? loadNonTeachingLedger(String(linkedNonTeaching.id))
+        : Promise.resolve([]),
+    ]);
+
+    return [...profileRows, ...nonTeachingRows]
+      .sort((a, b) => Number(b.ledger_sequence ?? 0) - Number(a.ledger_sequence ?? 0))
+      .slice(0, 1000);
   }
 
   function summarize(rows: Array<Record<string, unknown>>) {
@@ -102,8 +133,8 @@ Deno.serve(async (req) => {
     return {
       service_credit_balance: latest(serviceRows),
       wellness_leave_balance: latest(wellnessRows),
-      total_service_credits_earned: Math.round(totalEarned * 100) / 100,
-      total_service_credits_used: Math.round(totalUsed * 100) / 100,
+      total_service_credits_earned: Math.round(totalEarned * 10000) / 10000,
+      total_service_credits_used: Math.round(totalUsed * 10000) / 10000,
       transaction_count: serviceRows.length,
       wellness_transaction_count: wellnessRows.length,
     };
@@ -114,7 +145,7 @@ Deno.serve(async (req) => {
       return json({ error: "Service Credits are available to personnel accounts only." }, 403);
     }
     try {
-      const rows = await loadLedger(caller.id);
+      const rows = await loadSelfLedger(caller.id);
       return json({
         ok: true,
         personnel: {
@@ -137,60 +168,128 @@ Deno.serve(async (req) => {
   }
 
   if (action === "list_personnel") {
-    const { data: personnel, error } = await admin
-      .from("profiles")
-      .select("id,full_name,email,position,role,requested_role,account_status")
-      .eq("account_status", "active")
-      .in("role", ["teacher", "staff_administrator"])
-      .order("full_name")
-      .limit(1000);
+    const [{ data: portalPersonnel, error: portalError }, { data: nonTeaching, error: nonTeachingError }] =
+      await Promise.all([
+        admin
+          .from("profiles")
+          .select("id,full_name,email,position,role,requested_role,account_status")
+          .eq("account_status", "active")
+          .in("role", ["teacher", "staff_administrator"])
+          .order("full_name")
+          .limit(1000),
+        admin
+          .from("non_teaching_personnel")
+          .select("id,full_name,email,position,portal_user_id,is_active")
+          .eq("is_active", true)
+          .is("portal_user_id", null)
+          .order("full_name")
+          .limit(1000),
+      ]);
 
-    if (error) return json({ error: "Unable to load personnel accounts." }, 500);
+    if (portalError || nonTeachingError) {
+      return json({ error: "Unable to load personnel accounts." }, 500);
+    }
 
     const { data: transactions } = await admin
       .from("service_credit_transactions")
-      .select("personnel_id,credit_type,balance_after,ledger_sequence")
+      .select("personnel_id,non_teaching_personnel_id,credit_type,balance_after,ledger_sequence")
       .order("ledger_sequence", { ascending: false })
-      .limit(5000);
+      .limit(12000);
 
-    const balances = new Map<string, number>();
+    const profileBalances = new Map<string, number>();
+    const nonTeachingBalances = new Map<string, number>();
     for (const row of transactions ?? []) {
       if (row.credit_type !== "service_credit") continue;
-      const id = String(row.personnel_id ?? "");
-      if (!balances.has(id)) balances.set(id, Number(row.balance_after ?? 0));
+      if (row.personnel_id) {
+        const id = String(row.personnel_id);
+        if (!profileBalances.has(id)) profileBalances.set(id, Number(row.balance_after ?? 0));
+      }
+      if (row.non_teaching_personnel_id) {
+        const id = String(row.non_teaching_personnel_id);
+        if (!nonTeachingBalances.has(id)) {
+          nonTeachingBalances.set(id, Number(row.balance_after ?? 0));
+        }
+      }
     }
 
-    return json({
-      ok: true,
-      personnel: (personnel ?? []).map((person) => ({
+    const combined = [
+      ...(portalPersonnel ?? []).map((person) => ({
         ...person,
-        service_credit_balance: balances.has(String(person.id))
-          ? balances.get(String(person.id))
+        owner_type: "profile",
+        service_credit_balance: profileBalances.has(String(person.id))
+          ? profileBalances.get(String(person.id))
           : null,
       })),
-    });
+      ...(nonTeaching ?? []).map((person) => ({
+        id: `nt:${person.id}`,
+        full_name: person.full_name,
+        email: person.email,
+        position: person.position,
+        role: "non_teaching_personnel",
+        requested_role: null,
+        account_status: "active",
+        owner_type: "non_teaching",
+        service_credit_balance: nonTeachingBalances.has(String(person.id))
+          ? nonTeachingBalances.get(String(person.id))
+          : null,
+      })),
+    ].sort((a, b) => String(a.full_name ?? "").localeCompare(String(b.full_name ?? "")));
+
+    return json({ ok: true, personnel: combined });
   }
 
-  const personnelId = String(body.personnel_id ?? "");
-  if (!personnelId) return json({ error: "Select a personnel account." }, 400);
+  const personnelToken = String(body.personnel_id ?? "");
+  if (!personnelToken) return json({ error: "Select a personnel account." }, 400);
 
-  const { data: target } = await admin
-    .from("profiles")
-    .select("id,full_name,email,position,role,requested_role,account_status")
-    .eq("id", personnelId)
-    .maybeSingle();
+  const isNonTeaching = personnelToken.startsWith("nt:");
+  const personnelId = isNonTeaching ? personnelToken.slice(3) : personnelToken;
 
-  if (
-    !target ||
-    target.account_status !== "active" ||
-    !["teacher", "staff_administrator"].includes(String(target.role))
-  ) {
+  let target: Record<string, unknown> | null = null;
+
+  if (isNonTeaching) {
+    const { data } = await admin
+      .from("non_teaching_personnel")
+      .select("id,full_name,email,position,portal_user_id,is_active")
+      .eq("id", personnelId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (data) {
+      target = {
+        id: `nt:${data.id}`,
+        full_name: data.full_name,
+        email: data.email,
+        position: data.position,
+        role: "non_teaching_personnel",
+        account_status: "active",
+        owner_type: "non_teaching",
+      };
+    }
+  } else {
+    const { data } = await admin
+      .from("profiles")
+      .select("id,full_name,email,position,role,requested_role,account_status")
+      .eq("id", personnelId)
+      .maybeSingle();
+
+    if (
+      data &&
+      data.account_status === "active" &&
+      ["teacher", "staff_administrator"].includes(String(data.role))
+    ) {
+      target = { ...data, owner_type: "profile" };
+    }
+  }
+
+  if (!target) {
     return json({ error: "Active personnel account not found." }, 404);
   }
 
   if (action === "get_personnel") {
     try {
-      const rows = await loadLedger(personnelId);
+      const rows = isNonTeaching
+        ? await loadNonTeachingLedger(personnelId)
+        : await loadProfileLedger(personnelId);
       const creatorIds = Array.from(
         new Set(rows.map((row) => String(row.created_by ?? "")).filter(Boolean))
       );
@@ -247,7 +346,8 @@ Deno.serve(async (req) => {
     }
 
     const row = {
-      personnel_id: personnelId,
+      personnel_id: isNonTeaching ? null : personnelId,
+      non_teaching_personnel_id: isNonTeaching ? personnelId : null,
       credit_type: "service_credit",
       posting_date: postingDate,
       transaction_kind: kind,
