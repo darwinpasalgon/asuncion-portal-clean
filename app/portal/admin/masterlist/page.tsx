@@ -54,6 +54,7 @@ type PreviewRow = {
   shs_track: string;
   shs_strand_program: string;
   valid: boolean;
+  status: "ready" | "existing" | "invalid" | "created";
   error: string;
 };
 const SHS_TRACKS = [
@@ -350,8 +351,11 @@ export default function BulkAccountImportPage() {
   }, []);
 
   const summary = useMemo(() => {
-    const valid = rows.filter((row) => row.valid).length;
-    return { total: rows.length, valid, invalid: rows.length - valid };
+    const ready = rows.filter((row) => row.status === "ready").length;
+    const existing = rows.filter((row) => row.status === "existing").length;
+    const invalid = rows.filter((row) => row.status === "invalid").length;
+    const created = rows.filter((row) => row.status === "created").length;
+    return { total: rows.length, ready, existing, invalid, created };
   }, [rows]);
 
   const gradeOptions = useMemo(
@@ -673,6 +677,7 @@ export default function BulkAccountImportPage() {
       const birthDate =
         personType === "student" ? normalizeBirthDate(data.birth_date ?? "") : "";
       const problems: string[] = [];
+      let existingAccount = false;
 
       if (!fullName) problems.push("Name is required.");
       if (personType === "student" && sourceName && (!lastName || !firstName)) {
@@ -684,15 +689,21 @@ export default function BulkAccountImportPage() {
 
       if (personType === "student") {
         if (!/^\d{12}$/.test(lrn)) problems.push("LRN must be exactly 12 digits.");
-        if (existingLrns.has(lrn)) problems.push("LRN already has an account.");
-        if (seen.has(lrn)) problems.push("Duplicate LRN in this file.");
+        if (existingLrns.has(lrn)) existingAccount = true;
+        if (seen.has(lrn) && !existingAccount) problems.push("Duplicate LRN in this file.");
         if (lrn) seen.add(lrn);
       } else {
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) problems.push("Invalid email.");
-        if (existingEmails.has(email)) problems.push("Email already has an account.");
-        if (seen.has(email)) problems.push("Duplicate email in this CSV.");
+        if (existingEmails.has(email)) existingAccount = true;
+        if (seen.has(email) && !existingAccount) problems.push("Duplicate email in this CSV.");
         if (email) seen.add(email);
       }
+
+      const rowStatus: PreviewRow["status"] = existingAccount
+        ? "existing"
+        : problems.length
+          ? "invalid"
+          : "ready";
 
       preview.push({
         row_number: Number(data.source_row) || index + 1,
@@ -724,22 +735,36 @@ export default function BulkAccountImportPage() {
         remarks: data.remarks ?? "",
         shs_track: grade === 12 ? selectedShsTrack : "",
         shs_strand_program: grade === 12 ? selectedShsStrand : "",
-        valid: problems.length === 0,
-        error: problems.join(" "),
+        valid: rowStatus === "ready",
+        status: rowStatus,
+        error:
+          rowStatus === "existing"
+            ? personType === "student"
+              ? "LRN already has an account."
+              : "Email already has an account."
+            : problems.join(" "),
       });
     }
+
+    const readyCount = preview.filter((row) => row.status === "ready").length;
+    const existingCount = preview.filter(
+      (row) => row.status === "existing"
+    ).length;
+    const invalidCount = preview.filter((row) => row.status === "invalid").length;
 
     setRows(preview);
     setMessage(
       personType === "student"
-        ? `${sf1Label ? `SF1 detected: ${sf1Label}. ` : ""}Validation complete for Grade ${selectedGrade} - ${selectedSection}${selectedGrade === "12" ? ` · ${selectedShsTrack === "Technical-Vocational-Livelihood" ? "TVL" : selectedShsTrack} · ${shsStrandOptions.find((item) => item.value === selectedShsStrand)?.label ?? selectedShsStrand}` : ""}. Review all rows before importing.`
-        : "Validation complete. Review all rows before importing."
+        ? `${sf1Label ? `SF1 detected: ${sf1Label}. ` : ""}Validation complete for Grade ${selectedGrade} - ${selectedSection}${selectedGrade === "12" ? ` · ${selectedShsTrack === "Technical-Vocational-Livelihood" ? "TVL" : selectedShsTrack} · ${shsStrandOptions.find((item) => item.value === selectedShsStrand)?.label ?? selectedShsStrand}` : ""}. ${readyCount} Ready account${readyCount === 1 ? "" : "s"} can be created. ${existingCount ? `${existingCount} existing account${existingCount === 1 ? "" : "s"} will be skipped. ` : ""}${invalidCount ? `${invalidCount} row${invalidCount === 1 ? "" : "s"} need correction and will not be submitted.` : ""}`
+        : `Validation complete. ${readyCount} Ready account${readyCount === 1 ? "" : "s"} can be created. ${existingCount ? `${existingCount} existing account${existingCount === 1 ? "" : "s"} will be skipped. ` : ""}${invalidCount ? `${invalidCount} row${invalidCount === 1 ? "" : "s"} need correction and will not be submitted.` : ""}`
     );
   }
 
   async function importAccounts() {
-    const valid = rows.filter((row) => row.valid);
-    if (!file || !valid.length || summary.invalid > 0) return;
+    const valid = rows.filter(
+      (row) => row.valid && row.status === "ready"
+    );
+    if (!file || !valid.length) return;
 
     setWorking(true);
     setError("");
@@ -747,6 +772,10 @@ export default function BulkAccountImportPage() {
     setCredentials([]);
 
     const issued: Credential[] = [];
+    const serverFailures: Array<{
+      identifier?: string;
+      error?: string;
+    }> = [];
 
     try {
       for (let start = 0; start < valid.length; start += 200) {
@@ -770,16 +799,89 @@ export default function BulkAccountImportPage() {
         issued.push(...(result.accounts ?? []));
         setCredentials([...issued]);
         if (Array.isArray(result.errors) && result.errors.length) {
-          const first = result.errors[0];
-          throw new Error(
-            `${result.errors.length} row(s) were skipped. ${first?.error ?? "Review the import file."}`
-          );
+          serverFailures.push(...result.errors);
         }
       }
 
-      setMessage(
-        `${issued.length} account${issued.length === 1 ? "" : "s"} created. Download the temporary credentials now.`
+      const createdIdentifiers = new Set(
+        issued.map((item) => item.identifier.toLowerCase())
       );
+      const failureByIdentifier = new Map(
+        serverFailures
+          .filter((item) => item.identifier)
+          .map((item) => [
+            String(item.identifier).toLowerCase(),
+            String(item.error ?? "The account could not be created."),
+          ])
+      );
+
+      setRows((current) =>
+        current.map((row) => {
+          const identifier =
+            personType === "student" ? row.lrn : row.email.toLowerCase();
+
+          if (createdIdentifiers.has(identifier.toLowerCase())) {
+            return {
+              ...row,
+              valid: false,
+              status: "created" as const,
+              error: "Account created in this import.",
+            };
+          }
+
+          const serverError = failureByIdentifier.get(identifier.toLowerCase());
+          if (!serverError) return row;
+
+          const alreadyExists = /already has .*account|already.*registered|already exists/i.test(
+            serverError
+          );
+          return {
+            ...row,
+            valid: false,
+            status: alreadyExists ? ("existing" as const) : ("invalid" as const),
+            error: serverError,
+          };
+        })
+      );
+
+      if (issued.length) {
+        setUsers((current) => {
+          const knownLrns = new Set(
+            current.map((user) => user.lrn ?? "").filter(Boolean)
+          );
+          const knownEmails = new Set(
+            current.map((user) => user.email.toLowerCase())
+          );
+          const additions: UserRecord[] = [];
+
+          for (const item of issued) {
+            if (personType === "student") {
+              if (!knownLrns.has(item.identifier)) {
+                knownLrns.add(item.identifier);
+                additions.push({ lrn: item.identifier, email: "" });
+              }
+            } else {
+              const email = item.identifier.toLowerCase();
+              if (!knownEmails.has(email)) {
+                knownEmails.add(email);
+                additions.push({ lrn: null, email });
+              }
+            }
+          }
+
+          return [...current, ...additions];
+        });
+      }
+
+      if (issued.length) {
+        setMessage(
+          `${issued.length} Ready account${issued.length === 1 ? "" : "s"} created successfully. ${summary.existing ? `${summary.existing} existing account${summary.existing === 1 ? "" : "s"} from the uploaded file were skipped. ` : ""}${serverFailures.length ? `${serverFailures.length} additional row${serverFailures.length === 1 ? "" : "s"} could not be created and remain listed for review. ` : ""}Download the temporary credentials now.`
+        );
+      } else if (serverFailures.length) {
+        setError(
+          `No new accounts were created. ${serverFailures.length} Ready row${serverFailures.length === 1 ? " was" : "s were"} skipped by the server. ${serverFailures[0]?.error ?? "Review the rows and try again."}`
+        );
+      }
     } catch (err) {
       setError(
         (err instanceof Error ? err.message : "Import failed.") +
@@ -1180,10 +1282,14 @@ export default function BulkAccountImportPage() {
             <>
               <div className={styles.summary}>
                 <span>Total <strong>{summary.total}</strong></span>
-                <span>Ready <strong>{summary.valid}</strong></span>
+                <span>Ready <strong>{summary.ready}</strong></span>
+                <span>Already Existing <strong>{summary.existing}</strong></span>
                 <span>Needs Correction <strong>{summary.invalid}</strong></span>
-                <button className={styles.primary} onClick={() => void importAccounts()} disabled={working || summary.invalid > 0 || summary.valid === 0}>
-                  <KeyRound size={16} />{working ? "Creating accounts…" : "Create accounts"}
+                {summary.created > 0 && (
+                  <span>Created <strong>{summary.created}</strong></span>
+                )}
+                <button className={styles.primary} onClick={() => void importAccounts()} disabled={working || summary.ready === 0}>
+                  <KeyRound size={16} />{working ? "Creating Ready accounts…" : `Create Ready Accounts (${summary.ready})`}
                 </button>
               </div>
 
@@ -1191,12 +1297,31 @@ export default function BulkAccountImportPage() {
                 <table>
                   <thead><tr><th aria-label="Number"></th><th>Name</th><th>{personType === "student" ? "LRN" : "Email"}</th>{personType === "student" && <><th>Grade</th><th>Section</th>{selectedGrade === "12" && <><th>Track</th><th>Strand</th></>}</>}<th>Status</th></tr></thead>
                   <tbody>{rows.map((row, index) => (
-                    <tr key={row.row_number} className={!row.valid ? styles.invalidRow : ""}>
+                    <tr
+                      key={row.row_number}
+                      className={
+                        row.status === "invalid"
+                          ? styles.invalidRow
+                          : row.status === "existing"
+                            ? styles.existingRow
+                            : ""
+                      }
+                    >
                       <td>{index + 1}</td>
                       <td><strong>{row.full_name || "—"}</strong></td>
                       <td>{personType === "student" ? row.lrn : row.email}</td>
                       {personType === "student" && <><td>{row.grade_level ?? "—"}</td><td>{row.section || "—"}</td>{selectedGrade === "12" && <><td>{row.shs_track === "Technical-Vocational-Livelihood" ? "TVL" : row.shs_track || "—"}</td><td>{(SHS_STRANDS[row.shs_track]?.find((item) => item.value === row.shs_strand_program)?.label ?? row.shs_strand_program) || "—"}</td></>}</>}
-                      <td>{row.valid ? <span className={styles.ready}>Ready</span> : <span className={styles.invalid}>{row.error}</span>}</td>
+                      <td>
+                        {row.status === "ready" ? (
+                          <span className={styles.ready}>Ready</span>
+                        ) : row.status === "existing" ? (
+                          <span className={styles.existing}>Already Existing</span>
+                        ) : row.status === "created" ? (
+                          <span className={styles.created}>Created</span>
+                        ) : (
+                          <span className={styles.invalid}>{row.error}</span>
+                        )}
+                      </td>
                     </tr>
                   ))}</tbody>
                 </table>
