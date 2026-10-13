@@ -24,6 +24,7 @@ import {
   Settings2,
   ShieldCheck,
   SlidersHorizontal,
+  Sparkles,
   Users,
 } from "lucide-react";
 import {
@@ -50,6 +51,20 @@ type Student = {
   section_id: string;
   section: string;
   tve_major: string | null;
+};
+
+type RemarkDraft = {
+  term_no: number;
+  text: string;
+  suggestion: string;
+  source: "automatic" | "manual" | "pending";
+  saved: boolean;
+  grade_average: number | null;
+  grade_complete: boolean;
+  subject_count: number;
+  attendance_rate: number | null;
+  class_days: number;
+  cutoff: string | null;
 };
 
 type Sf9NumericLayoutKey = Exclude<
@@ -106,6 +121,38 @@ export default function Sf9Page() {
   const [editorSampleId, setEditorSampleId] = useState("");
   const [editorDetail, setEditorDetail] = useState<any>(null);
   const [loadingEditorDetail, setLoadingEditorDetail] = useState(false);
+  const [remarkDrafts, setRemarkDrafts] = useState<Record<string, RemarkDraft[]>>({});
+  const [savingRemarksFor, setSavingRemarksFor] = useState("");
+  const [remarkMessage, setRemarkMessage] = useState("");
+
+  function remarkDraftsFromDetail(value: any) {
+    const next: Record<string, RemarkDraft[]> = {};
+    for (const card of value?.cards ?? []) {
+      next[String(card.id)] = (card.comment_details ?? []).map((item: any) => ({
+        term_no: Number(item.term_no),
+        text: String(item.text ?? ""),
+        suggestion: String(item.suggestion ?? ""),
+        source:
+          item.source === "manual"
+            ? "manual"
+            : item.source === "automatic"
+              ? "automatic"
+              : "pending",
+        saved: Boolean(item.saved),
+        grade_average:
+          typeof item.grade_average === "number" ? item.grade_average : null,
+        grade_complete: Boolean(item.grade_complete),
+        subject_count: Number(item.subject_count ?? 0),
+        attendance_rate:
+          typeof item.attendance_rate === "number"
+            ? item.attendance_rate
+            : null,
+        class_days: Number(item.class_days ?? 0),
+        cutoff: item.cutoff ? String(item.cutoff) : null,
+      }));
+    }
+    return next;
+  }
 
   async function loadBase() {
     setLoading(true);
@@ -152,6 +199,8 @@ export default function Sf9Page() {
     setEditorSampleId("");
     setEditorDetail(null);
     setStudents([]);
+    setRemarkDrafts({});
+    setRemarkMessage("");
 
     if (!selectedSectionId) return;
 
@@ -214,7 +263,11 @@ export default function Sf9Page() {
           if (!cancelled) setError(result.error ?? "Unable to prepare SF9.");
           return;
         }
-        if (!cancelled) setDetail(result);
+        if (!cancelled) {
+          setDetail(result);
+          setRemarkDrafts(remarkDraftsFromDetail(result));
+          setRemarkMessage("");
+        }
       } catch {
         if (!cancelled) setError("Unable to reach the SF9 service.");
       } finally {
@@ -314,6 +367,118 @@ export default function Sf9Page() {
   function printSf9() {
     if (!detail?.cards?.length) return;
     window.print();
+  }
+
+  function patchRemark(studentId: string, termIndex: number, text: string) {
+    setRemarkDrafts((current) => {
+      const existing = current[studentId] ?? [];
+      const next = existing.map((item, index) =>
+        index === termIndex
+          ? {
+              ...item,
+              text,
+              source:
+                text.trim() && text.trim() === item.suggestion.trim()
+                  ? "automatic"
+                  : text.trim()
+                    ? "manual"
+                    : "pending",
+              saved: false,
+            }
+          : item
+      );
+      return { ...current, [studentId]: next };
+    });
+
+    setDetail((current: any) => {
+      if (!current?.cards) return current;
+      return {
+        ...current,
+        cards: current.cards.map((card: any) => {
+          if (String(card.id) !== studentId) return card;
+          const comments = [...(card.comments ?? ["", "", ""])];
+          comments[termIndex] = text;
+          const details = (card.comment_details ?? []).map(
+            (item: any, index: number) =>
+              index === termIndex
+                ? {
+                    ...item,
+                    text,
+                    source:
+                      text.trim() && text.trim() === String(item.suggestion ?? "").trim()
+                        ? "automatic"
+                        : text.trim()
+                          ? "manual"
+                          : "pending",
+                    saved: false,
+                  }
+                : item
+          );
+          return { ...card, comments, comment_details: details };
+        }),
+      };
+    });
+    setRemarkMessage("");
+  }
+
+  function regenerateRemark(studentId: string, termIndex: number) {
+    const draft = remarkDrafts[studentId]?.[termIndex];
+    if (!draft?.suggestion) return;
+    patchRemark(studentId, termIndex, draft.suggestion);
+  }
+
+  async function saveLearnerRemarks(studentId: string) {
+    const drafts = remarkDrafts[studentId] ?? [];
+    if (!selectedSectionId || drafts.length === 0) return;
+
+    setSavingRemarksFor(studentId);
+    setError("");
+    setRemarkMessage("");
+    try {
+      const response = await fetch("/api/academic/sf9", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_remarks",
+          sectionId: selectedSectionId,
+          studentId,
+          remarks: drafts.map((item) => ({
+            termNo: item.term_no,
+            remark: item.text,
+            source:
+              item.text.trim() &&
+              item.text.trim() === item.suggestion.trim()
+                ? "automatic"
+                : "manual",
+          })),
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(result.error ?? "Unable to save the SF9 remarks.");
+        return;
+      }
+
+      setRemarkDrafts((current) => ({
+        ...current,
+        [studentId]: (current[studentId] ?? []).map((item) => ({
+          ...item,
+          saved: Boolean(item.text.trim()),
+          source:
+            item.text.trim() &&
+            item.text.trim() === item.suggestion.trim()
+              ? "automatic"
+              : item.text.trim()
+                ? "manual"
+                : "pending",
+        })),
+      }));
+      setRemarkMessage("SF9 remarks saved. The current preview is ready to print.");
+    } catch {
+      setError("Unable to reach the SF9 remarks service.");
+    } finally {
+      setSavingRemarksFor("");
+    }
   }
 
   function updateLayoutNumber(
@@ -1053,6 +1218,125 @@ export default function Sf9Page() {
           </div>
         </section>
 
+        {detail?.cards?.length > 0 && (
+          <section className={styles.remarksPanel}>
+            <div className={styles.remarksHeader}>
+              <div className={styles.remarksTitle}>
+                <span className={styles.remarksIcon}>
+                  <Sparkles size={18} />
+                </span>
+                <div>
+                  <strong>Automated Teacher&apos;s Remarks</strong>
+                  <span>
+                    Suggestions use only published grades and recorded attendance.
+                    Review or edit them before printing.
+                  </span>
+                </div>
+              </div>
+              <div className={styles.remarksGuardrail}>
+                No personality or behavior is inferred automatically.
+              </div>
+            </div>
+
+            {remarkMessage && (
+              <div className={styles.remarksNotice}>{remarkMessage}</div>
+            )}
+
+            <div className={styles.remarksLearners}>
+              {detail.cards.map((card: any) => {
+                const drafts = remarkDrafts[String(card.id)] ?? [];
+                return (
+                  <article className={styles.remarksLearner} key={card.id}>
+                    <div className={styles.remarksLearnerHead}>
+                      <div>
+                        <strong>{card.full_name}</strong>
+                        <span>
+                          Grade {card.grade_level} · {card.section}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className={styles.saveRemarksButton}
+                        disabled={savingRemarksFor === String(card.id)}
+                        onClick={() => void saveLearnerRemarks(String(card.id))}
+                      >
+                        <Save size={15} />
+                        {savingRemarksFor === String(card.id)
+                          ? "Saving…"
+                          : "Save Remarks"}
+                      </button>
+                    </div>
+
+                    <div className={styles.termRemarkGrid}>
+                      {drafts.map((draft, index) => (
+                        <div className={styles.termRemark} key={draft.term_no}>
+                          <div className={styles.termRemarkTop}>
+                            <strong>Term {draft.term_no}</strong>
+                            <div className={styles.remarkSignals}>
+                              {draft.grade_complete &&
+                              draft.grade_average !== null ? (
+                                <span>Avg {draft.grade_average}</span>
+                              ) : (
+                                <span className={styles.pendingSignal}>
+                                  Waiting for Published Grades
+                                </span>
+                              )}
+                              {draft.attendance_rate !== null && (
+                                <span>
+                                  Attendance {draft.attendance_rate.toFixed(1)}%
+                                </span>
+                              )}
+                              {draft.saved && (
+                                <span>
+                                  {draft.source === "manual"
+                                    ? "Adviser Edited"
+                                    : "Saved Auto Remark"}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <textarea
+                            rows={4}
+                            maxLength={500}
+                            value={draft.text}
+                            placeholder={
+                              draft.grade_complete
+                                ? "No automatic remark is available yet."
+                                : "Automatic remark will appear after all graded subjects for this term are published."
+                            }
+                            onChange={(event) =>
+                              patchRemark(
+                                String(card.id),
+                                index,
+                                event.target.value
+                              )
+                            }
+                          />
+
+                          <div className={styles.termRemarkFooter}>
+                            <span>{draft.text.length}/500</span>
+                            <button
+                              type="button"
+                              disabled={!draft.suggestion}
+                              onClick={() =>
+                                regenerateRemark(String(card.id), index)
+                              }
+                            >
+                              <RefreshCw size={13} />
+                              Regenerate
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         <section className={styles.previewHeading}>
           <div>
             <span>PRINT PREVIEW</span>
@@ -1063,8 +1347,8 @@ export default function Sf9Page() {
             </h2>
           </div>
           <p>
-            Only <strong>published</strong> term grades are printed. Attendance is
-            summarized from the section&apos;s recorded daily attendance.
+            Only <strong>published</strong> term grades are printed. Automated remarks
+            use those grades plus recorded attendance and remain editable by the adviser.
           </p>
         </section>
 
