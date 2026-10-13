@@ -830,15 +830,17 @@ function DashboardHome({
               <span>School Year</span>
               <strong>{academicContext?.school_year ?? "Current"}</strong>
             </div>
-            <div>
-              <span>My Service Credits</span>
-              <strong>
-                {serviceCreditSummary?.service_credit_balance === null ||
-                serviceCreditSummary?.service_credit_balance === undefined
-                  ? "Not Recorded"
-                  : `${Number(serviceCreditSummary.service_credit_balance).toFixed(2)} days`}
-              </strong>
-            </div>
+            {profile.role === "staff_administrator" && (
+              <div>
+                <span>My Service Credits</span>
+                <strong>
+                  {serviceCreditSummary?.service_credit_balance === null ||
+                  serviceCreditSummary?.service_credit_balance === undefined
+                    ? "Not Recorded"
+                    : `${Number(serviceCreditSummary.service_credit_balance).toFixed(2)} days`}
+                </strong>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -1069,7 +1071,7 @@ function SideNav({
                 <span>My Profile</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            {profile.role !== "student" && (
+            {(profile.role === "teacher" || profile.role === "staff_administrator") && (
               <SidebarMenuItem>
                 <SidebarMenuButton
                   className="nav-button"
@@ -1569,7 +1571,10 @@ export default function PortalPage() {
             }
           }
 
-          if (loadedProfile.role !== "student") {
+          if (
+            loadedProfile.role === "teacher" ||
+            loadedProfile.role === "staff_administrator"
+          ) {
             try {
               const creditsResponse = await fetch("/api/service-credits", {
                 method: "POST",
