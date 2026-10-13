@@ -8,7 +8,7 @@ function read(file) {
 }
 
 test("Service Credits can belong to active non-teaching personnel without portal accounts", () => {
-  const migration = read("supabase/migrations/20261013101500_service_credits_unlinked_non_teaching.sql");
+  const migration = read("supabase/migrations/20261013104417_service_credits_unlinked_non_teaching.sql");
   const fn = read("supabase/functions/service-credits/index.ts");
 
   assert.match(migration, /non_teaching_personnel_id uuid/);
@@ -29,7 +29,7 @@ test("HR can post to an unlinked non-teaching Service Credits ledger", () => {
 });
 
 test("linked non-teaching personnel can later read their imported ledger", () => {
-  const migration = read("supabase/migrations/20261013101500_service_credits_unlinked_non_teaching.sql");
+  const migration = read("supabase/migrations/20261013104417_service_credits_unlinked_non_teaching.sql");
   const fn = read("supabase/functions/service-credits/index.ts");
 
   assert.match(migration, /nt\.portal_user_id = \(select auth\.uid\(\)\)/);
@@ -38,7 +38,7 @@ test("linked non-teaching personnel can later read their imported ledger", () =>
 });
 
 test("Service Credits preserve up to four decimal places", () => {
-  const migration = read("supabase/migrations/20261013101500_service_credits_unlinked_non_teaching.sql");
+  const migration = read("supabase/migrations/20261013104417_service_credits_unlinked_non_teaching.sql");
   const adminPage = read("app/portal/admin/service-credits/page.tsx");
   const selfPage = read("app/portal/service-credits/page.tsx");
 
