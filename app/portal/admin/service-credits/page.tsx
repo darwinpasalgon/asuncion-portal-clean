@@ -60,6 +60,17 @@ function moneyStyle(value: number | null | undefined) {
   return formatted === "Not Recorded" ? formatted : `${formatted} days`;
 }
 
+function surnameSortKey(fullName: string) {
+  const name = fullName.trim().replace(/\s+/g, " ");
+  if (name.includes(",")) return name.split(",")[0].toLocaleLowerCase("en-PH");
+  const parts = name.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/i, "").split(" ");
+  const last = parts.pop() ?? "";
+  if (parts.at(-1)?.toUpperCase() === "CRUZ" && last.toUpperCase() === "") return last;
+  if (parts.at(-1)?.toUpperCase() === "DE" || parts.at(-1)?.toUpperCase() === "DEL" || parts.at(-1)?.toUpperCase() === "DELA") return (parts.pop() + " " + last).toLocaleLowerCase("en-PH");
+  if (parts.at(-1)?.toUpperCase() === "LA" && parts.at(-2)?.toUpperCase() === "DE") return (parts.slice(-2).join(" ") + " " + last).toLocaleLowerCase("en-PH");
+  return last.toLocaleLowerCase("en-PH");
+}
+
 export default function AdminServiceCreditsPage() {
   const [personnel, setPersonnel] = useState<Personnel[]>([]);
   const [selectedId, setSelectedId] = useState("");
@@ -92,8 +103,12 @@ export default function AdminServiceCreditsPage() {
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error ?? "Unable to load personnel.");
       const rows = (result.personnel ?? []) as Personnel[];
-      setPersonnel(rows);
-      if (!selectedId && rows[0]?.id) setSelectedId(rows[0].id);
+      const sortedRows = [...rows].sort((a, b) =>
+        surnameSortKey(a.full_name).localeCompare(surnameSortKey(b.full_name), "en-PH") ||
+        a.full_name.localeCompare(b.full_name, "en-PH")
+      );
+      setPersonnel(sortedRows);
+      if (!selectedId && sortedRows[0]?.id) setSelectedId(sortedRows[0].id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load personnel.");
     } finally {
