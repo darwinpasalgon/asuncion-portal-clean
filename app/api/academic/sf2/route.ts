@@ -484,7 +484,10 @@ export async function GET(request: NextRequest) {
 
           if (row.status === "absent") return { date, state: "absent", code: "X" };
           if (row.status === "absent_morning") {
-            return { date, state: "late", code: "" };
+            return { date, state: "absent_morning", code: "" };
+          }
+          if (row.status === "absent_afternoon") {
+            return { date, state: "absent_afternoon", code: "" };
           }
           if (row.status === "cutting_classes") {
             return { date, state: "cutting", code: "" };
@@ -497,7 +500,10 @@ export async function GET(request: NextRequest) {
 
         const absent = cells.filter((cell) => cell.state === "absent").length;
         const tardy = cells.filter(
-          (cell) => cell.state === "late" || cell.state === "cutting"
+          (cell) =>
+            cell.state === "absent_morning" ||
+            cell.state === "absent_afternoon" ||
+            cell.state === "cutting"
         ).length;
 
         let currentStreak = 0;
@@ -514,7 +520,8 @@ export async function GET(request: NextRequest) {
         const presentDays = cells.filter(
           (cell) =>
             cell.state === "present" ||
-            cell.state === "late" ||
+            cell.state === "absent_morning" ||
+            cell.state === "absent_afternoon" ||
             cell.state === "cutting"
         ).length;
 
@@ -543,10 +550,10 @@ export async function GET(request: NextRequest) {
 
     const dailyTotals = schoolDays.map((date, index) => {
       const male = males.filter((learner) =>
-        ["present", "late", "cutting"].includes(learner.cells[index]?.state)
+        ["present", "absent_morning", "absent_afternoon", "cutting"].includes(learner.cells[index]?.state)
       ).length;
       const female = females.filter((learner) =>
-        ["present", "late", "cutting"].includes(learner.cells[index]?.state)
+        ["present", "absent_morning", "absent_afternoon", "cutting"].includes(learner.cells[index]?.state)
       ).length;
       return { date, male, female, total: male + female };
     });
