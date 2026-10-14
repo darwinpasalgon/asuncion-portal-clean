@@ -421,8 +421,37 @@ export default function Sf9Page() {
 
   function regenerateRemark(studentId: string, termIndex: number) {
     const draft = remarkDrafts[studentId]?.[termIndex];
-    if (!draft?.suggestion) return;
-    patchRemark(studentId, termIndex, draft.suggestion);
+    if (!draft?.grade_complete || draft.grade_average === null) return;
+
+    const average = draft.grade_average;
+    const attendance = draft.attendance_rate;
+    const academic = average >= 90
+      ? ["Mahusay ang pagganap sa mga asignatura ngayong term.", "Kapansin-pansin ang mataas na antas ng pagkatuto ngayong term.", "Napakaganda ng ipinakitang akademikong resulta ngayong term."]
+      : average >= 80
+        ? ["Maganda ang pagganap sa mga asignatura ngayong term.", "Patuloy na umuunlad ang pagkatuto sa mga asignatura.", "Maayos ang pangkalahatang resulta sa pag-aaral ngayong term."]
+        : average >= 75
+          ? ["Natutugunan ang inaasahang antas ng pagkatuto ngayong term.", "May pundasyon sa mga aralin na maaari pang paghusayin.", "Nakapapasa sa mga asignatura at may pagkakataong higit pang umunlad."]
+          : ["Kailangan pa ng dagdag na suporta sa mga aralin ngayong term.", "May mga asignaturang nangangailangan ng mas tutok na pagsasanay.", "Makabubuting palakasin ang mga pangunahing kasanayan sa pag-aaral."];
+    const attendanceText = attendance === null
+      ? ""
+      : attendance >= 95
+        ? "Panatilihin ang regular na pagpasok."
+        : attendance >= 90
+          ? "Sikaping mabawasan ang mga pagliban."
+          : "Pagtuunan din ang mas regular na pagpasok.";
+    const nextStep = average >= 90
+      ? "Ipagpatuloy ang mahusay na paghahanda sa bawat gawain."
+      : average >= 75
+        ? "Maglaan pa ng oras sa pagrerepaso at pagsasanay."
+        : "Humingi ng gabay sa guro at magsanay nang tuloy-tuloy.";
+
+    const options = academic.map((statement, index) =>
+      [statement, index === 1 ? nextStep : attendanceText, index === 1 ? attendanceText : nextStep]
+        .filter(Boolean).join(" ").slice(0, 500)
+    );
+    const next = options.find((option) => option !== draft.text.trim()) ?? options[0];
+    patchRemark(studentId, termIndex, next);
+    setRemarkMessage("A new suggestion was generated. Review and save it before printing.");
   }
 
   async function saveLearnerRemarks(studentId: string) {
@@ -1310,7 +1339,7 @@ export default function Sf9Page() {
                             <span>{draft.text.length}/500</span>
                             <button
                               type="button"
-                              disabled={!draft.suggestion}
+                              disabled={!draft.grade_complete || draft.grade_average === null}
                               onClick={() =>
                                 regenerateRemark(String(card.id), index)
                               }
