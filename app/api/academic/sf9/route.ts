@@ -403,6 +403,7 @@ function subjectRank(name: string) {
     science: 40,
     "araling panlipunan": 50,
     "edukasyon sa pagpapakatao": 60,
+    "values education": 60,
     "technical vocational education": 70,
     mapeh: 80,
     "technical drawing": 110,
