@@ -1,8 +1,10 @@
 "use client";
 
+import { generateSf9Remark } from "@/lib/sf9-remarks";
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type MouseEvent as ReactMouseEvent,
 } from "react";
@@ -65,6 +67,7 @@ type RemarkDraft = {
   attendance_rate: number | null;
   class_days: number;
   cutoff: string | null;
+  subject_grades: Array<{ label: string; grade: number }>;
 };
 
 type Sf9NumericLayoutKey = Exclude<
@@ -124,6 +127,7 @@ export default function Sf9Page() {
   const [remarkDrafts, setRemarkDrafts] = useState<Record<string, RemarkDraft[]>>({});
   const [savingRemarksFor, setSavingRemarksFor] = useState("");
   const [remarkMessage, setRemarkMessage] = useState("");
+  const regenerationCounters = useRef<Record<string, number>>({});
 
   function remarkDraftsFromDetail(value: any) {
     const next: Record<string, RemarkDraft[]> = {};
@@ -149,6 +153,7 @@ export default function Sf9Page() {
             : null,
         class_days: Number(item.class_days ?? 0),
         cutoff: item.cutoff ? String(item.cutoff) : null,
+        subject_grades: Array.isArray(item.subject_grades) ? item.subject_grades : [],
       }));
     }
     return next;
@@ -423,35 +428,29 @@ export default function Sf9Page() {
     const draft = remarkDrafts[studentId]?.[termIndex];
     if (!draft?.grade_complete || draft.grade_average === null) return;
 
-    const average = draft.grade_average;
-    const attendance = draft.attendance_rate;
-    const academic = average >= 90
-      ? ["Mahusay ang pagganap sa mga asignatura ngayong term.", "Kapansin-pansin ang mataas na antas ng pagkatuto ngayong term.", "Napakaganda ng ipinakitang akademikong resulta ngayong term."]
-      : average >= 80
-        ? ["Maganda ang pagganap sa mga asignatura ngayong term.", "Patuloy na umuunlad ang pagkatuto sa mga asignatura.", "Maayos ang pangkalahatang resulta sa pag-aaral ngayong term."]
-        : average >= 75
-          ? ["Natutugunan ang inaasahang antas ng pagkatuto ngayong term.", "May pundasyon sa mga aralin na maaari pang paghusayin.", "Nakapapasa sa mga asignatura at may pagkakataong higit pang umunlad."]
-          : ["Kailangan pa ng dagdag na suporta sa mga aralin ngayong term.", "May mga asignaturang nangangailangan ng mas tutok na pagsasanay.", "Makabubuting palakasin ang mga pangunahing kasanayan sa pag-aaral."];
-    const attendanceText = attendance === null
-      ? ""
-      : attendance >= 95
-        ? "Panatilihin ang regular na pagpasok."
-        : attendance >= 90
-          ? "Sikaping mabawasan ang mga pagliban."
-          : "Pagtuunan din ang mas regular na pagpasok.";
-    const nextStep = average >= 90
-      ? "Ipagpatuloy ang mahusay na paghahanda sa bawat gawain."
-      : average >= 75
-        ? "Maglaan pa ng oras sa pagrerepaso at pagsasanay."
-        : "Humingi ng gabay sa guro at magsanay nang tuloy-tuloy.";
-
-    const options = academic.map((statement, index) =>
-      [statement, index === 1 ? nextStep : attendanceText, index === 1 ? attendanceText : nextStep]
-        .filter(Boolean).join(" ").slice(0, 500)
-    );
-    const next = options.find((option) => option !== draft.text.trim()) ?? options[0];
+    const key = studentId + ":" + draft.term_no;
+    const signal = {
+      termAverage: draft.grade_average,
+      gradeComplete: draft.grade_complete,
+      subjectCount: draft.subject_count,
+      attendanceRate: draft.attendance_rate,
+      classDays: draft.class_days,
+      subjectGrades: draft.subject_grades,
+      lowestSubject: null,
+      lowestGrade: null,
+      variantSeed: key,
+    };
+    let counter = regenerationCounters.current[key] ?? 0;
+    let next = "";
+    for (let attempt = 0; attempt < 25; attempt++) {
+      counter++;
+      next = generateSf9Remark(signal, counter);
+      if (next && next !== draft.text.trim()) break;
+    }
+    regenerationCounters.current[key] = counter;
+    if (!next) return;
     patchRemark(studentId, termIndex, next);
-    setRemarkMessage("A new suggestion was generated. Review and save it before printing.");
+    setRemarkMessage("New subject- and attendance-based remark generated. Review and save before printing.");
   }
 
   async function saveLearnerRemarks(studentId: string) {
