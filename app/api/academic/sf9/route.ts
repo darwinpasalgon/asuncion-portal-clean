@@ -729,7 +729,7 @@ export async function GET(request: NextRequest) {
               inFilter(requestedStudentIds)
             )}&teacher_assignment_id=in.${encodeURIComponent(
               inFilter(assignmentIds)
-            )}&status=eq.published&select=student_id,teacher_assignment_id,term_no,term_grade,music_grade,arts_grade,physical_education_grade,health_grade,status`,
+            )}&status=eq.published&select=student_id,teacher_assignment_id,term_no,term_grade,music_arts_grade,pe_health_grade,music_grade,arts_grade,physical_education_grade,health_grade,status`,
             token
           )
         : [];
@@ -865,30 +865,24 @@ export async function GET(request: NextRequest) {
         });
 
         if (normalized === "mapeh") {
-          const musicArts = termRecords.map((record) =>
-            record &&
-            record.music_grade !== null &&
-            record.music_grade !== undefined &&
-            record.arts_grade !== null &&
-            record.arts_grade !== undefined
-              ? roundAverage([
-                  Number(record.music_grade),
-                  Number(record.arts_grade),
-                ])
-              : null
-          );
-          const peHealth = termRecords.map((record) =>
-            record &&
-            record.physical_education_grade !== null &&
-            record.physical_education_grade !== undefined &&
-            record.health_grade !== null &&
-            record.health_grade !== undefined
-              ? roundAverage([
-                  Number(record.physical_education_grade),
-                  Number(record.health_grade),
-                ])
-              : null
-          );
+          const musicArts = termRecords.map((record) => {
+            if (!record) return null;
+            if (record.music_arts_grade !== null && record.music_arts_grade !== undefined) {
+              return Number(record.music_arts_grade);
+            }
+            return record.music_grade != null && record.arts_grade != null
+              ? roundAverage([Number(record.music_grade), Number(record.arts_grade)])
+              : null;
+          });
+          const peHealth = termRecords.map((record) => {
+            if (!record) return null;
+            if (record.pe_health_grade !== null && record.pe_health_grade !== undefined) {
+              return Number(record.pe_health_grade);
+            }
+            return record.physical_education_grade != null && record.health_grade != null
+              ? roundAverage([Number(record.physical_education_grade), Number(record.health_grade)])
+              : null;
+          });
 
           rows.push({
             key: `${subject.id}-music-arts`,
