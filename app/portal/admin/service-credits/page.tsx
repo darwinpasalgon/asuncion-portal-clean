@@ -65,7 +65,6 @@ function surnameSortKey(fullName: string) {
   if (name.includes(",")) return name.split(",")[0].toLocaleLowerCase("en-PH");
   const parts = name.replace(/\s+(JR\.?|SR\.?|II|III|IV)$/i, "").split(" ");
   const last = parts.pop() ?? "";
-  if (parts.at(-1)?.toUpperCase() === "CRUZ" && last.toUpperCase() === "") return last;
   if (parts.at(-1)?.toUpperCase() === "DE" || parts.at(-1)?.toUpperCase() === "DEL" || parts.at(-1)?.toUpperCase() === "DELA") return (parts.pop() + " " + last).toLocaleLowerCase("en-PH");
   if (parts.at(-1)?.toUpperCase() === "LA" && parts.at(-2)?.toUpperCase() === "DE") return (parts.slice(-2).join(" ") + " " + last).toLocaleLowerCase("en-PH");
   return last.toLocaleLowerCase("en-PH");
