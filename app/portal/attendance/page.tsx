@@ -27,6 +27,7 @@ type AttendanceStatus =
   | "present"
   | "absent"
   | "absent_morning"
+  | "absent_afternoon"
   | "cutting_classes"
   | "transferred_in"
   | "transferred_out"
@@ -37,9 +38,9 @@ type ExclusionType="regular_holiday"|"special_non_working_holiday"|"class_suspen
 type DateExclusion={id?:string;school_year_id:string;section_id:string;attendance_date:string;exclusion_type:ExclusionType;reason:string|null};
 type PendingDate={section_id:string;grade_level:number;section:string;attendance_date:string;expected_count:number;recorded_count:number};
 type AttendanceAssistant={id:string;school_year_id:string;section_id:string;student_id:string;assigned_by:string;is_active:boolean;assigned_at:string;updated_at:string};
-type AssistantEntry={id?:string;school_year_id:string;section_id:string;attendance_date:string;student_id:string;status:"present"|"absent"|"absent_morning"|"cutting_classes";entered_by:string;updated_at?:string};
+type AssistantEntry={id?:string;school_year_id:string;section_id:string;attendance_date:string;student_id:string;status:"present"|"absent"|"absent_morning"|"absent_afternoon"|"cutting_classes";entered_by:string;updated_at?:string};
 type AssistantRoster={school_year_id:string;section_id:string;student_id:string;display_name:string;sex:string|null};
-type AssistantDraft={status:"present"|"absent"|"absent_morning"|"cutting_classes"|""};
+type AssistantDraft={status:"present"|"absent"|"absent_morning"|"absent_afternoon"|"cutting_classes"|""};
 
 function localDate(){
   const d=new Date();
@@ -56,6 +57,7 @@ const ATTENDANCE_LABELS:Record<AttendanceStatus,string>={
   present:"Present",
   absent:"Absent",
   absent_morning:"Absent in the Morning",
+  absent_afternoon:"Absent in the Afternoon",
   cutting_classes:"Cutting Classes",
   transferred_in:"Transferred In",
   transferred_out:"Transferred Out",
@@ -219,7 +221,7 @@ export default function AttendancePage(){
     setAssistantDrafts(next);
   }
 
-  function updateAssistantDraft(studentId:string,status:"present"|"absent"|"absent_morning"|"cutting_classes"|""){
+  function updateAssistantDraft(studentId:string,status:"present"|"absent"|"absent_morning"|"absent_afternoon"|"cutting_classes"|""){
     setAssistantDrafts(current=>({...current,[studentId]:{status}}));
   }
 
@@ -322,7 +324,7 @@ export default function AttendancePage(){
       const x=await r.json().catch(()=>({}));
       if(!r.ok){setError(x.error??"Unable to save attendance.");return;}
       const savedCount=x.count??roster.length;
-      setSuccess("Attendance saved for "+savedCount+" student"+(savedCount===1?"":"s")+".");
+      setSuccess((isEditingSavedAttendance?"Attendance updated for ":"Attendance saved for ")+savedCount+" student"+(savedCount===1?"":"s")+".");
       await load(date);
     }catch{setError("Unable to reach the attendance service.");}
     finally{setWorking(false);}
@@ -335,6 +337,8 @@ export default function AttendancePage(){
   const untaggedCount=roster.filter(student=>!drafts[student.id]?.status).length;
   const currentAssistants=attendanceAssistants.filter(item=>item.section_id===sectionId&&item.is_active);
   const currentAssistantEntries=assistantEntries.filter(item=>item.section_id===sectionId&&item.attendance_date===date);
+  const currentOfficialAttendance=attendance.filter(item=>item.section_id===sectionId&&item.attendance_date===date);
+  const isEditingSavedAttendance=currentOfficialAttendance.length>0;
   const assistantIds=new Set(currentAssistants.map(item=>item.student_id));
   const assistantCandidates=roster.filter(student=>!assistantIds.has(student.id));
   const assistantUntaggedCount=assistantRoster.filter(
@@ -411,6 +415,7 @@ export default function AttendancePage(){
       present:rows.filter(a=>a.status==="present").length,
       absent:rows.filter(a=>a.status==="absent").length,
       absentMorning:rows.filter(a=>a.status==="absent_morning").length,
+      absentAfternoon:rows.filter(a=>a.status==="absent_afternoon").length,
       cutting:rows.filter(a=>a.status==="cutting_classes").length,
       transferredIn:rows.filter(a=>a.status==="transferred_in").length,
       transferredOut:rows.filter(a=>a.status==="transferred_out").length,
@@ -432,7 +437,7 @@ export default function AttendancePage(){
         <p>{role==="teacher"
           ?"Record daily section attendance for sections assigned to you as Attendance Teacher / Adviser."
           :assistantAssignment
-            ?"Mark your classmates Present, Absent, Absent in the Morning, or Cutting Classes for today. Your adviser reviews and saves the official attendance."
+            ?"Mark your classmates Present, Absent, Absent in the Morning, Absent in the Afternoon, or Cutting Classes for today. Your adviser reviews and saves the official attendance."
             :"Your recorded attendance for the active school year."}</p>
       </div>
       {activeYear&&<div className={styles.yearCard}><CheckCircle2 size={18}/><div><span>SCHOOL YEAR</span><strong>{activeYear.name}</strong></div></div>}
@@ -591,9 +596,14 @@ export default function AttendancePage(){
               </div>
               <div className={styles.actions}>
                 <button className={styles.markAll} onClick={markAllPresent}><CheckCircle2 size={16}/>Mark All Present</button>
-                <button className={styles.saveAll} disabled={working||!roster.length||untaggedCount>0} onClick={()=>void save()}><Save size={16}/>{working?"Saving…":"Save Attendance"}</button>
+                <button className={styles.saveAll} disabled={working||!roster.length||untaggedCount>0} onClick={()=>void save()}><Save size={16}/>{working?"Saving…":isEditingSavedAttendance?"Update Attendance":"Save Attendance"}</button>
               </div>
             </div>
+
+            {isEditingSavedAttendance&&<div className={styles.editNotice}>
+              <ClipboardCheck size={16}/>
+              <span>Saved attendance is loaded for this date. Correct any attendance tag or note, then click Update Attendance. The existing records will be updated, not duplicated.</span>
+            </div>}
 
             {currentAssistantEntries.length>0&&<div className={styles.assistantDraftNotice}>
               <UserCheck size={16}/>
@@ -641,6 +651,7 @@ export default function AttendancePage(){
                           <option value="present">Present</option>
                           <option value="absent">Absent</option>
                           <option value="absent_morning">Absent in the Morning</option>
+                          <option value="absent_afternoon">Absent in the Afternoon</option>
                           <option value="cutting_classes">Cutting Classes</option>
                           <option value="transferred_in">Transferred In</option>
                           <option value="transferred_out">Transferred Out</option>
@@ -698,6 +709,7 @@ export default function AttendancePage(){
                   <button type="button" className={d.status==="present"?styles.assistantPresent:""} onClick={()=>updateAssistantDraft(student.student_id,"present")}>Present</button>
                   <button type="button" className={d.status==="absent"?styles.assistantAbsent:""} onClick={()=>updateAssistantDraft(student.student_id,"absent")}>Absent</button>
                   <button type="button" className={d.status==="absent_morning"?styles.assistantAbsentMorning:""} onClick={()=>updateAssistantDraft(student.student_id,"absent_morning")}>Absent in the Morning</button>
+                  <button type="button" className={d.status==="absent_afternoon"?styles.assistantAbsentAfternoon:""} onClick={()=>updateAssistantDraft(student.student_id,"absent_afternoon")}>Absent in the Afternoon</button>
                   <button type="button" className={d.status==="cutting_classes"?styles.assistantCutting:""} onClick={()=>updateAssistantDraft(student.student_id,"cutting_classes")}>Cutting Classes</button>
                 </div>
               </article>;
@@ -714,6 +726,7 @@ export default function AttendancePage(){
         <article><CheckCircle2 size={22}/><span>Present</span><strong>{counts.present}</strong></article>
         <article><XCircle size={22}/><span>Absent</span><strong>{counts.absent}</strong></article>
         <article><Clock3 size={22}/><span>Absent in the Morning</span><strong>{counts.absentMorning}</strong></article>
+        <article><Clock3 size={22}/><span>Absent in the Afternoon</span><strong>{counts.absentAfternoon}</strong></article>
         <article><XCircle size={22}/><span>Cutting Classes</span><strong>{counts.cutting}</strong></article>
         <article><UserCheck size={22}/><span>Movement</span><strong>{counts.transferredIn+" / "+counts.transferredOut+" / "+counts.dropped}</strong><small>Transferred In / Out / Dropped</small></article>
       </div>
