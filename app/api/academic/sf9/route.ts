@@ -983,6 +983,8 @@ export async function GET(request: NextRequest) {
           classDays: 0,
           lowestSubject: lowest?.label ?? null,
           lowestGrade: lowest?.grade ?? null,
+          subjectGrades: gradesForTerm,
+          variantSeed: studentId + ':' + termNo,
           cutoff: null,
         };
       }
@@ -1032,6 +1034,8 @@ export async function GET(request: NextRequest) {
         classDays: termClassDates.length,
         lowestSubject: lowest?.label ?? null,
         lowestGrade: lowest?.grade ?? null,
+        subjectGrades: gradesForTerm,
+        variantSeed: studentId + ':' + termNo,
         cutoff,
       };
     }
@@ -1114,6 +1118,7 @@ export async function GET(request: NextRequest) {
           cutoff: signal.cutoff,
           lowest_subject: signal.lowestSubject,
           lowest_grade: signal.lowestGrade,
+          subject_grades: signal.subjectGrades ?? [],
         };
       });
 
