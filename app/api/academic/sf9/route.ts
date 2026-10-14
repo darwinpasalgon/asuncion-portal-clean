@@ -920,7 +920,15 @@ export async function GET(request: NextRequest) {
           ? roundAverage(completeFinals)
           : null;
 
-      return { rows, generalAverage };
+      const termAverages = [0, 1, 2].map((termIndex) => {
+        const values = mainRows.map((row) => row.terms?.[termIndex]);
+        return mainRows.length > 0 &&
+          values.every((value) => typeof value === "number" && Number.isFinite(value))
+          ? roundAverage(values as number[])
+          : null;
+      });
+
+      return { rows, generalAverage, termAverages };
     }
 
     function buildTermRemarkSignal(
@@ -1127,6 +1135,7 @@ export async function GET(request: NextRequest) {
         tve_major: enrollment.tve_major ?? null,
         grade_rows: gradesBuilt.rows,
         general_average: gradesBuilt.generalAverage,
+        general_averages_by_term: gradesBuilt.termAverages,
         attendance: buildAttendance(studentId),
         comments: remarkDetails.map((item) => item.text),
         comment_details: remarkDetails,
