@@ -149,6 +149,7 @@ export type Sf9CardData = {
   track: string;
   grade_rows: GradeRow[];
   general_average: number | null;
+  general_averages_by_term?: Array<number | null>;
   attendance: Attendance;
   comments: string[];
 };
@@ -367,7 +368,10 @@ function FrontCard({
             </tr>
           ))}
           <tr className={styles.generalAverageRow}>
-            <td colSpan={4}>General Average</td>
+            <td>General Average</td>
+            <td>{displayNumber(card.general_averages_by_term?.[0] ?? null)}</td>
+            <td>{displayNumber(card.general_averages_by_term?.[1] ?? null)}</td>
+            <td>{displayNumber(card.general_averages_by_term?.[2] ?? null)}</td>
             <td>{displayNumber(card.general_average)}</td>
             <td>
               {card.general_average === null
