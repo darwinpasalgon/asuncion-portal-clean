@@ -140,19 +140,7 @@ function AttendanceHeader({ days }: { days: Sf2DayColumn[] }) {
 function AttendanceCell({
   cell,
 }: {
-  cell:
-    | {
-        state:
-          | "present"
-          | "absent"
-          | "late"
-          | "cutting"
-          | "movement"
-          | "not_enrolled"
-          | "unrecorded";
-        code: string;
-      }
-    | undefined;
+  cell: Sf2Learner["cells"][number] | undefined;
 }) {
   const state = cell?.state ?? "not_enrolled";
   return (
