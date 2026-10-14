@@ -23,15 +23,16 @@ type Adviser={id:string;section_id:string;teacher_id:string};
 type Enrollment={student_id:string;grade_level:number;section_id:string|null};
 type Student={id:string;full_name:string;lrn:string|null};
 type LearnerInfo={student_id:string;sex:string|null;religion:string|null};
-type DailyStatus="present"|"absent"|"absent_morning"|"cutting_classes";
+type DailyStatus="present"|"absent"|"absent_morning"|"absent_afternoon"|"cutting_classes";
 type Attendance={student_id:string;section_id:string;status:DailyStatus|"transferred_in"|"transferred_out"|"dropped";note:string|null};
 type Exclusion={id:string;section_id:string;attendance_date:string;exclusion_type:"regular_holiday"|"special_non_working_holiday"|"class_suspension";reason:string|null};
 
-const DAILY_STATUSES:DailyStatus[]=["present","absent","absent_morning","cutting_classes"];
+const DAILY_STATUSES:DailyStatus[]=["present","absent","absent_morning","absent_afternoon","cutting_classes"];
 const STATUS_LABELS:Record<DailyStatus,string>={
   present:"Present",
   absent:"Absent",
   absent_morning:"Absent in the Morning",
+  absent_afternoon:"Absent in the Afternoon",
   cutting_classes:"Cutting Classes",
 };
 const EXCLUSION_LABELS:Record<Exclusion["exclusion_type"],string>={
@@ -164,6 +165,7 @@ export default function AdminAttendancePage(){
       <article><ClipboardCheck size={22}/><span>Present</span><strong>{count("present")}</strong></article>
       <article><CalendarDays size={22}/><span>Absent</span><strong>{count("absent")}</strong></article>
       <article><UserCheck size={22}/><span>Absent in the Morning</span><strong>{count("absent_morning")}</strong></article>
+      <article><UserCheck size={22}/><span>Absent in the Afternoon</span><strong>{count("absent_afternoon")}</strong></article>
       <article><AlertTriangle size={22}/><span>Cutting Classes</span><strong>{count("cutting_classes")}</strong></article>
       <article className={unrecordedTotal?styles.needsAttention:""}><Users size={22}/><span>Unrecorded</span><strong>{unrecordedTotal}</strong></article>
       <article><Users size={22}/><span>Total Learners by Sex</span><strong>M {totalMale} · F {totalFemale}</strong></article>
@@ -172,7 +174,7 @@ export default function AdminAttendancePage(){
     </div>
 
     <section className={styles.panel}>
-      <div className={styles.panelHeading}><div><h2>Daily Overview by Section</h2><p>Open a section to see exactly who is Present, Absent, Absent in the Morning, or Cutting Classes.</p></div></div>
+      <div className={styles.panelHeading}><div><h2>Daily Overview by Section</h2><p>Open a section to see exactly who is Present, Absent, Absent in the Morning, Absent in the Afternoon, or Cutting Classes.</p></div></div>
       <div className={styles.overviewGrid}>
         {sections.map(s=>{
           const exclusion=exclusions.find(x=>x.section_id===s.id);
@@ -181,7 +183,7 @@ export default function AdminAttendancePage(){
             <summary>
               <div><span>Grade {s.grade_level}</span><strong>{s.name}</strong><small>{enrolledCount(s.id)} enrolled</small></div>
               {exclusion?<div className={styles.noClassesBadge}><CalendarOff size={16}/><div><strong>No Classes</strong><span>{EXCLUSION_LABELS[exclusion.exclusion_type]}</span></div></div>:
-              <div className={styles.counts}><span>P <b>{count("present",s.id)}</b></span><span>A <b>{count("absent",s.id)}</b></span><span>AM <b>{count("absent_morning",s.id)}</b></span><span>CC <b>{count("cutting_classes",s.id)}</b></span><span className={missing.length?styles.unrecordedPill:""}>U <b>{missing.length}</b></span></div>}
+              <div className={styles.counts}><span>P <b>{count("present",s.id)}</b></span><span>A <b>{count("absent",s.id)}</b></span><span>AM <b>{count("absent_morning",s.id)}</b></span><span>PM <b>{count("absent_afternoon",s.id)}</b></span><span>CC <b>{count("cutting_classes",s.id)}</b></span><span className={missing.length?styles.unrecordedPill:""}>U <b>{missing.length}</b></span></div>}
             </summary>
             {exclusion?<div className={styles.noClassesDetail}><CalendarOff size={20}/><div><strong>{EXCLUSION_LABELS[exclusion.exclusion_type]}</strong><span>{exclusion.reason||"No additional reason provided."}</span></div></div>:
             <div className={styles.statusColumns}>
