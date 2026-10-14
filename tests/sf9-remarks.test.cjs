@@ -34,9 +34,9 @@ test("SF9 automatic remarks use published grades and recorded attendance", () =>
 test("SF9 generated remarks avoid invented personality and behavior claims", () => {
   const helper = read("lib/sf9-remarks.ts");
 
-  assert.match(helper, /Napakahusay ang akademikong pagganap/);
+  assert.match(helper, /Napakahusay ng kabuuang akademikong pagganap/);
   assert.match(helper, /Regular ang pagpasok/);
-  assert.match(helper, /Kailangang maging mas regular ang pagpasok/);
+  assert.match(helper, /Kailangan pang pagbutihin ang regular na pagpasok/);
   assert.doesNotMatch(helper, /mabait|masayahin|madaldal|pakikipagkuwentuhan|paglalaro/i);
 });
 
