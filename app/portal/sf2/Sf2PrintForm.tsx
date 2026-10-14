@@ -17,7 +17,8 @@ export type Sf2Learner = {
     state:
       | "present"
       | "absent"
-      | "late"
+      | "absent_morning"
+      | "absent_afternoon"
       | "cutting"
       | "movement"
       | "not_enrolled"
@@ -139,26 +140,15 @@ function AttendanceHeader({ days }: { days: Sf2DayColumn[] }) {
 function AttendanceCell({
   cell,
 }: {
-  cell:
-    | {
-        state:
-          | "present"
-          | "absent"
-          | "late"
-          | "cutting"
-          | "movement"
-          | "not_enrolled"
-          | "unrecorded";
-        code: string;
-      }
-    | undefined;
+  cell: Sf2Learner["cells"][number] | undefined;
 }) {
   const state = cell?.state ?? "not_enrolled";
   return (
     <td
       className={[
         "sf2-att-cell",
-        state === "late" ? "sf2-half-upper" : "",
+        state === "absent_morning" ? "sf2-half-upper" : "",
+        state === "absent_afternoon" ? "sf2-half-lower" : "",
         state === "cutting" ? "sf2-half-lower" : "",
         state === "unrecorded" ? "sf2-unrecorded" : "",
         state === "not_enrolled" ? "sf2-not-enrolled" : "",

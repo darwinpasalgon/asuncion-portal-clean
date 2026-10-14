@@ -54,7 +54,7 @@ type AssistantEntryRow = {
   section_id: string;
   attendance_date: string;
   student_id: string;
-  status: "present" | "absent" | "absent_morning" | "cutting_classes";
+  status: "present" | "absent" | "absent_morning" | "absent_afternoon" | "cutting_classes";
   entered_by: string;
   updated_at?: string;
 };
@@ -678,7 +678,7 @@ export async function POST(request: NextRequest) {
       section_id: string;
       attendance_date: string;
       student_id: string;
-      status: "present" | "absent" | "absent_morning" | "cutting_classes";
+      status: "present" | "absent" | "absent_morning" | "absent_afternoon" | "cutting_classes";
       entered_by: string;
       updated_at: string;
     }> = [];
@@ -692,10 +692,10 @@ export async function POST(request: NextRequest) {
         !studentId ||
         seen.has(studentId) ||
         !allowedStudents.has(studentId) ||
-        !["present", "absent", "absent_morning", "cutting_classes"].includes(status)
+        !["present", "absent", "absent_morning", "absent_afternoon", "cutting_classes"].includes(status)
       ) {
         return NextResponse.json(
-          { error: "Every classmate must be marked Present, Absent, Absent in the Morning, or Cutting Classes." },
+          { error: "Every classmate must be marked Present, Absent, Absent in the Morning, Absent in the Afternoon, or Cutting Classes." },
           { status: 400 }
         );
       }
@@ -705,7 +705,7 @@ export async function POST(request: NextRequest) {
         section_id: sectionId,
         attendance_date: attendanceDate,
         student_id: studentId,
-        status: status as "present" | "absent" | "absent_morning" | "cutting_classes",
+        status: status as "present" | "absent" | "absent_morning" | "absent_afternoon" | "cutting_classes",
         entered_by: userId,
         updated_at: new Date().toISOString(),
       });
@@ -1080,6 +1080,7 @@ export async function POST(request: NextRequest) {
     "present",
     "absent",
     "absent_morning",
+    "absent_afternoon",
     "cutting_classes",
     "transferred_in",
     "transferred_out",
