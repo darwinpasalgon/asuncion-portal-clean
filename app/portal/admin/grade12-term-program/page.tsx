@@ -118,7 +118,10 @@ export default function Grade12TermProgramPage() {
           {visible.filter(p=>p.day_of_week===index+1).map(p=><article className={p.needs_review?styles.flagged:styles.period} key={p.id}>
             <div className={styles.periodHead}><span>{timeLabel(p.start_time)}–{timeLabel(p.end_time)}</span><button type="button" onClick={()=>openEdit(p)} aria-label={`Edit ${p.subject_label} ${day}`}><Pencil size={15}/></button></div>
             <h3>{p.subject_label}</h3>
-            <p>{instructorNames(p)}</p>
+            {p.subject_label.includes("ORGANIC AGRICULTURE PRODUCTION/FOOD PROCESSING") && (p.instructor_ids??[]).length===2 ? (
+              <p><strong>Organic Agriculture Production:</strong> {teacherMap.get(p.instructor_ids[0])??"Not Matched"}<br/>
+                <strong>Food Processing:</strong> {teacherMap.get(p.instructor_ids[1])??"Not Matched"}</p>
+            ) : <p>{instructorNames(p)}</p>}
             {p.needs_review && <div className={styles.flagText}><AlertTriangle size={14}/><span>{p.review_reason??"Needs review"}</span></div>}
           </article>)}
           {!visible.some(p=>p.day_of_week===index+1)&&<p className={styles.empty}>No scheduled periods</p>}
@@ -129,11 +132,28 @@ export default function Grade12TermProgramPage() {
     {edit && <div className={styles.overlay} role="presentation"><section className={styles.dialog} role="dialog" aria-modal="true" aria-label="Edit term period">
       <div className={styles.dialogHead}><div><strong>Edit {term===1?"First":"Second"} Term Period</strong><span>{sections.find(s=>s.id===edit.section_id)?.name} · {DAYS[edit.day_of_week-1]}</span></div><button type="button" onClick={()=>setEdit(null)} aria-label="Close"><X size={20}/></button></div>
       <label>Subject<input value={subject} onChange={e=>setSubject(e.target.value)}/></label>
-      <label>Teacher Assignment <small>Hold Ctrl (Windows) or Command (Mac) to select multiple instructors for combined TVL groups.</small>
-        <select multiple size={7} value={instructorIds} onChange={e=>setInstructorIds(Array.from(e.currentTarget.selectedOptions).map(o=>o.value))}>
-          {teachers.map(t=><option value={t.id} key={t.id}>{t.full_name}</option>)}
-        </select>
-      </label>
+      {edit.subject_label.includes("ORGANIC AGRICULTURE PRODUCTION/FOOD PROCESSING") ? (
+        <div className={styles.timeRow}>
+          <label>Organic Agriculture Production Teacher
+            <select value={instructorIds[0]??""} onChange={e=>setInstructorIds([e.target.value,instructorIds[1]??""].filter(Boolean))}>
+              <option value="">Select Teacher</option>
+              {teachers.map(t=><option value={t.id} key={t.id}>{t.full_name}</option>)}
+            </select>
+          </label>
+          <label>Food Processing Teacher
+            <select value={instructorIds[1]??""} onChange={e=>setInstructorIds([instructorIds[0]??"",e.target.value].filter(Boolean))}>
+              <option value="">Select Teacher</option>
+              {teachers.map(t=><option value={t.id} key={t.id}>{t.full_name}</option>)}
+            </select>
+          </label>
+        </div>
+      ) : (
+        <label>Teacher Assignment <small>Hold Ctrl (Windows) or Command (Mac) to select multiple teachers.</small>
+          <select multiple size={7} value={instructorIds} onChange={e=>setInstructorIds(Array.from(e.currentTarget.selectedOptions).map(o=>o.value))}>
+            {teachers.map(t=><option value={t.id} key={t.id}>{t.full_name}</option>)}
+          </select>
+        </label>
+      )}
       <label>Original Teacher in Excel<input readOnly value={edit.instructor_label}/></label>
       <div className={styles.timeRow}><label>Start Time<input type="time" min="07:30" max="16:45" value={start} onChange={e=>setStart(e.target.value)}/></label><label>End Time<input type="time" min="07:30" max="16:45" value={end} onChange={e=>setEnd(e.target.value)}/></label></div>
       <p className={styles.note}>Editing this period changes only this term and day. Teacher conflicts are checked before changes are saved; the original Excel instructor remains visible for reference.</p>
