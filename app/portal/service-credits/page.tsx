@@ -6,6 +6,7 @@ import styles from "./service-credits.module.css";
 
 type Transaction = {
   id: string;
+  ledger_sequence?: number;
   credit_type: "service_credit" | "wellness_leave";
   posting_date: string;
   transaction_kind: string;
@@ -23,6 +24,9 @@ type Transaction = {
 type Summary = {
   service_credit_balance: number | null;
   wellness_leave_balance: number | null;
+  wellness_allowance: number;
+  wellness_used: number;
+  wellness_year: number;
   total_service_credits_earned: number;
   total_service_credits_used: number;
   transaction_count: number;
@@ -102,6 +106,23 @@ export default function ServiceCreditsPage() {
     [transactions, tab]
   );
 
+  const wellnessRunningBalances = useMemo(() => {
+    const sorted = transactions.filter((item) => item.credit_type === "wellness_leave")
+      .slice().sort((a, b) =>
+        a.posting_date.localeCompare(b.posting_date) ||
+        Number(a.ledger_sequence ?? 0) - Number(b.ledger_sequence ?? 0)
+      );
+    const usedByYear = new Map<string, number>();
+    const balances = new Map<string, number>();
+    for (const item of sorted) {
+      const year = item.posting_date.slice(0, 4);
+      const used = (usedByYear.get(year) ?? 0) + Number(item.service_credits_used ?? 0);
+      usedByYear.set(year, used);
+      balances.set(item.id, Math.max(0, 5 - used));
+    }
+    return balances;
+  }, [transactions]);
+
   const balance =
     tab === "service_credit"
       ? summary?.service_credit_balance ?? null
@@ -138,6 +159,7 @@ export default function ServiceCreditsPage() {
                   {personnel?.full_name || "Personnel"}
                   {personnel?.position ? ` · ${personnel.position}` : ""}
                 </small>
+                {tab === "wellness_leave" && <small>{summary?.wellness_year}: {formatDays(summary?.wellness_used ?? 0)} of {formatDays(summary?.wellness_allowance ?? 0)} days used · Renews January 1 · Expires December 31</small>}
               </div>
               <UserRound size={34} />
             </section>
@@ -160,6 +182,12 @@ export default function ServiceCreditsPage() {
                 <div><span>Transactions</span><strong>{summary?.transaction_count ?? 0}</strong></div>
               </section>
             )}
+
+            {tab === "wellness_leave" && <section className={styles.metrics}>
+              <div><span>Annual Allowance</span><strong>{formatDays(summary?.wellness_allowance ?? 0)} days</strong></div>
+              <div><span>Used This Year</span><strong>{formatDays(summary?.wellness_used ?? 0)} days</strong></div>
+              <div><span>Renewal</span><strong>January 1</strong></div>
+            </section>}
 
             <section className={styles.history}>
               <div className={styles.sectionHead}>
@@ -184,9 +212,10 @@ export default function ServiceCreditsPage() {
                         <span>{item.remarks || (item.absence_days > 0 ? `${item.absence_days.toFixed(2)} absence day(s)` : "No remarks")}</span>
                       </div>
                       <div className={styles.amounts}>
-                        {item.service_credits_earned > 0 && (
+                        {tab === "service_credit" && item.service_credits_earned > 0 && (
                           <span className={styles.credit}>+{formatDays(item.service_credits_earned)}</span>
                         )}
+                        {tab === "wellness_leave" && item.service_credits_earned > 0 && <span>Legacy allocation</span>}
                         {item.service_credits_used > 0 && (
                           <span className={styles.debit}>-{formatDays(item.service_credits_used)}</span>
                         )}
@@ -195,8 +224,8 @@ export default function ServiceCreditsPage() {
                         )}
                       </div>
                       <div className={styles.runningBalance}>
-                        <span>Balance</span>
-                        <strong>{formatDays(item.balance_after)}</strong>
+                        <span>{tab === "wellness_leave" ? `${item.posting_date.slice(0,4)} Remaining` : "Balance"}</span>
+                        <strong>{formatDays(tab === "wellness_leave" ? wellnessRunningBalances.get(item.id) ?? 5 : item.balance_after)}</strong>
                       </div>
                     </article>
                   ))}
