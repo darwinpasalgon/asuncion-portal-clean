@@ -217,6 +217,7 @@ Deno.serve(async (req) => {
     ok: true,
     user_id: created.user.id,
     created: true,
+    temporary_password: password,
     profile,
   });
 });
