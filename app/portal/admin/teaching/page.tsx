@@ -687,6 +687,7 @@ function subjectTeacherLabel(teacher: Teacher) {
           <a href="/portal/admin/school-setup" className={styles.topLink}>
             School setup
           </a>
+          <a href="#grade12-subjects" className={styles.topLink}>Review Grade 12 Subjects</a>
         </nav>
 
         <header className={styles.header}>
@@ -753,7 +754,8 @@ function subjectTeacherLabel(teacher: Teacher) {
           <div className={styles.grade12ReviewSummary}>
             <BookOpen size={20} />
             <div><strong>{grade12Subjects.length} Active Grade 12 Subjects</strong>
-              <span>Academic subjects are separated from HGP and ARAL load-only activities.
+              <span>HGP and ARAL support sessions are identified when configured as schedule-only.
+                The existing ARAL subject retains its prior grading setting.
                 Organic Agriculture Production and Food Processing appear individually, even when taught in a shared time slot.</span>
             </div>
           </div>
