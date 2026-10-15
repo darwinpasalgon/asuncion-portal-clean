@@ -262,6 +262,88 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Only Super Administrator may provision a Non-Teaching Personnel login.
+  // The admin role must be chosen explicitly, not silently granted.
+  if (action === "create_non_teaching_account") {
+    const fullName = String(body.full_name ?? "").trim().replace(/\s+/g, " ");
+    const position = String(body.position ?? "").trim();
+    const adminRole = String(body.admin_role ?? "").trim();
+    const email = String(body.email ?? "").trim().toLowerCase();
+    const phone = normalizePhone(String(body.recovery_phone ?? "").trim());
+    if (fullName.length < 3 || fullName.length > 180) {
+      return json({error:"Enter the personnel's full name (3–180 characters)."},400);
+    }
+    if (position.length < 2 || position.length > 140) {
+      return json({error:"Choose or enter a valid non-teaching designation."},400);
+    }
+    if (!["registrar","content_administrator","school_administrator"].includes(adminRole)) {
+      return json({error:"Select a staff access role before creating an account."},400);
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+      return json({error:"A valid login email is required."},400);
+    }
+    if (phone === null) return json({error:"Enter a valid mobile number or leave it blank."},400);
+    const {data: existingProfile, error: duplicateError} = await admin.from("profiles")
+      .select("id").ilike("email",email).limit(1);
+    if (duplicateError) return json({error:"Unable to check existing portal accounts."},500);
+    if (existingProfile?.length) return json({error:"This email already has an account. Edit the existing account instead."},409);
+    const {data: existingPersonnel, error: personnelCheckError} = await admin.from("non_teaching_personnel")
+      .select("id,full_name,portal_user_id").ilike("email",email).limit(1);
+    if (personnelCheckError) return json({error:"Unable to verify the existing non-teaching personnel directory."},500);
+    const directoryEntry = existingPersonnel?.[0];
+    if (directoryEntry?.portal_user_id) return json({error:"This personnel record is already linked to a portal account."},409);
+    if (directoryEntry && directoryEntry.full_name.trim().toUpperCase() !== fullName.toUpperCase()) {
+      return json({error:"This email belongs to an existing personnel record with a different name. Review the directory first."},409);
+    }
+
+    const provisioningToken = crypto.randomUUID();
+    const password = temporaryPassword();
+    const {error: tokenError} = await admin.from("account_provisioning_tokens").insert({
+      token:provisioningToken,email,requested_role:"administrator",
+      created_by:callerId,expires_at:new Date(Date.now()+5*60*1000).toISOString(),
+    });
+    if (tokenError) return json({error:"Unable to authorize secure staff account provisioning."},500);
+    const {data: created,error: createError} = await admin.auth.admin.createUser({
+      email,password,email_confirm:true,
+      user_metadata:{
+        requested_role:"administrator",provisioning_token:provisioningToken,
+        full_name:fullName,position,admin_role:adminRole,recovery_phone:phone??"",
+      },
+      app_metadata:{anhs_provisioned:"true"},
+    });
+    if (createError || !created.user?.id) {
+      await admin.from("account_provisioning_tokens").delete().eq("token",provisioningToken);
+      return json({error:createError?.message??"Unable to create staff login."},409);
+    }
+    const userId = created.user.id;
+    const {data: profile} = await admin.from("profiles")
+      .select("id,role,admin_role,account_status,must_change_password").eq("id",userId).maybeSingle();
+    if (!profile || profile.role !== "staff_administrator" ||
+        profile.admin_role !== adminRole || profile.account_status !== "active" ||
+        !profile.must_change_password) {
+      await admin.auth.admin.deleteUser(userId);
+      return json({error:"Staff role verification failed; partial login was rolled back."},500);
+    }
+    const {error: directoryError} = directoryEntry
+      ? await admin.from("non_teaching_personnel").update({
+          portal_user_id:userId,position,is_active:true,updated_at:new Date().toISOString()
+        }).eq("id",directoryEntry.id).is("portal_user_id",null)
+      : await admin.from("non_teaching_personnel").insert({
+          full_name:fullName,email,position,portal_user_id:userId,is_active:true,
+          personal:{},official:{},source_data:{origin:"manual_account_creation"},
+        });
+    if (directoryError) {
+      await admin.auth.admin.deleteUser(userId);
+      return json({error:"Could not link the non-teaching personnel directory, so the new login was rolled back."},500);
+    }
+    return json({
+      ok:true,person_type:"non_teaching",account:{
+        user_id:userId,full_name:fullName,identifier:email,position,
+        access_role:adminRole,temporary_password:password,credential_status:"new",
+      }
+    });
+  }
+
   if (action !== "import") return json({ error: "Invalid action." }, 400);
 
   const personType: PersonType = body.person_type === "teacher" ? "teacher" : "student";
