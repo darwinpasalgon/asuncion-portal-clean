@@ -1200,7 +1200,8 @@ export default function Sf9Page() {
               lineHeight: 1.55
             }}>
               <strong>Attendance Records Incomplete.</strong> Class days follow the
-              school calendar from June 8, excluding dates marked No Classes.
+              school calendar from June 8, excluding national non-working holidays
+              and dates marked No Classes.
               One or more selected learners have unrecorded school days. These
               days are <strong>not counted as absences</strong>. Please complete
               earlier attendance and record school holidays or suspensions before
