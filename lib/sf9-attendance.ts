@@ -12,6 +12,27 @@ export const SF9_MONTHS = [
   { key: "Apr", month: 4 },
 ] as const;
 
+// National regular/special non-working holidays declared for 2026 (Proclamation 1006).
+// These instructional-day exclusions are in addition to section-specific
+// holidays/suspensions recorded by advisers in Attendance.
+const PH_NON_CLASS_DATES_2026 = new Set([
+  "2026-06-12", // Independence Day
+  "2026-08-21", // Ninoy Aquino Day
+  "2026-08-31", // National Heroes Day
+  "2026-11-02", // All Souls' Day
+  "2026-11-30", // Bonifacio Day
+  "2026-12-08", // Immaculate Conception
+  "2026-12-24", "2026-12-25", "2026-12-30", "2026-12-31",
+  "2027-01-01", // New Year holiday
+  "2027-03-25", "2027-03-26", // Holy Week
+]);
+export function sf9OfficialNonClassDate(date: string, startYear: number) {
+  if (startYear !== 2026) return false;
+  if (PH_NON_CLASS_DATES_2026.has(date)) return true;
+  // DepEd SY 2026–2027 year-end break: December 19–January 3.
+  return date >= "2026-12-19" && date <= "2027-01-03";
+}
+
 export type Sf9AttendanceEntry = { attendance_date: string; status: string | null };
 
 export function sf9AttendanceValue(status: string | null | undefined): { present: number; absent: number } | null {
@@ -38,7 +59,7 @@ export function sf9MonthKey(date: string, startYear: number): string | null {
 export function sf9InstructionalDates(input: {
   startDate: string; currentDate: string; startYear: number; excludedDates: Iterable<string>;
 }) {
-  const end = `${input.startYear + 1}-04-30`;
+  const end = input.startYear === 2026 ? "2027-04-08" : `${input.startYear + 1}-04-30`;
   const cutoff = input.currentDate < end ? input.currentDate : end;
   const start = input.startDate;
   const exclusions = new Set(input.excludedDates);
@@ -51,7 +72,7 @@ export function sf9InstructionalDates(input: {
     const weekday = current.getUTCDay();
     if (weekday < 1 || weekday > 5) continue;
     const date = current.toISOString().slice(0, 10);
-    if (!exclusions.has(date) && sf9MonthKey(date, input.startYear)) days.push(date);
+    if (!exclusions.has(date) && !sf9OfficialNonClassDate(date, input.startYear) && sf9MonthKey(date, input.startYear)) days.push(date);
   }
   return days;
 }
