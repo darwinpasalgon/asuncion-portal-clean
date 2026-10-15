@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
+  BriefcaseBusiness,
   BellRing,
   BookOpen,
   CalendarDays,
