@@ -256,6 +256,8 @@ export async function POST(request: NextRequest) {
         name,
         code: null,
         is_active: true,
+        is_graded: name !== "ARAL" || ![11,12].includes(gradeLevel),
+        include_in_school_forms: name !== "ARAL" || ![11,12].includes(gradeLevel),
       }),
       cache: "no-store",
     });
