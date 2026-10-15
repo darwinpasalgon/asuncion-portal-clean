@@ -135,13 +135,13 @@ export default function Grade12TermProgramPage() {
       {edit.subject_label.includes("ORGANIC AGRICULTURE PRODUCTION/FOOD PROCESSING") ? (
         <div className={styles.timeRow}>
           <label>Organic Agriculture Production Teacher
-            <select value={instructorIds[0]??""} onChange={e=>setInstructorIds([e.target.value,instructorIds[1]??""].filter(Boolean))}>
+            <select value={instructorIds[0]??""} onChange={e=>setInstructorIds([e.target.value,instructorIds[1]??""])}>
               <option value="">Select Teacher</option>
               {teachers.map(t=><option value={t.id} key={t.id}>{t.full_name}</option>)}
             </select>
           </label>
           <label>Food Processing Teacher
-            <select value={instructorIds[1]??""} onChange={e=>setInstructorIds([instructorIds[0]??"",e.target.value].filter(Boolean))}>
+            <select value={instructorIds[1]??""} onChange={e=>setInstructorIds([instructorIds[0]??"",e.target.value])}>
               <option value="">Select Teacher</option>
               {teachers.map(t=><option value={t.id} key={t.id}>{t.full_name}</option>)}
             </select>
@@ -157,7 +157,7 @@ export default function Grade12TermProgramPage() {
       <label>Original Teacher in Excel<input readOnly value={edit.instructor_label}/></label>
       <div className={styles.timeRow}><label>Start Time<input type="time" min="07:30" max="16:45" value={start} onChange={e=>setStart(e.target.value)}/></label><label>End Time<input type="time" min="07:30" max="16:45" value={end} onChange={e=>setEnd(e.target.value)}/></label></div>
       <p className={styles.note}>Editing this period changes only this term and day. Teacher conflicts are checked before changes are saved; the original Excel instructor remains visible for reference.</p>
-      <button className={styles.save} type="button" onClick={()=>void save()} disabled={saving||!subject.trim()||start>=end}><Save size={16}/>{saving?"Saving…":"Save Period"}</button>
+      <button className={styles.save} type="button" onClick={()=>void save()} disabled={saving||!subject.trim()||start>=end||(subject.includes("ORGANIC AGRICULTURE PRODUCTION/FOOD PROCESSING")&&(instructorIds.length!==2||instructorIds.some(id=>!id)||instructorIds[0]===instructorIds[1]))}><Save size={16}/>{saving?"Saving…":"Save Period"}</button>
     </section></div>}
   </div></main>;
 }
