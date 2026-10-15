@@ -739,3 +739,15 @@
   .namePanelHead{align-items:stretch;flex-direction:column}
   .nameSave{width:100%;justify-content:center}
 }
+
+.designationPanel{display:grid;gap:12px;border:1px solid #b9dec9;background:#eef8f2;border-radius:14px;padding:19px;margin-bottom:18px}
+.designationPanel h3{display:flex;align-items:center;gap:9px;margin:0;color:#215c42;font-size:1.05rem}
+.designationPanel p{color:#5c7568;margin:0 0 2px;font-size:.85rem}
+.designationPanel label{display:grid;gap:6px;color:#355c47;font-size:.83rem;font-weight:750}
+.designationPanel label input,.designationPanel label select{display:block;width:100%;box-sizing:border-box;min-height:42px;border:1px solid #b8d5c4;border-radius:9px;background:#fff;padding:9px 11px;font:inherit;color:#193f30}
+.designationPanel input[readonly]{background:#e9efec}
+.designationSave{min-height:44px;min-width:180px;justify-self:start;border:0;border-radius:9px;background:#268259;color:white;padding:10px 16px;font-weight:800;cursor:pointer}
+.designationSave:disabled{opacity:.45;cursor:not-allowed}
+.designationShortcut{display:inline-flex;align-items:center;justify-content:center;gap:7px;margin-left:auto;min-height:39px;border-radius:9px;padding:0 12px;background:#276d51;color:#fff!important;text-decoration:none;font-weight:800;font-size:.83rem}
+.designationShortcut:hover{background:#19543c}
+@media(max-width:590px){.identity{flex-wrap:wrap}.designationShortcut{margin-left:0;width:100%}.designationPanel{padding:15px}}
