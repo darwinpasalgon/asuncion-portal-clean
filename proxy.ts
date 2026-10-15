@@ -24,7 +24,7 @@ async function accessState(token: string): Promise<AccessState> {
   }
   const user = await userResponse.json().catch(() => null);
   if (!user?.id) {
-    return { valid: false, mustChangePassword: false, role: null, accountStatus: null, permissions: [] };
+    return { valid: false, mustChangePassword: false, role: null, accountStatus: null, permissions: [], gradeLevelHead: null };
   }
 
   const profileResponse = await fetch(
@@ -39,7 +39,7 @@ async function accessState(token: string): Promise<AccessState> {
   );
 
   if (!profileResponse.ok) {
-    return { valid: false, mustChangePassword: false, role: null, accountStatus: null, permissions: [] };
+    return { valid: false, mustChangePassword: false, role: null, accountStatus: null, permissions: [], gradeLevelHead: null };
   }
   const profiles = await profileResponse.json().catch(() => []);
   const profile = profiles?.[0];
