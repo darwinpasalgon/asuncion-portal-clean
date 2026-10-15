@@ -45,6 +45,22 @@ test("SF9 present and absent reflect only recorded statuses; half-days split 0.5
   assert.equal(result.total_unrecorded,1);
 });
 
+test("Official national holidays and the DepEd 2026 school calendar are excluded",()=>{
+ const calendar=sf9InstructionalDates({
+   startDate:"2026-06-08",currentDate:"2026-08-31",startYear:2026,excludedDates:[]
+ });
+ const days=Array.from(calendar);
+ assert.equal(days.filter(date=>date.startsWith("2026-06")).length,16);
+ assert.equal(days.filter(date=>date.startsWith("2026-07")).length,23);
+ assert.equal(days.filter(date=>date.startsWith("2026-08")).length,19);
+ assert.equal(days.includes("2026-06-12"),false);
+ assert.equal(days.includes("2026-08-21"),false);
+ assert.equal(days.includes("2026-08-31"),false);
+ const finalDays=sf9InstructionalDates({
+   startDate:"2026-06-08",currentDate:"2027-04-30",startYear:2026,excludedDates:[]
+ });
+ assert.equal(finalDays.at(-1),"2027-04-08");
+});
 test("SF9 counts Absent in the Morning as a half day; incomplete months remain unrecorded", () => {
   const result=sf9AttendanceSummary({startYear:2026,
     classDates:["2026-09-01","2026-09-02","2026-10-01","2026-10-02"],
