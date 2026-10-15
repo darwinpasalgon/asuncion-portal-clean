@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getScopedAdminAccess } from "@/lib/admin-access";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 import { findScheduleConflicts, type ProposedPeriod } from "@/lib/schedule-conflicts";
+import { validSchoolTimeRange, schoolHoursError } from "@/lib/schedule-hours";
 
 function manilaDate() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -75,23 +76,6 @@ async function activeYear(token: string) {
     token
   );
   return rows?.[0] ?? null;
-}
-
-const SCHOOL_DAY_START = "07:30";
-const SCHOOL_DAY_END = "16:30";
-
-function validTime(value: string) {
-  return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
-}
-
-function validSchoolTimeRange(startTime: string, endTime: string) {
-  return (
-    validTime(startTime) &&
-    validTime(endTime) &&
-    startTime >= SCHOOL_DAY_START &&
-    endTime <= SCHOOL_DAY_END &&
-    startTime < endTime
-  );
 }
 
 async function conflictResponse(token: string, assignmentId: string, periods: ProposedPeriod[]) {
@@ -319,9 +303,9 @@ export async function POST(request: NextRequest) {
       }
       seenDays.add(dayOfWeek);
 
-      if (!validSchoolTimeRange(startTime, endTime)) {
+      if (!validSchoolTimeRange(startTime, endTime, Number(assignmentRows[0].grade_level))) {
         return NextResponse.json(
-          { error: "Class schedules must be between 7:30 AM and 4:30 PM." },
+          { error: schoolHoursError(Number(assignmentRows[0].grade_level)) },
           { status: 400 }
         );
       }
