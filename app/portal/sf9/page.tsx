@@ -55,6 +55,19 @@ type Student = {
   tve_major: string | null;
 };
 
+type ReadinessRow = {
+  student_id: string;
+  learner_name: string;
+  grade_status: string;
+  grades_published: number;
+  expected_subjects: number;
+  remarks_status: string;
+  attendance_status: string;
+  attendance_days: number;
+  learner_status: string;
+  issues: string[];
+};
+
 type RemarkDraft = {
   term_no: number;
   text: string;
@@ -128,6 +141,11 @@ export default function Sf9Page() {
   const [savingRemarksFor, setSavingRemarksFor] = useState("");
   const [remarkMessage, setRemarkMessage] = useState("");
   const regenerationCounters = useRef<Record<string, number>>({});
+  const [readinessTerm, setReadinessTerm] = useState(1);
+  const [readiness, setReadiness] = useState<ReadinessRow[]>([]);
+  const [readinessLoading, setReadinessLoading] = useState(false);
+  const [readinessError, setReadinessError] = useState("");
+  const [readinessOpen, setReadinessOpen] = useState(true);
 
   function remarkDraftsFromDetail(value: any) {
     const next: Record<string, RemarkDraft[]> = {};
@@ -345,6 +363,43 @@ export default function Sf9Page() {
     };
   }, [layoutEditorOpen, selectedSectionId, editorSampleId]);
 
+  useEffect(() => {
+    if (!selectedSectionId) {
+      setReadiness([]);
+      return;
+    }
+    let cancelled = false;
+    async function checkReadiness() {
+      setReadinessLoading(true);
+      setReadinessError("");
+      try {
+        const params = new URLSearchParams({
+          sectionId: selectedSectionId,
+          readiness: "true",
+          term: String(readinessTerm),
+        });
+        const response = await fetch("/api/academic/sf9?" + params, { cache: "no-store" });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error ?? "Readiness check failed.");
+        if (!cancelled) setReadiness(Array.isArray(result.readiness) ? result.readiness : []);
+      } catch (error) {
+        if (!cancelled) {
+          setReadiness([]);
+          setReadinessError(error instanceof Error ? error.message : "Readiness check failed.");
+        }
+      } finally {
+        if (!cancelled) setReadinessLoading(false);
+      }
+    }
+    void checkReadiness();
+    return () => { cancelled = true; };
+  }, [selectedSectionId, readinessTerm, detail]);
+
+  const selectedReadiness = readiness.filter((entry) => selectedIds.includes(entry.student_id));
+  const missingReadiness = selectedReadiness.filter((entry) =>
+    entry.issues?.some((issue) => issue !== "Verify attendance dates and totals")
+  );
+
   const selectedSection = sections.find(
     (section) => section.id === selectedSectionId
   );
@@ -371,6 +426,20 @@ export default function Sf9Page() {
 
   function printSf9() {
     if (!detail?.cards?.length) return;
+    if (readinessLoading || readinessError) {
+      window.alert("The SF9 readiness check is unavailable. Please review grades, attendance and remarks before printing.");
+      return;
+    }
+    if (selectedIds.length !== selectedReadiness.length) {
+      window.alert("Readiness results are incomplete. Please refresh the section before printing.");
+      return;
+    }
+    if (missingReadiness.length > 0) {
+      const names = missingReadiness.map((entry) =>
+        entry.learner_name + ": " + entry.issues.filter((issue) => issue !== "Verify attendance dates and totals").join(", ")
+      ).join("\\n");
+      if (!window.confirm("Unresolved SF9 requirements:\\n" + names + "\\n\\nPrint anyway?")) return;
+    }
     window.print();
   }
 
@@ -1211,6 +1280,59 @@ export default function Sf9Page() {
               finalizing the report card.
             </p>
           )}
+          <section aria-label="SF9 Report Card Readiness Check" style={{
+            padding: 16, margin: "14px 0", border: "1px solid #cbd5e1",
+            borderRadius: 12, background: "var(--card, #fff)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <div>
+                <strong>Report Card Readiness Check</strong>
+                <p style={{ fontSize: 12, marginTop: 4 }}>Check grades, adviser remarks, attendance and basic learner information before printing.</p>
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <label htmlFor="sf9-readiness-term" style={{ fontSize: 12 }}>Term</label>
+                <select id="sf9-readiness-term" value={readinessTerm} onChange={(event) => setReadinessTerm(Number(event.target.value))}>
+                  <option value={1}>Term 1</option>
+                  <option value={2}>Term 2</option>
+                  <option value={3}>Term 3</option>
+                </select>
+                <button type="button" onClick={() => setReadinessOpen(!readinessOpen)}>
+                  {readinessOpen ? "Hide Details" : "Show Details"}
+                </button>
+              </div>
+            </div>
+            {readinessLoading ? <p role="status">Checking learner records…</p> : readinessError ?
+              <p role="alert" style={{ color: "#b91c1c" }}>{readinessError}</p> :
+              <p role="status" style={{ marginTop: 8, fontSize: 13 }}>
+                <strong>{readiness.length}</strong> learners checked ·
+                <strong> {readiness.filter((entry) => entry.grade_status === "Published" && entry.remarks_status === "Available" && entry.learner_status === "Complete").length}</strong> with complete grades, remarks and basic details.
+                Attendance requires date-by-date verification.
+              </p>}
+            {readinessOpen && !readinessLoading && !readinessError && (
+              <div style={{ maxHeight: 320, overflowY: "auto", marginTop: 10 }}>
+                {readiness.map((entry) => (
+                  <div key={entry.student_id} style={{
+                    padding: "9px 0", borderTop: "1px solid #e2e8f0",
+                    display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap"
+                  }}>
+                    <div>
+                      <strong style={{ fontSize: 13 }}>{entry.learner_name}</strong>
+                      <div style={{ fontSize: 12, marginTop: 3 }}>
+                        Grades: {entry.grades_published}/{entry.expected_subjects} ({entry.grade_status}) ·
+                        Remarks: {entry.remarks_status} · Profile: {entry.learner_status} · Attendance: {entry.attendance_status}
+                      </div>
+                      <div style={{ fontSize: 12, marginTop: 3, color: "#92400e" }}>
+                        {(entry.issues ?? []).join(" · ") || "No outstanding issues detected"}
+                      </div>
+                    </div>
+                    <button type="button" onClick={() => {
+                      setSelectedIds([entry.student_id]);
+                    }}>View SF9</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
           <div className={styles.search}>
             <Search size={16} />
             <input
