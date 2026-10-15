@@ -526,6 +526,28 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    if (request.nextUrl.searchParams.get("readiness") === "true") {
+      const requestedTerm = Number(request.nextUrl.searchParams.get("term") ?? "1");
+      if (![1, 2, 3].includes(requestedTerm)) {
+        return NextResponse.json({ error: "Invalid school term." }, { status: 400 });
+      }
+      const readinessResponse = await fetch(`${SUPABASE_URL}/rest/v1/rpc/sf9_report_card_readiness`, {
+        method: "POST",
+        headers: headers(token),
+        body: JSON.stringify({
+          p_school_year_id: activeYear.id,
+          p_section_id: sectionId,
+          p_term_no: requestedTerm,
+        }),
+        cache: "no-store",
+      });
+      if (!readinessResponse.ok) {
+        return NextResponse.json({ error: "Unable to check SF9 readiness." }, { status: 400 });
+      }
+      const readiness = await readinessResponse.json();
+      return NextResponse.json({ readiness, term: requestedTerm });
+    }
+
     if (requestedStudentIds.length === 0) {
       const enrollments = await getRows(
         `student_enrollments?school_year_id=eq.${encodeURIComponent(
