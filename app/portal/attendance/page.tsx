@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   AlertTriangle,
@@ -110,6 +110,9 @@ export default function AttendancePage(){
   const [enrollments,setEnrollments]=useState<Enrollment[]>([]);
   const [students,setStudents]=useState<Student[]>([]);
   const [attendance,setAttendance]=useState<RecordRow[]>([]);
+  const [loadedDate,setLoadedDate]=useState("");
+  const loadSequence=useRef(0);
+  const [savingStudentId,setSavingStudentId]=useState("");
   const [dateExclusions,setDateExclusions]=useState<DateExclusion[]>([]);
   const [pendingDates,setPendingDates]=useState<PendingDate[]>([]);
   const [attendanceAssistants,setAttendanceAssistants]=useState<AttendanceAssistant[]>([]);
@@ -133,14 +136,21 @@ export default function AttendancePage(){
   const [success,setSuccess]=useState("");
 
   async function load(targetDate=date,targetSectionId=sectionId){
+    const requestId=++loadSequence.current;
     setLoading(true);setError("");
+    // Never display another date's records while the next date is loading.
+    setLoadedDate("");
+    setAttendance([]);
+    setDrafts({});
     try{
       const r=await fetch("/api/academic/attendance?date="+encodeURIComponent(targetDate),{cache:"no-store"});
       const x=await r.json().catch(()=>({}));
+      if(requestId!==loadSequence.current)return;
       if(!r.ok){setError(x.error??"Unable to load attendance.");return;}
       setRole(x.role??null);setProfile(x.profile??null);setActiveYear(x.activeYear??null);
       setAdvisers(x.advisers??[]);setSections(x.sections??[]);setEnrollments(x.enrollments??[]);
       setStudents(x.students??[]);setAttendance(x.attendance??[]);
+      setLoadedDate(targetDate);
       setDateExclusions(x.dateExclusions??[]);setPendingDates(x.pendingDates??[]);
       setAttendanceAssistants(x.attendanceAssistants??[]);
       setAssistantEntries(x.assistantEntries??[]);
@@ -154,8 +164,8 @@ export default function AttendancePage(){
           : x.sections?.[0]?.id??"";
         if(requested)setSectionId(requested);
       }
-    }catch{setError("Unable to reach the attendance service.");}
-    finally{setLoading(false);}
+    }catch{if(requestId===loadSequence.current)setError("Unable to reach the attendance service.");}
+    finally{if(requestId===loadSequence.current)setLoading(false);}
   }
 
   useEffect(()=>{
@@ -198,7 +208,7 @@ export default function AttendancePage(){
   );
 
   useEffect(()=>{
-    if(role!=="teacher"||!sectionId)return;
+    if(role!=="teacher"||!sectionId||loadedDate!==date)return;
     const next:Record<string,Draft>={};
     for(const student of roster){
       const existing=attendance.find(a=>a.student_id===student.id&&a.section_id===sectionId);
@@ -206,7 +216,7 @@ export default function AttendancePage(){
       next[student.id]={status:existing?.status??assistant?.status??"",note:existing?.note??""};
     }
     setDrafts(next);
-  },[role,sectionId,roster,attendance,assistantEntries,date]);
+  },[role,sectionId,roster,attendance,assistantEntries,date,loadedDate]);
 
   function markAllPresent(){
     const next:Record<string,Draft>={};
@@ -316,18 +326,32 @@ export default function AttendancePage(){
     }));
   }
 
-  async function save(){
-    if(!sectionId||!roster.length)return;
-    setWorking(true);setError("");setSuccess("");
+  async function save(studentId?:string){
+    if(!sectionId||!roster.length||loading||loadedDate!==date||working)return;
+    const hasSavedAttendance=attendance.some(item=>item.section_id===sectionId&&item.attendance_date===date);
+    const sourceStudents=hasSavedAttendance
+      ? roster.filter(s=>studentId ? s.id===studentId : isChanged(s.id))
+      : roster;
+    if(!sourceStudents.length){
+      setError("No learner attendance changes to save.");
+      return;
+    }
+    if(sourceStudents.some(s=>!drafts[s.id]?.status)){
+      setError(hasSavedAttendance
+        ? "Select a valid attendance status for the learner being corrected."
+        : "Tag all learners before saving the first attendance sheet.");
+      return;
+    }
+    setWorking(true);setSavingStudentId(studentId??"");setError("");setSuccess("");
     try{
       const r=await fetch("/api/academic/attendance",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
-          action:"save_attendance",
+          action:hasSavedAttendance?"update_attendance":"save_attendance",
           sectionId,
           attendanceDate:date,
-          records:roster.map(s=>({
+          records:sourceStudents.map(s=>({
             studentId:s.id,
             status:drafts[s.id]?.status??"",
             note:drafts[s.id]?.note??"",
@@ -336,11 +360,20 @@ export default function AttendancePage(){
       });
       const x=await r.json().catch(()=>({}));
       if(!r.ok){setError(x.error??"Unable to save attendance.");return;}
-      const savedCount=x.count??roster.length;
-      setSuccess((isEditingSavedAttendance?"Attendance updated for ":"Attendance saved for ")+savedCount+" student"+(savedCount===1?"":"s")+".");
-      await load(date);
+      const savedCount=x.count??sourceStudents.length;
+      await load(date,sectionId);
+      setSuccess((hasSavedAttendance?"Attendance correction saved for ":"Attendance saved for ")+savedCount+
+        " learner"+(savedCount===1?"":"s")+". Other saved learner records were not changed.");
     }catch{setError("Unable to reach the attendance service.");}
-    finally{setWorking(false);}
+    finally{setWorking(false);setSavingStudentId("");}
+  }
+
+  function isChanged(studentId:string){
+    const existing=attendance.find(row=>row.section_id===sectionId&&row.student_id===studentId&&row.attendance_date===date);
+    const current=drafts[studentId];
+    if(!current)return false;
+    if(!existing)return Boolean(current.status);
+    return current.status!==existing.status||current.note.trim()!==(existing.note??"").trim();
   }
 
   const selectedExclusion=dateExclusions.find(
@@ -352,6 +385,9 @@ export default function AttendancePage(){
   const currentAssistantEntries=assistantEntries.filter(item=>item.section_id===sectionId&&item.attendance_date===date);
   const currentOfficialAttendance=attendance.filter(item=>item.section_id===sectionId&&item.attendance_date===date);
   const isEditingSavedAttendance=currentOfficialAttendance.length>0;
+  const changedStudents=roster.filter(student=>isChanged(student.id));
+  const invalidChanges=changedStudents.some(student=>!drafts[student.id]?.status);
+  const attendanceReady=!loading&&loadedDate===date;
   const assistantIds=new Set(currentAssistants.map(item=>item.student_id));
   const assistantCandidates=roster.filter(student=>!assistantIds.has(student.id));
   const assistantUntaggedCount=assistantRoster.filter(
@@ -474,8 +510,8 @@ export default function AttendancePage(){
                 {sections.map(s=><option key={s.id} value={s.id}>{"Grade "+s.grade_level+" · "+s.name}</option>)}
               </select>
             </label>
-            <label><span>Date (from {schoolStart})</span><input type="date" value={date} min={schoolStart} max={localDate()} onChange={e=>setDate(e.target.value)}/></label>
-            <button className={styles.loadButton} onClick={()=>void load(date)}><CalendarDays size={16}/>Load Date</button>
+            <label><span>Date (from {schoolStart})</span><input type="date" value={date} min={schoolStart} max={localDate()} onChange={e=>{const next=e.target.value;setDate(next);if(next)void load(next,sectionId);}}/></label>
+            <button className={styles.loadButton} disabled={loading} onClick={()=>void load(date,sectionId)}><CalendarDays size={16}/>{loading?"Loading…":"Reload Date"}</button>
           </section>
 
           <section className={styles.assistantManager}>
@@ -622,14 +658,18 @@ export default function AttendancePage(){
                 <p>{formatDate(date)+" · "+roster.length+" enrolled student"+(roster.length===1?"":"s")}</p>
               </div>
               <div className={styles.actions}>
-                <button className={styles.markAll} onClick={markAllPresent}><CheckCircle2 size={16}/>Mark All Present</button>
-                <button className={styles.saveAll} disabled={working||!roster.length||untaggedCount>0} onClick={()=>void save()}><Save size={16}/>{working?"Saving…":isEditingSavedAttendance?"Update Attendance":"Save Attendance"}</button>
+                <button className={styles.markAll} disabled={!attendanceReady||working} onClick={markAllPresent}><CheckCircle2 size={16}/>Mark All Present</button>
+                <button className={styles.saveAll}
+                  disabled={working||!attendanceReady||!roster.length||(isEditingSavedAttendance?(changedStudents.length===0||invalidChanges):untaggedCount>0)}
+                  onClick={()=>void save()}><Save size={16}/>
+                  {working?"Saving…":isEditingSavedAttendance?`Save ${changedStudents.length} Change${changedStudents.length===1?"":"s"}`:"Save Attendance"}
+                </button>
               </div>
             </div>
 
             {isEditingSavedAttendance&&<div className={styles.editNotice}>
               <ClipboardCheck size={16}/>
-              <span>Saved attendance is loaded for this date. Correct any attendance tag or note, then click Update Attendance. The existing records will be updated, not duplicated.</span>
+              <span>Existing attendance is loaded for this date. Change only the learner who needs correction, then click Save This Learner, or Save Changes for multiple learners. Everyone else's saved records will remain untouched.</span>
             </div>}
 
             {currentAssistantEntries.length>0&&<div className={styles.assistantDraftNotice}>
@@ -639,14 +679,16 @@ export default function AttendancePage(){
               </span>
             </div>}
 
-            {untaggedCount>0&&<div className={styles.untaggedNotice}>
+            {!isEditingSavedAttendance&&untaggedCount>0&&<div className={styles.untaggedNotice}>
               <AlertTriangle size={16}/>
               <span>
                 {untaggedCount+" learner"+(untaggedCount===1?"":"s")+" still need an attendance tag before this date can be saved."}
               </span>
             </div>}
 
-            {roster.length===0
+            {!attendanceReady
+              ?<div className={styles.empty}>Loading saved attendance for {formatDate(date)}…</div>
+              :roster.length===0
               ?<div className={styles.empty}>No active students are enrolled in this section.</div>
               :<div className={styles.roster}>
                 {rosterGroups.map(({group,students:groupStudents})=>{
@@ -685,6 +727,11 @@ export default function AttendancePage(){
                           <option value="dropped">Dropped</option>
                         </select>
                         <input maxLength={300} placeholder="Optional note" value={d.note} onChange={e=>update(student.id,"note",e.target.value)}/>
+                        {isEditingSavedAttendance&&<button type="button" className={styles.saveLearner}
+                          disabled={working||!isChanged(student.id)||!d.status}
+                          onClick={()=>void save(student.id)}>
+                          <Save size={14}/>{working&&savingStudentId===student.id?"Saving…":"Save This Learner"}
+                        </button>}
                       </article>;
                     })}
                   </section>;
