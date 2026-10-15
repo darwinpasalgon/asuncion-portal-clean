@@ -1225,14 +1225,7 @@ function SideNav({
                       <span>Teacher Schedule</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton className="nav-button" onClick={() => {
-                      window.location.href = "/portal/admin/grade12-term-program";
-                    }}>
-                      <CalendarDays size={19} />
-                      <span>Grade 12 Term Programs</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+
                 </SidebarMenu>
               </div>
             )}
