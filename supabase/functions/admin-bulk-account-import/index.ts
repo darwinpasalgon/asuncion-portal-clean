@@ -268,6 +268,17 @@ Deno.serve(async (req) => {
     const fullName = String(body.full_name ?? "").trim().replace(/\s+/g, " ");
     const position = String(body.position ?? "").trim();
     const adminRole = String(body.admin_role ?? "").trim();
+    const permitted = new Set([
+      "accounts.manage","users.manage","bulk_import.manage","school_setup.manage",
+      "teaching.manage","schedules.manage","attendance.manage","reports.view",
+      "announcements.manage","resources.manage","password_resets.manage","sf10.manage","hr.manage"
+    ]);
+    const requestedPermissions = Array.isArray(body.access_permissions) ? body.access_permissions : [];
+    if (requestedPermissions.length>13 ||
+        requestedPermissions.some((permission:unknown)=>typeof permission!=="string" || !permitted.has(permission))) {
+      return json({error:"The selected staff permission list is not valid."},400);
+    }
+    const grantedPermissions = [...new Set(requestedPermissions as string[])];
     const email = String(body.email ?? "").trim().toLowerCase();
     const phone = normalizePhone(String(body.recovery_phone ?? "").trim());
     if (fullName.length < 3 || fullName.length > 180) {
@@ -346,10 +357,27 @@ Deno.serve(async (req) => {
       await admin.auth.admin.deleteUser(userId);
       return json({error:"Could not link the non-teaching personnel directory, so the new login was rolled back."},500);
     }
+    if (grantedPermissions.length) {
+      const {error: grantError} = await admin.from("administrator_permissions").insert(
+        grantedPermissions.map(permission=>({
+          administrator_id:userId,permission,granted_by:callerId
+        }))
+      );
+      if (grantError) {
+        // A failed permissions save must not leave a usable, partially
+        // configured staff login or an orphan provisional directory record.
+        if (!directoryEntry) {
+          await admin.from("non_teaching_personnel").delete().eq("id",directoryResult.data.id);
+        }
+        await admin.auth.admin.deleteUser(userId);
+        return json({error:"Staff permissions could not be saved; the partial login was rolled back."},500);
+      }
+    }
     return json({
       ok:true,person_type:"non_teaching",account:{
         user_id:userId,full_name:fullName,identifier:email,position,
-        access_role:adminRole,temporary_password:password,credential_status:"new",
+        access_role:adminRole,access_permissions:grantedPermissions,
+        temporary_password:password,credential_status:"new",
       }
     });
   }
