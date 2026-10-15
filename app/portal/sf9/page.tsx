@@ -145,7 +145,7 @@ export default function Sf9Page() {
   const [readiness, setReadiness] = useState<ReadinessRow[]>([]);
   const [readinessLoading, setReadinessLoading] = useState(false);
   const [readinessError, setReadinessError] = useState("");
-  const [readinessOpen, setReadinessOpen] = useState(true);
+  const [readinessOpen, setReadinessOpen] = useState(false);
 
   function remarkDraftsFromDetail(value: any) {
     const next: Record<string, RemarkDraft[]> = {};
@@ -1280,57 +1280,71 @@ export default function Sf9Page() {
               finalizing the report card.
             </p>
           )}
-          <section aria-label="SF9 Report Card Readiness Check" style={{
-            padding: 16, margin: "14px 0", border: "1px solid #cbd5e1",
-            borderRadius: 12, background: "var(--card, #fff)"
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <section className={styles.readinessPanel} aria-label="SF9 Report Card Readiness Check">
+            <div className={styles.readinessHeader}>
               <div>
-                <strong>Report Card Readiness Check</strong>
-                <p style={{ fontSize: 12, marginTop: 4 }}>Check grades, adviser remarks, attendance and basic learner information before printing.</p>
+                <span className={styles.readinessEyebrow}>SF9 VALIDATION</span>
+                <h3>Report Card Readiness</h3>
+                <p>Grades, remarks, learner records and attendance</p>
               </div>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <label htmlFor="sf9-readiness-term" style={{ fontSize: 12 }}>Term</label>
+              <div className={styles.readinessControls}>
+                <label htmlFor="sf9-readiness-term">Term</label>
                 <select id="sf9-readiness-term" value={readinessTerm} onChange={(event) => setReadinessTerm(Number(event.target.value))}>
                   <option value={1}>Term 1</option>
                   <option value={2}>Term 2</option>
                   <option value={3}>Term 3</option>
                 </select>
-                <button type="button" onClick={() => setReadinessOpen(!readinessOpen)}>
-                  {readinessOpen ? "Hide Details" : "Show Details"}
-                </button>
               </div>
             </div>
-            {readinessLoading ? <p role="status">Checking learner records…</p> : readinessError ?
-              <p role="alert" style={{ color: "#b91c1c" }}>{readinessError}</p> :
-              <p role="status" style={{ marginTop: 8, fontSize: 13 }}>
-                <strong>{readiness.length}</strong> learners checked ·
-                <strong> {readiness.filter((entry) => entry.grade_status === "Published" && entry.remarks_status === "Available" && entry.learner_status === "Complete").length}</strong> with complete grades, remarks and basic details.
-                Attendance requires date-by-date verification.
-              </p>}
-            {readinessOpen && !readinessLoading && !readinessError && (
-              <div style={{ maxHeight: 320, overflowY: "auto", marginTop: 10 }}>
-                {readiness.map((entry) => (
-                  <div key={entry.student_id} style={{
-                    padding: "9px 0", borderTop: "1px solid #e2e8f0",
-                    display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap"
-                  }}>
-                    <div>
-                      <strong style={{ fontSize: 13 }}>{entry.learner_name}</strong>
-                      <div style={{ fontSize: 12, marginTop: 3 }}>
-                        Grades: {entry.grades_published}/{entry.expected_subjects} ({entry.grade_status}) ·
-                        Remarks: {entry.remarks_status} · Profile: {entry.learner_status} · Attendance: {entry.attendance_status}
-                      </div>
-                      <div style={{ fontSize: 12, marginTop: 3, color: "#92400e" }}>
-                        {(entry.issues ?? []).join(" · ") || "No outstanding issues detected"}
-                      </div>
-                    </div>
-                    <button type="button" onClick={() => {
-                      setSelectedIds([entry.student_id]);
-                    }}>View SF9</button>
+            {(() => {
+              const complete = readiness.filter((entry) =>
+                entry.grade_status === "Published" &&
+                entry.remarks_status === "Available" &&
+                entry.learner_status === "Complete"
+              ).length;
+              const percent = readiness.length > 0 ? Math.round((complete / readiness.length) * 100) : 0;
+              return (
+                <>
+                  <div className={styles.readinessProgressHeading} role="status" aria-live="polite">
+                    <span>{readinessLoading ? "Checking learner records…" : readinessError ? "Check unsuccessful" : readiness.length === 0 ? "No learners to check" : complete + " of " + readiness.length + " learners checked"}</span>
+                    <strong>{readinessLoading ? "Checking…" : readinessError ? "—" : percent + "%"}</strong>
                   </div>
-                ))}
-              </div>
+                  <div className={styles.readinessTrack} role="progressbar" aria-label="SF9 readiness" aria-valuemin={0} aria-valuemax={100} aria-valuenow={readinessLoading ? undefined : percent} aria-valuetext={readinessLoading ? "Checking learner records" : percent + " percent"}>
+                    <div className={readinessLoading ? styles.readinessScanning : styles.readinessFill} style={readinessLoading ? undefined : { width: percent + "%" }} />
+                  </div>
+                  {readinessError ? <p className={styles.readinessError} role="alert">{readinessError}</p> :
+                    <p className={styles.readinessNote}>{readinessLoading ? "Validating information securely…" : "Progress covers grades, remarks and basic learner data. Attendance dates still require verification."}</p>}
+                  {!readinessLoading && !readinessError && readiness.length > 0 && (
+                    <div className={styles.readinessMetrics}>
+                      <span><CheckCircle2 size={15} /> {readiness.filter((r) => r.grade_status === "Published").length} Grades ready</span>
+                      <span><CheckCircle2 size={15} /> {readiness.filter((r) => r.remarks_status === "Available").length} Remarks ready</span>
+                      <span><CheckCircle2 size={15} /> {readiness.filter((r) => r.learner_status === "Complete").length} Profiles ready</span>
+                      <span><ShieldCheck size={15} /> Attendance review required</span>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+            {!readinessLoading && !readinessError && readiness.length > 0 && (
+              <>
+                <button type="button" className={styles.readinessDetailsToggle} aria-expanded={readinessOpen} onClick={() => setReadinessOpen(!readinessOpen)}>
+                  {readinessOpen ? "Hide learner details" : "View learner details"} <span aria-hidden="true">{readinessOpen ? "−" : "+"}</span>
+                </button>
+                {readinessOpen && (
+                  <div className={styles.readinessLearners}>
+                    {readiness.map((entry) => (
+                      <div key={entry.student_id} className={styles.readinessLearner}>
+                        <div>
+                          <strong>{entry.learner_name}</strong>
+                          <p>{entry.grade_status === "Published" ? "Grades ready" : entry.grade_status} · {entry.remarks_status === "Available" ? "Remarks ready" : "Missing remarks"} · {entry.learner_status === "Complete" ? "Profile ready" : "Incomplete profile"}</p>
+                          <small>{(entry.issues ?? []).join(" · ") || "No issues detected"}</small>
+                        </div>
+                        <button type="button" onClick={() => setSelectedIds([entry.student_id])}>View SF9</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </section>
           <div className={styles.search}>
