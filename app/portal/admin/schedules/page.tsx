@@ -978,6 +978,7 @@ export default function ClassSchedulesPage() {
           <a href="/portal/admin/teaching" className={styles.topLink}>
             Subjects & Teachers
           </a>
+          <a href="/portal/admin/grade12-term-program" className={styles.topLink}>Grade 12 · Term 1 &amp; Term 2 Programs</a>
         </nav>
 
         <header className={styles.header}>
@@ -1001,7 +1002,12 @@ export default function ClassSchedulesPage() {
           )}
         </header>
 
-        {error && <div className={styles.error} role="alert">{error}</div>}
+        <div style={{marginBottom:16,padding:"15px 18px",borderRadius:12,background:"#eaf7f0",border:"1px solid #c6e4d3"}}>
+            <strong style={{color:"#215b42"}}>Grade 12 First &amp; Second Term Class Programs</strong>
+            <p style={{margin:"7px 0 10px",color:"#537562",fontSize:13}}>Open the imported Excel schedules by term, review instructor assignments, and adjust subject time slots without replacing other grade levels.</p>
+            <a href="/portal/admin/grade12-term-program" style={{display:"inline-flex",padding:"10px 14px",borderRadius:8,background:"#237653",color:"white",fontWeight:750,textDecoration:"none"}}>Open Grade 12 Term Programs</a>
+          </div>
+          {error && <div className={styles.error} role="alert">{error}</div>}
         {success && <div className={styles.success} role="status">{success}</div>}
 
         {reviewOrigin && (
