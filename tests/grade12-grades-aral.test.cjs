@@ -57,3 +57,17 @@ test("Combined Food Processing and Organic Agriculture periods are visible but g
  assert.match(page,/Their individual Grade 12 SHS specialization/);
  assert.match(page,/disabled=\{Boolean\(working\) \|\| classStudents.length === 0 \|\| selectedMixedTvlGradebook\}/);
 });
+
+test("Grade 12 term grades follow future teacher changes and ARAL remains non-graded",()=>{
+ const sync=read("supabase/migrations/20261015194100_sync_grade12_term_teacher_after_period_edits.sql");
+ const termRoute=read("app/api/admin/grade12-term-program/route.ts");
+ const subjectRoute=read("app/api/admin/teaching-setup/route.ts");
+ assert.match(sync,/grade12_sync_term_teacher_after_edit/);
+ assert.match(sync,/after update of instructor_ids on public.grade12_term_periods/);
+ assert.match(sync,/update public.grade12_term_gradebook gb/);
+ assert.match(sync,/insert into public.teacher_assignments/);
+ assert.match(termRoute,/requestedSubject/);
+ assert.match(termRoute,/\^ARAL\(\?:\\s\|\$\)/);
+ assert.match(subjectRoute,/is_graded: name !== "ARAL" \|\| !\[11,12\]\.includes\(gradeLevel\)/);
+ assert.match(subjectRoute,/include_in_school_forms: name !== "ARAL"/);
+});
