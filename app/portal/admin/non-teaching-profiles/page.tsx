@@ -378,6 +378,9 @@ export default function NonTeachingProfilesPage() {
                 <div className={styles.personHeading}>
                   <div><span>NON-TEACHING PERSONNEL</span><h2>{person.full_name}</h2><p>{person.position || "Position not set"} · {person.email || "No email"}</p></div>
                   <div className={styles.headingActions}>
+                    <a className={styles.designationShortcut} href={`/portal/admin/personnel-designations?type=non_teaching&personnel=${encodeURIComponent(person.id)}`}>
+                      <Save size={16}/>Change Designation
+                    </a>
                     {!person.portal_user_id && /^HEAD TEACHER\b/i.test(person.position ?? "") && (
                       <button className={styles.resetButton} onClick={() => void createHeadTeacherAccount()} disabled={provisioning}>
                         <KeyRound size={16} />{provisioning ? "Creating Account..." : "Create Portal Account"}
@@ -415,7 +418,7 @@ export default function NonTeachingProfilesPage() {
                     <button type="button" onClick={() => setNewCredentials(null)}>Hide Credentials</button>
                   </div>
                 )}
-                <div className={styles.namePanel}>
+                <div className={styles.designationPanel}>
                   <h3>Change Personnel Designation</h3>
                   <p>Record promotions and appointment changes without deleting the personnel account or history.</p>
                   <label>New Position
