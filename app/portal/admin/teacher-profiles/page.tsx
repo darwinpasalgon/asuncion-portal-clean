@@ -386,7 +386,6 @@ export default function TeacherProfilesHrPage() {
           official,
           service_records: service,
           ratings,
-          position,
         }),
       });
       const result = await response.json().catch(() => ({}));
@@ -482,33 +481,32 @@ export default function TeacherProfilesHrPage() {
                     <span>TEACHER&apos;S PROFILE</span>
                     <h2>{teacher?.full_name}</h2>
                   </div>
+                  <a className={styles.designationShortcut} href={`/portal/admin/personnel-designations?type=teacher&personnel=${encodeURIComponent(selectedId)}`}>
+                    <BriefcaseBusiness size={16}/>Change Designation
+                  </a>
                 </div>
 
-                <section className={styles.panel}>
-                  <h3>Change Personnel Designation</h3>
-                  <p>For promotions or updates to an existing teaching position. Saves independently of incomplete profile fields.</p>
-                  <label><span>Reason / Appointment Reference</span><input value={designationReason} onChange={event=>setDesignationReason(event.target.value)} placeholder="e.g. Promoted to Master Teacher I, effective date"/></label>
-                  <button type="button" disabled={designationSaving||!designationReason.trim()||!position||position===String(teacher?.position??"").toUpperCase()} onClick={()=>void saveDesignation()}>{designationSaving?"Saving Designation...":"Update Designation"}</button>
+                <section className={styles.designationPanel}>
+                  <h3><BriefcaseBusiness size={19}/> Change Personnel Designation</h3>
+                  <p>Record a promotion without changing the employee's account or other profile information.</p>
+                  <label><span>Current Designation</span><input readOnly value={teacher?.position ?? "Not Recorded"}/></label>
+                  <label><span>New Designation</span>
+                    <select value={position} onChange={(event)=>setPosition(event.target.value)}>
+                      <option value="">Select teaching position</option>
+                      {positionOptions(teachingPositions,position).map(item=>(
+                        <option value={item} key={item}>{item}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label><span>Appointment / Promotion Reason</span><input value={designationReason} onChange={event=>setDesignationReason(event.target.value)} placeholder="e.g. Promoted to Master Teacher I effective October 15, 2026"/></label>
+                  <button className={styles.designationSave} type="button" disabled={designationSaving||designationReason.trim().length<3||!position||position===String(teacher?.position??"").toUpperCase()} onClick={()=>void saveDesignation()}>{designationSaving?"Saving Designation...":"Update Designation"}</button>
                 </section>
                 <section className={styles.panel}>
                   <div className={styles.panelHead}><BriefcaseBusiness size={20} /><h3>Employment Information</h3></div>
                   <div className={styles.grid}>
                     <label>
-                      <span>Position</span>
-                      <select
-                        value={position}
-                        onChange={(event) => setPosition(event.target.value)}
-                      >
-                        <option value="">Select teaching position</option>
-                        {positionOptions(teachingPositions, position).map((item) => (
-                          <option key={item} value={item}>
-                            {item}
-                            {!teachingPositions.includes(item as (typeof teachingPositions)[number])
-                              ? " (current)"
-                              : ""}
-                          </option>
-                        ))}
-                      </select>
+                      <span>Current Position (use Change Designation above to update)</span>
+                      <input readOnly value={teacher?.position ?? "Not Recorded"}/>
                     </label>
                     <label>
                       <span>Date of Original Appointment</span>
