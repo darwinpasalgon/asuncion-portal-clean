@@ -95,7 +95,10 @@ export async function POST(request: NextRequest) {
   if (!body || body.action !== "update_period") return NextResponse.json({ error: "Invalid action." }, { status: 400 });
 
   const id = String(body.id ?? "");
-  const subject = String(body.subject_label ?? "").trim();
+  const requestedSubject = String(body.subject_label ?? "").trim();
+  const subject = /^ARAL(?:\s|$)/i.test(requestedSubject) ? "ARAL"
+    : /^HGP\/ARAL(?:\s|$)/i.test(requestedSubject) ? "HGP/ARAL"
+    : requestedSubject;
   const teachers: string[] = Array.isArray(body.instructor_ids) ? Array.from(new Set<string>((body.instructor_ids as unknown[]).map((value) => String(value)))) : [];
   const start = String(body.start_time ?? "").slice(0, 5);
   const end = String(body.end_time ?? "").slice(0, 5);
