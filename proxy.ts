@@ -118,6 +118,7 @@ const adminPagePermissions: Array<[string, string]> = [
   ["/portal/admin/reports", "reports.view"],
   ["/portal/admin/password-resets", "password_resets.manage"],
   ["/portal/admin/sf10", "sf10.manage"],
+  ["/portal/admin/personnel-designations", "hr.manage"],
   ["/portal/admin/teacher-profiles", "hr.manage"],
   ["/portal/admin/non-teaching-profiles", "hr.manage"],
   ["/portal/admin/service-credits", "hr.manage"],
