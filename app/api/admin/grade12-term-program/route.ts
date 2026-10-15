@@ -127,8 +127,13 @@ export async function POST(request: NextRequest) {
     if (conflicts.length && isChangingStaffOrTime) {
       return NextResponse.json({ error: "Teacher schedule conflict within this term. Review the existing Grade 12 entries.", conflicts: conflicts.map(p=>({section_id:p.section_id,day:p.day_of_week,start:p.start_time,end:p.end_time,subject:p.subject_label})) }, { status: 409 });
     }
-    const notes = [teachers.length===0 ? "Instructor account not yet matched" : null, end>"16:30" ? "Ends after 4:30 PM" : null,
-      conflicts.length ? "Source timetable has overlapping teacher allocations" : null].filter(Boolean);
+    const preservedNotes = (existing.review_reason ?? "").split(";").map(note => note.trim()).filter(note =>
+      note && !/ends after (the )?4:30 PM|Instructor missing from portal teacher accounts|Instructor account not yet matched|Source timetable has overlapping teacher allocations/i.test(note)
+    );
+    const notes = [...preservedNotes,
+      teachers.length === 0 ? "Instructor account not yet matched" : null,
+      conflicts.length ? "Source timetable has overlapping teacher allocations" : null
+    ].filter((note): note is string => Boolean(note));
     const response = await fetch(`${SUPABASE_URL}/rest/v1/grade12_term_periods?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH", headers: {...authHeaders(info.token),Prefer:"return=representation"},
       body: JSON.stringify({
