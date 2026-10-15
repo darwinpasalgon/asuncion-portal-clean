@@ -218,6 +218,13 @@ export async function GET(request: NextRequest) {
   }
 }
 
+function canonicalShsAralName(name: string, gradeLevel: number) {
+  // ARAL Reading, ARAL Math and ARAL Program are a single, non-graded
+  // teaching load in Senior High. Do not touch Araling Panlipunan in JHS.
+  return (gradeLevel===11 || gradeLevel===12) && /^ARAL(?:\s|$)/i.test(name)
+    ? "ARAL" : name;
+}
+
 export async function POST(request: NextRequest) {
   const token = tokenFrom(request);
   if (!token || !(await isAdmin(token))) {
@@ -229,7 +236,7 @@ export async function POST(request: NextRequest) {
 
   if (action === "add_subject") {
     const gradeLevel = Number(body?.gradeLevel ?? 0);
-    const name = String(body?.name ?? "").trim().replace(/\s+/g, " ");
+    const name = canonicalShsAralName(String(body?.name ?? "").trim().replace(/\s+/g, " "), gradeLevel);
 
     if (!isSupportedAcademicLevel(gradeLevel)) {
       return NextResponse.json({ error: "Select a valid Grade Level or ALS A&E program." }, { status: 400 });
@@ -271,17 +278,25 @@ export async function POST(request: NextRequest) {
 
   if (action === "update_subject") {
     const id = String(body?.id ?? "");
-    const name = String(body?.name ?? "").trim().replace(/\s+/g, " ");
+    const requestedName = String(body?.name ?? "").trim().replace(/\s+/g, " ");
 
     if (!id) {
       return NextResponse.json({ error: "Subject is required." }, { status: 400 });
     }
-    if (name.length < 2 || name.length > 100) {
+    if (requestedName.length < 2 || requestedName.length > 100) {
       return NextResponse.json(
         { error: "Subject name must contain 2 to 100 characters." },
         { status: 400 }
       );
     }
+
+    const [currentSubject] = await getRows(
+      `subjects?id=eq.${encodeURIComponent(id)}&select=grade_level&limit=1`, token
+    );
+    if (!currentSubject) {
+      return NextResponse.json({error:"Subject was not found."},{status:404});
+    }
+    const name = canonicalShsAralName(requestedName, Number(currentSubject.grade_level));
 
     const response = await fetch(
       `${SUPABASE_URL}/rest/v1/subjects?id=eq.${encodeURIComponent(id)}`,
