@@ -111,7 +111,33 @@ export function generateSf9Remark(signal: Sf9RemarkSignal, variation = 0): strin
           ? ["May ilang pagliban na maaari pang mabawasan.", "Sikaping maging mas regular ang pagpasok.", "Makabubuting pagbutihin pa ang attendance.", "Makatutulong ang pagbawas ng pagliban."]
           : ["Kailangan pang pagbutihin ang regular na pagpasok.", "Pagtuunan ang pagdalo sa klase upang masuportahan ang pagkatuto.", "Mahalagang mabawasan ang mga pagliban.", "Makabubuting magkaroon ng mas tuloy-tuloy na attendance."];
 
-  const opening = pick(academic, 0);
+  // Adapt the Filipino wording of Grade 9 Quezon's adviser-curated SF9
+  // workbook to evidence-based automatic suggestions. We intentionally reuse
+  // constructive phrases, NOT unverified personality/behavior observations
+  // such as being shy, talkative, late with projects, or fast at recitation.
+  // Quezon's actual Term 1 learner-specific remarks are stored separately
+  // and always override automatic suggestions.
+  const quezonStyle = signal.termAverage >= 90
+    ? [
+        "May magandang kakayahang matuto batay sa mataas na mga marka; ipagpatuloy ang pagsisikap sa bawat asignatura.",
+        "Mahusay ang naitalang pagganap sa klase; may potensiyal na makamit ang mas mataas pang resulta.",
+        "Maganda ang naging resulta sa mga aralin at may kakayahang mapanatili ang mahusay na pagganap.",
+      ]
+    : signal.termAverage >= 80
+      ? [
+          "May kakayahang makasunod sa aralin; makatutulong ang dagdag na oras sa pagsasanay upang higit pang umunlad.",
+          "May kakayahang mapaunlad ang mga marka sa bawat aralin sa pamamagitan ng regular na pagsasanay.",
+          "Ipagpatuloy ang mga nagawang pag-aaral at pagbutihin pa ang paghahanda sa mga gawain.",
+        ]
+      : [
+          "Kailangang maglaan ng dagdag na oras sa pagsasanay upang mapahusay ang mga marka sa bawat asignatura.",
+          "May kakayahang umunlad pa; makatutulong ang pagtutok sa mga araling nangangailangan ng dagdag na pagsasanay.",
+          "Maging masipag sa mga performance task at pagbabalik-aral upang mapataas ang naitalang mga marka.",
+        ];
+
+  const opening = variation % 3 === 2
+    ? pick(academic, 0)
+    : pick(quezonStyle, 3);
   const detail = pick(specific, 1);
   const presence = pick(attendance, 2);
   const pieces = variation % 3 === 1 ? [opening, presence, detail] : variation % 3 === 2 ? [detail, opening, presence] : [opening, detail, presence];
