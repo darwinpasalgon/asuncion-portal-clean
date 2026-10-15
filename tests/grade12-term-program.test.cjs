@@ -69,3 +69,15 @@ test("Old Grade 12 screen retires; existing JHS screen and records stay intact",
  assert.match(internal,/update_period/);
  assert.match(internal,/Teacher Schedule/);
 });
+
+test("Grade 12 stays navigable with visible Grade Level and Section selectors",()=>{
+ const c=read("app/portal/admin/schedules/page.tsx");
+ const pos=c.indexOf('!teacherView && quickGrade === "12"');
+ assert.ok(pos>0);
+ const branch=c.slice(pos,c.indexOf(") : (",pos));
+ assert.match(branch,/Grade Level/);
+ assert.match(branch,/Section/);
+ assert.match(branch,/setQuickGrade/);
+ assert.match(branch,/setQuickSection/);
+ assert.match(branch,/Grade12SchedulesInline/);
+});
