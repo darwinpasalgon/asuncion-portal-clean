@@ -173,7 +173,7 @@ export async function GET(request: NextRequest) {
             )
           : Promise.resolve([]),
         getRows(
-          `grade12_term_gradebook?school_year_id=eq.${encodeURIComponent(activeYear.id)}&select=section_id,subject_id,term_no,teacher_assignment_id,term_teacher_id`,
+          `grade12_term_gradebook?school_year_id=eq.${encodeURIComponent(activeYear.id)}&select=section_id,subject_id,term_no,teacher_assignment_id,term_teacher_id,requires_learner_group`,
           token
         ),
       ]);
@@ -319,7 +319,7 @@ async function validateGrade12GradingTerm(
 ):Promise<string|null> {
   if (Number(assignment.grade_level) !== 12) return null;
   const linked = await getRows(
-    `grade12_term_gradebook?school_year_id=eq.${encodeURIComponent(activeYearId)}&section_id=eq.${encodeURIComponent(assignment.section_id)}&subject_id=eq.${encodeURIComponent(assignment.subject_id)}&term_no=eq.${termNo}&select=teacher_assignment_id,term_teacher_id&limit=1`,
+    `grade12_term_gradebook?school_year_id=eq.${encodeURIComponent(activeYearId)}&section_id=eq.${encodeURIComponent(assignment.section_id)}&subject_id=eq.${encodeURIComponent(assignment.subject_id)}&term_no=eq.${termNo}&select=teacher_assignment_id,term_teacher_id,requires_learner_group&limit=1`,
     token
   );
   if (!linked?.[0] || linked[0].teacher_assignment_id !== assignment.id) {
@@ -327,6 +327,9 @@ async function validateGrade12GradingTerm(
   }
   if (!linked[0].term_teacher_id) {
     return "The Grade 12 subject teacher has not yet been linked for this term. Complete the teacher assignment first.";
+  }
+  if (linked[0].requires_learner_group) {
+    return "This Grade 12 section combines Food Processing and Organic Agriculture Production learners. Their individual SHS specializations must be assigned before grades can be recorded safely.";
   }
   return null;
 }
