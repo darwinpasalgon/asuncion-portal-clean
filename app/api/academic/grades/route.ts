@@ -126,6 +126,7 @@ export async function GET(request: NextRequest) {
       learnerInformation,
       grades,
       advisers,
+      grade12TermGradebook,
     ] = await Promise.all([
         getRows(
           `teacher_assignments?school_year_id=eq.${encodeURIComponent(
@@ -171,6 +172,10 @@ export async function GET(request: NextRequest) {
               token
             )
           : Promise.resolve([]),
+        getRows(
+          `grade12_term_gradebook?school_year_id=eq.${encodeURIComponent(activeYear.id)}&select=section_id,subject_id,term_no,teacher_assignment_id,term_teacher_id`,
+          token
+        ),
       ]);
 
     const advisedSections = new Set(
@@ -253,11 +258,19 @@ export async function GET(request: NextRequest) {
       profile.role === "teacher"
         ? gradedAssignments.filter(
             (item: {
+              id:string;
+              grade_level:number;
               teacher_id: string;
               co_teacher_ids?: string[] | null;
             }) =>
-              item.teacher_id === identity.userId ||
-              (item.co_teacher_ids ?? []).includes(identity.userId)
+              item.grade_level === 12
+                ? (grade12TermGradebook ?? []).some(
+                    (link: {teacher_assignment_id?:string;term_teacher_id?:string}) =>
+                      link.teacher_assignment_id === item.id &&
+                      link.term_teacher_id === identity.userId
+                  )
+                : item.teacher_id === identity.userId ||
+                  (item.co_teacher_ids ?? []).includes(identity.userId)
           )
         : [];
 
@@ -281,6 +294,7 @@ export async function GET(request: NextRequest) {
       isSectionAdviser: profile.role === "teacher" && advisedSections.size > 0,
       adviserSections: adviserSectionDetails,
       assignments: gradeAssignments,
+      grade12TermGradebook,
       subjectAssignments,
       sections,
       subjects: (subjects ?? []).filter(
@@ -296,6 +310,25 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+async function validateGrade12GradingTerm(
+  token:string, activeYearId:string,
+  assignment:{id:string;section_id:string;subject_id:string;grade_level:number},
+  termNo:number
+):Promise<string|null> {
+  if (Number(assignment.grade_level) !== 12) return null;
+  const linked = await getRows(
+    `grade12_term_gradebook?school_year_id=eq.${encodeURIComponent(activeYearId)}&section_id=eq.${encodeURIComponent(assignment.section_id)}&subject_id=eq.${encodeURIComponent(assignment.subject_id)}&term_no=eq.${termNo}&select=teacher_assignment_id,term_teacher_id&limit=1`,
+    token
+  );
+  if (!linked?.[0] || linked[0].teacher_assignment_id !== assignment.id) {
+    return "This Grade 12 subject is not scheduled for the selected term.";
+  }
+  if (!linked[0].term_teacher_id) {
+    return "The Grade 12 subject teacher has not yet been linked for this term. Complete the teacher assignment first.";
+  }
+  return null;
 }
 
 export async function POST(request: NextRequest) {
@@ -345,6 +378,12 @@ export async function POST(request: NextRequest) {
     }
 
     const selectedAssignment = assignments[0];
+    const grade12TermError = await validateGrade12GradingTerm(
+      token, activeYear.id, selectedAssignment, termNo
+    );
+    if (grade12TermError) {
+      return NextResponse.json({error:grade12TermError},{status:409});
+    }
     const canGrade = await teacherAdvisesSection(
       token,
       userId,
@@ -621,6 +660,12 @@ export async function POST(request: NextRequest) {
     }
 
     const selectedAssignment = assignments[0];
+    const grade12TermError = await validateGrade12GradingTerm(
+      token, activeYear.id, selectedAssignment, termNo
+    );
+    if (grade12TermError) {
+      return NextResponse.json({error:grade12TermError},{status:409});
+    }
 
     const canGrade = await teacherAdvisesSection(
       token,
@@ -839,6 +884,12 @@ export async function POST(request: NextRequest) {
     }
 
     const selectedAssignment = assignments[0];
+    const grade12TermError = await validateGrade12GradingTerm(
+      token, activeYear.id, selectedAssignment, termNo
+    );
+    if (grade12TermError) {
+      return NextResponse.json({error:grade12TermError},{status:409});
+    }
 
     const canGrade = await teacherAdvisesSection(
       token,
