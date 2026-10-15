@@ -195,7 +195,7 @@ export default function NonTeachingProfilesPage() {
     if (!window.confirm(`Change ${person.full_name}'s designation from ${person.position ?? "Not Set"} to ${designation}? This will update their personnel record.`)) return;
     setDesignationSaving(true);setError("");setMessage("");
     try {
-      const response=await fetch("/api/teacher-profiles",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"change_designation",owner_type:"non_teaching",personnel_id:person.id,position:designation,reason:designationReason})});
+      const response=await fetch("/api/teacher-profiles",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"change_designation",owner_type:"non_teaching",personnel_id:person.id,position:designation,expected_position:String(person.position??"").toUpperCase(),reason:designationReason})});
       const result=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(result.error??"Designation update failed.");
       setPerson(current=>current?{...current,position:result.personnel.position}:current);
