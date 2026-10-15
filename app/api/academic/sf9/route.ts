@@ -724,7 +724,7 @@ export async function GET(request: NextRequest) {
               inFilter(requestedStudentIds)
             )}&teacher_assignment_id=in.${encodeURIComponent(
               inFilter(assignmentIds)
-            )}&status=eq.published&select=student_id,teacher_assignment_id,term_no,term_grade,music_arts_grade,pe_health_grade,music_grade,arts_grade,physical_education_grade,health_grade,status`,
+            )}&status=eq.published&select=student_id,teacher_assignment_id,term_no,term_grade,music_arts_grade,pe_health_grade,music_grade,arts_grade,physical_education_grade,health_grade,status,published_at`,
             token
           )
         : [];
