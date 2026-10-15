@@ -118,3 +118,5 @@
   .assistantStatusButtons{width:100%}
   .assistantStatusButtons button{flex:1}
 }
+
+.monthSwitcher{display:flex;gap:18px;align-items:center;justify-content:space-between;padding:17px 19px;margin:15px 0;border:1px solid #c9e2d4;border-radius:13px;background:#f0f8f3}.monthSwitcher>div{display:grid;gap:6px}.monthSwitcher strong{color:#286849;font-size:.91rem}.monthSwitcher div>span{font-size:.77rem;color:#567c68;line-height:1.5}.monthSwitcher label{display:grid;gap:6px;min-width:200px;color:#456d56;font-size:.76rem;font-weight:800}.monthSwitcher select{min-height:42px;border:1px solid #afcfbc;border-radius:9px;background:white;color:#205239;padding:9px 10px;font:inherit}.monthSwitcher select:focus{outline:2px solid #67a885;outline-offset:2px}@media(max-width:650px){.monthSwitcher{flex-direction:column;align-items:stretch}.monthSwitcher label{min-width:0}}
