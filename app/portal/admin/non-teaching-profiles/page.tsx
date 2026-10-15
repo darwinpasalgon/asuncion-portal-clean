@@ -55,6 +55,8 @@ export default function NonTeachingProfilesPage() {
   const [saving, setSaving] = useState(false);
   const [savingName, setSavingName] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [provisioning, setProvisioning] = useState(false);
+  const [newCredentials, setNewCredentials] = useState<{ email: string; temporary_password: string } | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -98,6 +100,7 @@ export default function NonTeachingProfilesPage() {
       setLoadingRecord(true);
       setError("");
       setMessage("");
+      setNewCredentials(null);
       try {
         const response = await fetch("/api/teacher-profiles", {
           method: "POST",
@@ -148,6 +151,37 @@ export default function NonTeachingProfilesPage() {
 
   function update(key: string, value: string) {
     setPersonal((current) => ({ ...current, [key]: value }));
+  }
+
+  async function createHeadTeacherAccount() {
+    if (!person || !/^HEAD TEACHER\\b/i.test(person.position ?? "") || person.portal_user_id) return;
+    if (!window.confirm(`Create a portal account for ${person.full_name} using ${person.email}? The temporary password will only be displayed once.`)) return;
+    setProvisioning(true);
+    setNewCredentials(null);
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch("/api/admin/head-teacher-provision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ personnel_id: person.id }),
+        cache: "no-store",
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error ?? "Unable to provision this Head Teacher account.");
+      setPerson((previous) => previous ? { ...previous, portal_user_id: result.user_id } : previous);
+      if (result.created && result.temporary_password) {
+        setNewCredentials({ email: person.email ?? "", temporary_password: result.temporary_password });
+        setMessage("Account created. Copy the temporary credentials now. The password is displayed once.");
+      } else {
+        setMessage("Existing account linked. If the login password is unknown, use Reset Password.");
+      }
+      await loadPersonnel();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to provision account.");
+    } finally {
+      setProvisioning(false);
+    }
   }
 
   async function requestPasswordReset() {
@@ -322,6 +356,11 @@ export default function NonTeachingProfilesPage() {
                 <div className={styles.personHeading}>
                   <div><span>NON-TEACHING PERSONNEL</span><h2>{person.full_name}</h2><p>{person.position || "Position not set"} · {person.email || "No email"}</p></div>
                   <div className={styles.headingActions}>
+                    {!person.portal_user_id && /^HEAD TEACHER\\b/i.test(person.position ?? "") && (
+                      <button className={styles.resetButton} onClick={() => void createHeadTeacherAccount()} disabled={provisioning}>
+                        <KeyRound size={16} />{provisioning ? "Creating Account..." : "Create Portal Account"}
+                      </button>
+                    )}
                     <button
                       className={styles.resetButton}
                       onClick={() => void requestPasswordReset()}
@@ -345,6 +384,15 @@ export default function NonTeachingProfilesPage() {
                   </div>
                 </div>
 
+                {newCredentials && (
+                  <div role="status" className={styles.namePanel}>
+                    <strong>New Portal Credentials (shown once)</strong>
+                    <p>Email: {newCredentials.email}</p>
+                    <p>Temporary Password: <code>{newCredentials.temporary_password}</code></p>
+                    <p>Copy these details securely and ask the user to change the password after first login.</p>
+                    <button type="button" onClick={() => setNewCredentials(null)}>Hide Credentials</button>
+                  </div>
+                )}
                 <div className={styles.namePanel}>
                   <div className={styles.namePanelHead}>
                     <div>
