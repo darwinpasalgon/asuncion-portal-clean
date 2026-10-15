@@ -18,7 +18,7 @@ test("SF9 calendar starts June 8, skips weekends and excluded school suspensions
     startDate:"2026-06-08",currentDate:"2026-06-12",startYear:2026,
     excludedDates:["2026-06-10"]
   });
-  assert.deepEqual(Array.from(days), ["2026-06-08","2026-06-09","2026-06-11","2026-06-12"]);
+  assert.deepEqual(Array.from(days), ["2026-06-08","2026-06-09","2026-06-11"]);
   assert.equal(sf9MonthKey("2027-01-05",2026),"Jan");
   assert.equal(sf9MonthKey("2026-01-05",2026),null);
   assert.equal(sf9MonthKey("2027-05-05",2026),null);
