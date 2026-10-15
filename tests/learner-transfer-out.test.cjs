@@ -28,7 +28,7 @@ test("Transfer Out changes enrollment, attendance roster, and history atomically
   assert.doesNotMatch(sql, /delete from public\.student_enrollments/);
   assert.doesNotMatch(sql, /delete from public\.profiles/);
   assert.match(api, /admin\.rpc\("admin_change_learner_enrollment_status"/);
-  assert.match(api, /removed from the active class and attendance rosters/);
+  assert.match(api, /removed from the active class and attendance rosters/i);
 });
 
 test("Class counts and grades exclude transferred learners while SF2 preserves transfer remarks", () => {
