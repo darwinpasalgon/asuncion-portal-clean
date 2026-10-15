@@ -120,6 +120,14 @@ Deno.serve(async (req) => {
   function summarize(rows: Array<Record<string, unknown>>) {
     const serviceRows = rows.filter((row) => row.credit_type === "service_credit");
     const wellnessRows = rows.filter((row) => row.credit_type === "wellness_leave");
+    // Philippine calendar-year boundaries; the entitlement renews automatically on January 1.
+    const wellnessYear = Number(
+      new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Manila", year: "numeric" }).format(new Date())
+    );
+    const wellnessUsed = wellnessRows
+      .filter((row) => String(row.posting_date ?? "").startsWith(String(wellnessYear) + "-"))
+      .reduce((sum, row) => sum + Number(row.service_credits_used ?? 0), 0);
+    const wellnessBalance = Math.max(0, Math.round((5 - wellnessUsed) * 10000) / 10000);
     const latest = (items: Array<Record<string, unknown>>) =>
       items.length ? Number(items[0]?.balance_after ?? 0) : null;
     const totalEarned = serviceRows.reduce(
@@ -132,7 +140,10 @@ Deno.serve(async (req) => {
     );
     return {
       service_credit_balance: latest(serviceRows),
-      wellness_leave_balance: latest(wellnessRows),
+      wellness_leave_balance: wellnessBalance,
+      wellness_allowance: 5,
+      wellness_used: Math.round(wellnessUsed * 10000) / 10000,
+      wellness_year: wellnessYear,
       total_service_credits_earned: Math.round(totalEarned * 10000) / 10000,
       total_service_credits_used: Math.round(totalUsed * 10000) / 10000,
       transaction_count: serviceRows.length,
@@ -324,12 +335,19 @@ Deno.serve(async (req) => {
 
   if (action === "post_transaction") {
     const kind = String(body.transaction_kind ?? "");
+    const creditType = String(body.credit_type ?? "service_credit");
+    if (!["service_credit", "wellness_leave"].includes(creditType)) {
+      return json({ error: "Unknown leave or credit type." }, 400);
+    }
+    if (creditType === "wellness_leave" && kind !== "debit") {
+      return json({ error: "Wellness Leave is a 5-day annual allowance and cannot be manually credited." }, 400);
+    }
     if (!["credit", "debit"].includes(kind)) {
       return json({ error: "Choose Add Service Credits or Deduct Service Credits." }, 400);
     }
 
     const amount = number(body.amount);
-    if (!Number.isFinite(amount) || amount <= 0 || amount > 999.99) {
+    if (!Number.isFinite(amount) || amount <= 0 || amount > (creditType === "wellness_leave" ? 5 : 999.99)) {
       return json({ error: "Enter a valid service credit amount from 0.01 to 999.99 days." }, 400);
     }
 
@@ -348,7 +366,7 @@ Deno.serve(async (req) => {
     const row = {
       personnel_id: isNonTeaching ? null : personnelId,
       non_teaching_personnel_id: isNonTeaching ? personnelId : null,
-      credit_type: "service_credit",
+      credit_type: creditType,
       posting_date: postingDate,
       transaction_kind: kind,
       previous_balance: 0,
@@ -370,10 +388,16 @@ Deno.serve(async (req) => {
 
     if (error || !saved) {
       const message = String(error?.message ?? "");
+      if (/insufficient annual wellness leave balance/i.test(message)) {
+        return json({ error: "The 5-day annual Wellness Leave allowance would be exceeded. Choose fewer days or check this year’s usage." }, 409);
+      }
+      if (/future date/i.test(message)) {
+        return json({ error: "Wellness Leave cannot be deducted for a future date." }, 400);
+      }
       if (/insufficient service credit balance/i.test(message)) {
         return json({ error: "Insufficient Service Credits balance for this deduction." }, 409);
       }
-      return json({ error: "Unable to post the Service Credits transaction." }, 500);
+      return json({ error: "Unable to post the leave or Service Credits transaction." }, 500);
     }
 
     return json({ ok: true, transaction: saved });
