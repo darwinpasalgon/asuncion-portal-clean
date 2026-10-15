@@ -150,10 +150,10 @@
 }
 .printScope :global(.sf2-deped-wordmark-frame){
   position:absolute;
-  right:0;
-  top:0;
-  width:46.718mm;
-  height:21.135mm;
+  right:1.5mm;
+  top:1.5mm;
+  width:35mm;
+  height:14.5mm;
   display:flex;
   align-items:flex-start;
   justify-content:flex-end;
@@ -174,7 +174,8 @@
   object-fit:contain;
 }
 .printScope :global(.sf2-deped-wordmark){
-  object-fit:fill;
+  object-fit:contain;
+  object-position:top right;
 }
 .printScope :global(.sf2-title-block){
   position:absolute;
@@ -526,13 +527,30 @@
   }
   .shell{max-width:none;margin:0}
   .topBar,.header,.controls,.notice,.warning,.error{display:none!important}
+  /* Never print the preview's on-screen scroll container or its scrollbars. */
+  .page,.shell,.printScope{
+    overflow:visible!important;
+    max-height:none!important;
+  }
   .previewFrame{
-    overflow:visible;
+    overflow:visible!important;
+    width:auto!important;
+    height:auto!important;
+    max-width:none!important;
+    max-height:none!important;
+    scrollbar-width:none!important;
+    -ms-overflow-style:none;
     border:0;
     border-radius:0;
     padding:0;
     margin:0;
     background:#fff;
+  }
+  .previewFrame::-webkit-scrollbar,
+  .previewFrame :global(*)::-webkit-scrollbar{
+    display:none!important;
+    width:0!important;
+    height:0!important;
   }
   /* The original Excel-width layout exactly touched A4's printable edge.
      Shrink only the printed output slightly so real printer margins,
