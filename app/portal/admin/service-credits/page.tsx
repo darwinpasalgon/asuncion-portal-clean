@@ -24,6 +24,9 @@ type Transaction = {
   particulars: string;
   absence_days: number;
   service_credits_used: number;
+  wellness_reconciled?: boolean;
+  wellness_original_used?: number;
+  wellness_reconciliation_reason?: string;
   balance_after: number;
   remarks: string | null;
   source: string;
@@ -323,6 +326,7 @@ export default function AdminServiceCreditsPage() {
                             {tab === "service_credit" && item.service_credits_earned > 0 && <b className={styles.credit}>+{formatDays(item.service_credits_earned)}</b>}
                             {tab === "wellness_leave" && item.service_credits_earned > 0 && <span>Legacy allocation (not additional days)</span>}
                             {item.service_credits_used > 0 && <b className={styles.debit}>-{formatDays(item.service_credits_used)}</b>}
+                             {tab === "wellness_leave" && item.wellness_reconciled && <span title="Excel USED cell was blank. Deduction verified using the source remaining balance and leave particulars.">Excel Balance Reconciled</span>}
                             {item.transaction_kind === "opening_balance" && <b className={styles.opening}>Opening</b>}
                           </div>
                           <div className={styles.rowBalance}><span>{item.particulars === "Balance Forwarded to Division Office" ? "Balance Forwarded" : tab === "wellness_leave" ? `${item.posting_date.slice(0,4)} Remaining` : "Balance"}</span><strong>{item.particulars === "Balance Forwarded to Division Office" ? formatDays(item.previous_balance) + " days" : formatDays(tab === "wellness_leave" ? wellnessRunningBalances.get(item.id) ?? 5 : item.balance_after)}</strong></div>
