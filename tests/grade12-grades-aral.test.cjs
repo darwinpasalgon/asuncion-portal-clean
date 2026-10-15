@@ -25,7 +25,7 @@ test("Grade 12 term table preserves subject-teacher assignment and only lets adv
  assert.match(sql,/create table if not exists public.grade12_term_gradebook/);
  assert.match(sql,/unique\(school_year_id,section_id,subject_id,term_no\)/);
  assert.match(sql,/term_teacher_id uuid references public.profiles/);
- assert.match(sql,/requires_learner_group/);
+ assert.match(read("supabase/migrations/20261015192000_flag_grade12_mixed_tvl_grading.sql"),/requires_learner_group/);
  assert.match(sql,/security_invoker=true/);
  assert.match(api,/validateGrade12GradingTerm\(/);
  assert.match(api,/This Grade 12 subject is not scheduled for the selected term/);
