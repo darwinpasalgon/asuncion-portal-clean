@@ -25,6 +25,13 @@ type Assignment = {
   co_teacher_ids?: string[] | null;
 };
 type Section = { id: string; grade_level: number; name: string };
+type Grade12TermSubject = {
+  section_id: string;
+  subject_id: string;
+  term_no: number;
+  teacher_assignment_id: string | null;
+  term_teacher_id: string | null;
+};
 type Subject = {
   id: string;
   grade_level: number;
@@ -138,6 +145,7 @@ export default function GradesPage() {
   const [activeYear, setActiveYear] = useState<ActiveYear | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [subjectAssignments, setSubjectAssignments] = useState<Assignment[]>([]);
+  const [grade12TermGradebook, setGrade12TermGradebook] = useState<Grade12TermSubject[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -174,6 +182,7 @@ export default function GradesPage() {
       setActiveYear(result.activeYear ?? null);
       setAssignments(result.assignments ?? []);
       setSubjectAssignments(result.subjectAssignments ?? []);
+      setGrade12TermGradebook(result.grade12TermGradebook ?? []);
       setSections(result.sections ?? []);
       setSubjects(result.subjects ?? []);
       setEnrollments(result.enrollments ?? []);
@@ -220,9 +229,25 @@ export default function GradesPage() {
     [students]
   );
 
+  const termScopedAssignments = useMemo(() => assignments.filter(assignment =>
+    assignment.grade_level !== 12 ||
+    grade12TermGradebook.some(link => link.term_no === selectedTerm &&
+      link.section_id === assignment.section_id &&
+      link.subject_id === assignment.subject_id &&
+      link.teacher_assignment_id === assignment.id)
+  ),[assignments,grade12TermGradebook,selectedTerm]);
+  const subjectTermAssignments = useMemo(() => subjectAssignments.filter(assignment =>
+    assignment.grade_level !== 12 ||
+    grade12TermGradebook.some(link => link.term_no === selectedSubjectTerm &&
+      link.section_id === assignment.section_id &&
+      link.subject_id === assignment.subject_id &&
+      link.teacher_assignment_id === assignment.id &&
+      link.term_teacher_id === profile?.id)
+  ),[subjectAssignments,grade12TermGradebook,selectedSubjectTerm,profile?.id]);
+
   const gradebookAssignments = useMemo(
     () =>
-      assignments.filter((assignment, index, all) => {
+      termScopedAssignments.filter((assignment, index, all) => {
         const subject = subjectMap.get(assignment.subject_id);
         if (!isTechnicalVocationalEducation(subject?.name)) return true;
         return (
@@ -233,10 +258,10 @@ export default function GradesPage() {
           ) === index
         );
       }),
-    [assignments, subjectMap]
+    [termScopedAssignments, subjectMap]
   );
 
-  const selectedAssignment = assignments.find(
+  const selectedAssignment = gradebookAssignments.find(
     (item) => item.id === selectedAssignmentId
   );
 
@@ -312,9 +337,26 @@ export default function GradesPage() {
     [classStudents]
   );
 
-  const selectedSubjectAssignment = subjectAssignments.find(
+  const selectedSubjectAssignment = subjectTermAssignments.find(
     (item) => item.id === selectedSubjectAssignmentId
   );
+  useEffect(() => {
+    if (!gradebookAssignments.some(item=>item.id===selectedAssignmentId))
+      setSelectedAssignmentId(gradebookAssignments[0]?.id ?? "");
+  },[gradebookAssignments,selectedAssignmentId]);
+  useEffect(() => {
+    if (!subjectTermAssignments.some(item=>item.id===selectedSubjectAssignmentId))
+      setSelectedSubjectAssignmentId(subjectTermAssignments[0]?.id ?? "");
+  },[subjectTermAssignments,selectedSubjectAssignmentId]);
+
+  const grade12Sections = adviserSections.filter(section=>section.grade_level===12);
+  const missingGrade12TermSubjects = grade12TermGradebook.filter(link=>
+    link.term_no===selectedTerm && grade12Sections.some(section=>section.id===link.section_id)
+    && (!link.teacher_assignment_id || !link.term_teacher_id));
+  const missingTermDescriptions = missingGrade12TermSubjects.map(link=>
+    `${sectionMap.get(link.section_id) ?? "Section"}: ${subjectMap.get(link.subject_id)?.name ?? "Subject"}`
+  );
+
   const selectedSubjectAssignmentSubject = selectedSubjectAssignment
     ? subjectMap.get(selectedSubjectAssignment.subject_id)
     : null;
@@ -438,7 +480,7 @@ export default function GradesPage() {
   }
 
   async function saveGrade(studentId: string) {
-    if (!selectedAssignmentId) return;
+    if (!selectedAssignment) return;
 
     setWorking(studentId);
     setError("");
@@ -450,7 +492,7 @@ export default function GradesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "save_grade",
-          assignmentId: selectedAssignmentId,
+          assignmentId: selectedAssignment.id,
           studentId,
           termNo: selectedTerm,
           termGrade: drafts[studentId],
@@ -476,7 +518,7 @@ export default function GradesPage() {
   }
 
   async function saveAllGrades() {
-    if (!selectedAssignmentId || classStudents.length === 0) return;
+    if (!selectedAssignment || classStudents.length === 0) return;
 
     setWorking("save-all");
     setError("");
@@ -488,7 +530,7 @@ export default function GradesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "save_all_grades",
-          assignmentId: selectedAssignmentId,
+          assignmentId: selectedAssignment.id,
           termNo: selectedTerm,
           records: classStudents.map((student) => ({
             studentId: student.id,
@@ -518,7 +560,7 @@ export default function GradesPage() {
   }
 
   async function setPublication(publish: boolean) {
-    if (!selectedAssignmentId) return;
+    if (!selectedAssignment) return;
 
     setWorking("publish");
     setError("");
@@ -530,7 +572,7 @@ export default function GradesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: publish ? "publish_term" : "unpublish_term",
-          assignmentId: selectedAssignmentId,
+          assignmentId: selectedAssignment.id,
           termNo: selectedTerm,
         }),
       });
@@ -658,7 +700,7 @@ export default function GradesPage() {
 
         {role === "teacher" && isSectionAdviser && teacherView === "adviser" && (
           <>
-            {assignments.length === 0 && adviserSections.length > 0 && (
+            {gradebookAssignments.length === 0 && adviserSections.length > 0 && (
               <section className={styles.gradePanel}>
                 <div className={styles.panelHeading}>
                   <div>
@@ -681,15 +723,21 @@ export default function GradesPage() {
               </section>
             )}
 
+            {missingGrade12TermSubjects.length>0 && (
+              <div className={styles.tveSetupNote} role="status">
+                <strong>{missingGrade12TermSubjects.length} Grade 12 subject awaiting teacher confirmation in Term {selectedTerm}.</strong>
+                <span>{missingTermDescriptions.join("; ")}. This subject is displayed for review but grade entry is blocked until its teacher is linked.</span>
+              </div>
+            )}
             <section className={styles.controls}>
               <label>
                 <span>Assigned Class</span>
                 <select
                   value={selectedAssignmentId}
-                  disabled={assignments.length === 0}
+                  disabled={gradebookAssignments.length === 0}
                   onChange={(event) => setSelectedAssignmentId(event.target.value)}
                 >
-                  {assignments.length === 0 && (
+                  {gradebookAssignments.length === 0 && (
                     <option value="">No Assigned Classes</option>
                   )}
                   {gradebookAssignments.map((assignment) => (
@@ -1081,7 +1129,7 @@ export default function GradesPage() {
                       setSelectedSubjectAssignmentId(event.target.value)
                     }
                   >
-                    {subjectAssignments.map((assignment) => (
+                    {subjectTermAssignments.map((assignment) => (
                       <option key={assignment.id} value={assignment.id}>
                         {subjectAssignmentLabel(assignment)}
                       </option>
