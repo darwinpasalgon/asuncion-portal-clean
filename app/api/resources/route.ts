@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
-import { hasAdminPermission } from "@/lib/admin-access";
+import { getGradeLevelHeadScope, hasAdminPermission } from "@/lib/admin-access";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
@@ -173,6 +173,9 @@ export async function GET(request: NextRequest) {
       ),
     ]);
 
+    const gradeLevelHead = profile.role === "teacher"
+      ? await getGradeLevelHeadScope(token)
+      : null;
     const visibleAssignments =
       profile.role === "teacher"
         ? (assignments ?? []).filter(
@@ -185,13 +188,46 @@ export async function GET(request: NextRequest) {
           )
         : assignments ?? [];
 
+    const resourceAssignments = gradeLevelHead
+      ? (assignments ?? []).filter(
+          (assignment: { grade_level: number }) =>
+            Number(assignment.grade_level) === gradeLevelHead.gradeLevel
+        )
+      : visibleAssignments;
+    const gradeAssignmentIds = new Set(
+      resourceAssignments.map((item: { id: string }) => item.id)
+    );
+    const scopedResources = gradeLevelHead
+      ? (resources ?? []).filter((resource: {
+          resource_scope: string;
+          teacher_assignment_id: string | null;
+          status: string;
+          created_by: string;
+        }) =>
+          resource.created_by === auth.userId ||
+          (resource.status === "published" &&
+            (resource.resource_scope === "school" ||
+              (resource.resource_scope === "class" &&
+                resource.teacher_assignment_id !== null &&
+                gradeAssignmentIds.has(resource.teacher_assignment_id))))
+        )
+      : resources;
+
     return NextResponse.json({
       profile,
       activeYear: year,
-      resources,
+      resources: scopedResources,
       assignments: visibleAssignments,
-      sections,
-      subjects,
+      resourceAssignments,
+      gradeLevelHead: gradeLevelHead
+        ? { grade_level: gradeLevelHead.gradeLevel }
+        : null,
+      sections: gradeLevelHead
+        ? (sections ?? []).filter((s: { grade_level: number }) => Number(s.grade_level) === gradeLevelHead.gradeLevel)
+        : sections,
+      subjects: gradeLevelHead
+        ? (subjects ?? []).filter((s: { grade_level: number }) => Number(s.grade_level) === gradeLevelHead.gradeLevel)
+        : subjects,
     });
   } catch {
     return NextResponse.json(
