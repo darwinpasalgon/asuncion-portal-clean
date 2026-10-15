@@ -166,7 +166,8 @@ export default function Grade12SchedulesInline({sectionId,teacherId,sections,tea
     {(janeNeedsLink>0 || Boolean(janePassword)) && <section className={styles.panel} style={{padding:18}}>
       <strong>Jane Bardon · {janeNeedsLink} unmatched Second Term periods</strong>
       <p>Her teaching account can be created with a provisional email. The official address and personal details can be completed afterward.</p>
-      <button className={styles.secondary} type="button" disabled={busy} onClick={()=>void (janeEmail?linkJane():createJane())}>{janeEmail?"Link Jane Bardon to Schedule":"Create Jane Bardon's Teacher Account"}</button>
+      {janeNeedsLink>0 && canProvision && <button className={styles.secondary} type="button" disabled={busy} onClick={()=>void (janeEmail?linkJane():createJane())}>{janeEmail?"Link Jane Bardon to Schedule":"Create Jane Bardon's Teacher Account"}</button>}
+      {janeNeedsLink>0 && !canProvision && <small>Super Administrator access is required to create and link this account.</small>}
       {janePassword&&<><p>Temporary password: <code>{janePassword}</code></p><button type="button" onClick={downloadCredentials}>Download Temporary Credentials</button></>}
     </section>}
     {error&&<div className={styles.error} role="alert">{error}</div>}
