@@ -7,6 +7,7 @@ type AccessState = {
   role: "student" | "teacher" | "administrator" | "staff_administrator" | null;
   accountStatus: string | null;
   permissions: string[];
+  gradeLevelHead: number | null;
 };
 
 async function accessState(token: string): Promise<AccessState> {
@@ -19,7 +20,7 @@ async function accessState(token: string): Promise<AccessState> {
   });
 
   if (!userResponse.ok) {
-    return { valid: false, mustChangePassword: false, role: null, accountStatus: null, permissions: [] };
+    return { valid: false, mustChangePassword: false, role: null, accountStatus: null, permissions: [], gradeLevelHead: null };
   }
   const user = await userResponse.json().catch(() => null);
   if (!user?.id) {
@@ -64,7 +65,21 @@ async function accessState(token: string): Promise<AccessState> {
     }
   }
 
+  let gradeLevelHead: number | null = null;
+  if (profile?.role === "teacher" && profile?.account_status === "active") {
+    const headResponse = await fetch(
+      `${SUPABASE_URL}/rest/v1/grade_level_heads?profile_id=eq.${encodeURIComponent(user.id)}&is_active=eq.true&select=grade_level&limit=1`,
+      { headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${token}` }, cache: "no-store" }
+    );
+    if (headResponse.ok) {
+      const heads = await headResponse.json().catch(() => []);
+      const number = Number(heads?.[0]?.grade_level);
+      if (Number.isInteger(number) && number >= 7 && number <= 12) gradeLevelHead = number;
+    }
+  }
+
   return {
+    gradeLevelHead,
     valid: profile?.account_status === "active" && Boolean(profile?.role),
     mustChangePassword: Boolean(profile?.must_change_password),
     role: profile?.role ?? null,
@@ -235,9 +250,14 @@ function destination(request: NextRequest, state: AccessState) {
   if (onAdminPage && state.role !== "administrator") {
     const requiredPermission = delegatedPermissionFor(pathname);
     const allowed =
-      state.role === "staff_administrator" &&
-      Boolean(requiredPermission) &&
-      state.permissions.includes(String(requiredPermission));
+      (state.role === "staff_administrator" &&
+        Boolean(requiredPermission) &&
+        state.permissions.includes(String(requiredPermission))) ||
+      (state.role === "teacher" &&
+        state.gradeLevelHead !== null &&
+        ["/portal/admin/schedules", "/portal/admin/attendance", "/portal/admin/reports"].some(
+          (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
+        ));
 
     if (!allowed) {
       const url = new URL("/portal", request.url);
