@@ -437,8 +437,8 @@ export default function Sf9Page() {
     if (missingReadiness.length > 0) {
       const names = missingReadiness.map((entry) =>
         entry.learner_name + ": " + entry.issues.filter((issue) => issue !== "Verify attendance dates and totals").join(", ")
-      ).join("\\n");
-      if (!window.confirm("Unresolved SF9 requirements:\\n" + names + "\\n\\nPrint anyway?")) return;
+      ).join("\n");
+      if (!window.confirm("Unresolved SF9 requirements:\n" + names + "\n\nPrint anyway?")) return;
     }
     window.print();
   }
