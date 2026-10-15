@@ -15,6 +15,9 @@ type Transaction = {
   particulars: string;
   absence_days: number;
   service_credits_used: number;
+  wellness_reconciled?: boolean;
+  wellness_original_used?: number;
+  wellness_reconciliation_reason?: string;
   balance_after: number;
   remarks: string | null;
   source: string;
@@ -219,6 +222,7 @@ export default function ServiceCreditsPage() {
                         {item.service_credits_used > 0 && (
                           <span className={styles.debit}>-{formatDays(item.service_credits_used)}</span>
                         )}
+                         {tab === "wellness_leave" && item.wellness_reconciled && <span title="Excel USED cell was blank; deduction confirmed using the remaining balance and leave dates.">Excel Balance Reconciled</span>}
                         {item.transaction_kind === "opening_balance" && (
                           <span className={styles.opening}>Opening</span>
                         )}
