@@ -133,7 +133,8 @@ Deno.serve(async (req) => {
       .reduce((sum, row) => sum + Number(row.service_credits_used ?? 0), 0);
     const wellnessBalance = eligible ? Math.max(0, Math.round((5 - wellnessUsed) * 10000) / 10000) : null;
     const latest = (items: Array<Record<string, unknown>>) =>
-      items.length ? Number(items[0]?.balance_after ?? 0) : null;
+      items.length && String(items[0]?.particulars ?? "") !== "Balance Forwarded to Division Office"
+        ? Number(items[0]?.balance_after ?? 0) : null;
     const totalEarned = serviceRows.reduce(
       (sum, row) => sum + Number(row.service_credits_earned ?? 0),
       0
@@ -207,22 +208,23 @@ Deno.serve(async (req) => {
 
     const { data: transactions } = await admin
       .from("service_credit_transactions")
-      .select("personnel_id,non_teaching_personnel_id,credit_type,balance_after,ledger_sequence")
+      .select("personnel_id,non_teaching_personnel_id,credit_type,balance_after,particulars,ledger_sequence")
       .order("ledger_sequence", { ascending: false })
       .limit(12000);
 
-    const profileBalances = new Map<string, number>();
-    const nonTeachingBalances = new Map<string, number>();
+    const profileBalances = new Map<string, number | null>();
+    const nonTeachingBalances = new Map<string, number | null>();
     for (const row of transactions ?? []) {
       if (row.credit_type !== "service_credit") continue;
+      const forwarded = row.particulars === "Balance Forwarded to Division Office";
       if (row.personnel_id) {
         const id = String(row.personnel_id);
-        if (!profileBalances.has(id)) profileBalances.set(id, Number(row.balance_after ?? 0));
+        if (!profileBalances.has(id)) profileBalances.set(id, forwarded ? null : Number(row.balance_after ?? 0));
       }
       if (row.non_teaching_personnel_id) {
         const id = String(row.non_teaching_personnel_id);
         if (!nonTeachingBalances.has(id)) {
-          nonTeachingBalances.set(id, Number(row.balance_after ?? 0));
+          nonTeachingBalances.set(id, forwarded ? null : Number(row.balance_after ?? 0));
         }
       }
     }
