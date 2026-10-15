@@ -114,6 +114,7 @@ const adminPagePermissions: Array<[string, string]> = [
   ["/portal/admin/school-setup", "school_setup.manage"],
   ["/portal/admin/teaching", "teaching.manage"],
   ["/portal/admin/schedules", "schedules.manage"],
+  ["/portal/admin/grade12-term-program", "schedules.manage"],
   ["/portal/admin/attendance", "attendance.manage"],
   ["/portal/admin/reports", "reports.view"],
   ["/portal/admin/password-resets", "password_resets.manage"],
@@ -256,7 +257,7 @@ function destination(request: NextRequest, state: AccessState) {
         state.permissions.includes(String(requiredPermission))) ||
       (state.role === "teacher" &&
         state.gradeLevelHead !== null &&
-        ["/portal/admin/schedules", "/portal/admin/attendance", "/portal/admin/reports"].some(
+        ["/portal/admin/schedules", "/portal/admin/grade12-term-program", "/portal/admin/attendance", "/portal/admin/reports"].some(
           (prefix) => pathname === prefix || pathname.startsWith(prefix + "/")
         ));
 
