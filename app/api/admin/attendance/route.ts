@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getScopedAdminAccess, hasAdminPermission } from "@/lib/admin-access";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
+import { attendanceStartDate } from "@/lib/attendance-calendar";
 
 function headers(token: string) {
   return {
@@ -43,7 +44,7 @@ async function getRows(path: string, token: string) {
 
 async function activeYear(token: string) {
   const rows = await getRows(
-    "school_years?is_active=eq.true&select=id,name&limit=1",
+    "school_years?is_active=eq.true&select=id,name,start_year,end_year&limit=1",
     token
   );
   return rows?.[0] ?? null;
@@ -139,6 +140,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       activeYear: year,
+      attendanceStart: attendanceStartDate(year),
       grades,
       sections,
       teachers,
