@@ -75,6 +75,8 @@ export default function ResourcesPage(){
   const [activeYear,setActiveYear]=useState<Year|null>(null);
   const [resources,setResources]=useState<Resource[]>([]);
   const [assignments,setAssignments]=useState<Assignment[]>([]);
+  const [resourceAssignments,setResourceAssignments]=useState<Assignment[]>([]);
+  const [gradeLevelHead,setGradeLevelHead]=useState<number|null>(null);
   const [sections,setSections]=useState<Section[]>([]);
   const [subjects,setSubjects]=useState<Subject[]>([]);
   const [scope,setScope]=useState<"school"|"class">("class");
@@ -94,6 +96,8 @@ export default function ResourcesPage(){
       if(!r.ok){setError(x.error??"Unable to load learning resources.");return;}
       setProfile(x.profile??null);setActiveYear(x.activeYear??null);
       setResources(x.resources??[]);setAssignments(x.assignments??[]);
+      setResourceAssignments(x.resourceAssignments??x.assignments??[]);
+      setGradeLevelHead(typeof x.gradeLevelHead?.grade_level==="number"?x.gradeLevelHead.grade_level:null);
       setSections(x.sections??[]);setSubjects(x.subjects??[]);
       if(x.profile?.role==="administrator")setScope("school");
       else setScope("class");
@@ -107,7 +111,7 @@ export default function ResourcesPage(){
   const canPost=profile?.role==="administrator"||profile?.role==="teacher";
   const sectionMap=useMemo(()=>new Map(sections.map(s=>[s.id,s])),[sections]);
   const subjectMap=useMemo(()=>new Map(subjects.map(s=>[s.id,s])),[subjects]);
-  const assignmentMap=useMemo(()=>new Map(assignments.map(a=>[a.id,a])),[assignments]);
+  const assignmentMap=useMemo(()=>new Map(resourceAssignments.map(a=>[a.id,a])),[resourceAssignments]);
 
   function assignmentLabel(a:Assignment){
     const s=sectionMap.get(a.section_id);
@@ -282,7 +286,7 @@ export default function ResourcesPage(){
 
     <section className={styles.library}>
       <div className={styles.libraryHead}>
-        <div><h2>Resource Library</h2><p>{profile?.role==="student"?"Materials available to your enrolled classes.":"Published resources and any drafts available to your account."}</p></div>
+        <div><h2>{gradeLevelHead ? `Grade ${gradeLevelHead} Resource Library` : "Resource Library"}</h2><p>{gradeLevelHead ? `Monitor published modules and learning resources posted by subject teachers in Grade ${gradeLevelHead}. Only the original teacher can manage their materials.` : profile?.role==="student"?"Materials available to your enrolled classes.":"Published resources and any drafts available to your account."}</p></div>
         <span>{filtered.length} resource{filtered.length===1?"":"s"}</span>
       </div>
 
