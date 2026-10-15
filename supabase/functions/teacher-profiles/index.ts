@@ -275,42 +275,76 @@ Deno.serve(async req => {
     return json(result);
   }
 
+  if (action === "list_designations") {
+    if (!canManage) return json({ error: "Human Resources access required." }, 403);
+    const [{ data: profiles, error: profileError }, { data: nonTeaching, error: nonTeachingError }] = await Promise.all([
+      admin.from("profiles").select("id,full_name,email,position,role,account_status")
+        .in("role", ["teacher","staff_administrator","administrator"])
+        .eq("account_status","active").order("full_name").limit(1000),
+      admin.from("non_teaching_personnel").select("id,full_name,email,position,portal_user_id,is_active")
+        .eq("is_active",true).order("full_name").limit(1000),
+    ]);
+    if (profileError || nonTeachingError) return json({ error: "Unable to load personnel designation directory." }, 500);
+    const linkedIds = new Set((nonTeaching ?? []).map(person => String(person.portal_user_id ?? "")).filter(Boolean));
+    const personnel = [
+      ...(profiles ?? []).filter(person => !linkedIds.has(String(person.id))).map(person => ({
+        id: person.id, owner_type: "teacher", full_name: person.full_name, email: person.email,
+        position: person.position, category: person.role === "teacher" ? "Teaching" : "Administration",
+      })),
+      ...(nonTeaching ?? []).map(person => ({
+        id: person.id, owner_type: "non_teaching", full_name: person.full_name, email: person.email,
+        position: person.position, category: "Non-Teaching", portal_user_id: person.portal_user_id,
+      })),
+    ].sort((a,b)=>String(a.full_name).localeCompare(String(b.full_name)));
+    return json({ personnel });
+  }
+
+  if (action === "designation_history") {
+    if (!canManage) return json({ error: "Human Resources access required." }, 403);
+    const ownerType = String(body.owner_type ?? "");
+    const ownerId = String(body.personnel_id ?? "");
+    if (!["teacher","non_teaching"].includes(ownerType) || !/^[a-f0-9-]{36}$/i.test(ownerId)) {
+      return json({ error: "Select a personnel record." }, 400);
+    }
+    const column = ownerType === "teacher" ? "personnel_id" : "non_teaching_personnel_id";
+    const { data, error } = await admin.from("personnel_designation_history")
+      .select("id,previous_position,new_position,reason,changed_at,changed_by")
+      .eq(column, ownerId).order("changed_at", { ascending: false }).limit(40);
+    if (error) return json({ error: "Unable to load designation history." }, 500);
+    return json({ history: data ?? [] });
+  }
+
   if (action === "change_designation") {
     if (!canManage) return json({ error: "Human Resources access required." }, 403);
     const ownerType = String(body.owner_type ?? "");
     const ownerId = String(body.personnel_id ?? "");
     const newPosition = String(body.position ?? "").trim().toUpperCase();
+    const expectedPosition = String(body.expected_position ?? "").trim().toUpperCase();
     const reason = String(body.reason ?? "").trim();
-    if (!["teacher", "non_teaching"].includes(ownerType) || !ownerId) return json({ error: "Choose a personnel record." }, 400);
+    if (!["teacher", "non_teaching"].includes(ownerType) || !/^[a-f0-9-]{36}$/i.test(ownerId)) return json({ error: "Choose a valid personnel record." }, 400);
     if (!designationPositions.has(newPosition)) return json({ error: "Choose a valid DepEd position." }, 400);
-    if (reason.length < 3 || reason.length > 500) return json({ error: "Enter a brief promotion or designation reason." }, 400);
-    const table = ownerType === "teacher" ? "profiles" : "non_teaching_personnel";
-    const { data: existing } = await admin.from(table).select("id,full_name,position,portal_user_id").eq("id", ownerId).maybeSingle();
-    if (!existing) return json({ error: "Personnel record not found." }, 404);
-    const previous = String(existing.position ?? "").trim().toUpperCase();
-    if (previous === newPosition) return json({ error: "This employee already has that designation." }, 409);
-    const { error: historyError } = await admin.from("personnel_designation_history").insert({
-      personnel_id: ownerType === "teacher" ? ownerId : existing.portal_user_id,
-      non_teaching_personnel_id: ownerType === "non_teaching" ? ownerId : null,
-      previous_position: previous || null,
-      new_position: newPosition,
-      reason,
-      changed_by: caller.id,
+    if (reason.length < 3 || reason.length > 500) return json({ error: "Enter a brief appointment or promotion reason." }, 400);
+    // One PostgreSQL transaction changes both linked positions and adds the audit record.
+    const { data: updated, error } = await admin.rpc("hr_change_personnel_designation", {
+      p_owner_type: ownerType,
+      p_owner_id: ownerId,
+      p_new_position: newPosition,
+      p_reason: reason,
+      p_changed_by: caller.id,
+      p_expected_position: expectedPosition,
     });
-    if (historyError) return json({ error: "Unable to record designation history." }, 500);
-    const { data: updated, error: updateError } = await admin.from(table)
-      .update({ position: newPosition, updated_at: new Date().toISOString() })
-      .eq("id", ownerId)
-      .select("id,full_name,position,portal_user_id").single();
-    if (updateError || !updated) return json({ error: "Unable to update position; please contact HR to reconcile the pending history." }, 500);
-    if (ownerType === "non_teaching" && existing.portal_user_id) {
-      const { error: syncError } = await admin.from("profiles").update({position: newPosition,updated_at: new Date().toISOString()}).eq("id", existing.portal_user_id);
-      if (syncError) return json({ error: "Designation saved, but portal account synchronization failed. Please contact HR." }, 500);
+    if (error || !updated) {
+      const msg = String(error?.message ?? "");
+      if (/changed since this page loaded/i.test(msg)) return json({ error: "Position was updated by another administrator. Reload before saving." }, 409);
+      if (/already assigned/i.test(msg)) return json({ error: "Employee already has this designation." }, 409);
+      return json({ error: /Human Resources access|required|not found|Choose a valid/i.test(msg) ? msg : "Unable to update designation safely. No partial changes were saved." }, 400);
     }
-    return json({ok:true,personnel:updated,previous_position:previous,classification_note:
-      teachingPositions.has(newPosition) !== teachingPositions.has(previous)
-        ? "Position updated. Personnel classification and grade-level assignments need a separate HR review."
-        : null});
+    return json({
+      ok: true, personnel: updated, previous_position: updated.previous_position,
+      classification_note: teachingPositions.has(newPosition) !== teachingPositions.has(String(updated.previous_position ?? ""))
+        ? "Position updated. Confirm the teaching/non-teaching classification and review any grade-level responsibilities with HR."
+        : null,
+    });
   }
 
   if (action === "save_personnel_name") {
