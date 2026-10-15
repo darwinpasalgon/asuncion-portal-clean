@@ -55,6 +55,8 @@ test("Non-teaching Auth provisioning enforces explicit role, duplicate-checks pe
  assert.match(service,/profile.role !== "staff_administrator"/);
  assert.match(service,/directoryEntry\?\.portal_user_id/);
  assert.match(service,/existingByName/);
+ assert.match(service,/The existing personnel record has a different designation/);
+ assert.match(service,/directoryEntry.position\?\?position/);
  assert.match(service,/\.is\("portal_user_id",null\)\.select\("id"\)\.maybeSingle\(\)/);
  assert.match(service,/administrator_permissions/);
  assert.match(service,/grantError/);
