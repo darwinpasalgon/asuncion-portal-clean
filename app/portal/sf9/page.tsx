@@ -426,6 +426,9 @@ export default function Sf9Page() {
 
   function regenerateRemark(studentId: string, termIndex: number) {
     const draft = remarkDrafts[studentId]?.[termIndex];
+    // Protect workbook-assigned Grade 9 Quezon Term 1 remarks.
+    if (selectedSection?.grade_level === 9 &&
+        selectedSection.name.toLowerCase() === "quezon" && draft?.term_no === 1) return;
     if (!draft?.grade_complete || draft.grade_average === null) return;
 
     const key = studentId + ":" + draft.term_no;
@@ -1264,8 +1267,9 @@ export default function Sf9Page() {
                 <div>
                   <strong>Automated Teacher&apos;s Remarks</strong>
                   <span>
-                    Suggestions use only published grades and recorded attendance.
-                    Review or edit them before printing.
+                    Quezon Term 1 uses the adviser's exact assigned Excel remarks.
+                    Quezon Term 2 and other sections receive grade- and attendance-based
+                    Filipino suggestions after grades are published. Review before printing.
                   </span>
                 </div>
               </div>
@@ -1324,9 +1328,11 @@ export default function Sf9Page() {
                               )}
                               {draft.saved && (
                                 <span>
-                                  {draft.source === "manual"
-                                    ? "Adviser Edited"
-                                    : "Saved Auto Remark"}
+                                  {selectedSection?.grade_level === 9 &&
+                                    selectedSection.name.toLowerCase() === "quezon" &&
+                                    draft.term_no === 1
+                                      ? "Quezon Term 1 · Adviser Assigned"
+                                      : draft.source === "manual" ? "Adviser Edited" : "Saved Auto Remark"}
                                 </span>
                               )}
                             </div>
@@ -1354,7 +1360,9 @@ export default function Sf9Page() {
                             <span>{draft.text.length}/500</span>
                             <button
                               type="button"
-                              disabled={!draft.grade_complete || draft.grade_average === null}
+                              disabled={(selectedSection?.grade_level === 9 &&
+                                   selectedSection.name.toLowerCase() === "quezon" && draft.term_no === 1)
+                                   || !draft.grade_complete || draft.grade_average === null}
                               onClick={() =>
                                 regenerateRemark(String(card.id), index)
                               }
