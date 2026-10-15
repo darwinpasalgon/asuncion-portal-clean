@@ -57,7 +57,7 @@ export default function Grade12SchedulesInline({sectionId,teacherId,sections,tea
   const minutes=(s:string)=>Number(s.slice(0,2))*60+Number(s.slice(3,5));
   const weeklyHours=(scope.reduce((total,p)=>total+minutes(p.end_time)-minutes(p.start_time),0)/60).toFixed(1);
   function edit(p:Period){
-    setEditing(p);setSubject(p.subject_label);setInstructorIds([...p.instructor_ids??[]]);setStart(p.start_time.slice(0,5));setEnd(p.end_time.slice(0,5));setError("");setMessage("");
+    setEditing(p);setSubject(p.subject_label);setInstructorIds([...(p.instructor_ids ?? [])]);setStart(p.start_time.slice(0,5));setEnd(p.end_time.slice(0,5));setError("");setMessage("");
   }
   async function save(){
     if(!editing || busy)return;
