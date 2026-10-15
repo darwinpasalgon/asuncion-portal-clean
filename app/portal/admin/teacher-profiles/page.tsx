@@ -352,7 +352,7 @@ export default function TeacherProfilesHrPage() {
     if(!window.confirm(`Change ${teacher.full_name}'s designation to ${position}?`))return;
     setDesignationSaving(true);setError("");setMessage("");
     try {
-      const response=await fetch("/api/teacher-profiles",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"change_designation",owner_type:"teacher",personnel_id:selectedId,position,reason:designationReason})});
+      const response=await fetch("/api/teacher-profiles",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"change_designation",owner_type:"teacher",personnel_id:selectedId,position,expected_position:String(teacher.position??"").toUpperCase(),reason:designationReason})});
       const result=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(result.error??"Unable to update designation.");
       setTeacher(current=>current?{...current,position:result.personnel.position}:current);
