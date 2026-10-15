@@ -1192,6 +1192,21 @@ export default function Sf9Page() {
             </button>
           </div>
 
+          {detail?.cards?.some(card => (card.attendance.total_unrecorded ?? 0) > 0) && (
+            <p role="status" style={{
+              margin: "10px 0", padding: "11px 14px",
+              border: "1px solid #efd9b3", borderRadius: 10,
+              background: "#fff9eb", color: "#795a2c", fontSize: 12,
+              lineHeight: 1.55
+            }}>
+              <strong>Attendance Records Incomplete.</strong> Class days follow the
+              school calendar from June 8, excluding dates marked No Classes.
+              One or more selected learners have unrecorded school days. These
+              days are <strong>not counted as absences</strong>. Please complete
+              earlier attendance and record school holidays or suspensions before
+              finalizing the report card.
+            </p>
+          )}
           <div className={styles.search}>
             <Search size={16} />
             <input
