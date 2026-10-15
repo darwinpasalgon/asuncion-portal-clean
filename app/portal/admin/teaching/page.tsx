@@ -134,6 +134,8 @@ export default function TeachingSetupPage() {
   }, []);
 
   const activeSubjects = subjects.filter((item) => item.is_active);
+  const grade12Subjects = subjects.filter((item) => item.grade_level === 12 && item.is_active)
+    .sort((a,b)=>a.name.localeCompare(b.name));
   const activeSections = sections.filter((item) => item.is_active);
   const activeAssignments = assignments.filter((item) => item.is_active);
   const activeAdvisers = advisers.filter((item) => item.is_active);
@@ -733,6 +735,51 @@ function subjectTeacherLabel(teacher: Teacher) {
             <strong>{activeAdvisers.length}</strong>
           </article>
         </div>
+
+        <section id="grade12-subjects" className={styles.panel}>
+          <div className={styles.panelHeading}>
+            <div>
+              <h2>Grade 12 Subjects · First &amp; Second Term</h2>
+              <p>
+                Subjects from the uploaded Grade 12 class programs. Check the names below,
+                then click Edit to correct a name. Corrections update the matching Term 1
+                and Term 2 timetable labels without replacing teacher assignments or class times.
+              </p>
+            </div>
+            <button className={styles.refresh} onClick={() => void load()} disabled={loading}>
+              <RefreshCw size={16} /> Refresh Subjects
+            </button>
+          </div>
+          <div className={styles.grade12ReviewSummary}>
+            <BookOpen size={20} />
+            <div><strong>{grade12Subjects.length} Active Grade 12 Subjects</strong>
+              <span>Academic subjects are separated from HGP and ARAL load-only activities.
+                Organic Agriculture Production and Food Processing appear individually, even when taught in a shared time slot.</span>
+            </div>
+          </div>
+          {loading ? <div className={styles.loading}>Loading Grade 12 subjects…</div> :
+           grade12Subjects.length === 0 ? <div className={styles.empty}>No Grade 12 subjects found.</div> :
+           <div className={styles.grade12SubjectGrid}>
+             {grade12Subjects.map((subject) => (
+               <div key={subject.id} className={styles.grade12SubjectRow}>
+                 <div>
+                   <strong>{subject.name}</strong>
+                   <span>{subject.is_graded === false
+                     ? "Teaching Load / Schedule Only · Not Included in Grades or School Forms"
+                     : "Academic / Specialization Subject"}</span>
+                 </div>
+                 <button type="button" className={styles.editSubject} disabled={working === subject.id}
+                   onClick={() => void editSubject(subject)}>
+                   <Pencil size={15} /> {working === subject.id ? "Saving…" : "Edit Name"}
+                 </button>
+               </div>
+             ))}
+           </div>}
+          <div className={styles.grade12ReviewFooter}>
+            Grade 12 subjects are shared by the two terms. This subject catalogue does not
+            automatically assign teachers or publish grades.
+          </div>
+        </section>
 
         <section className={styles.panel}>
           <div className={styles.panelHeading}>
