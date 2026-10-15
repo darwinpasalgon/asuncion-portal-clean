@@ -1031,7 +1031,32 @@ export default function ClassSchedulesPage() {
         </div>
 
         {!teacherView && quickGrade === "12" ? (
-          <Grade12SchedulesInline sectionId={quickSection} sections={sections} teachers={teachers} />
+          <>
+            <section className={`${styles.panel} ${styles.quickPanel}`}>
+              <div className={styles.panelHeading}><div><h2>Quick Section Schedule</h2>
+                <p>Choose the grade level and section, just like the Junior High School scheduler.</p>
+              </div></div>
+              <div className={styles.quickPicker}>
+                <label>
+                  <span>Grade Level</span>
+                  <select value={quickGrade} disabled={loading || Boolean(working)} onChange={(event) => {
+                    setQuickGrade(event.target.value);setQuickSection("");setError("");setSuccess("");
+                  }}>
+                    <option value="">Select Grade Level</option>
+                    {gradeOptions.map(grade => <option key={grade} value={grade}>Grade {grade}</option>)}
+                  </select>
+                </label>
+                <label>
+                  <span>Section</span>
+                  <select value={quickSection} disabled={loading || Boolean(working)} onChange={event=>{setQuickSection(event.target.value);setError("");setSuccess("");}}>
+                    <option value="">Select Section</option>
+                    {quickSectionOptions.map(section=><option key={section.id} value={section.id}>{section.name}</option>)}
+                  </select>
+                </label>
+              </div>
+            </section>
+            <Grade12SchedulesInline sectionId={quickSection} sections={sections} teachers={teachers} />
+          </>
         ) : (
           <>
         <section className={`${styles.panel} ${styles.quickPanel}`}>
