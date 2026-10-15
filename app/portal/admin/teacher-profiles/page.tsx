@@ -156,6 +156,8 @@ export default function TeacherProfilesHrPage() {
   const [service, setService] = useState<Details[]>([]);
   const [ratings, setRatings] = useState<Details[]>([]);
   const [position, setPosition] = useState("");
+  const [designationReason, setDesignationReason] = useState("");
+  const [designationSaving, setDesignationSaving] = useState(false);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadingRecord, setLoadingRecord] = useState(false);
@@ -345,6 +347,22 @@ export default function TeacherProfilesHrPage() {
     }
   }
 
+  async function saveDesignation() {
+    if(!teacher || !selectedId || !designationReason.trim()) { setError("Enter the reason for the position change.");return; }
+    if(!window.confirm(`Change ${teacher.full_name}'s designation to ${position}?`))return;
+    setDesignationSaving(true);setError("");setMessage("");
+    try {
+      const response=await fetch("/api/teacher-profiles",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"change_designation",owner_type:"teacher",personnel_id:selectedId,position,reason:designationReason})});
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(result.error??"Unable to update designation.");
+      setTeacher(current=>current?{...current,position:result.personnel.position}:current);
+      setTeachers(current=>current.map(item=>item.id===selectedId?{...item,position:result.personnel.position}:item));
+      setDesignationReason("");
+      setMessage("Designation saved and change history recorded.");
+    }catch(err){setError(err instanceof Error?err.message:"Unable to update designation.");}
+    finally{setDesignationSaving(false);}
+  }
+
   async function saveRecord() {
     if (!selectedId) return;
     const missing = requiredMissingFields(personal);
@@ -466,6 +484,12 @@ export default function TeacherProfilesHrPage() {
                   </div>
                 </div>
 
+                <section className={styles.panel}>
+                  <h3>Change Personnel Designation</h3>
+                  <p>For promotions or updates to an existing teaching position. Saves independently of incomplete profile fields.</p>
+                  <label><span>Reason / Appointment Reference</span><input value={designationReason} onChange={event=>setDesignationReason(event.target.value)} placeholder="e.g. Promoted to Master Teacher I, effective date"/></label>
+                  <button type="button" disabled={designationSaving||!designationReason.trim()||!position||position===String(teacher?.position??"").toUpperCase()} onClick={()=>void saveDesignation()}>{designationSaving?"Saving Designation...":"Update Designation"}</button>
+                </section>
                 <section className={styles.panel}>
                   <div className={styles.panelHead}><BriefcaseBusiness size={20} /><h3>Employment Information</h3></div>
                   <div className={styles.grid}>
