@@ -92,7 +92,8 @@ export async function POST(request: NextRequest) {
     if (!roleChoices.some(choice=>choice===accessRole))
       return NextResponse.json({error:"Select an explicit staff access role before creating this account."},{status:400});
     action="create_non_teaching_account";
-    payload = {action,full_name:name,email,position,admin_role:accessRole,recovery_phone:phone};
+    payload = {action,full_name:name,email,position,admin_role:accessRole,recovery_phone:phone,
+      access_permissions:Array.isArray(body?.accessPermissions)?body.accessPermissions:[]};
   }
 
   const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-bulk-account-import`, {
@@ -111,6 +112,7 @@ export async function POST(request: NextRequest) {
       full_name:created.full_name,identifier:created.identifier,
       person_type:kind,position:created.position??null,
       access_role:created.access_role??null,
+      access_permissions:created.access_permissions??[],
       temporary_password:created.temporary_password,
       must_change_password:true,
     }
