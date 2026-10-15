@@ -31,6 +31,7 @@ type Grade12TermSubject = {
   term_no: number;
   teacher_assignment_id: string | null;
   term_teacher_id: string | null;
+  requires_learner_group?: boolean;
 };
 type Subject = {
   id: string;
@@ -353,6 +354,11 @@ export default function GradesPage() {
   const missingGrade12TermSubjects = grade12TermGradebook.filter(link=>
     link.term_no===selectedTerm && grade12Sections.some(section=>section.id===link.section_id)
     && (!link.teacher_assignment_id || !link.term_teacher_id));
+  const selectedMixedTvlGradebook = Boolean(selectedAssignment &&
+    grade12TermGradebook.some(link =>
+      link.teacher_assignment_id === selectedAssignment.id &&
+      link.term_no === selectedTerm && link.requires_learner_group));
+
   const missingTermDescriptions = missingGrade12TermSubjects.map(link=>
     `${sectionMap.get(link.section_id) ?? "Section"}: ${subjectMap.get(link.subject_id)?.name ?? "Subject"}`
   );
@@ -782,6 +788,15 @@ export default function GradesPage() {
               </div>
             )}
 
+            {selectedMixedTvlGradebook && (
+              <div className={styles.tveSetupNote} role="alert">
+                <strong>Mixed Senior High School TVL section requires learner specializations.</strong>
+                <span>This section contains both Organic Agriculture Production and Food Processing learners.
+                  Their individual Grade 12 SHS specialization has not yet been assigned.
+                  Subjects are visible, but grade encoding and publication are restricted
+                  until each learner is correctly grouped to prevent wrong grades.</span>
+              </div>
+            )}
             <section className={styles.gradePanel}>
               <div className={styles.panelHeading}>
                 <div>
@@ -798,7 +813,7 @@ export default function GradesPage() {
                   {!allPublished && (
                     <button
                       className={styles.saveAll}
-                      disabled={Boolean(working) || classStudents.length === 0}
+                      disabled={Boolean(working) || classStudents.length === 0 || selectedMixedTvlGradebook}
                       onClick={() => void saveAllGrades()}
                     >
                       <Save size={16} />
@@ -808,7 +823,7 @@ export default function GradesPage() {
                   {allPublished ? (
                     <button
                       className={styles.unpublish}
-                      disabled={working === "publish"}
+                      disabled={working === "publish" || selectedMixedTvlGradebook}
                       onClick={() => void setPublication(false)}
                     >
                       <Undo2 size={16} /> Return to draft
@@ -816,7 +831,7 @@ export default function GradesPage() {
                   ) : (
                     <button
                       className={styles.publish}
-                      disabled={working === "publish" || classStudents.length === 0}
+                      disabled={working === "publish" || classStudents.length === 0 || selectedMixedTvlGradebook}
                       onClick={() => void setPublication(true)}
                     >
                       <Send size={16} /> Publish Term {selectedTerm}
@@ -957,7 +972,7 @@ export default function GradesPage() {
                                   <button
                                     className={styles.saveButton}
                                     disabled={
-                                      working === student.id ||
+                                      selectedMixedTvlGradebook || working === student.id ||
                                       working === "save-all" ||
                                       published ||
                                       average === null
@@ -1029,7 +1044,7 @@ export default function GradesPage() {
                                       max="100"
                                       step="1"
                                       value={value}
-                                      disabled={saved?.status === "published"}
+                                      disabled={saved?.status === "published" || selectedMixedTvlGradebook}
                                       onChange={(event) =>
                                         setDrafts((current) => ({
                                           ...current,
@@ -1084,7 +1099,7 @@ export default function GradesPage() {
                                     <button
                                       className={styles.saveButton}
                                       disabled={
-                                        working === student.id ||
+                                        selectedMixedTvlGradebook || working === student.id ||
                                         working === "save-all" ||
                                         saved?.status === "published" ||
                                         (selectedIsTve &&
