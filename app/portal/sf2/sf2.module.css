@@ -534,7 +534,16 @@
     margin:0;
     background:#fff;
   }
-  .printScope{width:var(--sf2-print-width)}
+  /* The original Excel-width layout exactly touched A4's printable edge.
+     Shrink only the printed output slightly so real printer margins,
+     browser rounding, and border strokes cannot clip the right columns. */
+  .printScope{
+    width:var(--sf2-print-width);
+    zoom:.975;
+    margin:0;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
   .printScope :global(.sf2-print-document),
   .printScope :global(.sf2-flow-sheet){
     width:var(--sf2-print-width);
