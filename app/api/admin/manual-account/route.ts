@@ -13,6 +13,18 @@ const makeTempEmail = (name: string) => {
   return `${slug}.${crypto.randomUUID().slice(0,8)}@temp.asuncion-nhs.invalid`;
 };
 
+export async function GET(request: NextRequest) {
+  const token = request.cookies.get("anhs-access-token")?.value ?? "";
+  if (!token || !await isSuperAdministrator(token))
+    return NextResponse.json({error:"Super Administrator access required."},{status:403});
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/sections?is_active=eq.true&select=id,name,grade_level,program_type&order=grade_level.asc,name.asc&limit=250`,
+    {headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${token}`},cache:"no-store"}
+  );
+  if (!response.ok) return NextResponse.json({error:"Unable to load active sections."},{status:502});
+  return NextResponse.json({sections:await response.json()},{headers:{"Cache-Control":"no-store"}});
+}
+
 export async function POST(request: NextRequest) {
   const token = request.cookies.get("anhs-access-token")?.value ?? "";
   if (!token || !await isSuperAdministrator(token))
