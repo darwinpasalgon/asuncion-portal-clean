@@ -332,7 +332,7 @@ Deno.serve(async (req) => {
     const note = clean(body.note);
     const dateText = clean(body.effective_date);
 
-    if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(enrollmentId) ||
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(enrollmentId) ||
         !learnerStatuses.has(requestedStatus)) {
       return json({ error: "Choose a valid learner enrollment and status." }, 400);
     }
