@@ -1,5 +1,6 @@
-import { nonTeachingPositions, teachingPositions, positionOptions } from "@/lib/deped-positions";
 "use client";
+
+import { nonTeachingPositions, teachingPositions, positionOptions } from "@/lib/deped-positions";
 
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, KeyRound, Save, Search, UserRound } from "lucide-react";
