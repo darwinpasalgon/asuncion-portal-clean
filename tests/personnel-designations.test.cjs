@@ -40,3 +40,23 @@ test("Changing a position must not modify academic roles or assignments", () => 
   assert.doesNotMatch(sql, /update public\.(?:teacher_assignments|grade_level_heads|student_enrollments)/);
   assert.doesNotMatch(sql, /set role\s*=/);
 });
+
+test("Designation controls are immediately visible on HR and employee profile pages", () => {
+  const directory = read("app/portal/admin/personnel-designations/page.tsx");
+  const teacher = read("app/portal/admin/teacher-profiles/page.tsx");
+  const nonTeaching = read("app/portal/admin/non-teaching-profiles/page.tsx");
+  const nonTeachingStyles = read("app/portal/admin/non-teaching-profiles/non-teaching-profiles.module.css");
+  const teacherStyles = read("app/portal/admin/teacher-profiles/teacher-profiles.module.css");
+
+  assert.match(directory, /setSelectedId\(\(current\) => current \|\|/);
+  assert.match(directory, /params\.get\("personnel"\)/);
+  assert.match(directory, /Change Designation/);
+  assert.match(teacher, /designationShortcut/);
+  assert.match(teacher, /className=\{styles\.designationPanel\}/);
+  assert.match(teacher, /className=\{styles\.designationSave\}/);
+  assert.match(teacher, /New Designation/);
+  assert.match(nonTeaching, /className=\{styles\.designationPanel\}/);
+  assert.match(nonTeaching, /designationShortcut/);
+  assert.match(nonTeachingStyles, /\.designationShortcut\{/);
+  assert.match(teacherStyles, /\.designationSave\{/);
+});
