@@ -224,8 +224,8 @@ export default function ServiceCreditsPage() {
                         )}
                       </div>
                       <div className={styles.runningBalance}>
-                        <span>{tab === "wellness_leave" ? `${item.posting_date.slice(0,4)} Remaining` : "Balance"}</span>
-                        <strong>{formatDays(tab === "wellness_leave" ? wellnessRunningBalances.get(item.id) ?? 5 : item.balance_after)}</strong>
+                        <span>{item.particulars === "Balance Forwarded to Division Office" ? "Balance Forwarded" : tab === "wellness_leave" ? `${item.posting_date.slice(0,4)} Remaining` : "Balance"}</span>
+                        <strong>{item.particulars === "Balance Forwarded to Division Office" ? formatDays(item.previous_balance) + " days" : formatDays(tab === "wellness_leave" ? wellnessRunningBalances.get(item.id) ?? 5 : item.balance_after)}</strong>
                       </div>
                     </article>
                   ))}
