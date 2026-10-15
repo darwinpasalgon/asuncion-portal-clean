@@ -24,6 +24,22 @@ const roleLabels:Record<string,string>={
   content_administrator:"Content Administrator",
   school_administrator:"School Administrator",
 };
+const staffPermissions=[
+  {id:"reports.view",label:"View Reports"},
+  {id:"sf10.manage",label:"Manage SF10"},
+  {id:"hr.manage",label:"Personnel / HR Records"},
+  {id:"announcements.manage",label:"Announcements & Memos"},
+  {id:"resources.manage",label:"School Resources"},
+  {id:"attendance.manage",label:"Attendance Administration"},
+  {id:"schedules.manage",label:"Class Scheduling"},
+  {id:"teaching.manage",label:"Teaching Assignments"},
+  {id:"school_setup.manage",label:"School Setup"},
+  {id:"users.manage",label:"Manage User Accounts"},
+  {id:"accounts.manage",label:"Account Approvals"},
+  {id:"bulk_import.manage",label:"Bulk Account Import"},
+  {id:"password_resets.manage",label:"Password Resets"},
+];
+
 function asCsv(values:string[]) {
   return values.map(value=>`"${String(value).replaceAll('"','""')}"`).join(",");
 }
@@ -51,6 +67,7 @@ export default function CreateAccountPage(){
   const [phone,setPhone]=useState("");
   const [position,setPosition]=useState("");
   const [adminRole,setAdminRole]=useState("");
+  const [accessPermissions,setAccessPermissions]=useState<string[]>([]);
   const [downloaded,setDownloaded]=useState(false);
 
   useEffect(()=>{
@@ -80,7 +97,7 @@ export default function CreateAccountPage(){
     setFirstName("");setLastName("");setMiddleName("");setSuffix("");setLrn("");
     setGrade("");setSection("");setSex("");setBirthDate("");
     setShsTrack("");setShsProgram("");setEmail("");setPhone("");
-    setPosition("");setAdminRole("");setError("");
+    setPosition("");setAdminRole("");setAccessPermissions([]);setError("");
   }
   function selectKind(next:Kind){
     if(busy)return;
@@ -109,7 +126,7 @@ export default function CreateAccountPage(){
         personType:kind,fullName:kind==="student"?studentDisplayName:fullName.trim(),
         firstName,lastName,middleName,suffix,lrn,gradeLevel:Number(grade),
         section:selectedSection?.name??"",sex,birthDate,shsTrack,shsProgram,
-        email:email.trim(),phone:phone.trim(),position,adminRole,
+        email:email.trim(),phone:phone.trim(),position,adminRole,accessPermissions,
       };
       const response=await fetch("/api/admin/manual-account",{
         method:"POST",headers:{"Content-Type":"application/json"},
@@ -190,11 +207,19 @@ export default function CreateAccountPage(){
               {Object.entries(roleLabels).map(([id,name])=><option value={id} key={id}>{name}</option>)}
             </select>
           </label>}
+          {kind==="non_teaching"&&<fieldset className={styles.permissions}>
+            <legend>Staff Permissions (Optional, Select Only What's Needed)</legend>
+            {staffPermissions.map(p=><label key={p.id}>
+              <input type="checkbox" checked={accessPermissions.includes(p.id)}
+                onChange={e=>setAccessPermissions(prev=>e.target.checked?[...prev,p.id]:prev.filter(id=>id!==p.id))}/>
+              {p.label}
+            </label>)}
+          </fieldset>}
         </div>
         <p className={styles.note}>
           Leave Email blank to issue a temporary, non-deliverable login address.
           Replace it with the official email when available.
-          {kind==="non_teaching"&&" The selected staff access role grants its corresponding portal permissions. Do not select a higher access role than the personnel requires."}
+          {kind==="non_teaching"&&" The access role identifies the staff account type. Portal permissions are granted only through the checkboxes above; leave any unnecessary permission unchecked."}
         </p>
       </section>}
       {kind==="student"&&<label className={styles.phoneLabel}>Guardian / Recovery Mobile (Optional)
