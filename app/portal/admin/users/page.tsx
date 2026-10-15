@@ -13,6 +13,7 @@ import {
   UserRound,
   UserX,
   Users,
+  UserPlus,
   X,
 } from "lucide-react";
 import styles from "./users.module.css";
@@ -177,6 +178,7 @@ export default function UsersAccountsPage() {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
   const [activeYear, setActiveYear] = useState<{ id: string; name: string } | null>(null);
+  const [canCreateAccounts,setCanCreateAccounts] = useState(false);
   const [personType, setPersonType] = useState<PersonType>("student");
   const [status, setStatus] = useState<"all" | UserStatus>("all");
   const [search, setSearch] = useState("");
@@ -202,6 +204,7 @@ export default function UsersAccountsPage() {
       setUsers(result.users ?? []);
       setSections(result.sections ?? []);
       setActiveYear(result.activeYear ?? null);
+      setCanCreateAccounts(Boolean(result.canCreateAccounts));
     } catch {
       setError("Unable to reach the user-management service.");
     } finally {
@@ -468,6 +471,7 @@ export default function UsersAccountsPage() {
           </a>
           <div>
             <a href="/portal/admin/users">Pending Approvals</a>
+            {canCreateAccounts && <a href="/portal/admin/create-account">Create Account</a>}
             <a href="/portal/admin/masterlist">Bulk Account Import</a>
             <a href="/portal/admin/password-resets">Password Resets</a>
           </div>
@@ -482,11 +486,16 @@ export default function UsersAccountsPage() {
               access, and safely remove unused accounts.
             </p>
           </div>
-          <div className={styles.security}>
-            <ShieldCheck size={18} />
-            <div>
-              <small>ACTIVE SCHOOL YEAR</small>
-              <strong>{activeYear?.name ?? "Not Configured"}</strong>
+          <div className={styles.headerActions}>
+            {canCreateAccounts && <a className={styles.createAccountLink} href="/portal/admin/create-account">
+              <UserPlus size={17}/> Create Account
+            </a>}
+            <div className={styles.security}>
+              <ShieldCheck size={18} />
+              <div>
+                <small>ACTIVE SCHOOL YEAR</small>
+                <strong>{activeYear?.name ?? "Not Configured"}</strong>
+              </div>
             </div>
           </div>
         </header>
