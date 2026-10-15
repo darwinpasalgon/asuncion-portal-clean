@@ -21,6 +21,10 @@ type Attendance = {
   total_class_days: number;
   total_present: number;
   total_absent: number;
+  recorded_days?: Record<string, number>;
+  unrecorded_days?: Record<string, number>;
+  total_recorded?: number;
+  total_unrecorded?: number;
 };
 
 export type Sf9FontFamily = "bookman" | "arial" | "times" | "calibri" | "georgia";
@@ -426,17 +430,22 @@ function AttendanceTable({
   const row = (
     label: string,
     values: Record<string, number>,
-    total: number
+    total: number,
+    isClassDayRow = false
   ) => (
     <tr>
       <th>{label}</th>
       {months.map((month) => (
         <td key={month}>
-          {attendance.class_days[month] > 0 ? displayNumber(values[month]) : ""}
+          {attendance.class_days[month] > 0 &&
+          (isClassDayRow || (attendance.recorded_days?.[month] ?? 0) > 0)
+            ? displayNumber(values[month]) : ""}
         </td>
       ))}
       <td className={styles.totalCell}>
-        {attendance.total_class_days > 0 ? displayNumber(total) : ""}
+        {attendance.total_class_days > 0 &&
+        (isClassDayRow || (attendance.total_recorded ?? 0) > 0)
+          ? displayNumber(total) : ""}
       </td>
     </tr>
   );
@@ -455,7 +464,7 @@ function AttendanceTable({
         </tr>
       </thead>
       <tbody>
-        {row("No. of Class Days", attendance.class_days, attendance.total_class_days)}
+        {row("No. of Class Days", attendance.class_days, attendance.total_class_days, true)}
         {row("No. of Days Present", attendance.days_present, attendance.total_present)}
         {row("No. of Days Absent", attendance.days_absent, attendance.total_absent)}
       </tbody>
