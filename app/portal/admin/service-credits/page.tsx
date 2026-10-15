@@ -15,6 +15,7 @@ type Personnel = {
 
 type Transaction = {
   id: string;
+  ledger_sequence?: number;
   credit_type: "service_credit" | "wellness_leave";
   posting_date: string;
   transaction_kind: string;
@@ -32,6 +33,9 @@ type Transaction = {
 type Summary = {
   service_credit_balance: number | null;
   wellness_leave_balance: number | null;
+  wellness_allowance: number;
+  wellness_used: number;
+  wellness_year: number;
   total_service_credits_earned: number;
   total_service_credits_used: number;
   transaction_count: number;
@@ -39,7 +43,7 @@ type Summary = {
 };
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
 function formatDate(value: string) {
@@ -158,6 +162,25 @@ export default function AdminServiceCreditsPage() {
     [transactions, tab]
   );
 
+  const wellnessRunningBalances = useMemo(() => {
+    const sorted = transactions
+      .filter((item) => item.credit_type === "wellness_leave")
+      .slice()
+      .sort((a, b) =>
+        a.posting_date.localeCompare(b.posting_date) ||
+        Number(a.ledger_sequence ?? 0) - Number(b.ledger_sequence ?? 0)
+      );
+    const usedByYear = new Map<string, number>();
+    const result = new Map<string, number>();
+    for (const item of sorted) {
+      const year = item.posting_date.slice(0, 4);
+      const used = (usedByYear.get(year) ?? 0) + Number(item.service_credits_used ?? 0);
+      usedByYear.set(year, used);
+      result.set(item.id, Math.max(0, 5 - used));
+    }
+    return result;
+  }, [transactions]);
+
   async function postTransaction() {
     if (!selectedId) return;
     setPosting(true);
@@ -170,7 +193,8 @@ export default function AdminServiceCreditsPage() {
         body: JSON.stringify({
           action: "post_transaction",
           personnel_id: selectedId,
-          transaction_kind: mode,
+          transaction_kind: tab === "wellness_leave" ? "debit" : mode,
+          credit_type: tab,
           amount,
           posting_date: postingDate,
           particulars,
@@ -182,7 +206,7 @@ export default function AdminServiceCreditsPage() {
       setAmount("");
       setParticulars("");
       setRemarks("");
-      setMessage(mode === "credit" ? "Service Credits added successfully." : "Service Credits deducted successfully.");
+      setMessage(tab === "wellness_leave" ? "Wellness Leave deducted from this calendar year only. Service Credits are unchanged." : mode === "credit" ? "Service Credits added successfully." : "Service Credits deducted successfully.");
       await Promise.all([loadRecord(selectedId), loadPersonnel()]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to post transaction.");
@@ -231,45 +255,61 @@ export default function AdminServiceCreditsPage() {
               <div className={styles.empty}>{loadingRecord ? "Loading Service Credits..." : "Select a personnel account."}</div>
             ) : (
               <>
+                <div className={styles.tabs}>
+                  <button className={tab === "service_credit" ? styles.active : ""} onClick={() => { setTab("service_credit"); setAmount(""); }}>Service Credits</button>
+                  <button className={tab === "wellness_leave" ? styles.active : ""} onClick={() => { setTab("wellness_leave"); setAmount(""); }}>Wellness Leave</button>
+                </div>
+
                 <div className={styles.accountHead}>
                   <div>
-                    <span>PERSONNEL SERVICE CREDIT ACCOUNT</span>
+                    <span>{tab === "wellness_leave" ? `WELLNESS LEAVE · CALENDAR YEAR ${summary?.wellness_year ?? ""}` : "PERSONNEL SERVICE CREDIT ACCOUNT"}</span>
                     <h2>{selected.full_name}</h2>
                     <p>{selected.position || "Personnel"} · {selected.email}</p>
                   </div>
                   <div className={styles.balance}>
-                    <span>Available Balance</span>
-                    <strong>{moneyStyle(summary?.service_credit_balance)}</strong>
+                    <span>{tab === "wellness_leave" ? "Annual Wellness Leave Remaining" : "Available Balance"}</span>
+                    <strong>{moneyStyle(tab === "wellness_leave" ? summary?.wellness_leave_balance : summary?.service_credit_balance)}</strong>
                   </div>
                 </div>
 
                 <div className={styles.metrics}>
-                  <div><span>Total Earned</span><strong>+{formatDays(summary?.total_service_credits_earned ?? 0)}</strong></div>
-                  <div><span>Total Used</span><strong>-{formatDays(summary?.total_service_credits_used ?? 0)}</strong></div>
-                  <div><span>Transactions</span><strong>{summary?.transaction_count ?? 0}</strong></div>
+                  {tab === "wellness_leave" ? (
+                    <>
+                      <div><span>Annual Allowance</span><strong>{formatDays(summary?.wellness_allowance ?? 0)} days</strong></div>
+                      <div><span>Used in {summary?.wellness_year}</span><strong>{formatDays(summary?.wellness_used ?? 0)} days</strong></div>
+                      <div><span>Renews</span><strong>January 1</strong></div>
+                    </>
+                  ) : (
+                    <>
+                      <div><span>Total Earned</span><strong>+{formatDays(summary?.total_service_credits_earned ?? 0)}</strong></div>
+                      <div><span>Total Used</span><strong>-{formatDays(summary?.total_service_credits_used ?? 0)}</strong></div>
+                      <div><span>Transactions</span><strong>{summary?.transaction_count ?? 0}</strong></div>
+                    </>
+                  )}
                 </div>
 
                 <section className={styles.postingCard}>
+                  {tab === "wellness_leave" ? (
+                    <p>Deduct from the 5-day Wellness Leave allowance for the selected calendar year. Unused days expire December 31 and do not carry over. Earned Service Credits will not be affected.</p>
+                  ) : (
                   <div className={styles.modeButtons}>
                     <button className={mode === "credit" ? styles.creditActive : ""} onClick={() => setMode("credit")}><PlusCircle size={16} />Add Service Credits</button>
                     <button className={mode === "debit" ? styles.debitActive : ""} onClick={() => setMode("debit")}><MinusCircle size={16} />Deduct Service Credits</button>
                   </div>
+                  )}
                   <div className={styles.formGrid}>
-                    <label><span>Posting Date</span><input type="date" value={postingDate} onChange={(event) => setPostingDate(event.target.value)} /></label>
-                    <label><span>Amount (Days)</span><input inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Example: 1.50" /></label>
+                    <label><span>Posting Date</span><input type="date" max={tab === "wellness_leave" ? today() : undefined} value={postingDate} onChange={(event) => setPostingDate(event.target.value)} /></label>
+                    <label><span>Amount (Days)</span><input type="number" min="0.01" max={tab === "wellness_leave" ? 5 : 999.99} step="0.5" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Example: 1.00" /></label>
                     <label className={styles.wide}><span>Particulars</span><input value={particulars} onChange={(event) => setParticulars(event.target.value)} placeholder="Reason, activity, leave date, or reference" /></label>
                     <label className={styles.wide}><span>Remarks</span><input value={remarks} onChange={(event) => setRemarks(event.target.value)} placeholder="Optional" /></label>
                   </div>
-                  <button className={mode === "credit" ? styles.postCredit : styles.postDebit} onClick={() => void postTransaction()} disabled={posting}>
-                    {mode === "credit" ? <PlusCircle size={16} /> : <MinusCircle size={16} />}
-                    {posting ? "Posting..." : mode === "credit" ? "Post Credit" : "Post Deduction"}
+                  <button className={tab === "wellness_leave" || mode === "debit" ? styles.postDebit : styles.postCredit} onClick={() => void postTransaction()} disabled={posting || (tab === "wellness_leave" && !summary?.wellness_allowance)}>
+                    {tab === "service_credit" && mode === "credit" ? <PlusCircle size={16} /> : <MinusCircle size={16} />}
+                    {posting ? "Posting..." : tab === "wellness_leave" ? "Deduct Wellness Leave Only" : mode === "credit" ? "Post Credit" : "Post Deduction"}
                   </button>
                 </section>
 
-                <div className={styles.tabs}>
-                  <button className={tab === "service_credit" ? styles.active : ""} onClick={() => setTab("service_credit")}>Service Credits</button>
-                  <button className={tab === "wellness_leave" ? styles.active : ""} onClick={() => setTab("wellness_leave")}>Wellness Leave</button>
-                </div>
+
 
                 <section className={styles.history}>
                   <div className={styles.historyHead}><ClipboardCheck size={18} /><div><h3>Transaction History</h3><p>Imported and HR-posted entries are retained as an audit trail.</p></div></div>
@@ -280,11 +320,12 @@ export default function AdminServiceCreditsPage() {
                           <div><strong>{formatDate(item.posting_date)}</strong><span>{item.source === "excel_import" ? "Imported Excel" : item.created_by_name || "HR"}</span></div>
                           <div><strong>{item.particulars}</strong><span>{item.remarks || (item.absence_days > 0 ? `${item.absence_days.toFixed(2)} absence day(s)` : "No remarks")}</span></div>
                           <div className={styles.change}>
-                            {item.service_credits_earned > 0 && <b className={styles.credit}>+{formatDays(item.service_credits_earned)}</b>}
+                            {tab === "service_credit" && item.service_credits_earned > 0 && <b className={styles.credit}>+{formatDays(item.service_credits_earned)}</b>}
+                            {tab === "wellness_leave" && item.service_credits_earned > 0 && <span>Legacy allocation (not additional days)</span>}
                             {item.service_credits_used > 0 && <b className={styles.debit}>-{formatDays(item.service_credits_used)}</b>}
                             {item.transaction_kind === "opening_balance" && <b className={styles.opening}>Opening</b>}
                           </div>
-                          <div className={styles.rowBalance}><span>Balance</span><strong>{formatDays(item.balance_after)}</strong></div>
+                          <div className={styles.rowBalance}><span>{tab === "wellness_leave" ? `${item.posting_date.slice(0,4)} Remaining` : "Balance"}</span><strong>{formatDays(tab === "wellness_leave" ? wellnessRunningBalances.get(item.id) ?? 5 : item.balance_after)}</strong></div>
                         </article>
                       ))}
                     </div>
