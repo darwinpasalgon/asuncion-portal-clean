@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
+import { attendanceStartDate } from "@/lib/attendance-calendar";
 import { hasAdminPermission } from "@/lib/admin-access";
 
 type Profile = {
@@ -419,7 +420,7 @@ export async function GET(request: NextRequest) {
     );
 
     const schoolDays = datesBetween(bounds.start, cutoff)
-      .filter((date) => isWeekday(date) && !excludedDates.has(date))
+      .filter((date) => date >= attendanceStartDate(activeYear) && isWeekday(date) && !excludedDates.has(date))
       .slice(0, MAX_DAY_COLUMNS);
 
     const learners = studentIds
