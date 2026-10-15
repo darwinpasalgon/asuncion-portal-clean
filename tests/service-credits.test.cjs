@@ -68,3 +68,23 @@ test("learners are excluded from Service Credits access", () => {
   assert.match(fn, /Service Credits are available to personnel accounts only/);
   assert.match(proxy, /serviceCreditsPage && state\.role === "student"/);
 });
+
+test("Wellness Leave is an independent annual five-day allowance without carryover", () => {
+  const migration = read("supabase/migrations/20261015094500_wellness_leave_annual_allowance.sql");
+  const fn = read("supabase/functions/service-credits/index.ts");
+  const adminPage = read("app/portal/admin/service-credits/page.tsx");
+  const personnelPage = read("app/portal/service-credits/page.tsx");
+
+  assert.match(migration, /new\.credit_type = 'wellness_leave'/);
+  assert.match(migration, /make_date\(extract\(year from new\.posting_date\)::int, 1, 1\)/);
+  assert.match(migration, /new\.posting_date < \(v_year_start \+ interval '1 year'\)::date/);
+  assert.match(migration, /round\(5 - v_wellness_used, 4\)/);
+  assert.match(migration, /Insufficient annual Wellness Leave balance/);
+  assert.match(fn, /wellness_leave_balance: wellnessBalance/);
+  assert.match(fn, /wellness_allowance: eligible \? 5 : 0/);
+  assert.match(fn, /credit_type: creditType/);
+  assert.match(fn, /Wellness Leave must be deducted using the separate Wellness Leave tab/);
+  assert.match(adminPage, /Deduct Wellness Leave Only/);
+  assert.match(adminPage, /credit_type: tab/);
+  assert.match(personnelPage, /Renews January 1/);
+});
