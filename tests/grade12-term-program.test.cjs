@@ -35,3 +35,18 @@ test("Grade 12 term schedule storage cannot overwrite other grades or term assig
  assert.match(proxy,/\/portal\/admin\/grade12-term-program/);
  assert.doesNotMatch(api,/from\("class_schedules"\)|table=teacher_assignments/);
 });
+
+test("Jane Bardon is onboarded through the existing Super Admin-protected Auth importer",()=>{
+ const page=read("app/portal/admin/grade12-term-program/page.tsx");
+ const api=read("app/api/admin/grade12-term-program/route.ts");
+ const bulk=read("app/api/admin/import-accounts/route.ts");
+ assert.match(page,/jane\.bardon\.2026@temp\.asuncion-nhs\.invalid/);
+ assert.match(page,/personType:"teacher"/);
+ assert.match(page,/action:"link_jane_bardon"/);
+ assert.match(page,/setJaneCredentials/);
+ assert.match(page,/Download Teacher Credentials CSV/);
+ assert.match(api,/if \(body\?\.action === "link_jane_bardon"\)/);
+ assert.match(api,/await isSuperAdministrator\(info\.token\)/);
+ assert.match(api,/profiles\?email=eq\./);
+ assert.match(bulk,/functions\/v1\/admin-bulk-account-import/);
+});
