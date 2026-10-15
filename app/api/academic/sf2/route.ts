@@ -542,13 +542,22 @@ export async function GET(request: NextRequest) {
           dropped_date: droppedDate,
           effective_in_date: effectiveInDate,
           effective_out_date: effectiveOutDate,
+          // Preserve historical movement records for SF2 summaries, but do not
+          // print learners who have transferred out in the learner roster.
+          is_transferred_out:
+            String(enrollment.learner_status ?? "").trim().toLowerCase() === "transferred_out" ||
+            String(enrollment.enrollment_status ?? "").trim().toLowerCase() === "transferred" ||
+            Boolean(transferOutDate && (!transferInDate || transferOutDate >= transferInDate)),
         };
       })
       .filter((learner) => learner.sex === "M" || learner.sex === "F")
       .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
 
-    const males = learners.filter((learner) => learner.sex === "M");
-    const females = learners.filter((learner) => learner.sex === "F");
+    // The printable roster and its daily attendance totals exclude transferred-out
+    // learners; the full learner collection below still drives movement summaries.
+    const printLearners = learners.filter((learner) => !learner.is_transferred_out);
+    const males = printLearners.filter((learner) => learner.sex === "M");
+    const females = printLearners.filter((learner) => learner.sex === "F");
 
     const dailyTotals = schoolDays.map((date, index) => {
       const male = males.filter((learner) =>
@@ -563,7 +572,7 @@ export async function GET(request: NextRequest) {
     const missingByDate = schoolDays
       .map((date, index) => ({
         date,
-        missing: learners.filter(
+        missing: printLearners.filter(
           (learner) => learner.cells[index]?.state === "unrecorded"
         ).length,
       }))
