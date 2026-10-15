@@ -1318,6 +1318,17 @@ function SideNav({
                     <SidebarMenuButton
                       className="nav-button"
                       onClick={() => {
+                        window.location.href = "/portal/admin/personnel-designations";
+                      }}
+                    >
+                      <BriefcaseBusiness size={19} />
+                      <span>Personnel Designations &amp; Promotions</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      className="nav-button"
+                      onClick={() => {
                         window.location.href = "/portal/admin/teacher-profiles";
                       }}
                     >
