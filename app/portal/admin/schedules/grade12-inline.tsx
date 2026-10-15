@@ -27,6 +27,7 @@ export default function Grade12SchedulesInline({sectionId,teacherId,sections,tea
   const [end,setEnd]=useState("");
   const [janeEmail,setJaneEmail]=useState("");
   const [janePassword,setJanePassword]=useState("");
+  const [canProvision,setCanProvision]=useState(false);
 
   async function reload(){
     const r=await fetch("/api/admin/grade12-term-program",{cache:"no-store"});
