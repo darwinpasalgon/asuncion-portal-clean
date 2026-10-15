@@ -1045,7 +1045,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  if (action !== "save_attendance") {
+  if (action !== "save_attendance" && action !== "update_attendance") {
     return NextResponse.json({ error: "Invalid action." }, { status: 400 });
   }
 
@@ -1094,11 +1094,30 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (records.length !== allowedStudents.size) {
+  if (action === "save_attendance" && records.length !== allowedStudents.size) {
     return NextResponse.json(
-      { error: "Tag attendance for every active learner before saving." },
+      { error: "Tag attendance for every active learner before saving the initial sheet." },
       { status: 400 }
     );
+  }
+
+  // A previously recorded date can be corrected learner by learner. A partial
+  // upsert does not remove, clear, or rewrite anyone else's official attendance.
+  if (action === "update_attendance") {
+    const dayRecords = await getRows(
+      `daily_attendance?school_year_id=eq.${encodeURIComponent(
+        year.id
+      )}&section_id=eq.${encodeURIComponent(
+        sectionId
+      )}&attendance_date=eq.${attendanceDate}&select=student_id&limit=1`,
+      token
+    );
+    if (!dayRecords?.length) {
+      return NextResponse.json(
+        { error: "This date has no saved attendance yet. Complete and save the first attendance sheet before making individual corrections." },
+        { status: 409 }
+      );
+    }
   }
 
   const allowedStatuses = new Set([
@@ -1182,5 +1201,5 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ ok: true, count: result.length, attendance: result });
+  return NextResponse.json({ ok: true, count: result.length, attendance: result, mode: action === "update_attendance" ? "correction" : "initial" });
 }
