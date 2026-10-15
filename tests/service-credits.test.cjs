@@ -77,7 +77,7 @@ test("Wellness Leave is an independent annual five-day allowance without carryov
 
   assert.match(migration, /new\.credit_type = 'wellness_leave'/);
   assert.match(migration, /make_date\(extract\(year from new\.posting_date\)::int, 1, 1\)/);
-  assert.match(migration, /new\.posting_date < \(v_year_start \+ interval '1 year'\)::date/);
+  assert.match(migration, /t\.posting_date < \(v_year_start \+ interval '1 year'\)::date/);
   assert.match(migration, /round\(5 - v_wellness_used, 4\)/);
   assert.match(migration, /Insufficient annual Wellness Leave balance/);
   assert.match(fn, /wellness_leave_balance: wellnessBalance/);
