@@ -299,12 +299,12 @@ Deno.serve(async (req) => {
     if (duplicateError) return json({error:"Unable to check existing portal accounts."},500);
     if (existingProfile?.length) return json({error:"This email already has an account. Edit the existing account instead."},409);
     const {data: existingPersonnel, error: personnelCheckError} = await admin.from("non_teaching_personnel")
-      .select("id,full_name,portal_user_id").ilike("email",email).limit(1);
+      .select("id,full_name,position,portal_user_id").ilike("email",email).limit(1);
     if (personnelCheckError) return json({error:"Unable to verify the existing non-teaching personnel directory."},500);
     let directoryEntry = existingPersonnel?.[0];
     if (!directoryEntry) {
       const {data: existingByName,error: nameCheckError} = await admin.from("non_teaching_personnel")
-        .select("id,full_name,email,portal_user_id").ilike("full_name",fullName).limit(3);
+        .select("id,full_name,email,position,portal_user_id").ilike("full_name",fullName).limit(3);
       if (nameCheckError) return json({error:"Unable to check personnel directory names."},500);
       if ((existingByName??[]).length>1) return json({error:"Multiple personnel records share this name. Review them before creating the login."},409);
       directoryEntry = existingByName?.[0];
@@ -315,6 +315,9 @@ Deno.serve(async (req) => {
     if (directoryEntry?.portal_user_id) return json({error:"This personnel record is already linked to a portal account."},409);
     if (directoryEntry && directoryEntry.full_name.trim().toUpperCase() !== fullName.toUpperCase()) {
       return json({error:"This email belongs to an existing personnel record with a different name. Review the directory first."},409);
+    }
+    if (directoryEntry?.position && directoryEntry.position.trim().toUpperCase() !== position.toUpperCase()) {
+      return json({error:"The existing personnel record has a different designation. Verify or change it through Personnel Designations before creating the login."},409);
     }
 
     const provisioningToken = crypto.randomUUID();
@@ -347,7 +350,7 @@ Deno.serve(async (req) => {
     }
     const directoryResult = directoryEntry
       ? await admin.from("non_teaching_personnel").update({
-          portal_user_id:userId,email,position,is_active:true,updated_at:new Date().toISOString()
+          portal_user_id:userId,email,position:directoryEntry.position??position,is_active:true,updated_at:new Date().toISOString()
         }).eq("id",directoryEntry.id).is("portal_user_id",null).select("id").maybeSingle()
       : await admin.from("non_teaching_personnel").insert({
           full_name:fullName,email,position,portal_user_id:userId,is_active:true,
