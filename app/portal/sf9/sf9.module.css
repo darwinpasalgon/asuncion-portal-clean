@@ -275,3 +275,35 @@
   .printSheet:last-child{page-break-after:auto!important;break-after:auto!important}
   .cardFront,.cardBack{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+
+
+/* Compact SF9 readiness progress */
+.readinessPanel{margin:14px 0 18px;padding:20px;border:1px solid #dbe5ef;border-radius:16px;background:linear-gradient(135deg,#fff 0%,#f7fbff 100%);box-shadow:0 6px 20px rgba(15,23,42,.035)}
+.readinessHeader{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.readinessEyebrow{font-size:10px;font-weight:800;letter-spacing:.14em;color:#326c9b}
+.readinessHeader h3{margin:4px 0;font-size:18px;font-weight:800;color:#193553}
+.readinessHeader p,.readinessNote{margin:0;font-size:12px;color:#64748b;line-height:1.5}
+.readinessControls{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:600;color:#475569}
+.readinessControls select{min-width:105px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#193553}
+.readinessProgressHeading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:23px 0 9px;font-size:12px;font-weight:600;color:#475569}
+.readinessProgressHeading strong{font-size:17px;font-variant-numeric:tabular-nums;color:#19679c}
+.readinessTrack{position:relative;height:11px;overflow:hidden;border-radius:999px;background:#e4edf5}
+.readinessFill{height:100%;border-radius:999px;background:linear-gradient(90deg,#178b78,#2baf9a);transition:width .55s ease}
+.readinessScanning{height:100%;width:38%;border-radius:999px;background:linear-gradient(90deg,transparent,#247eae,#48bbbc,transparent);animation:sf9Scanning 1.35s ease-in-out infinite}
+@keyframes sf9Scanning{from{transform:translateX(-110%)}to{transform:translateX(285%)}}
+.readinessNote{margin-top:10px}
+.readinessError{font-size:12px;color:#b91c1c;margin:10px 0 0}
+.readinessMetrics{display:flex;flex-wrap:wrap;gap:9px;margin-top:17px}
+.readinessMetrics span{display:inline-flex;align-items:center;gap:5px;padding:7px 10px;border-radius:9px;background:#edf5fa;color:#3e5b70;font-size:11px;font-weight:650}
+.readinessMetrics svg{color:#238e85}
+.readinessDetailsToggle{width:100%;display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding:11px 1px 0;border:0;border-top:1px solid #e3eaf1;background:transparent;text-align:left;font-size:12px;font-weight:700;color:#286c9f;cursor:pointer}
+.readinessDetailsToggle span{font-size:20px;line-height:1}
+.readinessLearners{margin-top:12px;max-height:310px;overflow-y:auto;border:1px solid #e4eaf0;border-radius:10px;background:#fff}
+.readinessLearner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-bottom:1px solid #edf0f4}
+.readinessLearner:last-child{border-bottom:none}
+.readinessLearner strong{font-size:12px;color:#263c50}
+.readinessLearner p{margin:3px 0;color:#64748b;font-size:11px}
+.readinessLearner small{color:#9a6b2f;font-size:11px}
+.readinessLearner button{flex-shrink:0;padding:7px 11px;border:1px solid #c5ddec;border-radius:8px;background:#f2f8fc;color:#236b98;font-size:11px;font-weight:700;cursor:pointer}
+@media(max-width:600px){.readinessPanel{padding:15px}.readinessHeader h3{font-size:16px}.readinessLearner{align-items:flex-start;flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){.readinessScanning{animation:none;width:100%;background:#2baf9a}.readinessFill{transition:none}}
