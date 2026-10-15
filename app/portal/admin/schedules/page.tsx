@@ -17,6 +17,7 @@ import {
   WandSparkles,
 } from "lucide-react";
 import styles from "./schedules.module.css";
+import Grade12SchedulesInline from "./grade12-inline";
 
 type Year = { id: string; name: string };
 type Assignment = {
@@ -329,11 +330,19 @@ export default function ClassSchedulesPage() {
   }
 
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("view") === "teacher") {
-      setScheduleView("teacher");
-    }
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("view") === "teacher") setScheduleView("teacher");
+    if (params.get("grade") === "12") setQuickGrade("12");
     void load();
   }, []);
+  useEffect(() => {
+    if (quickGrade !== "12") return;
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("section");
+    if (!ref || !sections.length) return;
+    const section = sections.find(s => s.id === ref || s.name.toLowerCase() === ref.toLowerCase());
+    if (section && section.grade_level === 12) setQuickSection(section.id);
+  }, [quickGrade, sections]);
 
   useEffect(() => {
     if (loading || attentionInitialized.current) return;
@@ -978,7 +987,6 @@ export default function ClassSchedulesPage() {
           <a href="/portal/admin/teaching" className={styles.topLink}>
             Subjects & Teachers
           </a>
-          <a href="/portal/admin/grade12-term-program" className={styles.topLink}>Grade 12 · Term 1 &amp; Term 2 Programs</a>
         </nav>
 
         <header className={styles.header}>
@@ -1002,11 +1010,7 @@ export default function ClassSchedulesPage() {
           )}
         </header>
 
-        <div style={{marginBottom:16,padding:"15px 18px",borderRadius:12,background:"#eaf7f0",border:"1px solid #c6e4d3"}}>
-            <strong style={{color:"#215b42"}}>Grade 12 First &amp; Second Term Class Programs</strong>
-            <p style={{margin:"7px 0 10px",color:"#537562",fontSize:13}}>Open the imported Excel schedules by term, review instructor assignments, and adjust subject time slots without replacing other grade levels.</p>
-            <a href="/portal/admin/grade12-term-program" style={{display:"inline-flex",padding:"10px 14px",borderRadius:8,background:"#237653",color:"white",fontWeight:750,textDecoration:"none"}}>Open Grade 12 Term Programs</a>
-          </div>
+
           {error && <div className={styles.error} role="alert">{error}</div>}
         {success && <div className={styles.success} role="status">{success}</div>}
 
@@ -1026,6 +1030,10 @@ export default function ClassSchedulesPage() {
           </button>
         </div>
 
+        {!teacherView && quickGrade === "12" ? (
+          <Grade12SchedulesInline sectionId={quickSection} sections={sections} teachers={teachers} />
+        ) : (
+          <>
         <section className={`${styles.panel} ${styles.quickPanel}`}>
           <div className={styles.panelHeading}>
             <div>
@@ -1818,6 +1826,11 @@ export default function ClassSchedulesPage() {
             </div>
           )}
         </section>
+          </>
+        )}
+        {teacherView && quickTeacher && (
+          <Grade12SchedulesInline teacherId={quickTeacher} sections={sections} teachers={teachers} />
+        )}
         {conflictDialog && (
           <dialog ref={dialogRef} className={styles.conflictDialog} aria-labelledby="schedule-conflict-title" aria-describedby="schedule-conflict-description" onCancel={closeConflictDialog}>
             <div className={styles.conflictDialogHeading}>
