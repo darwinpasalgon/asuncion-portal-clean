@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 import { generateSf9Remark, type Sf9RemarkSignal } from "@/lib/sf9-remarks";
+import { attendanceStartDate } from "@/lib/attendance-calendar";
+import { sf9AttendanceSummary, sf9AttendanceValue, sf9InstructionalDates } from "@/lib/sf9-attendance";
 
 type JsonRow = Record<string, any>;
 
@@ -412,17 +414,10 @@ function subjectRank(name: string) {
   return ranks[normalized] ?? 100;
 }
 
-function attendancePresence(status?: string | null) {
-  const value = String(status ?? "").trim().toLowerCase();
-  if (value === "present") return 1;
-  if (value === "absent_morning") return 0.5;
-  return 0;
-}
-
-function monthKey(date: string) {
-  const parsed = new Date(`${date}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return MONTHS.find((item) => item.month === parsed.getMonth() + 1)?.key ?? null;
+function manilaToday() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila", year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date());
 }
 
 function dateOnly(value: unknown) {
@@ -644,7 +639,7 @@ export async function GET(request: NextRequest) {
       teacherAssignments,
       subjects,
       schoolInformation,
-      sectionAttendance,
+      excludedClassDates,
       studentAttendance,
     ] = await Promise.all([
       getRows(
@@ -686,13 +681,13 @@ export async function GET(request: NextRequest) {
         token
       ).catch(() => []),
       getRows(
-        `daily_attendance?school_year_id=eq.${encodeURIComponent(
+        `attendance_day_exclusions?school_year_id=eq.${encodeURIComponent(
           activeYear.id
         )}&section_id=eq.${encodeURIComponent(
           sectionId
-        )}&select=attendance_date,status`,
+        )}&select=attendance_date,exclusion_type`,
         token
-      ).catch(() => []),
+      ),
       getRows(
         `daily_attendance?school_year_id=eq.${encodeURIComponent(
           activeYear.id
@@ -702,7 +697,7 @@ export async function GET(request: NextRequest) {
           inFilter(requestedStudentIds)
         )}&select=student_id,attendance_date,status`,
         token
-      ).catch(() => []),
+      ),
     ]);
 
     const adviserId = String(sectionAdviser?.[0]?.teacher_id ?? "");
@@ -784,11 +779,17 @@ export async function GET(request: NextRequest) {
           subjectRank(String(bSubject?.name ?? ""));
       });
 
-    const classDates = new Set<string>();
-    for (const row of sectionAttendance ?? []) {
-      const date = String(row.attendance_date ?? "");
-      if (date) classDates.add(date);
-    }
+    // School-day counts start on June 8 for SY 2026–2027, not at the
+    // first day someone happened to enter attendance in the portal.
+    // No Classes exclusions are scoped to the student's section.
+    const calendarStart = attendanceStartDate(activeYear);
+    const today = manilaToday();
+    const classDates = sf9InstructionalDates({
+      startDate: calendarStart,
+      currentDate: today,
+      startYear: Number(activeYear.start_year),
+      excludedDates: (excludedClassDates ?? []).map((row: JsonRow) => String(row.attendance_date)),
+    });
 
     const school = schoolInformation?.[0] ?? {};
 
@@ -989,7 +990,7 @@ export async function GET(request: NextRequest) {
         };
       }
 
-      let start = `${activeYear.start_year}-06-01`;
+      let start = calendarStart;
       if (termNo > 1) {
         const previousCutoffs = (grades ?? [])
           .filter(
@@ -1008,30 +1009,26 @@ export async function GET(request: NextRequest) {
       const termClassDates = Array.from(classDates)
         .filter((date) => date >= start && date <= cutoff)
         .sort();
-      const studentRows = (studentAttendance ?? []).filter(
-        (row: JsonRow) =>
-          String(row.student_id) === studentId &&
-          String(row.attendance_date ?? "") >= start &&
-          String(row.attendance_date ?? "") <= cutoff
-      );
+      const classDateSet = new Set(termClassDates);
       const presenceByDate = new Map<string, number>();
-      for (const row of studentRows) {
-        presenceByDate.set(
-          String(row.attendance_date),
-          attendancePresence(row.status)
-        );
+      for (const row of studentAttendance ?? []) {
+        if (String(row.student_id) !== studentId) continue;
+        const date = String(row.attendance_date ?? "");
+        if (!classDateSet.has(date)) continue;
+        const value = sf9AttendanceValue(String(row.status ?? ""));
+        if (value) presenceByDate.set(date, value.present);
       }
-      const totalPresence = termClassDates.reduce(
-        (sum, date) => sum + (presenceByDate.get(date) ?? 0),
-        0
-      );
+      // Attendance-based remarks must use only days with actual statuses.
+      // Incomplete June–September entries must not lower a learner's rate.
+      const totalPresence = [...presenceByDate.values()].reduce((sum, value) => sum + value, 0);
+      const recordedDays = presenceByDate.size;
 
       return {
         termAverage,
         gradeComplete,
         subjectCount: mainRows.length,
-        attendanceRate: percent(totalPresence, termClassDates.length),
-        classDays: termClassDates.length,
+        attendanceRate: percent(totalPresence, recordedDays),
+        classDays: recordedDays,
         lowestSubject: lowest?.label ?? null,
         lowestGrade: lowest?.grade ?? null,
         subjectGrades: gradesForTerm,
@@ -1041,50 +1038,16 @@ export async function GET(request: NextRequest) {
     }
 
     function buildAttendance(studentId: string) {
-      const classDaysByMonth = Object.fromEntries(
-        MONTHS.map((item) => [item.key, 0])
-      ) as Record<string, number>;
-      const presentByMonth = Object.fromEntries(
-        MONTHS.map((item) => [item.key, 0])
-      ) as Record<string, number>;
-
-      for (const date of classDates) {
-        const key = monthKey(date);
-        if (key) classDaysByMonth[key] += 1;
-      }
-
-      for (const row of studentAttendance ?? []) {
-        if (String(row.student_id) !== studentId) continue;
-        const key = monthKey(String(row.attendance_date ?? ""));
-        if (!key) continue;
-        presentByMonth[key] += attendancePresence(row.status);
-      }
-
-      const absentByMonth = Object.fromEntries(
-        MONTHS.map((item) => [
-          item.key,
-          Math.max(0, classDaysByMonth[item.key] - presentByMonth[item.key]),
-        ])
-      ) as Record<string, number>;
-
-      const totalClassDays = Object.values(classDaysByMonth).reduce(
-        (sum, value) => sum + value,
-        0
-      );
-      const totalPresent = Object.values(presentByMonth).reduce(
-        (sum, value) => sum + value,
-        0
-      );
-
-      return {
-        months: MONTHS.map((item) => item.key),
-        class_days: classDaysByMonth,
-        days_present: presentByMonth,
-        days_absent: absentByMonth,
-        total_class_days: totalClassDays,
-        total_present: totalPresent,
-        total_absent: Math.max(0, totalClassDays - totalPresent),
-      };
+      return sf9AttendanceSummary({
+        classDates,
+        studentEntries: (studentAttendance ?? [])
+          .filter((row: JsonRow) => String(row.student_id) === studentId)
+          .map((row: JsonRow) => ({
+            attendance_date: String(row.attendance_date ?? ""),
+            status: String(row.status ?? ""),
+          })),
+        startYear: Number(activeYear.start_year),
+      });
     }
 
     const cards = requestedStudentIds.map((studentId) => {
