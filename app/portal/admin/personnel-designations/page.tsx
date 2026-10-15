@@ -52,7 +52,17 @@ export default function PersonnelDesignationsPage() {
     request("list_designations")
       .then((response) => {
         if (!alive) return;
-        setPeople(response.personnel ?? []);
+        const directory = (response.personnel ?? []) as Personnel[];
+        setPeople(directory);
+        // Show the editor immediately, rather than leaving the right panel empty.
+        // HR profile shortcuts can deep-link directly to a particular employee.
+        const params = new URLSearchParams(window.location.search);
+        const requestedId = params.get("personnel");
+        const requestedType = params.get("type");
+        const requested = directory.find((p) => p.id === requestedId &&
+          (!requestedType || p.owner_type === requestedType));
+        const initial = requested ?? directory[0];
+        if (initial) setSelectedId((current) => current || `${initial.owner_type}:${initial.id}`);
       })
       .catch((err) => { if (alive) setError(String(err.message ?? "Unable to load personnel.")); })
       .finally(() => { if (alive) setLoading(false); });
@@ -118,7 +128,7 @@ export default function PersonnelDesignationsPage() {
         <header className={styles.header}>
           <span>HUMAN RESOURCES</span>
           <h1>Personnel Designations</h1>
-          <p>Manage teaching, non-teaching, and administrative positions in one place. A promotion keeps the existing account and historical records.</p>
+          <p>Select an employee, choose the New Designation, enter the promotion or appointment details, and click Update Designation. Existing accounts and records are retained.</p>
         </header>
         {error && <div className={styles.error} role="alert">{error}</div>}
         {message && <div className={styles.success} role="status"><CheckCircle2 size={17} />{message}</div>}
@@ -159,6 +169,7 @@ export default function PersonnelDesignationsPage() {
                   <p><strong>Current Position:</strong> {person.position || "Not Recorded"}</p>
                 </div>
                 <div className={styles.form}>
+                  <div className={styles.formIntro}><BriefcaseBusiness size={20}/><div><h3>Change Designation</h3><p>Update this employee’s official position here.</p></div></div>
                   <label>New Designation
                     <select value={position} onChange={(e) => setPosition(e.target.value)}>
                       <option value="">Select Position</option>
@@ -168,10 +179,10 @@ export default function PersonnelDesignationsPage() {
                   <label>Promotion / Appointment Details
                     <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} maxLength={500} placeholder="Example: Promoted to Master Teacher I effective October 15, 2026; appointment reference..." />
                   </label>
-                  <button className={styles.save} type="button" disabled={saving || !position || !reason.trim() || position === String(person.position ?? "").toUpperCase()} onClick={() => void save()}>
+                  <button className={styles.save} type="button" disabled={saving || !position || reason.trim().length < 3 || position === String(person.position ?? "").toUpperCase()} onClick={() => void save()}>
                     <Save size={17} />{saving ? "Saving..." : "Update Designation"}
                   </button>
-                  <p className={styles.note}>Changing a position does not automatically reclassify a teaching/non-teaching record, change account permissions, or remove Grade Level Head responsibilities. Review those separately for cross-category promotions.</p>
+                  <p className={styles.note}>To enable the button, choose a different position and provide the appointment or promotion details. Changing a position does not automatically reclassify a teaching/non-teaching record, change account permissions, or remove Grade Level Head responsibilities. Review those separately for cross-category promotions.</p>
                 </div>
                 <div className={styles.history}>
                   <h3><History size={18} />Designation History</h3>
