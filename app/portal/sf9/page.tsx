@@ -1269,7 +1269,7 @@ export default function Sf9Page() {
                   <span>
                     Quezon Term 1 uses the adviser's exact assigned Excel remarks.
                     Quezon Term 2 and other sections receive grade- and attendance-based
-                    Filipino suggestions after grades are published. Review before printing.
+                    Filipino suggestions after grades are published. Review or edit them before printing.
                   </span>
                 </div>
               </div>
