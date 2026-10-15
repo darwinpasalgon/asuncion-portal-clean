@@ -85,6 +85,7 @@ function route(allowed = true) {
       }),
     },
     '@/lib/supabase-config':{SUPABASE_URL:'https://test.invalid',SUPABASE_PUBLISHABLE_KEY:'test'},
+    '@/lib/schedule-hours':loadTS('lib/schedule-hours.ts'),
     fetch:async (url,options={})=> {
       const u = new URL(url);
       const response=(body,status=200)=>new Response(JSON.stringify(body),{status});
