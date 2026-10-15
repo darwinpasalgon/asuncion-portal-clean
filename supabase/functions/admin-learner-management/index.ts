@@ -328,63 +328,46 @@ Deno.serve(async (req) => {
   if (action === "update_status") {
     const enrollmentId = clean(body.enrollment_id);
     const requestedStatus = clean(body.learner_status) as LearnerStatus;
+    const expectedStatus = clean(body.expected_status) || "active";
     const note = clean(body.note);
+    const dateText = clean(body.effective_date);
 
-    if (!enrollmentId || !learnerStatuses.has(requestedStatus)) {
-      return json({ error: "Choose a valid learner status." }, 400);
+    if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(enrollmentId) ||
+        !learnerStatuses.has(requestedStatus)) {
+      return json({ error: "Choose a valid learner enrollment and status." }, 400);
     }
-
-    const { data: enrollment, error: enrollmentError } = await admin
-      .from("student_enrollments")
-      .select(
-        "id,student_id,school_year_id,grade_level,section_id,tve_major,enrollment_status,learner_status"
-      )
-      .eq("id", enrollmentId)
-      .maybeSingle();
-
-    if (enrollmentError || !enrollment) {
-      return json({ error: "Enrollment record not found." }, 404);
+    if (dateText && (!/^\d{4}-\d{2}-\d{2}$/.test(dateText) ||
+        Number.isNaN(Date.parse(dateText)))) {
+      return json({ error: "Choose a valid effective date." }, 400);
     }
+    if (note.length > 1000) return json({ error: "Status remarks are too long." }, 400);
 
-    if (requestedStatus === "graduated" && Number(enrollment.grade_level) !== 12) {
-      return json({ error: "Only Grade 12 learners can be marked Graduated." }, 400);
-    }
-
-    const nextEnrollmentStatus = enrollmentStatusFor(requestedStatus);
-    const changedAt = new Date().toISOString();
-
-    const { error: updateError } = await admin
-      .from("student_enrollments")
-      .update({
-        enrollment_status: nextEnrollmentStatus,
-        learner_status: requestedStatus,
-        status_note: note || null,
-        status_changed_at: changedAt,
-        status_changed_by: callerId,
-        updated_at: changedAt,
-      })
-      .eq("id", enrollmentId);
-
-    if (updateError) {
-      return json({ error: "Unable to update learner status.", detail: updateError.message }, 500);
-    }
-
-    await admin.from("learner_enrollment_events").insert({
-      student_id: enrollment.student_id,
-      school_year_id: enrollment.school_year_id,
-      enrollment_id: enrollment.id,
-      event_type: eventTypeFor(requestedStatus),
-      from_grade_level: enrollment.grade_level,
-      from_section_id: enrollment.section_id,
-      to_grade_level: enrollment.grade_level,
-      to_section_id: enrollment.section_id,
-      from_status: enrollment.learner_status ?? "active",
-      to_status: requestedStatus,
-      note: note || null,
-      created_by: callerId,
+    const { data, error } = await admin.rpc("admin_change_learner_enrollment_status", {
+      p_enrollment_id: enrollmentId,
+      p_status: requestedStatus,
+      p_note: note,
+      p_effective_date: dateText || null,
+      p_actor_id: callerId,
+      p_expected_status: expectedStatus,
     });
+    if (error || !data) {
+      const detail = String(error?.message ?? "");
+      if (/changed by another administrator|already has this status/i.test(detail)) {
+        return json({ error: detail }, 409);
+      }
+      if (/valid|future|Grade 12|longer|not found/i.test(detail)) {
+        return json({ error: detail }, 400);
+      }
+      return json({ error: "Unable to update learner status. The enrollment and history were left unchanged.", detail }, 500);
+    }
 
-    return json({ ok: true });
+    return json({
+      ok: true,
+      enrollment: data,
+      message: requestedStatus === "transferred_out"
+        ? "Learner transferred out. Removed from the active class and attendance rosters; historical records and account retained."
+        : "Learner enrollment status updated.",
+    });
   }
 
   if (action === "move_section") {
