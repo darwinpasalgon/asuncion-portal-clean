@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import styles from "./schedules.module.css";
 import Grade12SchedulesInline from "./grade12-inline";
+import { SCHOOL_DAY_START, schoolDayEnd, schoolHoursError, validSchoolTimeRange } from "@/lib/schedule-hours";
 
 type Year = { id: string; name: string };
 type Assignment = {
@@ -121,19 +122,6 @@ const DAYS = [
 ];
 
 const WEEKDAYS = DAYS.slice(0, 5);
-const SCHOOL_DAY_START = "07:30";
-const SCHOOL_DAY_END = "16:30";
-
-function validSchoolTimeRange(startTime: string, endTime: string) {
-  return (
-    Boolean(startTime) &&
-    Boolean(endTime) &&
-    startTime >= SCHOOL_DAY_START &&
-    endTime <= SCHOOL_DAY_END &&
-    startTime < endTime
-  );
-}
-
 function grade7TveMajorLabel(code: Grade7TveRotation["major_code"]) {
   switch (code) {
     case "AGRI-CROP": return "Agriculture Crop Production";
@@ -558,8 +546,8 @@ export default function ClassSchedulesPage() {
       setError("Select at least one day for this subject.");
       return;
     }
-    if (!validSchoolTimeRange(draft.startTime, draft.endTime)) {
-      setError("Class schedules must be between 7:30 AM and 4:30 PM.");
+    if (!validSchoolTimeRange(draft.startTime, draft.endTime, assignment.grade_level)) {
+      setError(schoolHoursError(assignment.grade_level));
       return;
     }
 
@@ -737,8 +725,8 @@ export default function ClassSchedulesPage() {
     const assignment = lookup.assignmentsById.get(editAssignment);
     const periods = editId ? [{ id: editId, day_of_week: Number(editDay), start_time: editStart, end_time: editEnd, room: editRoom.trim().replace(/\s+/g, " ") || null }] :
       selectedDays.map((day) => ({ day_of_week: day, start_time: dayDrafts[day]?.startTime ?? "", end_time: dayDrafts[day]?.endTime ?? "", room: dayDrafts[day]?.room.trim().replace(/\s+/g, " ") || null }));
-    if (periods.some((period) => !validSchoolTimeRange(period.start_time, period.end_time))) {
-      setError("Class schedules must be between 7:30 AM and 4:30 PM.");
+    if (periods.some((period) => !validSchoolTimeRange(period.start_time, period.end_time, assignment?.grade_level))) {
+      setError(schoolHoursError(assignment?.grade_level));
       return;
     }
     if (assignment && checkLocalConflicts(assignment, periods)) return;
@@ -1281,7 +1269,7 @@ export default function ClassSchedulesPage() {
                       <input
                         type="time"
                         min={SCHOOL_DAY_START}
-                        max={SCHOOL_DAY_END}
+                        max={schoolDayEnd(assignment.grade_level)}
                         value={draft.startTime}
                         onChange={(event) =>
                           updateQuickDraft(
@@ -1298,7 +1286,7 @@ export default function ClassSchedulesPage() {
                       <input
                         type="time"
                         min={SCHOOL_DAY_START}
-                        max={SCHOOL_DAY_END}
+                        max={schoolDayEnd(assignment.grade_level)}
                         value={draft.endTime}
                         onChange={(event) =>
                           updateQuickDraft(
@@ -1467,7 +1455,7 @@ export default function ClassSchedulesPage() {
                       required
                       type="time"
                       min={SCHOOL_DAY_START}
-                      max={SCHOOL_DAY_END}
+                      max={schoolDayEnd(lookup.assignmentsById.get(editAssignment)?.grade_level)}
                       value={editStart}
                       onChange={(event) => setEditStart(event.target.value)}
                     />
@@ -1479,7 +1467,7 @@ export default function ClassSchedulesPage() {
                       required
                       type="time"
                       min={SCHOOL_DAY_START}
-                      max={SCHOOL_DAY_END}
+                      max={schoolDayEnd(lookup.assignmentsById.get(editAssignment)?.grade_level)}
                       value={editEnd}
                       onChange={(event) => setEditEnd(event.target.value)}
                     />
@@ -1574,7 +1562,7 @@ export default function ClassSchedulesPage() {
                               required
                               type="time"
                               min={SCHOOL_DAY_START}
-                              max={SCHOOL_DAY_END}
+                              max={schoolDayEnd(lookup.assignmentsById.get(editAssignment)?.grade_level)}
                               aria-label={`${dayInfo?.label} start time`}
                               value={draft.startTime}
                               onChange={(event) =>
@@ -1589,7 +1577,7 @@ export default function ClassSchedulesPage() {
                               required
                               type="time"
                               min={SCHOOL_DAY_START}
-                              max={SCHOOL_DAY_END}
+                              max={schoolDayEnd(lookup.assignmentsById.get(editAssignment)?.grade_level)}
                               aria-label={`${dayInfo?.label} end time`}
                               value={draft.endTime}
                               onChange={(event) =>
