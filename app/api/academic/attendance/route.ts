@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
+import { attendanceMonthRange, attendanceStartDate } from "@/lib/attendance-calendar";
 
 type AdviserRow = {
   id: string;
@@ -119,7 +120,7 @@ async function identity(request: NextRequest) {
 
 async function activeYear(token: string) {
   const rows = await getRows(
-    "school_years?is_active=eq.true&select=id,name&limit=1",
+    "school_years?is_active=eq.true&select=id,name,start_year,end_year&limit=1",
     token
   );
   return rows?.[0] ?? null;
@@ -284,7 +285,20 @@ export async function GET(request: NextRequest) {
 
       const filter = sectionFilter(sectionIds);
       const today = manilaToday();
-      const monthStart = `${today.slice(0, 7)}-01`;
+      const schoolStart = attendanceStartDate(year);
+      const selectedDate = validDate(date) ? date : today;
+      if (selectedDate < schoolStart || selectedDate > today) {
+        return NextResponse.json({
+          error: `Choose a date between ${schoolStart} (first school day) and ${today}.`,
+        }, { status: 400 });
+      }
+      const pendingMonth = selectedDate.slice(0, 7);
+      const pendingRange = attendanceMonthRange(pendingMonth, schoolStart, today);
+      if (!pendingRange) {
+        return NextResponse.json({ error: "Selected attendance month is outside the school year." }, { status: 400 });
+      }
+      const monthStart = pendingRange.start;
+      const monthEnd = pendingRange.end;
 
       const [
         sections,
@@ -344,7 +358,7 @@ export async function GET(request: NextRequest) {
           ? getRows(
               `daily_attendance?school_year_id=eq.${encodeURIComponent(
                 year.id
-              )}&attendance_date=gte.${monthStart}&attendance_date=lte.${today}&section_id=in.${encodeURIComponent(
+              )}&attendance_date=gte.${monthStart}&attendance_date=lte.${monthEnd}&section_id=in.${encodeURIComponent(
                 filter
               )}&select=student_id,section_id,attendance_date`,
               token
@@ -354,7 +368,7 @@ export async function GET(request: NextRequest) {
           ? getRows(
               `attendance_day_exclusions?school_year_id=eq.${encodeURIComponent(
                 year.id
-              )}&attendance_date=gte.${monthStart}&attendance_date=lte.${today}&section_id=in.${encodeURIComponent(
+              )}&attendance_date=gte.${monthStart}&attendance_date=lte.${monthEnd}&section_id=in.${encodeURIComponent(
                 filter
               )}&select=section_id,attendance_date,exclusion_type,reason`,
               token
@@ -461,7 +475,7 @@ export async function GET(request: NextRequest) {
         const section = sectionNameMap.get(sectionId);
         if (!expected || !section) continue;
 
-        for (const attendanceDate of dateRange(monthStart, today)) {
+        for (const attendanceDate of dateRange(monthStart, monthEnd)) {
           if (!isWeekday(attendanceDate)) continue;
           const key = `${sectionId}|${attendanceDate}`;
           if (excludedKeys.has(key)) continue;
@@ -500,7 +514,10 @@ export async function GET(request: NextRequest) {
         date: validDate(date) ? date : null,
         isWeekday: validDate(date) ? isWeekday(date) : null,
         today,
-        attendanceMonth: today.slice(0, 7),
+        attendanceMonth: pendingMonth,
+        attendanceStart: schoolStart,
+        pendingMonthStart: monthStart,
+        pendingMonthEnd: monthEnd,
       });
     }
 
@@ -885,6 +902,14 @@ export async function POST(request: NextRequest) {
   if (attendanceDate > manilaToday()) {
     return NextResponse.json(
       { error: "Future attendance dates cannot be recorded yet." },
+      { status: 400 }
+    );
+  }
+
+  const schoolStart = attendanceStartDate(year);
+  if (attendanceDate < schoolStart) {
+    return NextResponse.json(
+      { error: `Attendance for this school year begins on ${schoolStart}.` },
       { status: 400 }
     );
   }
