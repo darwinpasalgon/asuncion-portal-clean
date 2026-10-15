@@ -25,7 +25,8 @@ test("SF9 automatic remarks use published grades and recorded attendance", () =>
   assert.match(route, /status=eq\.published/);
   assert.match(route, /published_at/);
   assert.match(route, /buildTermRemarkSignal/);
-  assert.match(route, /attendancePresence/);
+  assert.match(route, /sf9AttendanceValue/);
+  assert.match(route, /recordedDays = presenceByDate.size/);
   assert.match(route, /generateSf9Remark/);
   assert.match(route, /sf9_teacher_remarks/);
   assert.match(route, /comments: remarkDetails\.map\(\(item\) => item\.text\)/);
