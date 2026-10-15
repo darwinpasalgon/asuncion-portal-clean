@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRightLeft,
+  LogOut,
   CheckCircle2,
   ChevronRight,
   Download,
@@ -124,6 +125,7 @@ type StatusTarget = {
   enrollment: Enrollment;
   status: LearnerStatus;
   note: string;
+  effectiveDate: string;
 };
 
 type MoveTarget = {
@@ -234,13 +236,14 @@ export default function LearnerManagementPage() {
   const [selectedYearId, setSelectedYearId] = useState("");
   const [gradeFilter, setGradeFilter] = useState("");
   const [sectionFilter, setSectionFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("currently_enrolled");
   const [missingFilter, setMissingFilter] = useState<"all"|"required"|"tve_major"|"shs_track_strand">("all");
   const [requestedStudentId, setRequestedStudentId] = useState("");
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [detailLearner, setDetailLearner] = useState<Learner | null>(null);
   const [statusTarget, setStatusTarget] = useState<StatusTarget | null>(null);
+  const [statusError, setStatusError] = useState("");
   const [moveTarget, setMoveTarget] = useState<MoveTarget | null>(null);
   const [transitionOpen, setTransitionOpen] = useState(false);
   const [transitionType, setTransitionType] = useState<"promoted" | "retained" | "graduated">("promoted");
@@ -339,8 +342,10 @@ export default function LearnerManagementPage() {
       if (gradeFilter && enrollment.grade_level !== Number(gradeFilter)) return [];
       if (sectionFilter && enrollment.section_id !== sectionFilter) return [];
       if (
-        statusFilter !== "all" &&
-        (enrollment.learner_status ?? "active") !== statusFilter
+        (statusFilter === "currently_enrolled"
+          ? enrollment.enrollment_status !== "active"
+          : statusFilter !== "all" &&
+            (enrollment.learner_status ?? "active") !== statusFilter)
       ) {
         return [];
       }
@@ -597,20 +602,45 @@ export default function LearnerManagementPage() {
     }
   }
 
+  function openStatus(learner: Learner, enrollment: Enrollment, status: LearnerStatus) {
+    setStatusError("");
+    setStatusTarget({
+      learner,
+      enrollment,
+      status,
+      note: status === "transferred_out" ? "" : enrollment.status_note ?? "",
+      effectiveDate: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10),
+    });
+  }
+
   async function saveStatus() {
-    if (!statusTarget) return;
+    if (!statusTarget || working) return;
+    setStatusError("");
+    const previous = statusTarget.enrollment.learner_status ?? "active";
+    if (statusTarget.status === previous) {
+      setStatusError("Choose a different status before saving.");
+      return;
+    }
     try {
-      await postAction({
+      const result = await postAction({
         action: "update_status",
         enrollment_id: statusTarget.enrollment.id,
         learner_status: statusTarget.status,
+        expected_status: previous,
         note: statusTarget.note,
+        effective_date: statusTarget.effectiveDate,
       });
+      const transferredOut = statusTarget.status === "transferred_out";
       setStatusTarget(null);
-      setSuccess("Learner status updated.");
+      if (transferredOut) setStatusFilter("currently_enrolled");
       await loadData(true);
+      setSuccess(result.message ?? (transferredOut
+        ? "Learner transferred out. Removed from active class roster. Find the record under the Transferred Out filter."
+        : "Learner status updated."));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to update learner status.");
+      const message = err instanceof Error ? err.message : "Unable to update learner status.";
+      setStatusError(message);
+      setError(message);
     }
   }
 
@@ -856,6 +886,7 @@ export default function LearnerManagementPage() {
               onChange={(event) => setStatusFilter(event.target.value)}
               aria-label="Learner Status"
             >
+              <option value="currently_enrolled">Current Class List</option>
               <option value="all">All Statuses</option>
               {statusOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -1079,17 +1110,20 @@ export default function LearnerManagementPage() {
                             <UserRound size={14} />View
                           </button>
                           <button
-                            onClick={() =>
-                              setStatusTarget({
-                                learner,
-                                enrollment,
-                                status: enrollment.learner_status ?? "active",
-                                note: enrollment.status_note ?? "",
-                              })
-                            }
+                            onClick={() => openStatus(learner, enrollment, enrollment.learner_status ?? "active")}
                           >
                             <Edit3 size={14} />Status
                           </button>
+                          {enrollment.enrollment_status === "active" && (
+                            <button
+                              type="button"
+                              className={styles.transferButton}
+                              onClick={() => openStatus(learner, enrollment, "transferred_out")}
+                              title="Remove from active class roster without deleting learner records"
+                            >
+                              <LogOut size={14} />Transfer Out
+                            </button>
+                          )}
                           <button
                             onClick={() =>
                               setMoveTarget({
@@ -1242,7 +1276,7 @@ export default function LearnerManagementPage() {
           <section className={styles.modal} role="dialog" aria-modal="true">
             <div className={styles.modalHead}>
               <div>
-                <span>LEARNER STATUS</span>
+                <span>{statusTarget.status === "transferred_out" ? "TRANSFER OUT LEARNER" : "LEARNER STATUS"}</span>
                 <h2>{statusTarget.learner.full_name}</h2>
                 <p>{selectedYear?.name} · {academicLevelLabel(statusTarget.enrollment.grade_level)} · {statusTarget.enrollment.section}</p>
               </div>
@@ -1279,14 +1313,25 @@ export default function LearnerManagementPage() {
               />
             </label>
 
-            <p className={styles.helpText}>
-              This changes the learner&apos;s academic enrollment status only. It does not delete or suspend the learner&apos;s portal account.
+            {(statusTarget.status === "transferred_out" || statusTarget.status === "dropped") && (
+              <label className={styles.field}>
+                <span>Effective Date</span>
+                <input type="date" value={statusTarget.effectiveDate}
+                  max={new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0,10)}
+                  onChange={(event) => setStatusTarget({ ...statusTarget, effectiveDate: event.target.value })} />
+              </label>
+            )}
+            <p className={statusTarget.status === "transferred_out" ? styles.inlineWarning : styles.helpText}>
+              {statusTarget.status === "transferred_out"
+                ? "Transfer Out removes this learner from the CURRENT active class and attendance rosters. Past attendance, grades, enrollment history, school forms and portal account are kept. Find the learner under Transferred Out."
+                : "Only the learner's enrollment status changes. The portal account and historical school records are retained."}
             </p>
+            {statusError && <div className={styles.error} role="alert">{statusError}</div>}
 
             <div className={styles.modalActions}>
               <button type="button" onClick={() => setStatusTarget(null)}>Cancel</button>
               <button className={styles.primary} type="button" onClick={() => void saveStatus()} disabled={working}>
-                {working ? "Saving…" : "Save status"}
+                {working ? "Saving…" : statusTarget.status === "transferred_out" ? "Confirm Transfer Out" : "Save Status"}
               </button>
             </div>
           </section>
