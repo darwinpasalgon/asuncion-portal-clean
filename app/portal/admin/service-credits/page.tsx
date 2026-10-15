@@ -325,7 +325,7 @@ export default function AdminServiceCreditsPage() {
                             {item.service_credits_used > 0 && <b className={styles.debit}>-{formatDays(item.service_credits_used)}</b>}
                             {item.transaction_kind === "opening_balance" && <b className={styles.opening}>Opening</b>}
                           </div>
-                          <div className={styles.rowBalance}><span>{tab === "wellness_leave" ? `${item.posting_date.slice(0,4)} Remaining` : "Balance"}</span><strong>{formatDays(tab === "wellness_leave" ? wellnessRunningBalances.get(item.id) ?? 5 : item.balance_after)}</strong></div>
+                          <div className={styles.rowBalance}><span>{item.particulars === "Balance Forwarded to Division Office" ? "Balance Forwarded" : tab === "wellness_leave" ? `${item.posting_date.slice(0,4)} Remaining` : "Balance"}</span><strong>{item.particulars === "Balance Forwarded to Division Office" ? formatDays(item.previous_balance) + " days" : formatDays(tab === "wellness_leave" ? wellnessRunningBalances.get(item.id) ?? 5 : item.balance_after)}</strong></div>
                         </article>
                       ))}
                     </div>
