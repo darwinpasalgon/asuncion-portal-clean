@@ -366,6 +366,9 @@ Deno.serve(async (req) => {
     const particulars = String(body.particulars ?? "").trim();
     const remarks = String(body.remarks ?? "").trim();
     if (!particulars) return json({ error: "Particulars are required." }, 400);
+    if (creditType === "service_credit" && kind === "debit" && /wellness/i.test(particulars)) {
+      return json({ error: "Wellness Leave must be deducted using the separate Wellness Leave tab, not Service Credits." }, 400);
+    }
     if (particulars.length > 1000 || remarks.length > 1000) {
       return json({ error: "Particulars and Remarks must each be 1,000 characters or fewer." }, 400);
     }
