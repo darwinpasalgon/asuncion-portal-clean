@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 
   const id = String(body.id ?? "");
   const subject = String(body.subject_label ?? "").trim();
-  const teachers = Array.isArray(body.instructor_ids) ? Array.from(new Set(body.instructor_ids.map(String))) : [];
+  const teachers: string[] = Array.isArray(body.instructor_ids) ? Array.from(new Set<string>((body.instructor_ids as unknown[]).map((value) => String(value)))) : [];
   const start = String(body.start_time ?? "").slice(0, 5);
   const end = String(body.end_time ?? "").slice(0, 5);
   if (!/^[0-9a-f-]{36}$/i.test(id) || !subject || subject.length > 160 ||
