@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   CalendarDays,
@@ -32,6 +32,9 @@ export default function Sf2Page() {
   const [report, setReport] = useState<Sf2ReportData | null>(null);
   const [loadingBase, setLoadingBase] = useState(true);
   const [loadingReport, setLoadingReport] = useState(false);
+  const [printing, setPrinting] = useState(false);
+  const reportRequestId = useRef(0);
+  const [reportKey, setReportKey] = useState("");
   const [error, setError] = useState("");
 
   async function loadBase() {
@@ -59,30 +62,46 @@ export default function Sf2Page() {
   }
 
   async function loadReport(targetSection = sectionId, targetMonth = month) {
-    if (!targetSection || !targetMonth) return;
+    if (!targetSection || !targetMonth) return false;
+    const requestId = ++reportRequestId.current;
     setLoadingReport(true);
+    setReport(null);
+    setReportKey("");
     setError("");
     try {
-      const params = new URLSearchParams({
-        sectionId: targetSection,
-        month: targetMonth,
-      });
-      const response = await fetch(`/api/academic/sf2?${params.toString()}`, {
-        cache: "no-store",
-      });
+      const params = new URLSearchParams({sectionId: targetSection, month: targetMonth});
+      const response = await fetch(`/api/academic/sf2?${params.toString()}`, {cache:"no-store"});
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setReport(null);
+      if (requestId !== reportRequestId.current) return false;
+      if (!response.ok || !result.report) {
         setError(result.error ?? "Unable to generate SF2.");
-        return;
+        return false;
       }
-      setReport((result.report ?? null) as Sf2ReportData | null);
+      setReport(result.report as Sf2ReportData);
+      setReportKey(targetSection + "|" + targetMonth);
+      return true;
     } catch {
-      setReport(null);
-      setError("Unable to reach the SF2 service.");
+      if (requestId === reportRequestId.current) setError("Unable to reach the SF2 service.");
+      return false;
     } finally {
-      setLoadingReport(false);
+      if (requestId === reportRequestId.current) setLoadingReport(false);
     }
+  }
+
+  async function printSf2() {
+    if (printing || !sectionId || !month) return;
+    setPrinting(true);
+    try {
+      // Always fetch the latest monthly SF2 before printing.
+      if (!await loadReport(sectionId, month)) return;
+      await new Promise<void>(resolve =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      );
+      if (document.fonts?.ready) await document.fonts.ready;
+      const images = Array.from(document.querySelectorAll<HTMLImageElement>(".sf2-print-document img"));
+      await Promise.all(images.map(img => img.decode?.().catch(() => undefined)));
+      window.print();
+    } finally { setPrinting(false); }
   }
 
   useEffect(() => {
@@ -96,6 +115,7 @@ export default function Sf2Page() {
   }, [loadingBase, sectionId, month]);
 
   const minMonth = activeYear ? `${activeYear.start_year}-06` : "";
+  const previewIsCurrent = Boolean(report && reportKey === sectionId + "|" + month);
   const maxMonth = useMemo(() => {
     if (!activeYear) return "";
     const now = new Date();
@@ -115,11 +135,11 @@ export default function Sf2Page() {
           <button
             type="button"
             className={styles.printButton}
-            disabled={!report || loadingReport}
-            onClick={() => window.print()}
+            disabled={loadingBase || printing || !sectionId || !month}
+            onClick={() => void printSf2()}
           >
             <Printer size={16} />
-            Print SF2
+            {printing ? "Preparing Print…" : "Print SF2"}
           </button>
         </div>
 
@@ -182,7 +202,7 @@ export default function Sf2Page() {
           </button>
         </section>
 
-        {report && !report.completeness.complete && (
+        {previewIsCurrent && report && !report.completeness.complete && (
           <div className={styles.warning}>
             <strong>Attendance is not yet complete for {monthName(report.month)}.</strong>{" "}
             {report.completeness.missing_entries} learner attendance entr
@@ -193,7 +213,7 @@ export default function Sf2Page() {
           </div>
         )}
 
-        {report && report.completeness.complete && (
+        {previewIsCurrent && report && report.completeness.complete && (
           <div className={styles.notice}>
             <FileSpreadsheet size={15} style={{ verticalAlign: "middle", marginRight: 7 }} />
             Monthly attendance is complete. SF2 is ready for official printing.
@@ -203,11 +223,11 @@ export default function Sf2Page() {
         <div className={`${styles.previewFrame} ${styles.printScope}`}>
           {loadingBase || loadingReport ? (
             <div className={styles.empty}>Generating the monthly SF2 report…</div>
-          ) : report ? (
+          ) : previewIsCurrent && report ? (
             <Sf2PrintForm report={report} />
           ) : (
             <div className={styles.empty}>
-              Select a section and month to generate School Form 2.
+              Select a section and month to preview School Form 2. Print SF2 also generates the latest report automatically.
             </div>
           )}
         </div>
