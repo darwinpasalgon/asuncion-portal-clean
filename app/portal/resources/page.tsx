@@ -143,6 +143,22 @@ export default function ResourcesPage(){
     return true;
   });
 
+  const resourcePostingStatus=useMemo(()=>{
+    if(gradeLevelHead===null)return [];
+    const gradeAssignments=resourceAssignments.filter(a=>a.grade_level===gradeLevelHead);
+    const postedIds=new Set(resources.filter(r=>r.status==="published"&&r.resource_scope==="class"&&r.teacher_assignment_id).map(r=>r.teacher_assignment_id));
+    const grouped=new Map<string,{name:string;total:number;posted:number}>();
+    for(const a of gradeAssignments){
+      const subject=subjectMap.get(a.subject_id);
+      if(!subject)continue;
+      const row=grouped.get(subject.id)??{name:subject.name,total:0,posted:0};
+      row.total++;
+      if(postedIds.has(a.id))row.posted++;
+      grouped.set(subject.id,row);
+    }
+    return [...grouped.values()].sort((a,b)=>a.name.localeCompare(b.name));
+  },[gradeLevelHead,resourceAssignments,resources,subjectMap]);
+
   async function submit(event:FormEvent<HTMLFormElement>){
     event.preventDefault();
     const form=event.currentTarget;
@@ -282,6 +298,19 @@ export default function ResourcesPage(){
           <button type="submit" disabled={working==="create"||(profile?.role==="teacher"&&assignments.length===0)}><Send size={16}/>{working==="create"?"Posting…":"Post Resource"}</button>
         </div>
       </form>
+    </section>}
+
+    {gradeLevelHead!==null&&<section className={styles.library}>
+      <div className={styles.libraryHead}>
+        <div><h2>Grade {gradeLevelHead} Subject Posting Status</h2><p>Published class resources by subject. A class counts as covered when at least one resource is published for its teaching assignment.</p></div>
+      </div>
+      <div className={styles.grid}>
+        {resourcePostingStatus.map(item=><article className={styles.card} key={item.name}>
+          <h3>{item.name}</h3>
+          <p>{item.posted} of {item.total} assigned class entries have posted resources.</p>
+          <strong>{item.total>0&&item.posted===item.total?"All assigned classes covered":item.posted===0?"No resources posted yet":"Some classes have no posted resources"}</strong>
+        </article>)}
+      </div>
     </section>}
 
     <section className={styles.library}>
