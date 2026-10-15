@@ -83,7 +83,30 @@ Deno.serve(async (req) => {
       .order("ledger_sequence", { ascending: false })
       .limit(1000);
     if (error) throw new Error("Unable to load Service Credits transactions.");
-    return data ?? [];
+    const items = data ?? [];
+    const wellnessIds = items
+      .filter((row) => row.credit_type === "wellness_leave")
+      .map((row) => String(row.id));
+    if (!wellnessIds.length) return items;
+    const { data: corrections, error: correctionError } = await admin
+      .from("service_credit_wellness_reconciliations")
+      .select("transaction_id,corrected_used_days,original_used_days,source_balance_after,reason")
+      .in("transaction_id", wellnessIds);
+    if (correctionError) {
+      throw new Error("Unable to reconcile Wellness Leave Excel entries. Balances were not displayed.");
+    }
+    const byId = new Map((corrections ?? []).map((entry) => [String(entry.transaction_id), entry]));
+    return items.map((row) => {
+      const correction = byId.get(String(row.id));
+      return correction ? {
+        ...row,
+        service_credits_used: Number(correction.corrected_used_days),
+        wellness_original_used: Number(correction.original_used_days),
+        wellness_reconciled: true,
+        wellness_reconciliation_reason: correction.reason,
+        wellness_excel_balance: Number(correction.source_balance_after),
+      } : row;
+    });
   }
 
   async function loadNonTeachingLedger(personnelId: string) {
