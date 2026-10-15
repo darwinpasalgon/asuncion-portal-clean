@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getScopedAdminAccess } from "@/lib/admin-access";
+import { getScopedAdminAccess, isSuperAdministrator } from "@/lib/admin-access";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/lib/supabase-config";
 
 const YEAR = "2026–2027";
@@ -31,10 +31,11 @@ export async function GET(request: NextRequest) {
   const info = await context(request);
   if (!info) return NextResponse.json({ error: "Grade 12 schedule administration access required." }, { status: 403 });
   try {
-    const [years, sections, teachers] = await Promise.all([
+    const [years, sections, teachers, canProvision] = await Promise.all([
       query<{id:string;name:string}>("school_years?is_active=eq.true&select=id,name&limit=1", info.token),
       query<{id:string;name:string}>("sections?grade_level=eq.12&is_active=eq.true&select=id,name&order=name.asc", info.token),
-      query<{id:string;full_name:string}>("profiles?role=eq.teacher&account_status=eq.active&select=id,full_name&order=full_name.asc", info.token),
+      query<{id:string;full_name:string;email:string}>("profiles?role=eq.teacher&account_status=eq.active&select=id,full_name,email&order=full_name.asc", info.token),
+      isSuperAdministrator(info.token),
     ]);
     if (!years[0] || !years[0].name.includes("2026")) {
       return NextResponse.json({ error: "The uploaded Grade 12 programs belong to SY 2026–2027." }, { status: 409 });
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
       `grade12_term_periods?school_year_id=eq.${encodeURIComponent(years[0].id)}&select=${select}&order=term_no.asc,day_of_week.asc,start_time.asc&limit=1000`,
       info.token
     );
-    return NextResponse.json({ schoolYear: YEAR, sections, teachers, periods, readOnly: false });
+    return NextResponse.json({ schoolYear: YEAR, sections, teachers, periods, readOnly: false, canProvision });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Unable to load Grade 12 term schedules." }, { status: 500 });
   }
@@ -52,6 +53,45 @@ export async function POST(request: NextRequest) {
   const info = await context(request);
   if (!info) return NextResponse.json({ error: "Grade 12 schedule edit access required." }, { status: 403 });
   const body = await request.json().catch(() => null);
+  if (body?.action === "link_jane_bardon") {
+    if (!await isSuperAdministrator(info.token)) {
+      return NextResponse.json({ error: "Super Administrator permission required." }, { status: 403 });
+    }
+    const janeEmail = "jane.bardon.2026@temp.asuncion-nhs.invalid";
+    const [jane] = await query<{id:string;full_name:string;role:string}>(
+      `profiles?email=eq.${encodeURIComponent(janeEmail)}&role=eq.teacher&account_status=eq.active&select=id,full_name,role&limit=1`,
+      info.token
+    );
+    if (!jane || jane.full_name.trim().toUpperCase() !== "JANE BARDON") {
+      return NextResponse.json({ error: "Jane Bardon's teaching account has not been created. Use the Create Teacher Account action first." }, { status: 404 });
+    }
+    const [year] = await query<{id:string}>("school_years?is_active=eq.true&select=id&limit=1",info.token);
+    if (!year) return NextResponse.json({error:"Active school year not found."},{status:409});
+    const items = await query<Period>(
+      `grade12_term_periods?school_year_id=eq.${year.id}&term_no=eq.2&instructor_label=eq.JANE%20BARDON&select=${select}&limit=50`,
+      info.token
+    );
+    let linked = 0;
+    for (const item of items) {
+      if ((item.instructor_ids ?? []).includes(jane.id)) { linked++; continue; }
+      if ((item.instructor_ids ?? []).length) {
+        return NextResponse.json({error:"A Jane Bardon period is already assigned to a different teacher. Review manually."},{status:409});
+      }
+      const reasons = (item.review_reason??"").split(";").map(x=>x.trim())
+        .filter(x=>x && !/Instructor missing from portal teacher accounts/i.test(x));
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/grade12_term_periods?id=eq.${encodeURIComponent(item.id)}`,{
+        method:"PATCH",
+        headers:{...authHeaders(info.token),Prefer:"return=representation"},
+        body:JSON.stringify({instructor_ids:[jane.id],needs_review:reasons.length>0,review_reason:reasons.join("; ")||null}),
+        cache:"no-store",
+      });
+      if (!response.ok) {
+        return NextResponse.json({error:`Linked ${linked} of ${items.length} periods. Refresh and retry the remaining entries.`,linked},{status:409});
+      }
+      linked++;
+    }
+    return NextResponse.json({ok:true,linked,teacher_id:jane.id,message:`Jane Bardon linked to ${linked} Second Term Grade 12 periods.`});
+  }
   if (!body || body.action !== "update_period") return NextResponse.json({ error: "Invalid action." }, { status: 400 });
 
   const id = String(body.id ?? "");
