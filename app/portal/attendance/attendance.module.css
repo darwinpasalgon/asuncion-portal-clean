@@ -120,3 +120,14 @@
 }
 
 .monthSwitcher{display:flex;gap:18px;align-items:center;justify-content:space-between;padding:17px 19px;margin:15px 0;border:1px solid #c9e2d4;border-radius:13px;background:#f0f8f3}.monthSwitcher>div{display:grid;gap:6px}.monthSwitcher strong{color:#286849;font-size:.91rem}.monthSwitcher div>span{font-size:.77rem;color:#567c68;line-height:1.5}.monthSwitcher label{display:grid;gap:6px;min-width:200px;color:#456d56;font-size:.76rem;font-weight:800}.monthSwitcher select{min-height:42px;border:1px solid #afcfbc;border-radius:9px;background:white;color:#205239;padding:9px 10px;font:inherit}.monthSwitcher select:focus{outline:2px solid #67a885;outline-offset:2px}@media(max-width:650px){.monthSwitcher{flex-direction:column;align-items:stretch}.monthSwitcher label{min-width:0}}
+
+/* Individual corrections are available only on previously saved attendance dates. */
+.roster article{grid-template-columns:minmax(235px,1.2fr) minmax(150px,.9fr) minmax(165px,1fr) auto}
+.saveLearner{min-height:39px;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  border:1px solid #b9d9c9;border-radius:9px;background:#eff9f3;color:#276c4b;
+  padding:8px 11px;font-size:.71rem;font-weight:800;white-space:nowrap;cursor:pointer}
+.saveLearner:disabled{opacity:.43;cursor:not-allowed}
+.saveLearner:not(:disabled):hover{background:#dff1e5}
+.saveLearner:focus-visible{outline:2px solid #317e59;outline-offset:2px}
+@media(max-width:1020px){.roster article{grid-template-columns:minmax(220px,1fr) minmax(140px,170px) minmax(170px,1fr)}.saveLearner{grid-column:2/-1;justify-self:end}}
+@media(max-width:620px){.roster article{grid-template-columns:1fr}.saveLearner{grid-column:auto;justify-self:stretch}}
