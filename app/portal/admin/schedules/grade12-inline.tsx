@@ -33,6 +33,7 @@ export default function Grade12SchedulesInline({sectionId,teacherId,sections,tea
     const d=await r.json().catch(()=>({}));
     if(!r.ok)throw new Error(d.error||"Grade 12 schedules could not be loaded.");
     setRows(d.periods??[]);
+    setCanProvision(Boolean(d.canProvision));
     const jane=(d.teachers??[]).find((t:Teacher&{email?:string})=>t.email==="jane.bardon.2026@temp.asuncion-nhs.invalid");
     if(jane)setJaneEmail("jane.bardon.2026@temp.asuncion-nhs.invalid");
   }
@@ -41,7 +42,7 @@ export default function Grade12SchedulesInline({sectionId,teacherId,sections,tea
     const termParam=Number(new URLSearchParams(window.location.search).get("term"));
     if(termParam===2)setTerm(2);
     fetch("/api/admin/grade12-term-program",{cache:"no-store"})
-      .then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"Failed to load Grade 12 schedules.");if(active){setRows(d.periods??[]);setJaneEmail((d.teachers??[]).some((t:Teacher&{email?:string})=>t.email==="jane.bardon.2026@temp.asuncion-nhs.invalid")?"jane.bardon.2026@temp.asuncion-nhs.invalid":"");}})
+      .then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"Failed to load Grade 12 schedules.");if(active){setRows(d.periods??[]);setCanProvision(Boolean(d.canProvision));setJaneEmail((d.teachers??[]).some((t:Teacher&{email?:string})=>t.email==="jane.bardon.2026@temp.asuncion-nhs.invalid")?"jane.bardon.2026@temp.asuncion-nhs.invalid":"");}})
       .catch(e=>{if(active)setError(e instanceof Error?e.message:"Unable to load Grade 12 schedules.");})
       .finally(()=>{if(active)setLoaded(true)});
     return()=>{active=false};
@@ -104,7 +105,7 @@ export default function Grade12SchedulesInline({sectionId,teacherId,sections,tea
     const url=URL.createObjectURL(new Blob([lines.join("\n")],{type:"text/csv"}));
     const a=document.createElement("a");a.href=url;a.download="jane-bardon-temporary-credentials.csv";a.click();URL.revokeObjectURL(url);
   }
-  const janeNeedsLink=rows.filter(p=>p.instructor_label==="JANE BARDON" && !p.instructor_ids?.length).length;
+  const janeNeedsLink=scope.filter(p=>p.instructor_label==="JANE BARDON" && !p.instructor_ids?.length).length;
   const title=teacherId?"Teacher Schedule":"Quick Section Schedule";
   return <>
     <section className={`${styles.panel} ${styles.quickPanel}`}>
@@ -162,7 +163,7 @@ export default function Grade12SchedulesInline({sectionId,teacherId,sections,tea
         <div className={styles.actions}><button type="button" className={styles.edit} disabled={busy} onClick={()=>edit(p)}><Pencil size={15}/> Edit</button></div>
       </article>)}</div>}
     </section>
-    {janeNeedsLink>0 && <section className={styles.panel} style={{padding:18}}>
+    {(janeNeedsLink>0 || Boolean(janePassword)) && <section className={styles.panel} style={{padding:18}}>
       <strong>Jane Bardon · {janeNeedsLink} unmatched Second Term periods</strong>
       <p>Her teaching account can be created with a provisional email. The official address and personal details can be completed afterward.</p>
       <button className={styles.secondary} type="button" disabled={busy} onClick={()=>void (janeEmail?linkJane():createJane())}>{janeEmail?"Link Jane Bardon to Schedule":"Create Jane Bardon's Teacher Account"}</button>
