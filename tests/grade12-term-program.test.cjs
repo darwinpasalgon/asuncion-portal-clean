@@ -21,7 +21,9 @@ test("Grade 12 term schedule storage cannot overwrite other grades or term assig
  const schema=read("supabase/migrations/20261015120500_grade12_term_class_program_schedule.sql");
  const api=read("app/api/admin/grade12-term-program/route.ts");
  const proxy=read("proxy.ts");
- const view=read("app/portal/admin/grade12-term-program/page.tsx");
+ const view=read("app/portal/admin/schedules/grade12-inline.tsx");
+ const standard=read("app/portal/admin/schedules/page.tsx");
+ const retired=read("app/portal/admin/grade12-term-program/page.tsx");
  assert.match(schema,/grade12_term_periods/);
  assert.match(schema,/term_no smallint not null/);
  assert.match(schema,/end_time <= time '16:45'/);
@@ -29,24 +31,41 @@ test("Grade 12 term schedule storage cannot overwrite other grades or term assig
  assert.match(schema,/row level security/);
  assert.match(api,/getScopedAdminAccess\(token, "schedules.manage"\)/);
  assert.match(api,/term_no=eq\.\$\{existing.term_no\}/);
- assert.match(view,/First Term/);
- assert.match(view,/Second Term/);
- assert.match(view,/Teacher Assignment/);
+ assert.match(view,/Term 1/);
+ assert.match(view,/Term 2/);
+ assert.match(view,/Subject Teacher/);
+ assert.match(standard,/Grade12SchedulesInline/);
+ assert.match(retired,/redirect\("/);
  assert.match(proxy,/\/portal\/admin\/grade12-term-program/);
  assert.doesNotMatch(api,/from\("class_schedules"\)|table=teacher_assignments/);
 });
 
 test("Jane Bardon is onboarded through the existing Super Admin-protected Auth importer",()=>{
- const page=read("app/portal/admin/grade12-term-program/page.tsx");
+ const page=read("app/portal/admin/schedules/grade12-inline.tsx");
  const api=read("app/api/admin/grade12-term-program/route.ts");
  const bulk=read("app/api/admin/import-accounts/route.ts");
  assert.match(page,/jane\.bardon\.2026@temp\.asuncion-nhs\.invalid/);
  assert.match(page,/personType:"teacher"/);
  assert.match(page,/action:"link_jane_bardon"/);
- assert.match(page,/setJaneCredentials/);
- assert.match(page,/Download Teacher Credentials CSV/);
+ assert.match(page,/setJanePassword/);
+ assert.match(page,/Download Temporary Credentials/);
  assert.match(api,/if \(body\?\.action === "link_jane_bardon"\)/);
  assert.match(api,/await isSuperAdministrator\(info\.token\)/);
  assert.match(api,/profiles\?email=eq\./);
  assert.match(bulk,/functions\/v1\/admin-bulk-account-import/);
+});
+
+test("Old Grade 12 screen retires; existing JHS screen and records stay intact",()=>{
+ const portal=read("app/portal/page.tsx");
+ const schedules=read("app/portal/admin/schedules/page.tsx");
+ const retired=read("app/portal/admin/grade12-term-program/page.tsx");
+ const internal=read("app/portal/admin/schedules/grade12-inline.tsx");
+ assert.doesNotMatch(portal,/window.location.href = "\/portal\/admin\/grade12-term-program"/);
+ assert.match(retired,/redirect\("\/portal\/admin\/schedules\?/);
+ assert.match(schedules,/quickGrade === "12"/);
+ assert.match(schedules,/!teacherView && quickGrade/);
+ assert.match(internal,/styles.quickRows/);
+ assert.match(internal,/styles.scheduleList/);
+ assert.match(internal,/update_period/);
+ assert.match(internal,/Teacher Schedule/);
 });
