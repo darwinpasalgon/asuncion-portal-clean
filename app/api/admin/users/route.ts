@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { hasAdminPermission } from "@/lib/admin-access";
+import { hasAdminPermission, isSuperAdministrator } from "@/lib/admin-access";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
 function authHeaders(token: string) {
@@ -101,6 +101,7 @@ export async function GET(request: NextRequest) {
       users,
       sections,
       activeYear: years?.[0] ?? null,
+      canCreateAccounts: await isSuperAdministrator(token),
     });
   } catch {
     return NextResponse.json({ error: "Unable to load Students and Teachers." }, { status: 500 });
