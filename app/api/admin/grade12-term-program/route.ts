@@ -65,6 +65,9 @@ export async function POST(request: NextRequest) {
       teachers.some(t => !/^[0-9a-f-]{36}$/i.test(t)) || teachers.length > 3) {
     return NextResponse.json({ error: "Choose valid subject, teachers, and time (7:30 AM to 4:45 PM)." }, { status: 400 });
   }
+  if (subject.includes("ORGANIC AGRICULTURE PRODUCTION/FOOD PROCESSING") && teachers.length !== 2) {
+    return NextResponse.json({error:"Assign distinct Organic Agriculture Production and Food Processing teachers."},{status:400});
+  }
   try {
     const [existing] = await query<Period>(`grade12_term_periods?id=eq.${encodeURIComponent(id)}&select=${select}&limit=1`, info.token);
     if (!existing) return NextResponse.json({ error: "Grade 12 period not found." }, { status: 404 });
