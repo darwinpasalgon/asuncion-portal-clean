@@ -1,3 +1,4 @@
+import { nonTeachingPositions, teachingPositions, positionOptions } from "@/lib/deped-positions";
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -55,6 +56,9 @@ export default function NonTeachingProfilesPage() {
   const [saving, setSaving] = useState(false);
   const [savingName, setSavingName] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [designation, setDesignation] = useState("");
+  const [designationReason, setDesignationReason] = useState("");
+  const [designationSaving, setDesignationSaving] = useState(false);
   const [provisioning, setProvisioning] = useState(false);
   const [newCredentials, setNewCredentials] = useState<{ email: string; temporary_password: string } | null>(null);
   const [error, setError] = useState("");
@@ -115,6 +119,7 @@ export default function NonTeachingProfilesPage() {
         if (!response.ok) throw new Error(result.error ?? "Unable to load the personnel profile.");
         if (!active) return;
         setPerson(result.personnel ?? null);
+        setDesignation(String(result.personnel?.position ?? "").toUpperCase());
         setPersonal((result.personnel?.personal ?? {}) as Details);
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : "Unable to load the personnel profile.");
@@ -182,6 +187,22 @@ export default function NonTeachingProfilesPage() {
     } finally {
       setProvisioning(false);
     }
+  }
+
+  async function saveDesignation() {
+    if (!person || !designationReason.trim()) { setError("Enter the appointment or promotion reason."); return; }
+    if (!window.confirm(`Change ${person.full_name}'s designation from ${person.position ?? "Not Set"} to ${designation}? This will update their personnel record.`)) return;
+    setDesignationSaving(true);setError("");setMessage("");
+    try {
+      const response=await fetch("/api/teacher-profiles",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"change_designation",owner_type:"non_teaching",personnel_id:person.id,position:designation,reason:designationReason})});
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok)throw new Error(result.error??"Designation update failed.");
+      setPerson(current=>current?{...current,position:result.personnel.position}:current);
+      setPersonnel(current=>current.map(item=>item.id===person.id?{...item,position:result.personnel.position}:item));
+      setDesignationReason("");
+      setMessage("Designation updated. "+(result.classification_note??"History recorded."));
+    }catch(err){setError(err instanceof Error?err.message:"Designation update failed.");}
+    finally{setDesignationSaving(false);}
   }
 
   async function requestPasswordReset() {
@@ -393,6 +414,21 @@ export default function NonTeachingProfilesPage() {
                     <button type="button" onClick={() => setNewCredentials(null)}>Hide Credentials</button>
                   </div>
                 )}
+                <div className={styles.namePanel}>
+                  <h3>Change Personnel Designation</h3>
+                  <p>Record promotions and appointment changes without deleting the personnel account or history.</p>
+                  <label>New Position
+                    <select value={designation} onChange={event=>setDesignation(event.target.value)}>
+                      <optgroup label="Non-Teaching Positions">{positionOptions(nonTeachingPositions).map(p=><option key={p} value={p}>{p}</option>)}</optgroup>
+                      <optgroup label="Teaching Positions">{positionOptions(teachingPositions).map(p=><option key={p} value={p}>{p}</option>)}</optgroup>
+                    </select>
+                  </label>
+                  <label>Promotion / Change Reason
+                    <input value={designationReason} onChange={event=>setDesignationReason(event.target.value)} placeholder="e.g. Promotion effective October 15, 2026"/>
+                  </label>
+                  <button type="button" onClick={()=>void saveDesignation()} disabled={designationSaving||!designationReason.trim()||designation===String(person.position??"").toUpperCase()}>{designationSaving?"Saving...":"Update Designation"}</button>
+                  <p>Changes between teaching and non-teaching positions require HR review of personnel classification and grade-level assignments.</p>
+                </div>
                 <div className={styles.namePanel}>
                   <div className={styles.namePanelHead}>
                     <div>
