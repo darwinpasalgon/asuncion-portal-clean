@@ -10,7 +10,7 @@ type Period = {
   needs_review: boolean; review_reason: string | null; source_sheet: string; source_row: number; source_file: string;
 };
 type Section = { id: string; name: string };
-type Teacher = { id: string; full_name: string };
+type Teacher = { id: string; full_name: string; email: string };
 const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday"];
 const timeLabel = (s: string) => {
   const [hour,minute] = s.slice(0,5).split(":").map(Number);
@@ -32,6 +32,9 @@ export default function Grade12TermProgramPage() {
   const [saving,setSaving] = useState(false);
   const [error,setError] = useState("");
   const [success,setSuccess] = useState("");
+  const [canProvision,setCanProvision] = useState(false);
+  const [provisioning,setProvisioning] = useState(false);
+  const [janeCredentials,setJaneCredentials] = useState<{email:string;password:string}|null>(null);
   useEffect(()=>{
     let alive=true;
     async function run() {
@@ -40,7 +43,7 @@ export default function Grade12TermProgramPage() {
         const d=await r.json().catch(()=>({}));
         if(!r.ok)throw new Error(d.error ?? "Unable to load Grade 12 schedules.");
         if(!alive)return;
-        setSections(d.sections??[]);setTeachers(d.teachers??[]);setPeriods(d.periods??[]);
+        setSections(d.sections??[]);setTeachers(d.teachers??[]);setPeriods(d.periods??[]);setCanProvision(Boolean(d.canProvision));
         const requestedSection=new URLSearchParams(window.location.search).get("section");
         const valid=(d.sections??[]).find((s:Section)=>s.id===requestedSection || s.name.toLowerCase()===requestedSection?.toLowerCase());
         setSection(valid?.id ?? d.sections?.[0]?.id ?? "");
@@ -57,6 +60,72 @@ export default function Grade12TermProgramPage() {
   const countByTerm=(n:number)=>periods.filter(p=>p.term_no===n).length;
   const pendingForTerm=(n:number)=>periods.filter(p=>p.term_no===n && (!p.instructor_ids || !p.instructor_ids.length)).length;
   const flagged=visible.filter(p=>p.needs_review).length;
+  const janeEmail="jane.bardon.2026@temp.asuncion-nhs.invalid";
+  const janeAccount=teachers.find(p=>p.email?.toLowerCase()===janeEmail);
+  const janeUnmatched=periods.filter(p=>p.instructor_label.toUpperCase()==="JANE BARDON" && p.term_no===2 && !p.instructor_ids?.length).length;
+
+  async function refreshProgram(){
+    const response=await fetch("/api/admin/grade12-term-program",{cache:"no-store"});
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(result.error??"Unable to refresh Grade 12 programs.");
+    setTeachers(result.teachers??[]);
+    setPeriods(result.periods??[]);
+  }
+
+  async function provisionJane(){
+    if(provisioning)return;
+    if(!janeAccount && !window.confirm("Create Jane Bardon's TEACHING PERSONNEL account with a temporary, non-deliverable email address? No official email, rank, or personal details will be invented. Save her one-time password securely and update her email when available."))return;
+    setProvisioning(true);setError("");setSuccess("");
+    try{
+      if(!janeAccount){
+        const response=await fetch("/api/admin/import-accounts",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({
+            action:"import",personType:"teacher",
+            fileName:"Grade 12 Second Term - Jane Bardon onboarding",
+            rows:[{
+              row_number:1,full_name:"JANE BARDON",email:janeEmail,
+              position:"Teacher",mobile:"",
+              teacher_personal:{},teacher_official:{},
+              source_data:{sheet:"Grade 12 Term 2",row:1}
+            }]
+          })
+        });
+        const result=await response.json().catch(()=>({}));
+        if(!response.ok)throw new Error(result.error??"Unable to create Teacher account.");
+        const issued=(result.accounts??[]).find((account:{identifier?:string})=>account.identifier?.toLowerCase()===janeEmail);
+        if(!issued?.temporary_password){
+          const reason=result.errors?.[0]?.error ?? "The importer did not return a new temporary credential.";
+          throw new Error(reason+" If the account was created, refresh and use Link Existing Account.");
+        }
+        setJaneCredentials({email:janeEmail,password:issued.temporary_password});
+      }
+      const linkResponse=await fetch("/api/admin/grade12-term-program",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action:"link_jane_bardon"})
+      });
+      const linkResult=await linkResponse.json().catch(()=>({}));
+      if(!linkResponse.ok)throw new Error(linkResult.error??"Account created; timetable linking needs review.");
+      await refreshProgram();
+      setSuccess(linkResult.message+" Jane's unspecified profile fields remain blank.");
+    }catch(e){setError(e instanceof Error?e.message:"Could not provision Jane Bardon.");}
+    finally{setProvisioning(false);}
+  }
+
+  function downloadJaneCredentials(){
+    if(!janeCredentials)return;
+    const csv=["Name,Role,Temporary Email,Temporary Password,Action Required",
+      ["JANE BARDON","Teacher",janeCredentials.email,janeCredentials.password,"Replace temporary email; change password on first login"]
+        .map(value=>`"${String(value).replaceAll('"','""')}"`).join(",")].join("\n");
+    const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement("a");
+    link.href=url;link.download="jane-bardon-teacher-temporary-credentials.csv";
+    document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+  }
+
   const instructorNames=(period:Period)=>{
     const names=(period.instructor_ids??[]).map(id=>teacherMap.get(id)).filter(Boolean);
     return names.length ? names.join(" / ") : period.instructor_label+" (Unmatched)";
@@ -97,6 +166,31 @@ export default function Grade12TermProgramPage() {
         <div><span>Second Term</span><strong>{countByTerm(2)} periods</strong><small>{pendingForTerm(2)} unmatched instructor periods</small></div>
         <div><span>Source Sections</span><strong>{sections.length}</strong><small>All official Grade 12 sections</small></div>
       </div>
+      {(janeUnmatched>0 || janeCredentials) && (
+        <section className={styles.onboarding}>
+          <div>
+            <strong>Jane Bardon · New Teaching Personnel</strong>
+            <p>{janeUnmatched} Second Term class periods are awaiting her teacher account.
+              {janeAccount ? " Her provisional account exists; link the remaining periods." :
+                " Her official email and rank have not yet been provided. Super Admin can provision a temporary teacher account."}</p>
+            {!canProvision && <small>Only the Super Administrator can create new accounts.</small>}
+          </div>
+          {canProvision && janeUnmatched>0 && (
+            <button type="button" onClick={()=>void provisionJane()} disabled={provisioning}>
+              {provisioning?"Saving account and linking schedules…":janeAccount?"Link Jane Bardon to 2nd Term":"Create Teacher Account & Link Schedules"}
+            </button>
+          )}
+          {janeCredentials && (
+            <div className={styles.credentials}>
+              <strong>One-time temporary login. Download before leaving this page.</strong>
+              <span>Temporary Email: {janeCredentials.email}</span>
+              <span>Temporary Password: {janeCredentials.password}</span>
+              <button type="button" onClick={downloadJaneCredentials}>Download Teacher Credentials CSV</button>
+              <small>Update Jane's official email in Personnel Accounts when known. Require password change at first login.</small>
+            </div>
+          )}
+        </section>
+      )}
       <section className={styles.controls}>
         <div className={styles.termSwitch} role="group" aria-label="Select Term">
           {[1,2].map(n=><button key={n} type="button" aria-pressed={term===n} className={term===n?styles.selected:""} onClick={()=>{setTerm(n);setError("");}}>{n===1?"First Term":"Second Term"}</button>)}
