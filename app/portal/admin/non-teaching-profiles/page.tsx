@@ -154,7 +154,7 @@ export default function NonTeachingProfilesPage() {
   }
 
   async function createHeadTeacherAccount() {
-    if (!person || !/^HEAD TEACHER\\b/i.test(person.position ?? "") || person.portal_user_id) return;
+    if (!person || !/^HEAD TEACHER\b/i.test(person.position ?? "") || person.portal_user_id) return;
     if (!window.confirm(`Create a portal account for ${person.full_name} using ${person.email}? The temporary password will only be displayed once.`)) return;
     setProvisioning(true);
     setNewCredentials(null);
@@ -356,7 +356,7 @@ export default function NonTeachingProfilesPage() {
                 <div className={styles.personHeading}>
                   <div><span>NON-TEACHING PERSONNEL</span><h2>{person.full_name}</h2><p>{person.position || "Position not set"} · {person.email || "No email"}</p></div>
                   <div className={styles.headingActions}>
-                    {!person.portal_user_id && /^HEAD TEACHER\\b/i.test(person.position ?? "") && (
+                    {!person.portal_user_id && /^HEAD TEACHER\b/i.test(person.position ?? "") && (
                       <button className={styles.resetButton} onClick={() => void createHeadTeacherAccount()} disabled={provisioning}>
                         <KeyRound size={16} />{provisioning ? "Creating Account..." : "Create Portal Account"}
                       </button>
