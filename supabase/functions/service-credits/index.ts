@@ -117,7 +117,11 @@ Deno.serve(async (req) => {
       .slice(0, 1000);
   }
 
-  function summarize(rows: Array<Record<string, unknown>>) {
+  function wellnessEligible(person: { role?: unknown; position?: unknown }) {
+    return person.role === "teacher" || /^HEAD TEACHER\b/i.test(String(person.position ?? ""));
+  }
+
+  function summarize(rows: Array<Record<string, unknown>>, eligible = true) {
     const serviceRows = rows.filter((row) => row.credit_type === "service_credit");
     const wellnessRows = rows.filter((row) => row.credit_type === "wellness_leave");
     // Philippine calendar-year boundaries; the entitlement renews automatically on January 1.
@@ -127,7 +131,7 @@ Deno.serve(async (req) => {
     const wellnessUsed = wellnessRows
       .filter((row) => String(row.posting_date ?? "").startsWith(String(wellnessYear) + "-"))
       .reduce((sum, row) => sum + Number(row.service_credits_used ?? 0), 0);
-    const wellnessBalance = Math.max(0, Math.round((5 - wellnessUsed) * 10000) / 10000);
+    const wellnessBalance = eligible ? Math.max(0, Math.round((5 - wellnessUsed) * 10000) / 10000) : null;
     const latest = (items: Array<Record<string, unknown>>) =>
       items.length ? Number(items[0]?.balance_after ?? 0) : null;
     const totalEarned = serviceRows.reduce(
@@ -141,7 +145,7 @@ Deno.serve(async (req) => {
     return {
       service_credit_balance: latest(serviceRows),
       wellness_leave_balance: wellnessBalance,
-      wellness_allowance: 5,
+      wellness_allowance: eligible ? 5 : 0,
       wellness_used: Math.round(wellnessUsed * 10000) / 10000,
       wellness_year: wellnessYear,
       total_service_credits_earned: Math.round(totalEarned * 10000) / 10000,
@@ -166,7 +170,7 @@ Deno.serve(async (req) => {
           position: caller.position,
           role: caller.role,
         },
-        summary: summarize(rows),
+        summary: summarize(rows, wellnessEligible(caller)),
         transactions: rows.slice(0, 100),
       });
     } catch (error) {
@@ -318,7 +322,7 @@ Deno.serve(async (req) => {
       return json({
         ok: true,
         personnel: target,
-        summary: summarize(rows),
+        summary: summarize(rows, wellnessEligible(target ?? {})),
         transactions: rows.map((row) => ({
           ...row,
           created_by_name: row.created_by
@@ -338,6 +342,9 @@ Deno.serve(async (req) => {
     const creditType = String(body.credit_type ?? "service_credit");
     if (!["service_credit", "wellness_leave"].includes(creditType)) {
       return json({ error: "Unknown leave or credit type." }, 400);
+    }
+    if (creditType === "wellness_leave" && !wellnessEligible(target ?? {})) {
+      return json({ error: "Wellness Leave posting is available to teaching personnel only." }, 403);
     }
     if (creditType === "wellness_leave" && kind !== "debit") {
       return json({ error: "Wellness Leave is a 5-day annual allowance and cannot be manually credited." }, 400);
