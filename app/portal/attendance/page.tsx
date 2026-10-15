@@ -15,9 +15,10 @@ import {
   XCircle,
 } from "lucide-react";
 import styles from "./attendance.module.css";
+import { attendanceMonths, attendanceStartDate } from "@/lib/attendance-calendar";
 
 type Role="student"|"teacher";
-type Year={id:string;name:string};
+type Year={id:string;name:string;start_year:number;end_year:number};
 type Profile={id:string;full_name:string;lrn:string|null;role:Role};
 type Adviser={id:string;section_id:string;teacher_id:string};
 type Section={id:string;grade_level:number;name:string};
@@ -164,6 +165,18 @@ export default function AttendancePage(){
     setDate(requestedDate);
     void load(requestedDate,requestedSection);
   },[]);
+
+  const schoolStart = attendanceStartDate(activeYear);
+  const monthChoices = attendanceMonths(schoolStart, localDate());
+  const selectedMonth = date.slice(0, 7);
+  const monthTitle = new Date(selectedMonth + "-01T12:00:00Z").toLocaleDateString("en-PH", { month: "long", year: "numeric", timeZone: "UTC" });
+
+  async function loadAttendanceMonth(month: string) {
+    const startOfMonth = month + "-01";
+    const firstDay = startOfMonth < schoolStart ? schoolStart : startOfMonth;
+    setDate(firstDay);
+    await load(firstDay, sectionId);
+  }
 
   const studentMap=useMemo(()=>new Map(students.map(s=>[s.id,s])),[students]);
   const selectedSection=sections.find(s=>s.id===sectionId);
@@ -435,7 +448,7 @@ export default function AttendancePage(){
         <span className={styles.eyebrow}>ACADEMIC RECORDS</span>
         <h1>{role==="teacher"?"Daily Attendance":assistantAssignment?"Attendance Assistant":"My Attendance"}</h1>
         <p>{role==="teacher"
-          ?"Record daily section attendance for sections assigned to you as Attendance Teacher / Adviser."
+          ?"Record daily section attendance for sections assigned to you as Attendance Teacher / Adviser, starting June 8, 2026."
           :assistantAssignment
             ?"Mark your classmates Present, Absent, Absent in the Morning, Absent in the Afternoon, or Cutting Classes for today. Your adviser reviews and saves the official attendance."
             :"Your recorded attendance for the active school year."}</p>
@@ -461,7 +474,7 @@ export default function AttendancePage(){
                 {sections.map(s=><option key={s.id} value={s.id}>{"Grade "+s.grade_level+" · "+s.name}</option>)}
               </select>
             </label>
-            <label><span>Date</span><input type="date" value={date} max={localDate()} onChange={e=>setDate(e.target.value)}/></label>
+            <label><span>Date (from {schoolStart})</span><input type="date" value={date} min={schoolStart} max={localDate()} onChange={e=>setDate(e.target.value)}/></label>
             <button className={styles.loadButton} onClick={()=>void load(date)}><CalendarDays size={16}/>Load Date</button>
           </section>
 
@@ -508,19 +521,33 @@ export default function AttendancePage(){
             </div>
           </section>
 
+          <section className={styles.monthSwitcher}>
+            <div>
+              <strong>Attendance Months · School Year {activeYear?.name ?? "2026–2027"}</strong>
+              <span>Select June through the current month to enter or review past attendance. No days are pre-marked Present or Absent.</span>
+            </div>
+            <label>
+              <span>Review Month</span>
+              <select value={selectedMonth} onChange={e=>void loadAttendanceMonth(e.target.value)}>
+                {monthChoices.map(month=>(
+                  <option value={month} key={month}>{new Date(month+"-01T12:00:00Z").toLocaleDateString("en-PH",{month:"long",year:"numeric",timeZone:"UTC"})}</option>
+                ))}
+              </select>
+            </label>
+          </section>
           {pendingDates.length>0&&<section className={styles.pendingPanel}>
             <div className={styles.pendingHeading}>
               <div>
                 <AlertTriangle size={19}/>
                 <div>
-                  <strong>Unrecorded Weekdays</strong>
-                  <span>Record attendance or mark the date as No Classes.</span>
+                  <strong>Unrecorded Weekdays · {monthTitle}</strong>
+                  <span>Review unrecorded dates from June 8 onward. Record attendance or mark the date as No Classes. Unrecorded does not mean absent.</span>
                 </div>
               </div>
               <span className={styles.pendingCount}>{pendingDates.length}</span>
             </div>
             <div className={styles.pendingList}>
-              {pendingDates.slice(0,12).map(item=><button
+              {pendingDates.slice(0,40).map(item=><button
                 type="button"
                 key={item.section_id+"-"+item.attendance_date}
                 className={styles.pendingDate}
@@ -536,8 +563,8 @@ export default function AttendancePage(){
                 <ArrowRight size={16}/>
               </button>)}
             </div>
-            {pendingDates.length>12&&<div className={styles.pendingMore}>
-              Showing the 12 most recent dates. Older unrecorded weekdays remain tracked.
+            {pendingDates.length>40&&<div className={styles.pendingMore}>
+              Showing the 40 most recent entries. You can also use the date picker to open any earlier date.
             </div>}
           </section>}
 
