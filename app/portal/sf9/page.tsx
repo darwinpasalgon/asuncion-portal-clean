@@ -1192,7 +1192,7 @@ export default function Sf9Page() {
             </button>
           </div>
 
-          {detail?.cards?.some(card => (card.attendance.total_unrecorded ?? 0) > 0) && (
+          {detail?.cards?.some((card: { attendance: { total_unrecorded?: number } }) => (card.attendance.total_unrecorded ?? 0) > 0) && (
             <p role="status" style={{
               margin: "10px 0", padding: "11px 14px",
               border: "1px solid #efd9b3", borderRadius: 10,
