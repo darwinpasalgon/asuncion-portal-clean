@@ -14,8 +14,9 @@ import {
 } from "lucide-react";
 import styles from "./attendance.module.css";
 import { captureRefreshScroll, restoreRefreshScroll } from "@/lib/background-refresh";
+import { attendanceStartDate } from "@/lib/attendance-calendar";
 
-type Year={id:string;name:string};
+type Year={id:string;name:string;start_year:number;end_year:number};
 type Grade={grade_level:number;label:string};
 type Section={id:string;grade_level:number;name:string};
 type Teacher={id:string;full_name:string;email:string};
@@ -156,9 +157,9 @@ export default function AdminAttendancePage(){
       <div>
         <span>DAILY ATTENDANCE</span>
         <strong>{date}</strong>
-        <small>Transfer and Dropped tags are learner movement records and are not included in this daily attendance view.</small>
+        <small>Attendance records begin {attendanceStartDate(activeYear)}. Select any date from June 8 onward. Unrecorded past days are not automatically Present or Absent.</small>
       </div>
-      <div className={styles.dateTools}><input type="date" max={localDate()} value={date} onChange={e=>setDate(e.target.value)}/><button onClick={()=>void load(date)}><RefreshCw size={16}/>Load</button></div>
+      <div className={styles.dateTools}><input type="date" min={attendanceStartDate(activeYear)} max={localDate()} value={date} onChange={e=>setDate(e.target.value)}/><button onClick={()=>void load(date)}><RefreshCw size={16}/>Load</button></div>
     </div>
 
     <div className={styles.summary}>
