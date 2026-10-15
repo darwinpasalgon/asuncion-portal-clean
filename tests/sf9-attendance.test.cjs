@@ -60,6 +60,7 @@ test("Official national holidays and the DepEd 2026 school calendar are excluded
    startDate:"2026-06-08",currentDate:"2027-04-30",startYear:2026,excludedDates:[]
  });
  assert.equal(finalDays.at(-1),"2027-04-08");
+ assert.equal(finalDays.length,201); // DepEd DO 009 s. 2026 full-year instructional-day total
 });
 test("SF9 counts Absent in the Morning as a half day; incomplete months remain unrecorded", () => {
   const result=sf9AttendanceSummary({startYear:2026,
