@@ -463,9 +463,10 @@ export async function GET(request: NextRequest) {
             `TRANSFERRED IN${transferInRow?.note ? ` - ${transferInRow.note}` : ""}`
           );
         }
-        if (transferOutDate) {
+        if (transferOutDate || String(enrollment.learner_status).toLowerCase() === "transferred_out") {
+          const note = transferOutRow?.note || enrollment.status_note;
           remarks.push(
-            `TRANSFERRED OUT${transferOutRow?.note ? ` - ${transferOutRow.note}` : ""}`
+            `TRANSFERRED OUT${note ? ` - ${note}` : ""}`
           );
         }
         if (droppedDate || String(enrollment.learner_status).toLowerCase() === "dropped") {
