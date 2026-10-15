@@ -53,8 +53,11 @@ test("advisers can correct already saved attendance for today or prior weekdays"
   );
   assert.match(api, /resolution=merge-duplicates/);
   assert.match(page, /isEditingSavedAttendance/);
-  assert.match(page, /Update Attendance/);
-  assert.match(page, /existing records will be updated, not duplicated/i);
+  assert.match(page, /Save This Learner/);
+  assert.match(page, /Everyone else's saved records will remain untouched/i);
+  assert.match(page, /action:hasSavedAttendance\?"update_attendance":"save_attendance"/);
+  assert.match(api, /action === "update_attendance"/);
+  assert.match(api, /dayRecords\?\.length/);
 });
 
 test("database migration allows afternoon absence in official and assistant attendance", () => {
