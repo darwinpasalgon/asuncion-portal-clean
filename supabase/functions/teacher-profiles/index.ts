@@ -51,6 +51,15 @@ const teachingPositions = new Set([
   "MASTER TEACHER I", "MASTER TEACHER II", "MASTER TEACHER III", "MASTER TEACHER IV", "MASTER TEACHER V",
 ]);
 
+const designationPositions = new Set([
+  ...teachingPositions,
+  "ADMINISTRATIVE OFFICER I", "ADMINISTRATIVE OFFICER II", "ADMINISTRATIVE OFFICER III", "ADMINISTRATIVE OFFICER IV", "ADMINISTRATIVE OFFICER V",
+  "HEAD TEACHER I", "HEAD TEACHER II", "HEAD TEACHER III", "HEAD TEACHER IV",
+  "PRINCIPAL I", "PRINCIPAL II", "PRINCIPAL III", "PRINCIPAL IV",
+  "PROJECT DEVELOPMENT OFFICER I", "PROJECT DEVELOPMENT OFFICER II",
+  "ADMINISTRATIVE ASSISTANT I", "ADMINISTRATIVE ASSISTANT II", "ADMINISTRATIVE ASSISTANT III", "REGISTRAR",
+]);
+
 Deno.serve(async req => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "Method not allowed." }, 405);
@@ -264,6 +273,44 @@ Deno.serve(async req => {
     });
     if (!result.ok) return json({ error: result.error }, result.status ?? 400);
     return json(result);
+  }
+
+  if (action === "change_designation") {
+    if (!canManage) return json({ error: "Human Resources access required." }, 403);
+    const ownerType = String(body.owner_type ?? "");
+    const ownerId = String(body.personnel_id ?? "");
+    const newPosition = String(body.position ?? "").trim().toUpperCase();
+    const reason = String(body.reason ?? "").trim();
+    if (!["teacher", "non_teaching"].includes(ownerType) || !ownerId) return json({ error: "Choose a personnel record." }, 400);
+    if (!designationPositions.has(newPosition)) return json({ error: "Choose a valid DepEd position." }, 400);
+    if (reason.length < 3 || reason.length > 500) return json({ error: "Enter a brief promotion or designation reason." }, 400);
+    const table = ownerType === "teacher" ? "profiles" : "non_teaching_personnel";
+    const { data: existing } = await admin.from(table).select("id,full_name,position,portal_user_id").eq("id", ownerId).maybeSingle();
+    if (!existing) return json({ error: "Personnel record not found." }, 404);
+    const previous = String(existing.position ?? "").trim().toUpperCase();
+    if (previous === newPosition) return json({ error: "This employee already has that designation." }, 409);
+    const { error: historyError } = await admin.from("personnel_designation_history").insert({
+      personnel_id: ownerType === "teacher" ? ownerId : existing.portal_user_id,
+      non_teaching_personnel_id: ownerType === "non_teaching" ? ownerId : null,
+      previous_position: previous || null,
+      new_position: newPosition,
+      reason,
+      changed_by: caller.id,
+    });
+    if (historyError) return json({ error: "Unable to record designation history." }, 500);
+    const { data: updated, error: updateError } = await admin.from(table)
+      .update({ position: newPosition, updated_at: new Date().toISOString() })
+      .eq("id", ownerId)
+      .select("id,full_name,position,portal_user_id").single();
+    if (updateError || !updated) return json({ error: "Unable to update position; please contact HR to reconcile the pending history." }, 500);
+    if (ownerType === "non_teaching" && existing.portal_user_id) {
+      const { error: syncError } = await admin.from("profiles").update({position: newPosition,updated_at: new Date().toISOString()}).eq("id", existing.portal_user_id);
+      if (syncError) return json({ error: "Designation saved, but portal account synchronization failed. Please contact HR." }, 500);
+    }
+    return json({ok:true,personnel:updated,previous_position:previous,classification_note:
+      teachingPositions.has(newPosition) !== teachingPositions.has(previous)
+        ? "Position updated. Personnel classification and grade-level assignments need a separate HR review."
+        : null});
   }
 
   if (action === "save_personnel_name") {
