@@ -308,7 +308,16 @@ export default function Sf2Page() {
           </div>
         )}
 
-        {previewIsCurrent && report && report.completeness.complete && (
+        {previewIsCurrent && report && (report.learners.male.length + report.learners.female.length === 0) && (
+          <div className={styles.warning}>
+            <strong>No enrolled learners in this section yet.</strong>{" "}
+            This section is assigned, but its learner roster is empty for the active school year.
+            Ask the registrar to import or assign the learners before printing SF2.
+          </div>
+        )}
+
+        {previewIsCurrent && report && report.completeness.complete &&
+          (report.learners.male.length + report.learners.female.length > 0) && (
           <div className={styles.notice}>
             <FileSpreadsheet size={15} style={{ verticalAlign: "middle", marginRight: 7 }} />
             Monthly attendance is complete. SF2 is ready for official printing.
