@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { DEPED_LOGO_DATA_URI } from "../admin/sf10/Sf10LogoData";
 import styles from "./sf9.module.css";
 import { sf9Grade11Rows, sf9Grade11TotalUnits, type Sf9Grade11Offering } from "@/lib/sf9-grade11-layout";
+import { sf9TrackLabel } from "@/lib/sf9-track-label";
 
 type GradeRow = {
   key: string;
@@ -282,7 +283,7 @@ function LearnerIdentity({
       <div className={styles.identityTrackRow}>
         <span>Track (SHS only):</span>
         <i aria-hidden="true" />
-        <strong>{card.track || ""}</strong>
+        <strong>{sf9TrackLabel(card.track || card.shs_program_code)}</strong>
       </div>
     </div>
   );
