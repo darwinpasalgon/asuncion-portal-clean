@@ -6,6 +6,7 @@ type AdviserSection = {
   id: string;
   grade_level: number;
   name: string;
+  shs_program_code: string | null;
 };
 
 type Enrollment = {
@@ -14,6 +15,7 @@ type Enrollment = {
   grade_level: number;
   section_id: string;
   tve_major: string | null;
+  shs_elective_group: string | null;
 };
 
 type LearnerInfo = {
@@ -230,7 +232,7 @@ export async function GET(request: NextRequest) {
       getRows(
         `sections?id=in.${encodeURIComponent(
           sectionFilter
-        )}&select=id,grade_level,name`,
+        )}&select=id,grade_level,name,shs_program_code`,
         token
       ),
       getRows(
@@ -238,7 +240,7 @@ export async function GET(request: NextRequest) {
           activeYear.id
         )}&section_id=in.${encodeURIComponent(
           sectionFilter
-        )}&enrollment_status=eq.active&select=id,student_id,grade_level,section_id,tve_major`,
+        )}&enrollment_status=eq.active&select=id,student_id,grade_level,section_id,tve_major,shs_elective_group`,
         token
       ),
       getRows(
@@ -372,6 +374,10 @@ export async function GET(request: NextRequest) {
           missing(enrollment.tve_major)
         ) {
           missingFields.push("TVE Major");
+        }
+        if (enrollment.grade_level === 11 && missing(enrollment.shs_elective_group)) {
+          if (section?.shs_program_code === "STEM") missingFields.push("STEM Major");
+          if (section?.shs_program_code === "TVL") missingFields.push("TVL Major");
         }
 
         const fullName =
