@@ -501,8 +501,9 @@ function PortalFrame({ children }: { children: ReactNode }) {
               hasPhoto={Boolean(profile.has_profile_photo)}
               version={profile.profile_photo_updated_at}
               size={36}
+              className={styles.sideAvatar}
             />
-            <span>
+            <span className={styles.sideIdentityText}>
               <strong>{profile.full_name}</strong>
               <small>{roleName(session)}</small>
             </span>
