@@ -48,3 +48,8 @@
 .loading,.empty{text-align:center;padding:30px 18px;color:#758a97;font-size:13px}
 .loading{display:flex;gap:10px;align-items:center;justify-content:center}
 @media(max-width:720px){.page{padding:18px 11px}.filters,.formRow{grid-template-columns:1fr}.header h1{font-size:1.75rem}.panelTitle{padding:15px;gap:9px}.communication{margin:13px 13px 0}.subjectList{padding-inline:13px}.count{white-space:nowrap}.selectedProgram{margin-inline:13px}.subjectRow{flex-wrap:wrap}.remove{margin-left:auto}}
+
+
+.unitActions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.unitButton{border:1px solid #cadde5;border-radius:8px;padding:8px 11px;color:#256f8c;background:#f3f9fc;font-size:11px;font-weight:750;cursor:pointer}
+.unitButton:disabled{opacity:.5}
