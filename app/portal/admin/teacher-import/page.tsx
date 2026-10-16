@@ -110,6 +110,7 @@ export default function TeacherProfileImportPage() {
   const [excluded, setExcluded] = useState<ParsedTeacher[]>([]);
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [recoveryCandidates, setRecoveryCandidates] = useState<CredentialCandidate[]>([]);
+  const [recoveryCheck, setRecoveryCheck] = useState<"checking" | "ready" | "unavailable">("checking");
   const [recoveringCredentials, setRecoveringCredentials] = useState(false);
   const [updatedProfiles, setUpdatedProfiles] = useState(0);
   const [fileName, setFileName] = useState("");
@@ -130,10 +131,17 @@ export default function TeacherProfileImportPage() {
           cache: "no-store",
         });
         const result = await response.json().catch(() => ({}));
-        if (!response.ok) return;
-        if (active) setRecoveryCandidates(result.candidates ?? []);
+        if (!response.ok) {
+          if (active) setRecoveryCheck("unavailable");
+          return;
+        }
+        if (active) {
+          setRecoveryCandidates(result.candidates ?? []);
+          setRecoveryCheck("ready");
+        }
       } catch {
         // Optional recovery helper. Normal Teacher import still works if this check fails.
+        if (active) setRecoveryCheck("unavailable");
       }
     }
 
@@ -620,12 +628,16 @@ export default function TeacherProfileImportPage() {
           <div className={styles.recoveryActions}>
             <div>
               <strong>
-                {recoveryCandidates.length > 0
+                {recoveryCheck === "checking" ? "Checking eligible Teacher accounts…"
+                  : recoveryCheck === "unavailable" ? "Unable to check eligible Teacher accounts"
+                  : recoveryCandidates.length > 0
                   ? `${recoveryCandidates.length} account${recoveryCandidates.length === 1 ? "" : "s"} eligible for recovery`
                   : "No eligible recovery accounts detected"}
               </strong>
               <span>
-                {recoveryCandidates.length > 0
+                {recoveryCheck === "unavailable"
+                  ? "This feature requires Super Administrator access. If your account is eligible, check your connection and refresh this page."
+                  : recoveryCandidates.length > 0
                   ? "A fresh temporary password will replace each eligible account's unknown first-login password. Download and distribute the CSV securely."
                   : "Existing passwords cannot be downloaded again. For other personnel, use verified Password Resets."}
               </span>
