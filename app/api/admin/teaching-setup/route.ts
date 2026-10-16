@@ -501,6 +501,9 @@ export async function POST(request: NextRequest) {
       ? await getRows(
           `shs_subject_offerings?school_year_id=eq.${encodeURIComponent(activeYear.id)}&grade_level=eq.11&category=eq.elective&is_active=eq.true&program_code=in.(STEM_MEDICAL,STEM_ENGINEERING,TVL_OAP,TVL_FOOD_PROCESSING)&select=subject_id,program_code`,
           token
+        ).then((rows: Array<{ program_code: string; subject_id: string }>) =>
+          rows.filter((row) => String(sectionRows[0].shs_program_code) === "STEM"
+            ? row.program_code.startsWith("STEM_") : row.program_code.startsWith("TVL_"))
         ) : [];
     const validStemPairs = new Set(stemOfferingRows.map((row: { subject_id: string; program_code: string }) =>
       String(row.subject_id) + "::" + String(row.program_code)));
@@ -1037,6 +1040,9 @@ export async function POST(request: NextRequest) {
       ? await getRows(
           `shs_subject_offerings?school_year_id=eq.${encodeURIComponent(activeYear.id)}&grade_level=eq.11&category=eq.elective&is_active=eq.true&subject_id=eq.${encodeURIComponent(subjectId)}&select=program_code`,
           token
+        ).then((rows: Array<{ program_code: string }>) =>
+          rows.filter((row) => String(sectionRows[0].shs_program_code) === "STEM"
+            ? row.program_code.startsWith("STEM_") : row.program_code.startsWith("TVL_"))
         ) : [];
     const isStemElective = stemOfferingRows.some(
       (row: { program_code?: string }) => isGrade11ElectiveGroup(row.program_code)
@@ -1046,7 +1052,7 @@ export async function POST(request: NextRequest) {
       (row: { program_code: string }) => row.program_code === major
     )) {
       return NextResponse.json(
-        { error: "Choose the matching Medical or Engineering STEM elective teacher group." },
+        { error: "Choose the matching Grade 11 STEM or TVL elective major." },
         { status: 400 }
       );
     }
