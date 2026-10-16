@@ -252,11 +252,20 @@ export async function GET(request: NextRequest) {
       }
     : null;
 
+  // A lightweight menu hint; feature APIs still enforce their own permissions.
+  const adviserRows = profile.role === "teacher" && activeYear
+    ? await getRows(
+        `${SUPABASE_URL}/rest/v1/section_advisers?teacher_id=eq.${encodeURIComponent(userId)}&school_year_id=eq.${encodeURIComponent(activeYear.id)}&is_active=eq.true&select=id&limit=1`,
+        token
+      )
+    : [];
+
   const response = NextResponse.json({
     profile,
     academicContext,
     adminPermissions,
     gradeLevelHead,
+    isAdviser: Boolean(adviserRows?.length),
   });
 
   if (refreshedSession) {

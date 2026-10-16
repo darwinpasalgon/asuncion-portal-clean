@@ -56,7 +56,7 @@ test("personnel dashboard shows Service Credits and links to their own ledger", 
 
   assert.match(portal, /My Service Credits/);
   assert.match(portal, /service_credit_balance/);
-  assert.match(portal, /\/portal\/service-credits/);
+  assert.match(read("lib/portal-navigation.ts"), /\/portal\/service-credits/);
   assert.match(selfPage, /My Service Credits/);
   assert.match(selfPage, /Wellness Leave/);
 });

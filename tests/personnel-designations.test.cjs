@@ -7,7 +7,7 @@ const read = (file) => fs.readFileSync(path.join(__dirname, "..", file), "utf8")
 
 test("HR has a single searchable personnel designation page", () => {
   const page = read("app/portal/admin/personnel-designations/page.tsx");
-  const portal = read("app/portal/page.tsx");
+  const portal = read("lib/portal-navigation.ts");
   const proxy = read("proxy.ts");
 
   assert.match(page, /list_designations/);

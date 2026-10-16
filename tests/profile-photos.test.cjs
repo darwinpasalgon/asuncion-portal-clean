@@ -50,11 +50,11 @@ test("My Profile automatically crops and compresses display photos", () => {
 });
 
 test("portal and Community use uploaded profile photos with initials fallback", () => {
-  const portal = read("app/portal/page.tsx");
+  const portal = read("components/portal/portal-shell.tsx");
   const community = read("app/portal/community/page.tsx");
   const avatar = read("components/profile-avatar.tsx");
 
-  assert.match(portal, /href = "\/portal\/profile"|window\.location\.href = "\/portal\/profile"/);
+  assert.match(portal, /href="\/portal\/profile"/);
   assert.match(portal, /<ProfileAvatar/);
   assert.match(community, /<ProfileAvatar/);
   assert.match(community, /Remove Photo/);
