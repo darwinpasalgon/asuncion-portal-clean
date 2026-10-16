@@ -33,7 +33,7 @@ test("SF2 uses a separate non-scrollable print sheet rather than printing the pr
   const page = read("app/portal/sf2/page.tsx");
   const css = read("app/portal/sf2/sf2.module.css");
   assert.match(page, /className=\{\`\$\{styles\.printOnly\} \$\{styles\.printScope\}\`\}/);
-  assert.match(page, /printDocument\.querySelectorAll<HTMLImageElement>\("img"\)/);
+  assert.match(page, /printDoc\.querySelectorAll<HTMLImageElement>\("img"\)/);
   assert.match(css, /\.printOnly\{display:none\}/);
   assert.match(css, /@media print\{[\s\S]*?\.page\{display:none!important\}/);
   assert.match(css, /\.printOnly\{[\s\S]*?display:block!important/);
