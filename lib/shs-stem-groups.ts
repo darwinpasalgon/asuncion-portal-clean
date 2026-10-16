@@ -17,3 +17,19 @@ export function stemGroupLabel(code: unknown) {
 export function publicShsProgram(code: string) {
   return isStemGroup(code) || code === "STEM" ? "STEM" : code;
 }
+
+/** Grade 11 single-section TVL majors and combined elective group helpers. */
+export const TVL_GROUPS = [
+  { code: "TVL_FOOD_PROCESSING", label: "TVL - Food Processing", shortLabel: "Food Processing" },
+  { code: "TVL_OAP", label: "TVL - Organic Agriculture Production", shortLabel: "Organic Agriculture Production" },
+] as const;
+export const GRADE11_ELECTIVE_GROUPS = [...STEM_GROUPS, ...TVL_GROUPS] as const;
+export function isGrade11ElectiveGroup(value: unknown): value is "STEM_MEDICAL" | "STEM_ENGINEERING" | "TVL_FOOD_PROCESSING" | "TVL_OAP" {
+ return isStemGroup(value) || value === "TVL_FOOD_PROCESSING" || value === "TVL_OAP";
+}
+export function electiveGroupLabel(code: unknown) {
+ return GRADE11_ELECTIVE_GROUPS.find((group) => group.code === code)?.shortLabel ?? "Not Assigned";
+}
+export function groupsForSectionProgram(code: string | null | undefined) {
+ return code === "STEM" ? STEM_GROUPS : code === "TVL" ? TVL_GROUPS : [];
+}
