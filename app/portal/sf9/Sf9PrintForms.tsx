@@ -297,14 +297,15 @@ function FrontCard({
   detail: Sf9Detail;
   layout: Sf9LayoutSettings;
 }) {
-  const rows = card.grade_level === 11
+  const grade11Rows = card.grade_level === 11
     ? sf9Grade11Rows(
         card.grade_rows,
         card.elective_offerings ?? [],
         card.shs_program_code ?? "",
         card.core_subject_units ?? {}
       )
-    : padGradeRows(card.grade_rows);
+    : null;
+  const rows = grade11Rows ?? padGradeRows(card.grade_rows);
   return (
     <article className={styles.cardFront}>
       <HeaderBlock
@@ -407,7 +408,7 @@ function FrontCard({
           {card.grade_level === 11 ? (
             <tr className={styles.generalAverageRow + " " + styles.grade11GeneralAverage}>
               <td colSpan={4}>General Average</td>
-              <td className={styles.grade11UnitsCell}>{sf9Grade11TotalUnits(rows)}</td>
+              <td className={styles.grade11UnitsCell}>{sf9Grade11TotalUnits(grade11Rows ?? [])}</td>
               <td>{displayNumber(card.general_average)}</td>
               <td>{card.general_average === null ? "" : card.general_average >= 75 ? "Passed" : "Failed"}</td>
             </tr>
