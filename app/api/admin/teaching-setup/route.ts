@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hasAdminPermission } from "@/lib/admin-access";
 // Keep this check local: grades/teaching integration tests load route modules in isolation.
-const isStemGroup = (value: unknown): value is "STEM_MEDICAL" | "STEM_ENGINEERING" =>
-  value === "STEM_MEDICAL" || value === "STEM_ENGINEERING";
+const isGrade11ElectiveGroup = (value: unknown): value is "STEM_MEDICAL" | "STEM_ENGINEERING" | "TVL_OAP" | "TVL_FOOD_PROCESSING" =>
+  value === "STEM_MEDICAL" || value === "STEM_ENGINEERING" || value === "TVL_OAP" || value === "TVL_FOOD_PROCESSING";
 import { teachingAssignmentError } from "@/lib/teaching-assignment-error";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 import {
@@ -1039,7 +1039,7 @@ export async function POST(request: NextRequest) {
           token
         ) : [];
     const isStemElective = stemOfferingRows.some(
-      (row: { program_code?: string }) => isStemGroup(row.program_code)
+      (row: { program_code?: string }) => isGrade11ElectiveGroup(row.program_code)
     );
     const major = requiresMajor || isStemElective ? majorRaw : null;
     if (isStemElective && !stemOfferingRows.some(
