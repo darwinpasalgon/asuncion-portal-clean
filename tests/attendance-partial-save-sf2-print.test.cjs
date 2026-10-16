@@ -37,7 +37,7 @@ test("SF2 print generates current report automatically and prints only after ren
  assert.match(page,/requestAnimationFrame\(\(\) => requestAnimationFrame/);
  assert.match(page,/document\.fonts\?\.ready/);
  assert.match(page,/img\.decode\?\.\(\)/);
- assert.match(page,/window\.print\(\)/);
+ assert.match(page,/printWindow\.print\(\)/);
  assert.match(page,/previewIsCurrent/);
  assert.match(page,/onClick=\{\(\) => void printSf2\(\)\}/);
  assert.match(css,/@page\{\s*size:A4 landscape/);
