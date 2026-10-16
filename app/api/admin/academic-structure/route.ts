@@ -277,13 +277,16 @@ export async function POST(request: NextRequest) {
     if (Number(sections?.[0]?.grade_level) !== 11) {
       return NextResponse.json({ error: "Program assignment is currently available only for Grade 11 sections." }, { status: 400 });
     }
+    const normalizedProgram = sections?.[0]?.name === "Amber" &&
+      (programCode === "TVL_FOOD_PROCESSING" || programCode === "TVL_OAP")
+        ? "TVL" : programCode;
     const response = await fetch(
       `${SUPABASE_URL}/rest/v1/sections?id=eq.${encodeURIComponent(id)}`,
       {
         method: "PATCH",
         headers: { ...headers(token), Prefer: "return=representation" },
         body: JSON.stringify({
-          shs_program_code: programCode || null,
+          shs_program_code: normalizedProgram || null,
           updated_at: new Date().toISOString(),
         }),
         cache: "no-store",
