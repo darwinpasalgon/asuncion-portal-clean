@@ -161,7 +161,7 @@ export default function Sf2Page() {
         const images = Array.from(printDoc.querySelectorAll<HTMLImageElement>("img"));
         await Promise.all(images.map((img) => img.decode?.().catch(() => undefined)));
         await new Promise<void>((resolve) =>
-          printWindow.requestAnimationFrame(() => printWindow.requestAnimationFrame(() => resolve()))
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
         );
 
         printWindow.addEventListener("afterprint", dispose, { once: true });
