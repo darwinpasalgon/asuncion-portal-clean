@@ -1,0 +1,98 @@
+.panel{
+  display:flex;
+  gap:14px;
+  align-items:flex-start;
+  width:100%;
+  box-sizing:border-box;
+  margin:14px 0;
+  padding:17px 19px;
+  border:1px solid #d7e8e7;
+  border-radius:14px;
+  background:linear-gradient(120deg,#f4fafb 0%,#ffffff 62%,#f4fbf7 100%);
+  box-shadow:0 6px 22px rgba(12,58,69,.045);
+  color:#193f50;
+}
+.iconBadge{
+  display:grid;
+  place-items:center;
+  flex:0 0 42px;
+  width:42px;
+  height:42px;
+  border:1px solid #cfebe6;
+  border-radius:12px;
+  background:#e5f6f1;
+  color:#16806e;
+}
+.content{flex:1;min-width:0}
+.heading{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.heading > div{display:grid;gap:4px}
+.kicker{
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.14em;
+  color:#488078;
+}
+.heading strong{
+  font-size:14px;
+  font-weight:800;
+  color:#204557;
+}
+.working{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:11px;
+  font-weight:750;
+  color:#178872;
+}
+.working svg{animation:formSpin 1.6s linear infinite}
+.track{
+  position:relative;
+  height:9px;
+  margin-top:13px;
+  border-radius:99px;
+  overflow:hidden;
+  background:#dfedea;
+}
+.movingBar{
+  position:absolute;
+  top:0;
+  bottom:0;
+  left:0;
+  width:36%;
+  border-radius:99px;
+  background:linear-gradient(90deg,#2382c4,#25b48d,#8adfbd);
+  box-shadow:0 0 14px rgba(37,180,141,.32);
+  animation:formLoading 1.45s ease-in-out infinite alternate;
+}
+.detail{
+  margin:8px 0 0;
+  font-size:11px;
+  line-height:1.5;
+  color:#62818a;
+}
+@keyframes formLoading{
+  from{transform:translateX(-105%)}
+  to{transform:translateX(285%)}
+}
+@keyframes formSpin{
+  to{transform:rotate(360deg)}
+}
+@media(max-width:520px){
+  .panel{padding:14px;gap:10px}
+  .iconBadge{flex-basis:36px;width:36px;height:36px}
+  .heading strong{font-size:13px}
+}
+@media(prefers-reduced-motion:reduce){
+  .movingBar{animation:none;transform:none;width:100%}
+  .working svg{animation:none}
+}
+@media print{
+  .panel{display:none!important}
+}
