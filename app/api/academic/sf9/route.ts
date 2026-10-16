@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isStemGroup } from "@/lib/shs-stem-groups";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 import { generateSf9Remark, type Sf9RemarkSignal } from "@/lib/sf9-remarks";
 import { attendanceStartDate } from "@/lib/attendance-calendar";
@@ -9,8 +10,9 @@ type JsonRow = Record<string, any>;
 function grade11ProgramLabel(code: string): string {
   const labels: Record<string, string> = {
     ASSH: "ASSH",
-    STEM_MEDICAL: "STEM - Medical",
-    STEM_ENGINEERING: "STEM - Engineering",
+    STEM: "STEM",
+    STEM_MEDICAL: "STEM",
+    STEM_ENGINEERING: "STEM",
     BUSINESS_ENTREPRENEURSHIP: "Business and Entrepreneurship",
     TVL_OAP: "TVL - Organic Agriculture Production",
     TVL_FOOD_PROCESSING: "TVL - Food Processing",
@@ -585,7 +587,7 @@ export async function GET(request: NextRequest) {
           activeYear.id
         )}&section_id=eq.${encodeURIComponent(
           sectionId
-        )}&enrollment_status=eq.active&select=student_id,grade_level,section_id,tve_major,shs_track,shs_strand_program`,
+        )}&enrollment_status=eq.active&select=student_id,grade_level,section_id,tve_major,shs_track,shs_strand_program,shs_elective_group`,
         token
       ).catch(() => []);
 
@@ -641,6 +643,7 @@ export async function GET(request: NextRequest) {
             tve_major: row.tve_major ?? null,
           shs_track: row.shs_track ?? null,
           shs_strand_program: row.shs_strand_program ?? null,
+          shs_elective_group: row.shs_elective_group ?? null,
           };
         })
         .filter(Boolean)
@@ -669,7 +672,7 @@ export async function GET(request: NextRequest) {
         sectionId
       )}&student_id=in.${encodeURIComponent(
         inFilter(requestedStudentIds)
-      )}&enrollment_status=eq.active&select=student_id,grade_level,section_id,tve_major,shs_track,shs_strand_program`,
+      )}&enrollment_status=eq.active&select=student_id,grade_level,section_id,tve_major,shs_track,shs_strand_program,shs_elective_group`,
       token
     ).catch(() => []);
 
@@ -870,7 +873,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    function buildGradeRows(studentId: string, tveMajor: string | null) {
+    function buildGradeRows(studentId: string, tveMajor: string | null, stemGroup: string | null) {
       const assignmentsBySubject = new Map<string, JsonRow[]>();
       for (const assignment of visibleAssignments) {
         const subjectId = String(assignment.subject_id);
@@ -897,6 +900,15 @@ export async function GET(request: NextRequest) {
         const subject = item.subject as JsonRow;
         const normalized = normalizedSubjectName(String(subject.name ?? ""));
         let assignment = item.assignments[0];
+        // One STEM section can use two separate elective teachers.
+        if (selectedSection.grade_level === 11 &&
+            item.assignments.some((candidate) => isStemGroup(candidate.major))) {
+          const matched = item.assignments.find(
+            (candidate) => isStemGroup(candidate.major) && candidate.major === stemGroup
+          );
+          if (!matched) continue;
+          assignment = matched;
+        }
 
         if (normalized === "technical vocational education") {
           assignment =
@@ -1118,21 +1130,28 @@ export async function GET(request: NextRequest) {
       const student: JsonRow = profileMap.get(studentId) ?? {};
       const info: JsonRow = infoMap.get(studentId) ?? {};
       const enrollment: JsonRow = enrollmentMap.get(studentId) ?? {};
+      const stemGroup = String(enrollment.shs_elective_group ?? "") || null;
       const gradesBuilt = buildGradeRows(
         studentId,
-        String(enrollment.tve_major ?? "") || null
+        String(enrollment.tve_major ?? "") || null,
+        stemGroup
       );
       const shsStrand = String(enrollment.shs_strand_program ?? "").trim();
       const shsTrack = String(enrollment.shs_track ?? "").trim();
       const learnerProgram = grade11ProgramCode(
         shsStrand, shsTrack, String(enrollment.tve_major ?? "")
       );
+      const sectionProgram = String(selectedSection.shs_program_code ?? "");
       const shsProgram = selectedSection.grade_level === 11
-        ? learnerProgram || String(selectedSection.shs_program_code ?? "")
+        ? (sectionProgram === "STEM" || sectionProgram.startsWith("STEM_") ||
+           learnerProgram.startsWith("STEM_") ? "STEM" : learnerProgram || sectionProgram)
         : "";
-      const electiveOfferings = shsProgram
+      const electiveProgram = shsProgram === "STEM"
+        ? (isStemGroup(stemGroup) ? stemGroup : (isStemGroup(learnerProgram) ? learnerProgram : ""))
+        : shsProgram;
+      const electiveOfferings = electiveProgram
         ? (shs11Offerings ?? [])
-            .filter((offer: JsonRow) => offer.category === "elective" && offer.program_code === shsProgram)
+            .filter((offer: JsonRow) => offer.category === "elective" && offer.program_code === electiveProgram)
             .map((offer: JsonRow) => ({
               term_no: Number(offer.term_no),
               name: String(subjectMap.get(String(offer.subject_id))?.name ?? ""),
@@ -1190,6 +1209,7 @@ export async function GET(request: NextRequest) {
         section_id: sectionId,
         track: selectedSection.grade_level === 11 ? grade11ProgramLabel(shsProgram) || shsStrand || shsTrack : shsStrand || shsTrack,
         shs_program_code: shsProgram,
+        shs_elective_group: stemGroup,
         elective_offerings: electiveOfferings,
         core_subject_units: coreUnits,
         tve_major: enrollment.tve_major ?? null,
