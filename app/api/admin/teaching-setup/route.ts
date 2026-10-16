@@ -204,7 +204,7 @@ export async function GET(request: NextRequest) {
 
     const stemElectiveOfferings = activeYear
       ? await getRows(
-          `shs_subject_offerings?school_year_id=eq.${encodeURIComponent(activeYear.id)}&grade_level=eq.11&category=eq.elective&is_active=eq.true&program_code=in.(STEM_MEDICAL,STEM_ENGINEERING)&select=subject_id,program_code,term_no`,
+          `shs_subject_offerings?school_year_id=eq.${encodeURIComponent(activeYear.id)}&grade_level=eq.11&category=eq.elective&is_active=eq.true&program_code=in.(STEM_MEDICAL,STEM_ENGINEERING,TVL_OAP,TVL_FOOD_PROCESSING)&select=subject_id,program_code,term_no`,
           token
         ) : [];
     return NextResponse.json({
@@ -497,9 +497,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const stemOfferingRows = gradeLevel === 11 && sectionRows?.[0]?.shs_program_code === "STEM"
+    const stemOfferingRows = gradeLevel === 11 && ["STEM","TVL"].includes(String(sectionRows?.[0]?.shs_program_code ?? ""))
       ? await getRows(
-          `shs_subject_offerings?school_year_id=eq.${encodeURIComponent(activeYear.id)}&grade_level=eq.11&category=eq.elective&is_active=eq.true&program_code=in.(STEM_MEDICAL,STEM_ENGINEERING)&select=subject_id,program_code`,
+          `shs_subject_offerings?school_year_id=eq.${encodeURIComponent(activeYear.id)}&grade_level=eq.11&category=eq.elective&is_active=eq.true&program_code=in.(STEM_MEDICAL,STEM_ENGINEERING,TVL_OAP,TVL_FOOD_PROCESSING)&select=subject_id,program_code`,
           token
         ) : [];
     const validStemPairs = new Set(stemOfferingRows.map((row: { subject_id: string; program_code: string }) =>
@@ -1033,7 +1033,7 @@ export async function POST(request: NextRequest) {
       String(subjectRows[0].name ?? "")
     );
     const majorRaw = String(body?.major ?? "").trim();
-    const stemOfferingRows = gradeLevel === 11 && sectionRows?.[0]?.shs_program_code === "STEM"
+    const stemOfferingRows = gradeLevel === 11 && ["STEM","TVL"].includes(String(sectionRows?.[0]?.shs_program_code ?? ""))
       ? await getRows(
           `shs_subject_offerings?school_year_id=eq.${encodeURIComponent(activeYear.id)}&grade_level=eq.11&category=eq.elective&is_active=eq.true&subject_id=eq.${encodeURIComponent(subjectId)}&select=program_code`,
           token
