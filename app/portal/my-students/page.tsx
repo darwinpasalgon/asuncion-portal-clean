@@ -747,7 +747,7 @@ export default function MyStudentsPage() {
                             <span>Strand</span>
                             <input
                               value={selected.grade_level === 11 && ["STEM","TVL"].includes(selected.section_program ?? "")
-                                 ? selected.section_program : shsStrandLabel(selected.shs_strand_program)}
+                                 ? (selected.section_program ?? "") : shsStrandLabel(selected.shs_strand_program)}
                               readOnly
                             />
                           </label>
