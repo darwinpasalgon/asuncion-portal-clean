@@ -14,7 +14,7 @@ type Subject = {
 type Offering = {
   id: string; subject_id: string; grade_level: number;
   category: "core" | "elective"; program_code: string;
-  term_no: number; group_label: string | null; is_active: boolean;
+  term_no: number; group_label: string | null; units: number | null; is_active: boolean;
 };
 type SchoolYear = { id: string; name: string };
 const PROGRAMS = [
@@ -37,6 +37,7 @@ export default function ShsSubjectManagerPage() {
   const [existingSubjectId, setExistingSubjectId] = useState("");
   const [newName, setNewName] = useState("");
   const [groupLabel, setGroupLabel] = useState("");
+  const [newUnits, setNewUnits] = useState("");
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
@@ -95,6 +96,7 @@ export default function ShsSubjectManagerPage() {
       setExistingSubjectId("");
       setNewName("");
       setGroupLabel("");
+      setNewUnits("");
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to update subject setup.");
@@ -108,7 +110,25 @@ export default function ShsSubjectManagerPage() {
       <div>
         <strong>{subjectMap.get(offering.subject_id)?.name ?? "Subject"}</strong>
         {offering.group_label && <small>{offering.group_label}</small>}
+        <small>Units: {offering.units === null || offering.units === undefined ? "Not set" : offering.units}</small>
       </div>
+      <div className={styles.unitActions}>
+        <button type="button" className={styles.unitButton} disabled={working}
+          onClick={() => {
+            const value = window.prompt(
+              "Enter credit units for " + (subjectMap.get(offering.subject_id)?.name ?? "subject") +
+              " (leave blank when unknown):",
+              offering.units === null || offering.units === undefined ? "" : String(offering.units)
+            );
+            if (value === null) return;
+            const trimmed = value.trim();
+            if (trimmed !== "" && (!/^\\d{1,2}(?:\\.\\d)?$/.test(trimmed) || Number(trimmed) > 20)) {
+              setError("Enter valid credit units between 0 and 20, with one decimal place.");
+              return;
+            }
+            void mutate({ action: "set_units", id: offering.id, units: trimmed });
+          }}
+        >Set Units</button>
       <button
         type="button"
         className={styles.remove}
@@ -119,6 +139,7 @@ export default function ShsSubjectManagerPage() {
           void mutate({ action: "remove_offering", id: offering.id });
         }}
       ><Trash2 size={15} /> Remove</button>
+      </div>
     </div>
   );
 
@@ -127,6 +148,7 @@ export default function ShsSubjectManagerPage() {
       <div className={styles.shell}>
         <nav className={styles.topBar}>
           <a href="/portal/admin/teaching"><ArrowLeft size={17} /> Teaching Subject Management</a>
+          <a href="/portal/admin/school-setup">Assign Grade 11 Section Programs</a>
           <button type="button" onClick={() => void load()} disabled={loading || working}>
             <RefreshCw size={16} /> Refresh
           </button>
@@ -220,6 +242,7 @@ export default function ShsSubjectManagerPage() {
                   subjectId: existingSubjectId || undefined,
                   name: existingSubjectId ? undefined : newName.trim(),
                   groupLabel: category === "core" ? groupLabel : null,
+                  units: newUnits.trim(),
                 });
               }}>
                 <div className={styles.formRow}>
@@ -247,6 +270,11 @@ export default function ShsSubjectManagerPage() {
                   </select>
                 </label> :
                   <p className={styles.target}>Will be offered in: <strong>Grade {grade} · Term {term} · {PROGRAMS.find((p) => p.code === program)?.label}</strong></p>}
+                <label><span>Credit Units for SF9 (Optional)</span>
+                  <input type="number" min="0" max="20" step="0.1" value={newUnits}
+                    onChange={(event) => setNewUnits(event.target.value)}
+                    placeholder="Leave blank until confirmed by the official template" />
+                </label>
                 <button className={styles.addButton} disabled={working} type="submit"><Plus size={17} /> {working ? "Saving Subject…" : "Add to Subject Setup"}</button>
               </form>
               <p className={styles.panelFootnote}>Removing an offering does not delete grades, schedules, or teacher assignments. Subject offerings are configured per active school year and do not automatically assign a teacher.</p>
