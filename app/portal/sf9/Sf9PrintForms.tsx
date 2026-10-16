@@ -154,6 +154,7 @@ export type Sf9CardData = {
   track: string;
   shs_program_code?: string;
   elective_offerings?: Sf9Grade11Offering[];
+  core_subject_units?: Record<string, number | null>;
   grade_rows: GradeRow[];
   general_average: number | null;
   general_averages_by_term?: Array<number | null>;
@@ -297,7 +298,12 @@ function FrontCard({
   layout: Sf9LayoutSettings;
 }) {
   const rows = card.grade_level === 11
-    ? sf9Grade11Rows(card.grade_rows, card.elective_offerings ?? [], card.shs_program_code ?? "")
+    ? sf9Grade11Rows(
+        card.grade_rows,
+        card.elective_offerings ?? [],
+        card.shs_program_code ?? "",
+        card.core_subject_units ?? {}
+      )
     : padGradeRows(card.grade_rows);
   return (
     <article className={styles.cardFront}>
@@ -355,6 +361,7 @@ function FrontCard({
         <thead>
           <tr>
             <th rowSpan={2} className={styles.learningAreaCol}>Learning Areas</th>
+            {card.grade_level === 11 && <th rowSpan={2} className={styles.unitsCol}>Units</th>}
             <th colSpan={3}>TERM</th>
             <th rowSpan={2} className={styles.finalCol}>Final<br />Grade</th>
             <th rowSpan={2} className={styles.remarksCol}>Remarks</th>
@@ -372,6 +379,7 @@ function FrontCard({
               return (
                 <tr key={row.key} className={kind === "section" ? styles.shsSectionRow : styles.shsGroupLabelRow}>
                   <td>{row.label}</td>
+                  {card.grade_level === 11 && <td></td>}
                   <td></td><td></td><td></td><td></td><td></td>
                 </tr>
               );
@@ -379,6 +387,7 @@ function FrontCard({
             return (
               <tr key={row.key} className={row.component ? styles.componentRow : "indent" in row && row.indent ? styles.shsIndentedRow : ""}>
                 <td>{row.label}</td>
+                {card.grade_level === 11 && <td>{("units" in row && row.units !== null && row.units !== undefined) ? row.units : ""}</td>}
                 <td>{displayNumber(row.terms?.[0])}</td>
                 <td>{displayNumber(row.terms?.[1])}</td>
                 <td>{displayNumber(row.terms?.[2])}</td>
@@ -389,6 +398,7 @@ function FrontCard({
           })}
           <tr className={styles.generalAverageRow}>
             <td>General Average</td>
+            {card.grade_level === 11 && <td></td>}
             <td>{displayNumber(card.general_averages_by_term?.[0] ?? null)}</td>
             <td>{displayNumber(card.general_averages_by_term?.[1] ?? null)}</td>
             <td>{displayNumber(card.general_averages_by_term?.[2] ?? null)}</td>
