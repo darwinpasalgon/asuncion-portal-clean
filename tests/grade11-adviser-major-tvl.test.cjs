@@ -7,7 +7,7 @@ const read = (p) => fs.readFileSync(path.join(__dirname, "..", p), "utf8");
 test("Amber is one Grade 11 TVL section with separate Food Processing and Agriculture majors", () => {
  const migration = read("supabase/migrations/20261016150000_grade11_tvl_amber_adviser_major.sql");
  const school = read("app/portal/admin/school-setup/page.tsx");
- assert.match(migration, /name='Amber' and shs_program_code is null/);
+ assert.match(migration, /name='Amber' and shs_program_code is distinct from 'TVL'/);
  assert.match(migration, /shs_program_code='TVL'/);
  assert.match(migration, /TVL_FOOD_PROCESSING/);
  assert.match(migration, /TVL_OAP/);
