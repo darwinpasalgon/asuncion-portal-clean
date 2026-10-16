@@ -11,6 +11,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import styles from "./sf10.module.css";
+import { GeneratingProgress } from "@/components/school-forms/GeneratingProgress";
 import { JhsSf10Form, ShsSf10Form } from "./Sf10PrintForms";
 
 type Student = {
@@ -196,6 +197,24 @@ export default function Sf10Page() {
         {error && <div className={styles.error}>{error}</div>}
         {success && <div className={styles.success}>{success}</div>}
 
+        {(loading || working === "load" || working === "save" || working === "print") && (
+          <GeneratingProgress
+            form="SF10"
+            message={
+              working === "print" ? "Preparing SF10 for printing…"
+                : working === "save" ? "Saving SF10 permanent record…"
+                  : working === "load" ? "Generating SF10 permanent record…"
+                    : "Loading SF10 learners…"
+            }
+            detail={
+              working === "print" ? "Recording the print action and preparing the official form."
+                : working === "save" ? "Saving the updated learner information."
+                  : working === "load" ? "Compiling learner information and scholastic history."
+                    : "Retrieving the learners available to your account."
+            }
+          />
+        )}
+
         <div className={styles.layout}>
           <aside className={styles.learners}>
             <div className={styles.search}>
@@ -264,7 +283,7 @@ export default function Sf10Page() {
                     disabled={working === "print" || !profileComplete}
                     onClick={() => void printRecord()}
                   >
-                    <Printer size={16} />Print Record
+                    <Printer size={16} />{working === "print" ? "Preparing Print…" : "Print Record"}
                   </button>
                 </section>
 
