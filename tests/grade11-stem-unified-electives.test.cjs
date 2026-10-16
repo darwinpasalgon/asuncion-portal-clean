@@ -11,7 +11,7 @@ test("Grade 11 School Setup offers STEM once while preserving Medical and Engine
   assert.match(page, /code: "STEM", name: "Academic · STEM"/);
   assert.doesNotMatch(page, /code: "STEM_MEDICAL", name:/);
   assert.doesNotMatch(page, /code: "STEM_ENGINEERING", name:/);
-  assert.match(api, /"STEM", "BUSINESS_ENTREPRENEURSHIP"/);
+  assert.match(api, /"STEM", "TVL", "BUSINESS_ENTREPRENEURSHIP"/);
   assert.match(api, /submittedCode === "STEM_MEDICAL"/);
   assert.match(sql, /update public.sections/);
   assert.match(sql, /set shs_program_code='STEM'/);
@@ -41,10 +41,10 @@ test("Subject teacher assignment differentiates STEM elective groups, not sectio
  assert.match(api, /validStemPairs/);
  assert.match(api, /isStemElective/);
  assert.match(api, /major = needsMajor \|\| isStemElective/);
- assert.match(page, /setupSection.shs_program_code === "STEM"/);
+ assert.match(page, /"STEM","TVL"\].includes\(setupSection.shs_program_code/);
  assert.match(page, /stemElectiveOfferings.filter/);
- assert.match(page, /STEM Elective Group/);
- assert.match(page, /stemGroupLabel/);
+ assert.match(page, /Grade 11 Elective Major/);
+ assert.match(page, /electiveGroupLabel/);
 });
 
 test("Gradebook and SF9 prevent cross-group grades and publicly display only STEM", () => {
