@@ -309,22 +309,27 @@
 @media(prefers-reduced-motion:reduce){.readinessScanning{animation:none;width:100%;background:#2baf9a}.readinessFill{transition:none}}
 
 
-/* Grade 11 Strengthened SHS SF9: AMOGUIS.xlsx, Learning Areas rows 32–43.
-   Keep the JHS and Grade 12 table untouched. */
-.grade11Table .learningAreaCol{width:49.5%}
-.grade11Table .finalCol{width:11%}
-.grade11Table .remarksCol{width:15.5%}
-.grade11Table th,.grade11Table td{height:4.05mm;padding:.57mm .55mm}
-.grade11Table tbody td:first-child{overflow-wrap:break-word;line-height:1.08}
-.shsSectionRow td{font-weight:800!important;text-align:left!important;background:#f2f3f3;font-size:7.44pt;padding:.45mm 1mm!important}
-.shsGroupLabelRow td{font-weight:650!important;text-align:left!important;font-size:6.8pt;padding:.5mm .8mm!important}
-.shsIndentedRow td:first-child{padding-left:4mm!important;font-size:7pt}
-@media print{.shsSectionRow td{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
-
-
-/* Seven-column Grade 11 table with an optional college-style credit-units field. */
-.grade11Table .learningAreaCol{width:42%}
-.grade11Table .unitsCol{width:7.5%;font-size:6.8pt}
-.grade11Table .finalCol{width:10.5%}
-.grade11Table .remarksCol{width:16%}
-.grade11Table td:nth-child(2){font-variant-numeric:tabular-nums;text-align:center}
+/* Updated official Grade 11 SF9, worksheet rows 29–44:
+   Learning Areas | T1 T2 T3 | Units | Final Grade | Remarks.
+   Printed left card occupies half of one A4 landscape sheet. */
+.grade11Table{table-layout:fixed;font-size:7.42pt}
+.grade11Table .learningAreaCol{width:38%}
+.grade11Table .unitsCol{width:9%;font-size:7.3pt}
+.grade11Table .finalCol{width:10%}
+.grade11Table .remarksCol{width:15%}
+.grade11Table th,.grade11Table td{height:4.4mm;padding:.51mm .49mm;line-height:1.06}
+.grade11Table tbody td:first-child{overflow-wrap:break-word;text-align:left}
+.grade11Table tbody td.grade11UnitsCell{text-align:center;font-weight:800;font-size:7.7pt;font-variant-numeric:tabular-nums}
+.grade11Table .shsSectionRow td{font-weight:800;font-style:italic;text-align:left;background:#fff;padding:.65mm 1mm}
+.grade11Table .shsGroupLabelRow td:first-child{font-weight:400;text-align:left;font-size:7.35pt}
+.grade11Table .shsIndentedRow td:first-child{padding-left:4.2mm;font-size:7.3pt;font-style:italic}
+.grade11Table .grade11UnusedTerm{background:#aaa!important}
+.grade11Table .grade11GeneralAverage td:first-child{font-weight:800;font-style:italic;text-align:center;font-size:8pt}
+.grade11Table .grade11GeneralAverage .grade11UnitsCell{font-size:8pt;font-weight:900}
+@media print{
+  .grade11Table .grade11UnusedTerm{
+    background:#aaa!important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+}
