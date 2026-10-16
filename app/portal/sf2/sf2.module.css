@@ -86,6 +86,8 @@
   border-radius:14px;
   padding:18px;
 }
+/* Print-only copy is independent of the scrollable on-screen preview. */
+.printOnly{display:none}
 .empty{
   min-height:260px;
   display:grid;
@@ -519,11 +521,21 @@
   margin:4.572mm 4.064mm 4.826mm 4.318mm;
 }
 @media print{
-  .page{
+  /* Hide the entire scrolling screen UI; print only the separate SF2 sheet. */
+  .page{display:none!important}
+  .printOnly{
+    display:block!important;
+    box-sizing:content-box;
+    width:var(--sf2-print-width);
+    max-width:none!important;
     min-height:0;
-    background:#fff;
-    padding:0;
-    margin:0;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+    overflow:visible!important;
+    background:#fff!important;
   }
   .shell{max-width:none;margin:0}
   .topBar,.header,.controls,.notice,.warning,.error{display:none!important}
