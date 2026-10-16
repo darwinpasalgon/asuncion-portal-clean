@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import styles from "./grades.module.css";
 import { isTechnicalVocationalEducation } from "@/lib/subject-config";
+import { isStemGroup, stemGroupLabel } from "@/lib/shs-stem-groups";
 
 type Role = "student" | "teacher";
 type ActiveYear = { id: string; name: string; start_year: number; end_year: number };
@@ -45,6 +46,7 @@ type Enrollment = {
   grade_level: number;
   section_id: string | null;
   tve_major: string | null;
+  shs_elective_group: string | null;
 };
 type Student = {
   id: string;
@@ -313,7 +315,9 @@ export default function GradesPage() {
           item.grade_level === selectedAssignment.grade_level &&
           (selectedIsTve ||
             !selectedAssignment.major ||
-            item.tve_major === selectedAssignment.major)
+            (isStemGroup(selectedAssignment.major)
+              ? item.shs_elective_group === selectedAssignment.major
+              : item.tve_major === selectedAssignment.major))
       )
       .map((item) => studentMap.get(item.student_id))
       .filter((item): item is Student => Boolean(item))
@@ -379,7 +383,9 @@ export default function GradesPage() {
           item.grade_level === selectedSubjectAssignment.grade_level &&
           (!selectedSubjectAssignmentIsTve ||
             !selectedSubjectAssignment.major ||
-            item.tve_major === selectedSubjectAssignment.major)
+            (isStemGroup(selectedSubjectAssignment.major)
+              ? item.shs_elective_group === selectedSubjectAssignment.major
+              : item.tve_major === selectedSubjectAssignment.major))
       )
       .map((item) => studentMap.get(item.student_id))
       .filter((item): item is Student => Boolean(item))
@@ -415,7 +421,7 @@ export default function GradesPage() {
     return `Grade ${assignment.grade_level} · ${sectionMap.get(
       assignment.section_id
     ) ?? "Unknown"} · ${subject?.name ?? "Unknown subject"}${
-      assignment.major ? ` · ${assignment.major}` : ""
+      assignment.major ? ` · ${isStemGroup(assignment.major) ? stemGroupLabel(assignment.major) : assignment.major}` : ""
     }`;
   }
 
