@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import styles from "./grades.module.css";
 import { isTechnicalVocationalEducation } from "@/lib/subject-config";
-import { isStemGroup, stemGroupLabel } from "@/lib/shs-stem-groups";
+import { isGrade11ElectiveGroup, electiveGroupLabel } from "@/lib/shs-stem-groups";
 
 type Role = "student" | "teacher";
 type ActiveYear = { id: string; name: string; start_year: number; end_year: number };
@@ -315,7 +315,7 @@ export default function GradesPage() {
           item.grade_level === selectedAssignment.grade_level &&
           (selectedIsTve ||
             !selectedAssignment.major ||
-            (isStemGroup(selectedAssignment.major)
+            (isGrade11ElectiveGroup(selectedAssignment.major)
               ? item.shs_elective_group === selectedAssignment.major
               : item.tve_major === selectedAssignment.major))
       )
@@ -383,7 +383,7 @@ export default function GradesPage() {
           item.grade_level === selectedSubjectAssignment.grade_level &&
           (!selectedSubjectAssignmentIsTve ||
             !selectedSubjectAssignment.major ||
-            (isStemGroup(selectedSubjectAssignment.major)
+            (isGrade11ElectiveGroup(selectedSubjectAssignment.major)
               ? item.shs_elective_group === selectedSubjectAssignment.major
               : item.tve_major === selectedSubjectAssignment.major))
       )
@@ -421,7 +421,7 @@ export default function GradesPage() {
     return `Grade ${assignment.grade_level} · ${sectionMap.get(
       assignment.section_id
     ) ?? "Unknown"} · ${subject?.name ?? "Unknown subject"}${
-      assignment.major ? ` · ${isStemGroup(assignment.major) ? stemGroupLabel(assignment.major) : assignment.major}` : ""
+      assignment.major ? ` · ${isGrade11ElectiveGroup(assignment.major) ? electiveGroupLabel(assignment.major) : assignment.major}` : ""
     }`;
   }
 
