@@ -371,7 +371,8 @@ function FrontCard({
             if (kind === "section" || kind === "group") {
               return (
                 <tr key={row.key} className={kind === "section" ? styles.shsSectionRow : styles.shsGroupLabelRow}>
-                  <td colSpan={6}>{row.label}</td>
+                  <td>{row.label}</td>
+                  <td></td><td></td><td></td><td></td><td></td>
                 </tr>
               );
             }
