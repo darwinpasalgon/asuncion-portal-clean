@@ -533,7 +533,7 @@ export default function SchoolSetupPage() {
                                   </optgroup>
                                   <optgroup label="TVL">
                                     {GRADE11_PROGRAM_OPTIONS.filter((item) =>
-                                      item.code.startsWith("TVL_") || item.code === "TVL"
+                                      (section.name === "Amber" ? item.code === "TVL" : item.code.startsWith("TVL_") || item.code === "TVL")
                                     ).map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}
                                   </optgroup>
                                 </select>
