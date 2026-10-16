@@ -1,6 +1,7 @@
 "use client";
 
 import { generateSf9Remark } from "@/lib/sf9-remarks";
+import { GeneratingProgress } from "@/components/school-forms/GeneratingProgress";
 import {
   useEffect,
   useMemo,
@@ -125,6 +126,7 @@ export default function Sf9Page() {
   const [loading, setLoading] = useState(true);
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [printingSf9, setPrintingSf9] = useState(false);
   const [error, setError] = useState("");
   const [layoutSettings, setLayoutSettings] =
     useState<Sf9LayoutSettings>(DEFAULT_SF9_LAYOUT);
@@ -424,8 +426,8 @@ export default function Sf9Page() {
     });
   }
 
-  function printSf9() {
-    if (!detail?.cards?.length) return;
+  async function printSf9() {
+    if (printingSf9 || !detail?.cards?.length) return;
     if (readinessLoading || readinessError) {
       window.alert("The SF9 readiness check is unavailable. Please review grades, attendance and remarks before printing.");
       return;
@@ -440,7 +442,21 @@ export default function Sf9Page() {
       ).join("\n");
       if (!window.confirm("Unresolved SF9 requirements:\n" + names + "\n\nPrint anyway?")) return;
     }
-    window.print();
+    setPrintingSf9(true);
+    try {
+      // Allow the progress animation to become visible before opening print.
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      );
+      if (document.fonts?.ready) await document.fonts.ready;
+      const documentImages = Array.from(
+        document.querySelectorAll<HTMLImageElement>(".sf9-print-document img")
+      );
+      await Promise.all(documentImages.map((image) => image.decode?.().catch(() => undefined)));
+      window.print();
+    } finally {
+      setPrintingSf9(false);
+    }
   }
 
   function remarkSource(text: string, suggestion: string): RemarkDraft["source"] {
@@ -845,6 +861,24 @@ export default function Sf9Page() {
         </header>
 
         {error && <div className={styles.error}>{error}</div>}
+
+        {(loading || loadingStudents || loadingDetail || loadingEditorDetail || printingSf9) && (
+          <GeneratingProgress
+            form="SF9"
+            message={
+              printingSf9 ? "Preparing SF9 for printing…"
+                : loading ? "Loading SF9 records…"
+                  : loadingStudents ? "Loading section learners…"
+                    : loadingEditorDetail ? "Generating editable SF9 preview…"
+                      : "Generating SF9 report card…"
+            }
+            detail={
+              printingSf9 ? "Preparing the A4 front and back pages for printing."
+                : loadingStudents ? "Retrieving the current learners in this section."
+                  : "Compiling published grades, attendance and adviser remarks."
+            }
+          />
+        )}
 
         <section className={styles.instructions}>
           <FileSpreadsheet size={21} />
@@ -1256,11 +1290,11 @@ export default function Sf9Page() {
             <button
               type="button"
               className={styles.printButton}
-              disabled={!detail?.cards?.length || loadingDetail}
+              disabled={!detail?.cards?.length || loadingDetail || printingSf9}
               onClick={printSf9}
             >
               <Printer size={17} />
-              {loadingDetail ? "Preparing…" : "Print SF9"}
+              {printingSf9 || loadingDetail ? "Preparing…" : "Print SF9"}
             </button>
           </div>
 
