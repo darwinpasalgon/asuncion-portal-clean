@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isStemGroup } from "@/lib/shs-stem-groups";
+import { isGrade11ElectiveGroup } from "@/lib/shs-stem-groups";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 import { generateSf9Remark, type Sf9RemarkSignal } from "@/lib/sf9-remarks";
 import { attendanceStartDate } from "@/lib/attendance-calendar";
@@ -11,11 +11,12 @@ function grade11ProgramLabel(code: string): string {
   const labels: Record<string, string> = {
     ASSH: "ASSH",
     STEM: "STEM",
+    TVL: "Technical-Vocational-Livelihood",
     STEM_MEDICAL: "STEM",
     STEM_ENGINEERING: "STEM",
     BUSINESS_ENTREPRENEURSHIP: "Business and Entrepreneurship",
-    TVL_OAP: "TVL - Organic Agriculture Production",
-    TVL_FOOD_PROCESSING: "TVL - Food Processing",
+    TVL_OAP: "TVL",
+    TVL_FOOD_PROCESSING: "TVL",
   };
   return labels[code] ?? "";
 }
@@ -902,9 +903,9 @@ export async function GET(request: NextRequest) {
         let assignment = item.assignments[0];
         // One STEM section can use two separate elective teachers.
         if (selectedSection.grade_level === 11 &&
-            item.assignments.some((candidate) => isStemGroup(candidate.major))) {
+            item.assignments.some((candidate) => isGrade11ElectiveGroup(candidate.major))) {
           const matched = item.assignments.find(
-            (candidate) => isStemGroup(candidate.major) && candidate.major === stemGroup
+            (candidate) => isGrade11ElectiveGroup(candidate.major) && candidate.major === stemGroup
           );
           if (!matched) continue;
           assignment = matched;
@@ -1144,10 +1145,13 @@ export async function GET(request: NextRequest) {
       const sectionProgram = String(selectedSection.shs_program_code ?? "");
       const shsProgram = selectedSection.grade_level === 11
         ? (sectionProgram === "STEM" || sectionProgram.startsWith("STEM_") ||
-           learnerProgram.startsWith("STEM_") ? "STEM" : learnerProgram || sectionProgram)
+           learnerProgram.startsWith("STEM_") ? "STEM" :
+           sectionProgram === "TVL" || sectionProgram.startsWith("TVL_") ||
+           learnerProgram.startsWith("TVL_") ? "TVL" :
+           learnerProgram || sectionProgram)
         : "";
-      const electiveProgram = shsProgram === "STEM"
-        ? (isStemGroup(stemGroup) ? stemGroup : (isStemGroup(learnerProgram) ? learnerProgram : ""))
+      const electiveProgram = shsProgram === "STEM" || shsProgram === "TVL"
+        ? (isGrade11ElectiveGroup(stemGroup) ? stemGroup : (isGrade11ElectiveGroup(learnerProgram) ? learnerProgram : ""))
         : shsProgram;
       const electiveOfferings = electiveProgram
         ? (shs11Offerings ?? [])
