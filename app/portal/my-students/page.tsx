@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import { TECHNICAL_VOCATIONAL_MAJORS } from "@/lib/subject-config";
+import { groupsForSectionProgram, electiveGroupLabel } from "@/lib/shs-stem-groups";
 import {
   LIS_ETHNICITY_OPTIONS,
   LIS_MOTHER_TONGUE_OPTIONS,
@@ -54,6 +55,8 @@ type Learner = {
   tve_major: string | null;
   shs_track: string | null;
   shs_strand_program: string | null;
+  shs_elective_group: string | null;
+  section_program: string | null;
   learner_status: string;
 };
 
@@ -161,6 +164,7 @@ export default function MyStudentsPage() {
         learner.tve_major,
         learner.shs_track,
         learner.shs_strand_program,
+        learner.shs_elective_group,
       ].some((value) => String(value ?? "").toLowerCase().includes(needle));
     });
   }, [learners, search, sectionFilter]);
@@ -191,9 +195,10 @@ export default function MyStudentsPage() {
       ).length,
       shsAssigned: learners.filter(
         (learner) =>
-          [11, 12].includes(learner.grade_level) &&
-          Boolean(learner.shs_track) &&
-          Boolean(learner.shs_strand_program)
+          (learner.grade_level === 11 && ["STEM", "TVL"].includes(learner.section_program ?? "")
+            ? Boolean(learner.shs_elective_group)
+            : [11, 12].includes(learner.grade_level) &&
+              Boolean(learner.shs_track) && Boolean(learner.shs_strand_program))
       ).length,
     }),
     [learners]
@@ -285,6 +290,21 @@ export default function MyStudentsPage() {
         }
       }
 
+      if (selected.grade_level === 11 && ["STEM","TVL"].includes(selected.section_program ?? "")) {
+        const group = String(form.get("shs_elective_group") ?? "");
+        if (group !== (selected.shs_elective_group ?? "")) {
+          const groupResponse = await fetch("/api/academic/adviser-students", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "set_grade11_major", enrollmentId: selected.enrollment_id, group }),
+          });
+          const groupResult = await groupResponse.json().catch(() => ({}));
+          if (!groupResponse.ok) {
+            setError(groupResult.error ?? "Learner profile saved, but Grade 11 major could not be changed.");
+            await load(selected.student_id);
+            return;
+          }
+        }
+      }
       setSuccess(`${selected.full_name}'s learner information was updated.`);
       await load(selected.student_id);
     } catch {
@@ -350,7 +370,7 @@ export default function MyStudentsPage() {
           </article>
           <article>
             <BookOpenCheck size={20} />
-            <span>{seniorHighView ? "Track / Strand Assigned" : "TVE Major Assigned"}</span>
+            <span>{seniorHighView ? "SHS Track / Major Assigned" : "TVE Major Assigned"}</span>
             <strong>{seniorHighView ? counts.shsAssigned : counts.tveAssigned}</strong>
           </article>
         </section>
@@ -667,7 +687,7 @@ export default function MyStudentsPage() {
                       <h3>Academic Information</h3>
                       <p>
                         {[11, 12].includes(selected.grade_level)
-                          ? "Senior High Track and Strand are shown from the official enrollment record."
+                          ? "Grade 11 major is adviser-managed in combined STEM or TVL sections. Other SHS placement fields remain protected."
                           : "Placement fields are protected; Adviser-managed TVE Major remains editable."}
                       </p>
                     </div>
@@ -701,16 +721,33 @@ export default function MyStudentsPage() {
                           </select>
                         </label>
                       )}
+                      {selected.grade_level === 11 &&
+                        ["STEM", "TVL"].includes(selected.section_program ?? "") && (
+                          <label className={styles.wide}>
+                            <span>{selected.section_program === "STEM" ? "STEM Major" : "TVL Major"}</span>
+                            <select name="shs_elective_group" defaultValue={selected.shs_elective_group ?? ""}>
+                              <option value="">Not Assigned</option>
+                              {groupsForSectionProgram(selected.section_program).map((item) =>
+                                <option key={item.code} value={item.code}>{item.shortLabel}</option>)}
+                            </select>
+                            <small>{selected.shs_elective_group
+                              ? "Current Major: " + electiveGroupLabel(selected.shs_elective_group)
+                              : "Choose the learner's major before encoding elective grades."}</small>
+                          </label>
+                        )}
                       {[11, 12].includes(selected.grade_level) && (
                         <>
                           <label>
                             <span>Track</span>
-                            <input value={shsTrackLabel(selected.shs_track)} readOnly />
+                            <input value={selected.grade_level === 11 && ["STEM","TVL"].includes(selected.section_program ?? "")
+                               ? selected.section_program === "STEM" ? "Academic" : "Technical-Vocational-Livelihood"
+                               : shsTrackLabel(selected.shs_track)} readOnly />
                           </label>
                           <label>
                             <span>Strand</span>
                             <input
-                              value={shsStrandLabel(selected.shs_strand_program)}
+                              value={selected.grade_level === 11 && ["STEM","TVL"].includes(selected.section_program ?? "")
+                                 ? selected.section_program : shsStrandLabel(selected.shs_strand_program)}
                               readOnly
                             />
                           </label>
