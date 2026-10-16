@@ -387,7 +387,7 @@ function FrontCard({
             return (
               <tr key={row.key} className={row.component ? styles.componentRow : "indent" in row && row.indent ? styles.shsIndentedRow : ""}>
                 <td>{row.label}</td>
-                {card.grade_level === 11 && <td>{("units" in row && row.units !== null && row.units !== undefined) ? row.units : ""}</td>}
+                {card.grade_level === 11 && <td>{("units" in row && typeof row.units === "number") ? displayNumber(row.units) : ""}</td>}
                 <td>{displayNumber(row.terms?.[0])}</td>
                 <td>{displayNumber(row.terms?.[1])}</td>
                 <td>{displayNumber(row.terms?.[2])}</td>
