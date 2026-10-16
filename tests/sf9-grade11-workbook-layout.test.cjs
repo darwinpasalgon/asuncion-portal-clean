@@ -23,9 +23,6 @@ test("Grade 11 layout uses exact core-subject row order and communication subrow
  assert.match(helper, /heading\("shs11-core-heading", "Core Subjects"/);
  assert.match(helper, /heading\("shs11-language-heading", GRADE11_COMMUNICATION_LABEL/);
  assert.match(helper, /heading\("shs11-elective-heading", "Elective Subjects"/);
- assert.match(helper, /Social Science Theory and Practice/);
- assert.match(helper, /Academic Elective 2/);
- assert.match(helper, /Academic Elective 3/);
  assert.match(helper, /shs11-elective-.*termNo/);
  assert.match(helper, /terms\[termNo - 1\] = source\?\.terms\?\.\[termNo - 1\]/);
 });
@@ -57,8 +54,29 @@ test("Grade 11 elective names use student program and term, not a fixed ASSH lab
  assert.match(api, /shs_program_code: shsProgram/);
  assert.match(api, /elective_offerings: electiveOfferings/);
  assert.match(helper, /electiveOfferings\.filter/);
- assert.match(helper, /programCode === "ASSH"/);
+ assert.doesNotMatch(helper, /"Academic Elective [123]"/);
+ assert.match(helper, /if \(!programCode\) return rows/);
  assert.match(rls, /sa\.teacher_id=\(select auth\.uid\(\)\)/);
  assert.match(rls, /sa\.school_year_id=shs_subject_offerings\.school_year_id/);
  assert.match(rls, /s\.grade_level=shs_subject_offerings\.grade_level/);
+});
+
+test("Grade 11 unit cells are optional and section-selected program supplies exact elective names", () => {
+ const migration = read("supabase/migrations/20261016123000_grade11_program_units.sql");
+ const school = read("app/portal/admin/school-setup/page.tsx");
+ const schoolApi = read("app/api/admin/academic-structure/route.ts");
+ const sf9 = read("app/api/academic/sf9/route.ts");
+ const layout = read("app/portal/sf9/Sf9PrintForms.tsx");
+ const ui = read("app/portal/admin/shs-subjects/page.tsx");
+ assert.match(migration, /shs_program_code/);
+ assert.match(migration, /add column if not exists units numeric/);
+ assert.match(school, /set_grade11_program/);
+ assert.match(schoolApi, /if \(action === "set_grade11_program"\)/);
+ assert.match(sf9, /learnerProgram \|\| String\(selectedSection.shs_program_code/);
+ assert.match(sf9, /category === "elective"/);
+ assert.match(sf9, /core_subject_units: coreUnits/);
+ assert.match(layout, /grade_level === 11 && <th rowSpan=\{2\} className=\{styles.unitsCol\}>Units<\/th>/);
+ assert.match(layout, /card.grade_level === 11 && <td>/);
+ assert.match(ui, /Set Units/);
+ assert.match(ui, /Credit Units for SF9/);
 });
