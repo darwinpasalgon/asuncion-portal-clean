@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isStemGroup } from "@/lib/shs-stem-groups";
+// Keep this check local: grades/teaching integration tests load route modules in isolation.
+const isStemGroup = (value: unknown): value is "STEM_MEDICAL" | "STEM_ENGINEERING" =>
+  value === "STEM_MEDICAL" || value === "STEM_ENGINEERING";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 import { isTechnicalVocationalEducation } from "@/lib/subject-config";
 
