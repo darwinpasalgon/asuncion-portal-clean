@@ -39,3 +39,16 @@ test("SF2 uses a separate non-scrollable print sheet rather than printing the pr
   assert.match(css, /\.printOnly\{[\s\S]*?display:block!important/);
   assert.match(css, /\.printOnly\{[\s\S]*?overflow:visible!important/);
 });
+
+test("SF2 actually prints an isolated iframe document, not the main browser page", () => {
+  const page = read("app/portal/sf2/page.tsx");
+  assert.match(page, /document\.createElement\("iframe"\)/);
+  assert.match(page, /document\.body\.appendChild\(iframe\)/);
+  assert.match(page, /printDocument\.outerHTML/);
+  assert.match(page, /head link\[rel="stylesheet"\]/);
+  assert.match(page, /printDoc\.fonts\?\.ready/);
+  assert.match(page, /const images = Array\.from\(printDoc\.querySelectorAll/);
+  assert.match(page, /printWindow\.print\(\)/);
+  assert.match(page, /printWindow\.addEventListener\("afterprint", dispose/);
+  assert.doesNotMatch(page, /(^|[^.\w])window\.print\(\)/);
+});
