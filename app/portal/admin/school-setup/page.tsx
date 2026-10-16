@@ -46,8 +46,7 @@ type Enrollment = {
 };
 
 const GRADE11_PROGRAM_OPTIONS = [
-  { code: "STEM_MEDICAL", name: "Academic · STEM (Medical)" },
-  { code: "STEM_ENGINEERING", name: "Academic · STEM (Engineering)" },
+  { code: "STEM", name: "Academic · STEM" },
   { code: "BUSINESS_ENTREPRENEURSHIP", name: "Academic · Business and Entrepreneurship" },
   { code: "ASSH", name: "Academic · Arts, Social Sciences and Humanities" },
   { code: "TVL_OAP", name: "TVL · Organic Agriculture Production" },
@@ -504,7 +503,7 @@ export default function SchoolSetupPage() {
                               )}
                               {section.grade_level === 11 && section.shs_program_code && (
                                 <span className={styles.programBadge}>
-                                  {GRADE11_PROGRAM_OPTIONS.find((item) => item.code === section.shs_program_code)?.name ?? section.shs_program_code}
+                                  {GRADE11_PROGRAM_OPTIONS.find((item) => item.code === section.shs_program_code)?.name ?? (section.shs_program_code?.startsWith("STEM_") ? "Academic · STEM" : section.shs_program_code)}
                                 </span>
                               )}
                             </div>
@@ -512,7 +511,7 @@ export default function SchoolSetupPage() {
                               {section.grade_level === 11 && (
                                 <select
                                   className={styles.programSelect}
-                                  value={section.shs_program_code ?? ""}
+                                  value={section.shs_program_code === "STEM_MEDICAL" || section.shs_program_code === "STEM_ENGINEERING" ? "STEM" : section.shs_program_code ?? ""}
                                   disabled={working === "shs-program-" + section.id}
                                   aria-label={`Track and Program for Grade 11 ${section.name}`}
                                   onChange={(event) => void setGrade11Program(section, event.target.value)}
