@@ -307,3 +307,16 @@
 .readinessLearner button{flex-shrink:0;padding:7px 11px;border:1px solid #c5ddec;border-radius:8px;background:#f2f8fc;color:#236b98;font-size:11px;font-weight:700;cursor:pointer}
 @media(max-width:600px){.readinessPanel{padding:15px}.readinessHeader h3{font-size:16px}.readinessLearner{align-items:flex-start;flex-wrap:wrap}}
 @media(prefers-reduced-motion:reduce){.readinessScanning{animation:none;width:100%;background:#2baf9a}.readinessFill{transition:none}}
+
+
+/* Grade 11 Strengthened SHS SF9: AMOGUIS.xlsx, Learning Areas rows 32–43.
+   Keep the JHS and Grade 12 table untouched. */
+.grade11Table .learningAreaCol{width:49.5%}
+.grade11Table .finalCol{width:11%}
+.grade11Table .remarksCol{width:15.5%}
+.grade11Table th,.grade11Table td{height:4.05mm;padding:.57mm .55mm}
+.grade11Table tbody td:first-child{overflow-wrap:break-word;line-height:1.08}
+.shsSectionRow td{font-weight:800!important;text-align:left!important;background:#f2f3f3;font-size:7.44pt;padding:.45mm 1mm!important}
+.shsGroupLabelRow td{font-weight:650!important;text-align:left!important;font-size:6.8pt;padding:.5mm .8mm!important}
+.shsIndentedRow td:first-child{padding-left:4mm!important;font-size:7pt}
+@media print{.shsSectionRow td{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
