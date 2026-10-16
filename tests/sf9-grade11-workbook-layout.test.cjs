@@ -14,17 +14,17 @@ test("Grade 11 layout uses exact core-subject row order and communication subrow
  for (const label of [
    "Effective Communication", "Mabisang Komunikasyon", "General Mathematics",
    "General Science", "Life and Career Skills",
-   "Pag-Aaral ng Kasanayan at Lipunang Pilipino",
+   "Pag-Aaral ng Kasaysayan at Lipunang Pilipino",
  ]) {
    const next = coreNames.indexOf('"' + label + '"', last + 1);
    assert.ok(next > last, "Core subject out of workbook order: " + label);
    last = next;
  }
- assert.match(helper, /heading\("shs11-core-heading", "Core Subjects"/);
- assert.match(helper, /heading\("shs11-language-heading", GRADE11_COMMUNICATION_LABEL/);
- assert.match(helper, /heading\("shs11-elective-heading", "Elective Subjects"/);
+ assert.match(helper, /headline\("shs11-core-heading","Core Subjects"/);
+ assert.match(helper, /headline\("shs11-language-heading",GRADE11_COMMUNICATION_LABEL/);
+ assert.match(helper, /headline\("shs11-elective-heading","Elective Subjects"/);
  assert.match(helper, /shs11-elective-.*termNo/);
- assert.match(helper, /terms\[termNo - 1\] = source\?\.terms\?\.\[termNo - 1\]/);
+ assert.match(helper, /terms\[termNo - 1\] = grade/);
 });
 
 test("The Grade 11 table matches the workbook while retaining Grade 7-10 JHS rows", () => {
@@ -55,7 +55,7 @@ test("Grade 11 elective names use student program and term, not a fixed ASSH lab
  assert.match(api, /elective_offerings: electiveOfferings/);
  assert.match(helper, /electiveOfferings\.filter/);
  assert.doesNotMatch(helper, /"Academic Elective [123]"/);
- assert.match(helper, /if \(!programCode\) return rows/);
+ assert.match(helper, /const offered = programCode/);
  assert.match(rls, /sa\.teacher_id=\(select auth\.uid\(\)\)/);
  assert.match(rls, /sa\.school_year_id=shs_subject_offerings\.school_year_id/);
  assert.match(rls, /s\.grade_level=shs_subject_offerings\.grade_level/);
