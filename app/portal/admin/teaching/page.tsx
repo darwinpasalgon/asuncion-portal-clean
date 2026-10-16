@@ -16,7 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import styles from "./teaching.module.css";
-import { STEM_GROUPS, stemGroupLabel, isStemGroup } from "@/lib/shs-stem-groups";
+import { groupsForSectionProgram, electiveGroupLabel, isGrade11ElectiveGroup } from "@/lib/shs-stem-groups";
 import { captureRefreshScroll, restoreRefreshScroll } from "@/lib/background-refresh";
 import ActionWaitOverlay from "@/app/components/action-wait-overlay";
 import {
@@ -193,10 +193,10 @@ export default function TeachingSetupPage() {
   const setupRows = useMemo(
     () =>
       subjectsForSetup.flatMap((subject) => {
-        if (setupSection?.grade_level === 11 && setupSection.shs_program_code === "STEM") {
+        if (setupSection?.grade_level === 11 && ["STEM","TVL"].includes(setupSection.shs_program_code ?? "")) {
           const groupCodes = Array.from(new Set(
             stemElectiveOfferings.filter((offering) => offering.subject_id === subject.id)
-              .map((offering) => offering.program_code).filter(isStemGroup)
+              .map((offering) => offering.program_code).filter((code) => groupsForSectionProgram(setupSection.shs_program_code).some((g) => g.code === code)).filter(isGrade11ElectiveGroup)
           ));
           if (groupCodes.length) return groupCodes.map((major) => ({
             key: `${subject.id}::${major}`, subject, major,
@@ -347,9 +347,9 @@ function subjectTeacherLabel(teacher: Teacher) {
     activeSubjects
       .filter((subject) => subject.grade_level === section.grade_level)
       .forEach((subject) => {
-        const stemGroups = section.grade_level === 11 && section.shs_program_code === "STEM"
+        const stemGroups = section.grade_level === 11 && ["STEM","TVL"].includes(section.shs_program_code ?? "")
           ? Array.from(new Set(stemElectiveOfferings.filter((item) => item.subject_id === subject.id)
-              .map((item) => item.program_code).filter(isStemGroup))) : [];
+              .map((item) => item.program_code).filter((code) => groupsForSectionProgram(section.shs_program_code).some((g) => g.code === code)).filter(isGrade11ElectiveGroup))) : [];
         if (stemGroups.length) {
           stemGroups.forEach((major) => {
             const assignment = assignmentFor(sectionId, subject.id, major);
@@ -950,7 +950,7 @@ function subjectTeacherLabel(teacher: Teacher) {
                               )}
                           </td>
                           <td>
-                            {exploratoryTve ? "Exploratory Rotation" : isStemGroup(row.major) ? stemGroupLabel(row.major) : row.major ?? "—"}
+                            {exploratoryTve ? "Exploratory Rotation" : isGrade11ElectiveGroup(row.major) ? electiveGroupLabel(row.major) : row.major ?? "—"}
                           </td>
                           <td>
                             {exploratoryTve ? (
@@ -1280,14 +1280,14 @@ function subjectTeacherLabel(teacher: Teacher) {
               )}
 
               {Number(assignmentGrade) === 11 &&
-                sectionsForAssignment.find((item) => item.id === assignmentSectionId)?.shs_program_code === "STEM" &&
+                ["STEM","TVL"].includes(sectionsForAssignment.find((item) => item.id === assignmentSectionId)?.shs_program_code ?? "") &&
                 stemElectiveOfferings.some((item) => item.subject_id === assignmentSubject) && (
                   <label>
-                    <span>STEM Elective Group</span>
+                    <span>Grade 11 Elective Major</span>
                     <select name="stemElectiveGroup" required value={assignmentMajor}
                       onChange={(event) => setAssignmentMajor(event.target.value)}>
-                      <option value="">Choose Medical or Engineering</option>
-                      {STEM_GROUPS.filter((group) => stemElectiveOfferings.some(
+                      <option value="">Choose Elective Major</option>
+                      {groupsForSectionProgram(sectionsForAssignment.find((item) => item.id === assignmentSectionId)?.shs_program_code).filter((group) => stemElectiveOfferings.some(
                         (item) => item.subject_id === assignmentSubject && item.program_code === group.code
                       )).map((group) => (
                         <option key={group.code} value={group.code}>{group.shortLabel}</option>
