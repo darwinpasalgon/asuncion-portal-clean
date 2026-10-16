@@ -29,6 +29,10 @@ async function isAdmin(token: string) {
 }
 
 const SHS_PROGRAM_TYPES = new Set(["Regular SHS", "ALS-SHS"]);
+const GRADE11_PROGRAM_CODES = new Set([
+  "STEM_MEDICAL", "STEM_ENGINEERING", "BUSINESS_ENTREPRENEURSHIP",
+  "ASSH", "TVL_OAP", "TVL_FOOD_PROCESSING",
+]);
 
 function validShsProgramType(value: unknown) {
   return SHS_PROGRAM_TYPES.has(String(value ?? "").trim());
@@ -86,7 +90,7 @@ export async function GET(request: NextRequest) {
         token
       ),
       restJson(
-        `${SUPABASE_URL}/rest/v1/sections?select=id,grade_level,name,is_active,program_type&order=grade_level.asc,name.asc`,
+        `${SUPABASE_URL}/rest/v1/sections?select=id,grade_level,name,is_active,program_type,shs_program_code&order=grade_level.asc,name.asc`,
         token
       ),
     ]);
@@ -255,6 +259,42 @@ export async function POST(request: NextRequest) {
       ok: true,
       section: result?.[0] ?? null,
       levelLabel: isAlsAe ? "ALS A&E" : `Grade ${gradeLevel}`,
+    });
+  }
+
+  if (action === "set_grade11_program") {
+    const id = String(body?.id ?? "");
+    const programCode = String(body?.programCode ?? "").trim();
+    if (!id || (programCode && !GRADE11_PROGRAM_CODES.has(programCode))) {
+      return NextResponse.json({ error: "Choose a valid Grade 11 section and program." }, { status: 400 });
+    }
+    const sections = await restJson(
+      `${SUPABASE_URL}/rest/v1/sections?id=eq.${encodeURIComponent(id)}&select=id,grade_level,name&limit=1`,
+      token
+    );
+    if (Number(sections?.[0]?.grade_level) !== 11) {
+      return NextResponse.json({ error: "Program assignment is currently available only for Grade 11 sections." }, { status: 400 });
+    }
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/sections?id=eq.${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        headers: { ...headers(token), Prefer: "return=representation" },
+        body: JSON.stringify({
+          shs_program_code: programCode || null,
+          updated_at: new Date().toISOString(),
+        }),
+        cache: "no-store",
+      }
+    );
+    const updated = await response.json().catch(() => []);
+    if (!response.ok || !updated?.[0]) {
+      return NextResponse.json({ error: "Unable to save the Grade 11 section program." }, { status: 400 });
+    }
+    return NextResponse.json({
+      ok: true,
+      section: updated[0],
+      message: "Section program saved. SF9 will use the matching configured electives.",
     });
   }
 
