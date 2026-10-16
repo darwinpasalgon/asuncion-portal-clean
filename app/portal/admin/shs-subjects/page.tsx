@@ -122,8 +122,8 @@ export default function ShsSubjectManagerPage() {
             );
             if (value === null) return;
             const trimmed = value.trim();
-            if (trimmed !== "" && (!/^\\d{1,2}(?:\\.\\d)?$/.test(trimmed) || Number(trimmed) > 20)) {
-              setError("Enter valid credit units between 0 and 20, with one decimal place.");
+            if (trimmed !== "" && (!Number.isFinite(Number(trimmed)) || Number(trimmed) < 0 ||
+              Number(trimmed) > 20 || Math.round(Number(trimmed) * 10) !== Number(trimmed) * 10)) {              setError("Enter valid credit units between 0 and 20, with one decimal place.");
               return;
             }
             void mutate({ action: "set_units", id: offering.id, units: trimmed });
