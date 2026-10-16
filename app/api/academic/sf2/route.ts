@@ -325,6 +325,7 @@ export async function GET(request: NextRequest) {
         )}&is_active=eq.true&select=teacher_id&limit=1`,
         token
       ).catch(() => []),
+      // Enrollment failures must not be shown as an empty printed roster.
       getRows(
         `student_enrollments?school_year_id=eq.${encodeURIComponent(
           activeYear.id
@@ -332,7 +333,7 @@ export async function GET(request: NextRequest) {
           selectedSectionId
         )}&select=id,student_id,grade_level,section_id,enrollment_status,enrolled_at,learner_status,status_note,status_changed_at`,
         token
-      ).catch(() => []),
+      ),
       getRows(
         `daily_attendance?school_year_id=eq.${encodeURIComponent(
           activeYear.id
