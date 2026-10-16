@@ -98,7 +98,13 @@ export default function Sf2Page() {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
       );
       if (document.fonts?.ready) await document.fonts.ready;
-      const images = Array.from(document.querySelectorAll<HTMLImageElement>(".sf2-print-document img"));
+      // Images must be decoded in the independent, non-scrollable print sheet.
+      const printDocument = document.querySelector(`.${styles.printOnly} .sf2-print-document`);
+      if (!printDocument) {
+        setError("SF2 print sheet is not ready. Please generate the report and try again.");
+        return;
+      }
+      const images = Array.from(printDocument.querySelectorAll<HTMLImageElement>("img"));
       await Promise.all(images.map(img => img.decode?.().catch(() => undefined)));
       window.print();
     } finally { setPrinting(false); }
@@ -125,6 +131,7 @@ export default function Sf2Page() {
   }, [activeYear]);
 
   return (
+    <>
     <main className={styles.page}>
       <div className={styles.shell}>
         <div className={styles.topBar}>
@@ -233,5 +240,10 @@ export default function Sf2Page() {
         </div>
       </div>
     </main>
+    {/* The printed form is NOT inside the screen's scrollable preview. */}
+    <div className={`${styles.printOnly} ${styles.printScope}`} aria-hidden="true">
+      {previewIsCurrent && report ? <Sf2PrintForm report={report} /> : null}
+    </div>
+    </>
   );
 }
