@@ -30,7 +30,7 @@ async function isAdmin(token: string) {
 
 const SHS_PROGRAM_TYPES = new Set(["Regular SHS", "ALS-SHS"]);
 const GRADE11_PROGRAM_CODES = new Set([
-  "STEM_MEDICAL", "STEM_ENGINEERING", "BUSINESS_ENTREPRENEURSHIP",
+  "STEM", "BUSINESS_ENTREPRENEURSHIP",
   "ASSH", "TVL_OAP", "TVL_FOOD_PROCESSING",
 ]);
 
@@ -264,7 +264,9 @@ export async function POST(request: NextRequest) {
 
   if (action === "set_grade11_program") {
     const id = String(body?.id ?? "");
-    const programCode = String(body?.programCode ?? "").trim();
+    const submittedCode = String(body?.programCode ?? "").trim();
+    // Accept a cached old dropdown value without retaining a split section.
+    const programCode = submittedCode === "STEM_MEDICAL" || submittedCode === "STEM_ENGINEERING" ? "STEM" : submittedCode;
     if (!id || (programCode && !GRADE11_PROGRAM_CODES.has(programCode))) {
       return NextResponse.json({ error: "Choose a valid Grade 11 section and program." }, { status: 400 });
     }
