@@ -45,3 +45,12 @@ test("Existing Grade 11 elective catalog rows receive three units unless locally
   assert.match(model, /const slots = offered\.length \? offered : \[\{term_no:termNo,name:"",units:null\}\]/);
   assert.doesNotMatch(model, /label: "Academic Elective [123]"/);
 });
+
+test("Grade 11 overall grade uses a credit-weighted average", () => {
+ const api = read("app/api/academic/sf9/route.ts");
+ const model = read("lib/sf9-grade11-layout.ts");
+ assert.ok(model.includes("export function sf9Grade11WeightedAverage"));
+ assert.ok(model.includes("row.final_grade) * Number(row.units)"));
+ assert.ok(api.includes("sf9Grade11WeightedAverage("));
+ assert.ok(api.includes("general_average: officialGrade11Average"));
+});
