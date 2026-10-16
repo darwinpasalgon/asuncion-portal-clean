@@ -6,6 +6,19 @@ import { sf9AttendanceSummary, sf9AttendanceValue, sf9InstructionalDates } from 
 
 type JsonRow = Record<string, any>;
 
+function grade11ProgramCode(strand: string, track: string, major: string): string {
+  const value = [strand, track, major].join(" ").toUpperCase().replace(/[^A-Z0-9]+/g, " ");
+  if (value.includes("FOOD PROCESSING")) return "TVL_FOOD_PROCESSING";
+  if (value.includes("ORGANIC AGRICULTURE") || value.includes(" TVL OAP")) return "TVL_OAP";
+  if (value.includes("STEM") && value.includes("MEDICAL")) return "STEM_MEDICAL";
+  if (value.includes("STEM") && value.includes("ENGINEERING")) return "STEM_ENGINEERING";
+  if (value.includes("ASSH") || value.includes("ARTS SOCIAL SCIENCES") || value.includes("HUMSS")) return "ASSH";
+  if (value.includes("BUSINESS") || value.includes("ENTREPRENEURSHIP") || value.includes("ABM")) {
+    return "BUSINESS_ENTREPRENEURSHIP";
+  }
+  return "";
+}
+
 function learnerSexRank(value: unknown) {
   const normalized = String(value ?? "").trim().toUpperCase();
   if (normalized === "M" || normalized === "MALE") return 0;
@@ -560,7 +573,7 @@ export async function GET(request: NextRequest) {
           activeYear.id
         )}&section_id=eq.${encodeURIComponent(
           sectionId
-        )}&enrollment_status=eq.active&select=student_id,grade_level,section_id,tve_major`,
+        )}&enrollment_status=eq.active&select=student_id,grade_level,section_id,tve_major,shs_track,shs_strand_program`,
         token
       ).catch(() => []);
 
@@ -614,6 +627,8 @@ export async function GET(request: NextRequest) {
             section_id: row.section_id,
             section: section.name,
             tve_major: row.tve_major ?? null,
+          shs_track: row.shs_track ?? null,
+          shs_strand_program: row.shs_strand_program ?? null,
           };
         })
         .filter(Boolean)
@@ -642,7 +657,7 @@ export async function GET(request: NextRequest) {
         sectionId
       )}&student_id=in.${encodeURIComponent(
         inFilter(requestedStudentIds)
-      )}&enrollment_status=eq.active&select=student_id,grade_level,section_id,tve_major`,
+      )}&enrollment_status=eq.active&select=student_id,grade_level,section_id,tve_major,shs_track,shs_strand_program`,
       token
     ).catch(() => []);
 
@@ -790,6 +805,15 @@ export async function GET(request: NextRequest) {
     const subjectMap = new Map<string, JsonRow>(
       (subjects ?? []).map((row: JsonRow) => [String(row.id), row])
     );
+
+    const shs11Offerings = selectedSection.grade_level === 11
+      ? await getRows(
+          `shs_subject_offerings?school_year_id=eq.${encodeURIComponent(
+            activeYear.id
+          )}&grade_level=eq.11&category=eq.elective&is_active=eq.true&select=subject_id,program_code,term_no`,
+          token
+        ).catch(() => [])
+      : [];
 
     const visibleAssignments = (teacherAssignments ?? [])
       .filter((assignment: JsonRow) => {
@@ -1086,6 +1110,20 @@ export async function GET(request: NextRequest) {
         studentId,
         String(enrollment.tve_major ?? "") || null
       );
+      const shsStrand = String(enrollment.shs_strand_program ?? "").trim();
+      const shsTrack = String(enrollment.shs_track ?? "").trim();
+      const shsProgram = selectedSection.grade_level === 11
+        ? grade11ProgramCode(shsStrand, shsTrack, String(enrollment.tve_major ?? ""))
+        : "";
+      const electiveOfferings = shsProgram
+        ? (shs11Offerings ?? [])
+            .filter((offer: JsonRow) => offer.program_code === shsProgram)
+            .map((offer: JsonRow) => ({
+              term_no: Number(offer.term_no),
+              name: String(subjectMap.get(String(offer.subject_id))?.name ?? ""),
+            }))
+            .filter((offer: { name: string }) => Boolean(offer.name))
+        : [];
 
       const remarkDetails = [1, 2, 3].map((termNo) => {
         const signal = buildTermRemarkSignal(
@@ -1127,7 +1165,9 @@ export async function GET(request: NextRequest) {
         grade_level: enrollment.grade_level ?? selectedSection.grade_level,
         section: selectedSection.name,
         section_id: sectionId,
-        track: "",
+        track: shsStrand || shsTrack,
+        shs_program_code: shsProgram,
+        elective_offerings: electiveOfferings,
         tve_major: enrollment.tve_major ?? null,
         grade_rows: gradesBuilt.rows,
         general_average: gradesBuilt.generalAverage,
