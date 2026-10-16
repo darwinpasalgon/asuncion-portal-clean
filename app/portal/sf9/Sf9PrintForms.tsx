@@ -3,7 +3,7 @@
 import type { CSSProperties } from "react";
 import { DEPED_LOGO_DATA_URI } from "../admin/sf10/Sf10LogoData";
 import styles from "./sf9.module.css";
-import { sf9Grade11Rows, type Sf9Grade11Offering } from "@/lib/sf9-grade11-layout";
+import { sf9Grade11Rows, sf9Grade11TotalUnits, type Sf9Grade11Offering } from "@/lib/sf9-grade11-layout";
 
 type GradeRow = {
   key: string;
@@ -361,8 +361,8 @@ function FrontCard({
         <thead>
           <tr>
             <th rowSpan={2} className={styles.learningAreaCol}>Learning Areas</th>
-            {card.grade_level === 11 && <th rowSpan={2} className={styles.unitsCol}>Units</th>}
             <th colSpan={3}>TERM</th>
+            {card.grade_level === 11 && <th rowSpan={2} className={styles.unitsCol}>Units</th>}
             <th rowSpan={2} className={styles.finalCol}>Final<br />Grade</th>
             <th rowSpan={2} className={styles.remarksCol}>Remarks</th>
           </tr>
@@ -375,42 +375,54 @@ function FrontCard({
         <tbody>
           {rows.map((row) => {
             const kind = "kind" in row ? row.kind : undefined;
-            if (kind === "section" || kind === "group") {
+            if (kind === "section") {
               return (
-                <tr key={row.key} className={kind === "section" ? styles.shsSectionRow : styles.shsGroupLabelRow}>
-                  <td>{row.label}</td>
-                  {card.grade_level === 11 && <td></td>}
-                  <td></td><td></td><td></td><td></td><td></td>
+                <tr key={row.key} className={styles.shsSectionRow}>
+                  <td colSpan={card.grade_level === 11 ? 7 : 6}>{row.label}</td>
                 </tr>
               );
             }
+            const group = kind === "group";
             return (
-              <tr key={row.key} className={row.component ? styles.componentRow : "indent" in row && row.indent ? styles.shsIndentedRow : ""}>
+              <tr key={row.key} className={
+                group ? styles.shsGroupLabelRow :
+                "indent" in row && row.indent ? styles.shsIndentedRow : row.component ? styles.componentRow : ""
+              }>
                 <td>{row.label}</td>
-                {card.grade_level === 11 && <td>{("units" in row && typeof row.units === "number") ? displayNumber(row.units) : ""}</td>}
-                <td>{displayNumber(row.terms?.[0])}</td>
-                <td>{displayNumber(row.terms?.[1])}</td>
-                <td>{displayNumber(row.terms?.[2])}</td>
+                {[0,1,2].map((term) => (
+                  <td key={term} className={
+                    card.grade_level === 11 && "electiveTerm" in row &&
+                    typeof row.electiveTerm === "number" && row.electiveTerm !== term + 1
+                      ? styles.grade11UnusedTerm : ""
+                  }>{displayNumber(row.terms?.[term])}</td>
+                ))}
+                {card.grade_level === 11 && <td className={styles.grade11UnitsCell}>
+                  {("units" in row && typeof row.units === "number") ? displayNumber(row.units) : ""}
+                </td>}
                 <td>{displayNumber(row.final_grade)}</td>
                 <td>{row.remarks}</td>
               </tr>
             );
           })}
-          <tr className={styles.generalAverageRow}>
-            <td>General Average</td>
-            {card.grade_level === 11 && <td></td>}
-            <td>{displayNumber(card.general_averages_by_term?.[0] ?? null)}</td>
-            <td>{displayNumber(card.general_averages_by_term?.[1] ?? null)}</td>
-            <td>{displayNumber(card.general_averages_by_term?.[2] ?? null)}</td>
-            <td>{displayNumber(card.general_average)}</td>
-            <td>
-              {card.general_average === null
-                ? ""
-                : card.general_average >= 75
-                  ? "Passed"
-                  : "Failed"}
-            </td>
-          </tr>
+          {card.grade_level === 11 ? (
+            <tr className={styles.generalAverageRow + " " + styles.grade11GeneralAverage}>
+              <td colSpan={4}>General Average</td>
+              <td className={styles.grade11UnitsCell}>{sf9Grade11TotalUnits(rows)}</td>
+              <td>{displayNumber(card.general_average)}</td>
+              <td>{card.general_average === null ? "" : card.general_average >= 75 ? "Passed" : "Failed"}</td>
+            </tr>
+          ) : (
+            <tr className={styles.generalAverageRow}>
+              <td>General Average</td>
+              <td>{displayNumber(card.general_averages_by_term?.[0] ?? null)}</td>
+              <td>{displayNumber(card.general_averages_by_term?.[1] ?? null)}</td>
+              <td>{displayNumber(card.general_averages_by_term?.[2] ?? null)}</td>
+              <td>{displayNumber(card.general_average)}</td>
+              <td>
+                {card.general_average === null ? "" : card.general_average >= 75 ? "Passed" : "Failed"}
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
 
