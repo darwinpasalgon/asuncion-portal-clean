@@ -251,6 +251,14 @@ export function portalNavigation(
         keywords: "HR balance wellness leave",
       },
       admin && {
+        id: "personnel-credentials",
+        label: "Personnel Login Credentials",
+        description: "Download login emails or generate eligible first-login credentials.",
+        href: "/portal/admin/personnel-credentials",
+        icon: "shield",
+        keywords: "teacher staff first login username email password credentials CSV download",
+      },
+      admin && {
         id: "teacher-import",
         label: "Import Personnel Profiles",
         description: "Import teaching personnel information.",
