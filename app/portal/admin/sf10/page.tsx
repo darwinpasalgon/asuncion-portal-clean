@@ -14,6 +14,8 @@ import styles from "./sf10.module.css";
 import { GeneratingProgress } from "@/components/school-forms/GeneratingProgress";
 import { JhsSf10Form, ShsSf10Form } from "./Sf10PrintForms";
 
+type AdvisorySection = { id: string; name: string; grade_level: number };
+
 type Student = {
   id: string;
   full_name: string;
@@ -25,6 +27,8 @@ type Student = {
 
 export default function Sf10Page() {
   const [students, setStudents] = useState<Student[]>([]);
+  const [advisorySections, setAdvisorySections] = useState<AdvisorySection[]>([]);
+  const [selectedSectionId, setSelectedSectionId] = useState("");
   const [selectedId, setSelectedId] = useState("");
   const [detail, setDetail] = useState<any>(null);
   const [search, setSearch] = useState("");
@@ -45,6 +49,12 @@ export default function Sf10Page() {
         return;
       }
       setStudents(result.students ?? []);
+      const scopedSections: AdvisorySection[] = Array.isArray(result.sections) ? result.sections : [];
+      setAdvisorySections(scopedSections);
+      setSelectedSectionId((current) =>
+        scopedSections.some((section) => section.id === current)
+          ? current : (scopedSections[0]?.id ?? "")
+      );
       setAccessMode(result.access_mode === "adviser" ? "adviser" : "admin");
     } catch {
       setError("Unable to reach the SF10 service.");
@@ -87,11 +97,13 @@ export default function Sf10Page() {
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
     if (!needle) return students;
+    const target = advisorySections.find((section) => section.id === selectedSectionId);
     return students.filter((student) =>
-      [student.full_name, student.lrn ?? "", student.section ?? "", String(student.grade_level ?? "")]
-        .some((value) => value.toLowerCase().includes(needle))
+      (!target || (student.section === target.name && student.grade_level === target.grade_level)) &&
+      (!needle || [student.full_name, student.lrn ?? "", student.section ?? "", String(student.grade_level ?? "")]
+        .some((value) => value.toLowerCase().includes(needle)))
     );
-  }, [students, search]);
+  }, [students, search, advisorySections, selectedSectionId]);
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -217,6 +229,20 @@ export default function Sf10Page() {
 
         <div className={styles.layout}>
           <aside className={styles.learners}>
+            {accessMode === "adviser" && advisorySections.length > 0 && (
+              <div className={styles.advisorySelector}>
+                <label htmlFor="sf10-advisory-section">Advisory Section</label>
+                <select id="sf10-advisory-section" value={selectedSectionId}
+                  onChange={(event) => {
+                    setSelectedSectionId(event.target.value);
+                    setSelectedId("");
+                    setDetail(null);
+                  }}>
+                  {advisorySections.map((section) =>
+                    <option key={section.id} value={section.id}>Grade {section.grade_level} · {section.name}</option>)}
+                </select>
+              </div>
+            )}
             <div className={styles.search}>
               <Search size={16} />
               <input
@@ -230,7 +256,13 @@ export default function Sf10Page() {
               {loading ? (
                 <div className={styles.empty}>Loading learners…</div>
               ) : filtered.length === 0 ? (
-                <div className={styles.empty}>No learners found.</div>
+                <div className={styles.empty}>
+                  {accessMode === "adviser" && advisorySections.length > 0 && !search.trim()
+                    ? "No enrolled learners in this advisory section yet. Ask the registrar to import or assign learners."
+                    : accessMode === "adviser" && advisorySections.length === 0
+                      ? "No active advisory section is assigned to this account."
+                      : "No learners found."}
+                </div>
               ) : (
                 filtered.map((item) => (
                   <button
