@@ -6,23 +6,23 @@ const read = (p) => fs.readFileSync(path.join(__dirname, "..", p), "utf8");
 
 test("Grade 11 layout uses exact core-subject row order and communication subrows from official workbook", () => {
  const helper = read("lib/sf9-grade11-layout.ts");
- const orderedLabels = [
-   '"Core Subjects"',
-   '"Effective Communication /Mabisang Komunikasyon"',
-   '"Effective Communication",',
-   '"Mabisang Komunikasyon",',
-   '"General Mathematics",',
-   '"General Science",',
-   '"Life and Career Skills",',
-   '"Pag-Aaral ng Kasanayan at Lipunang Pilipino",',
-   '"Elective Subjects"',
- ];
+ const coreStart = helper.indexOf("GRADE11_SF9_CORE_ORDER = [");
+ const coreEnd = helper.indexOf("] as const;", coreStart);
+ assert.ok(coreStart >= 0 && coreEnd > coreStart);
+ const coreNames = helper.slice(coreStart, coreEnd);
  let last = -1;
- for (const label of orderedLabels) {
-   const next = helper.indexOf(label, last + 1);
-   assert.ok(next > last, "Expected workbook label in sequence: " + label);
+ for (const label of [
+   "Effective Communication", "Mabisang Komunikasyon", "General Mathematics",
+   "General Science", "Life and Career Skills",
+   "Pag-Aaral ng Kasanayan at Lipunang Pilipino",
+ ]) {
+   const next = coreNames.indexOf('"' + label + '"', last + 1);
+   assert.ok(next > last, "Core subject out of workbook order: " + label);
    last = next;
  }
+ assert.match(helper, /heading\("shs11-core-heading", "Core Subjects"/);
+ assert.match(helper, /heading\("shs11-language-heading", GRADE11_COMMUNICATION_LABEL/);
+ assert.match(helper, /heading\("shs11-elective-heading", "Elective Subjects"/);
  assert.match(helper, /Social Science Theory and Practice/);
  assert.match(helper, /Academic Elective 2/);
  assert.match(helper, /Academic Elective 3/);
