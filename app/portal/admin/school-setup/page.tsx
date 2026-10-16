@@ -34,6 +34,7 @@ type Section = {
   name: string;
   is_active: boolean;
   program_type: string | null;
+  shs_program_code: string | null;
 };
 
 type Enrollment = {
@@ -43,6 +44,15 @@ type Enrollment = {
   section_id: string | null;
   enrollment_status: string;
 };
+
+const GRADE11_PROGRAM_OPTIONS = [
+  { code: "STEM_MEDICAL", name: "Academic · STEM (Medical)" },
+  { code: "STEM_ENGINEERING", name: "Academic · STEM (Engineering)" },
+  { code: "BUSINESS_ENTREPRENEURSHIP", name: "Academic · Business and Entrepreneurship" },
+  { code: "ASSH", name: "Academic · Arts, Social Sciences and Humanities" },
+  { code: "TVL_OAP", name: "TVL · Organic Agriculture Production" },
+  { code: "TVL_FOOD_PROCESSING", name: "TVL · Food Processing" },
+] as const;
 
 export default function SchoolSetupPage() {
   const [schoolYears, setSchoolYears] = useState<SchoolYear[]>([]);
@@ -239,6 +249,29 @@ export default function SchoolSetupPage() {
       setSuccess(`${section.name} is now classified as ${programType}.`);
     } catch {
       setError("Unable to reach the school setup service.");
+    } finally {
+      setWorking("");
+    }
+  }
+
+  async function setGrade11Program(section: Section, programCode: string) {
+    if (section.grade_level !== 11) return;
+    setWorking("shs-program-" + section.id);
+    setError("");
+    setSuccess("");
+    try {
+      const response = await fetch("/api/admin/academic-structure", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_grade11_program", id: section.id, programCode }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error ?? "Unable to assign the Grade 11 program.");
+      setSections((previous) => previous.map((item) => item.id === section.id
+        ? { ...item, shs_program_code: programCode || null } : item));
+      setSuccess("Grade 11 " + section.name + " program updated. SF9 electives will follow this program.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Unable to update Grade 11 program.");
     } finally {
       setWorking("");
     }
@@ -469,8 +502,34 @@ export default function SchoolSetupPage() {
                                   {section.program_type}
                                 </span>
                               )}
+                              {section.grade_level === 11 && section.shs_program_code && (
+                                <span className={styles.programBadge}>
+                                  {GRADE11_PROGRAM_OPTIONS.find((item) => item.code === section.shs_program_code)?.name ?? section.shs_program_code}
+                                </span>
+                              )}
                             </div>
                             <div className={styles.sectionActions}>
+                              {section.grade_level === 11 && (
+                                <select
+                                  className={styles.programSelect}
+                                  value={section.shs_program_code ?? ""}
+                                  disabled={working === "shs-program-" + section.id}
+                                  aria-label={`Track and Program for Grade 11 ${section.name}`}
+                                  onChange={(event) => void setGrade11Program(section, event.target.value)}
+                                >
+                                  <option value="">Select Track / Program</option>
+                                  <optgroup label="Academic">
+                                    {GRADE11_PROGRAM_OPTIONS.filter((item) =>
+                                      item.code.startsWith("STEM") || item.code === "BUSINESS_ENTREPRENEURSHIP" || item.code === "ASSH"
+                                    ).map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}
+                                  </optgroup>
+                                  <optgroup label="TVL">
+                                    {GRADE11_PROGRAM_OPTIONS.filter((item) =>
+                                      item.code.startsWith("TVL_")
+                                    ).map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}
+                                  </optgroup>
+                                </select>
+                              )}
                               {[11, 12].includes(section.grade_level) && (
                                 <select
                                   className={styles.programSelect}
