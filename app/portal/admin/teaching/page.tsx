@@ -687,6 +687,7 @@ function subjectTeacherLabel(teacher: Teacher) {
           <a href="/portal/admin/school-setup" className={styles.topLink}>
             School setup
           </a>
+          <a href="/portal/admin/shs-subjects" className={styles.topLink}><BookOpen size={16} /> SHS Core &amp; Term Electives</a>
           <a href="#grade12-subjects" className={styles.topLink}>Review Grade 12 Subjects</a>
         </nav>
 
@@ -736,6 +737,18 @@ function subjectTeacherLabel(teacher: Teacher) {
             <strong>{activeAdvisers.length}</strong>
           </article>
         </div>
+
+        <section className={styles.panel}>
+          <div className={styles.panelHeading}>
+            <div>
+              <h2>Grade 11–12 Core &amp; Elective Subject Setup</h2>
+              <p>Set Grade 11 core subjects, then add or remove electives by SHS academic/TVL program and term. Changes preserve existing schedules, grades, and teacher assignments.</p>
+            </div>
+            <a className={styles.refresh} href="/portal/admin/shs-subjects">
+              <BookOpen size={16} /> Open SHS Subject Setup
+            </a>
+          </div>
+        </section>
 
         <section id="grade12-subjects" className={styles.panel}>
           <div className={styles.panelHeading}>
