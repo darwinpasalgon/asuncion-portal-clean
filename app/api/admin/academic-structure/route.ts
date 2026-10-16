@@ -30,7 +30,7 @@ async function isAdmin(token: string) {
 
 const SHS_PROGRAM_TYPES = new Set(["Regular SHS", "ALS-SHS"]);
 const GRADE11_PROGRAM_CODES = new Set([
-  "STEM", "BUSINESS_ENTREPRENEURSHIP",
+  "STEM", "TVL", "BUSINESS_ENTREPRENEURSHIP",
   "ASSH", "TVL_OAP", "TVL_FOOD_PROCESSING",
 ]);
 
