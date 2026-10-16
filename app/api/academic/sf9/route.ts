@@ -510,7 +510,7 @@ export async function GET(request: NextRequest) {
       .slice(0, 2);
 
     const allSections = await getRows(
-      "sections?is_active=eq.true&grade_level=gte.7&grade_level=lte.12&select=id,grade_level,name&order=grade_level.asc,name.asc",
+      "sections?is_active=eq.true&grade_level=gte.7&grade_level=lte.12&select=id,grade_level,name,shs_program_code&order=grade_level.asc,name.asc",
       token
     );
 
@@ -810,7 +810,7 @@ export async function GET(request: NextRequest) {
       ? await getRows(
           `shs_subject_offerings?school_year_id=eq.${encodeURIComponent(
             activeYear.id
-          )}&grade_level=eq.11&category=eq.elective&is_active=eq.true&select=subject_id,program_code,term_no`,
+          )}&grade_level=eq.11&is_active=eq.true&select=subject_id,category,program_code,term_no,units`,
           token
         ).catch(() => [])
       : [];
@@ -1112,18 +1112,29 @@ export async function GET(request: NextRequest) {
       );
       const shsStrand = String(enrollment.shs_strand_program ?? "").trim();
       const shsTrack = String(enrollment.shs_track ?? "").trim();
+      const learnerProgram = grade11ProgramCode(
+        shsStrand, shsTrack, String(enrollment.tve_major ?? "")
+      );
       const shsProgram = selectedSection.grade_level === 11
-        ? grade11ProgramCode(shsStrand, shsTrack, String(enrollment.tve_major ?? ""))
+        ? learnerProgram || String(selectedSection.shs_program_code ?? "")
         : "";
       const electiveOfferings = shsProgram
         ? (shs11Offerings ?? [])
-            .filter((offer: JsonRow) => offer.program_code === shsProgram)
+            .filter((offer: JsonRow) => offer.category === "elective" && offer.program_code === shsProgram)
             .map((offer: JsonRow) => ({
               term_no: Number(offer.term_no),
               name: String(subjectMap.get(String(offer.subject_id))?.name ?? ""),
+              units: offer.units == null ? null : Number(offer.units),
             }))
             .filter((offer: { name: string }) => Boolean(offer.name))
         : [];
+
+      const coreUnits: Record<string, number | null> = {};
+      for (const offer of shs11Offerings ?? []) {
+        if (offer.category !== "core") continue;
+        const name = String(subjectMap.get(String(offer.subject_id))?.name ?? "");
+        if (name) coreUnits[name] = offer.units == null ? null : Number(offer.units);
+      }
 
       const remarkDetails = [1, 2, 3].map((termNo) => {
         const signal = buildTermRemarkSignal(
@@ -1165,9 +1176,10 @@ export async function GET(request: NextRequest) {
         grade_level: enrollment.grade_level ?? selectedSection.grade_level,
         section: selectedSection.name,
         section_id: sectionId,
-        track: shsStrand || shsTrack,
+        track: shsStrand || shsTrack || (shsProgram.startsWith("TVL_") ? "TVL" : shsProgram ? "Academic" : ""),
         shs_program_code: shsProgram,
         elective_offerings: electiveOfferings,
+        core_subject_units: coreUnits,
         tve_major: enrollment.tve_major ?? null,
         grade_rows: gradesBuilt.rows,
         general_average: gradesBuilt.generalAverage,
