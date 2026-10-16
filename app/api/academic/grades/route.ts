@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isStemGroup } from "@/lib/shs-stem-groups";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 import { isTechnicalVocationalEducation } from "@/lib/subject-config";
 
@@ -145,7 +146,7 @@ export async function GET(request: NextRequest) {
         getRows(
           `student_enrollments?school_year_id=eq.${encodeURIComponent(
             activeYear.id
-          )}&enrollment_status=eq.active&select=id,student_id,grade_level,section_id,tve_major`,
+          )}&enrollment_status=eq.active&select=id,student_id,grade_level,section_id,tve_major,shs_elective_group`,
           token
         ),
         getRows(
@@ -423,15 +424,15 @@ export async function POST(request: NextRequest) {
         activeYear.id
       )}&section_id=eq.${encodeURIComponent(
         selectedAssignment.section_id
-      )}&enrollment_status=eq.active&select=student_id,tve_major`,
+      )}&enrollment_status=eq.active&select=student_id,tve_major,shs_elective_group`,
       token
     ).catch(() => []);
 
     const expectedEnrollments = (enrollments ?? []).filter(
-      (enrollment: { tve_major?: string | null }) =>
-        isTveSubject ||
-        !selectedAssignment.major ||
-        enrollment.tve_major === selectedAssignment.major
+      (enrollment: { tve_major?: string | null; shs_elective_group?: string | null }) =>
+        isStemGroup(selectedAssignment.major)
+          ? enrollment.shs_elective_group === selectedAssignment.major
+          : isTveSubject || !selectedAssignment.major || enrollment.tve_major === selectedAssignment.major
     );
 
     if (!expectedEnrollments.length) {
@@ -706,7 +707,7 @@ export async function POST(request: NextRequest) {
         activeYear.id
       )}&section_id=eq.${encodeURIComponent(
         selectedAssignment.section_id
-      )}&enrollment_status=eq.active&select=id,tve_major&limit=1`,
+      )}&enrollment_status=eq.active&select=id,tve_major,shs_elective_group&limit=1`,
       token
     ).catch(() => []);
 
@@ -717,6 +718,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // STEM grade entry is strictly confined to the learner's Medical or
+    // Engineering group. Core subjects (major=null) remain section-wide.
+    if (isStemGroup(selectedAssignment.major) &&
+        enrollments[0].shs_elective_group !== selectedAssignment.major) {
+      return NextResponse.json(
+        { error: "This learner belongs to the other STEM elective group. Check the learner's group assignment." },
+        { status: 409 }
+      );
+    }
     let targetAssignment = selectedAssignment;
 
     if (isTveSubject) {
@@ -980,7 +990,9 @@ export async function POST(request: NextRequest) {
       );
 
       const missing = (enrollments ?? []).filter(
-        (enrollment: { student_id: string; tve_major?: string | null }) => {
+        (enrollment: { student_id: string; tve_major?: string | null; shs_elective_group?: string | null }) => {
+          if (isStemGroup(selectedAssignment.major) &&
+              enrollment.shs_elective_group !== selectedAssignment.major) return false;
           const expectedAssignmentId = isTveSubject
             ? assignmentByMajor.get(String(enrollment.tve_major ?? ""))
             : selectedAssignment.id;
