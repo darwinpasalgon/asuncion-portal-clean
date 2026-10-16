@@ -47,6 +47,7 @@ type Enrollment = {
 
 const GRADE11_PROGRAM_OPTIONS = [
   { code: "STEM", name: "Academic · STEM" },
+  { code: "TVL", name: "TVL · Combined Majors" },
   { code: "BUSINESS_ENTREPRENEURSHIP", name: "Academic · Business and Entrepreneurship" },
   { code: "ASSH", name: "Academic · Arts, Social Sciences and Humanities" },
   { code: "TVL_OAP", name: "TVL · Organic Agriculture Production" },
@@ -532,7 +533,7 @@ export default function SchoolSetupPage() {
                                   </optgroup>
                                   <optgroup label="TVL">
                                     {GRADE11_PROGRAM_OPTIONS.filter((item) =>
-                                      item.code.startsWith("TVL_")
+                                      item.code.startsWith("TVL_") || item.code === "TVL"
                                     ).map((item) => <option key={item.code} value={item.code}>{item.name}</option>)}
                                   </optgroup>
                                 </select>
