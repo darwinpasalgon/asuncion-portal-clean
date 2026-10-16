@@ -59,7 +59,9 @@ export async function POST(request: NextRequest) {
   if (origin && new URL(origin).origin !== request.nextUrl.origin) {
     return NextResponse.json({ error: "Invalid request origin." }, { status: 403, headers: noStore });
   }
-  const body = await request.json().catch(() => ({}));
+  const body = request.headers.get("content-type")?.includes("application/x-www-form-urlencoded")
+    ? Object.fromEntries(new URLSearchParams(await request.text()))
+    : await request.json().catch(() => ({}));
   if (body?.confirm !== "ISSUE_FIRST_LOGIN_PASSWORDS") {
     return NextResponse.json({ error: "Explicit confirmation required." }, { status: 400, headers: noStore });
   }
