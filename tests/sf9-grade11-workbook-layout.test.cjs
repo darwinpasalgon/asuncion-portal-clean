@@ -50,7 +50,7 @@ test("Grade 11 elective names use student program and term, not a fixed ASSH lab
  assert.match(api, /shs_strand_program/);
  assert.match(api, /shs_track/);
  assert.match(api, /shs_subject_offerings\?school_year_id=eq/);
- assert.match(api, /program_code=eq|offer\.program_code === shsProgram/);
+ assert.match(api, /offer\.program_code === electiveProgram/);
  assert.match(api, /shs_program_code: shsProgram/);
  assert.match(api, /elective_offerings: electiveOfferings/);
  assert.match(helper, /electiveOfferings\.filter/);
@@ -72,7 +72,8 @@ test("Grade 11 unit cells are optional and section-selected program supplies exa
  assert.match(migration, /add column if not exists units numeric/);
  assert.match(school, /set_grade11_program/);
  assert.match(schoolApi, /if \(action === "set_grade11_program"\)/);
- assert.match(sf9, /learnerProgram \|\| String\(selectedSection.shs_program_code/);
+ assert.match(sf9, /sectionProgram === "STEM"/);
+ assert.match(sf9, /learnerProgram \|\| sectionProgram/);
  assert.match(sf9, /category === "elective"/);
  assert.match(sf9, /core_subject_units: coreUnits/);
  assert.match(layout, /grade_level === 11 && <th rowSpan=\{2\} className=\{styles.unitsCol\}>Units<\/th>/);
