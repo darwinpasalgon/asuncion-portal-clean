@@ -9,6 +9,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { Sf2PrintForm, type Sf2ReportData } from "./Sf2PrintForm";
+import { GeneratingProgress } from "@/components/school-forms/GeneratingProgress";
 import styles from "./sf2.module.css";
 
 type Section = { id: string; grade_level: number; name: string };
@@ -208,6 +209,26 @@ export default function Sf2Page() {
             {loadingReport ? "Generating…" : "Generate Monthly SF2"}
           </button>
         </section>
+
+        {(loadingBase || loadingReport || printing) && (
+          <GeneratingProgress
+            form="SF2"
+            message={
+              printing
+                ? "Preparing SF2 for printing…"
+                : loadingBase
+                  ? "Loading SF2 sections…"
+                  : "Generating monthly SF2…"
+            }
+            detail={
+              printing
+                ? "Refreshing attendance and preparing the print-ready sheet."
+                : loadingBase
+                  ? "Checking school year and section access."
+                  : "Compiling attendance, class totals, and learner records."
+            }
+          />
+        )}
 
         {previewIsCurrent && report && !report.completeness.complete && (
           <div className={styles.warning}>
