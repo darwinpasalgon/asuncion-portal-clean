@@ -286,7 +286,9 @@ export async function GET(request: NextRequest) {
           ? gradedAssignments.filter(
               (item: { section_id: string; major?: string | null }) =>
                 item.section_id === ownEnrollment.section_id &&
-                (!item.major || item.major === ownEnrollment.tve_major)
+                (!item.major || (isGrade11ElectiveGroup(item.major)
+                  ? item.major === ownEnrollment.shs_elective_group
+                  : item.major === ownEnrollment.tve_major))
             )
           : [];
 
