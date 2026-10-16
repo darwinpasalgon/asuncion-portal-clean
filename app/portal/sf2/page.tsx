@@ -99,15 +99,82 @@ export default function Sf2Page() {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
       );
       if (document.fonts?.ready) await document.fonts.ready;
-      // Images must be decoded in the independent, non-scrollable print sheet.
+      // Print inside a clean, temporary document instead of the portal's
+      // scrollable DOM. This avoids Chromium including an ancestor/body gutter.
       const printDocument = document.querySelector(`.${styles.printOnly} .sf2-print-document`);
       if (!printDocument) {
         setError("SF2 print sheet is not ready. Please generate the report and try again.");
         return;
       }
-      const images = Array.from(printDocument.querySelectorAll<HTMLImageElement>("img"));
-      await Promise.all(images.map(img => img.decode?.().catch(() => undefined)));
-      window.print();
+      const iframe = document.createElement("iframe");
+      iframe.title = "SF2 Clean Print Document";
+      iframe.setAttribute("aria-hidden", "true");
+      iframe.style.cssText = "position:fixed;left:-10000px;top:0;width:1px;height:1px;border:0;overflow:hidden;";
+      document.body.appendChild(iframe);
+      const dispose = () => { iframe.remove(); };
+      try {
+        const printWindow = iframe.contentWindow;
+        const printDoc = printWindow?.document;
+        if (!printWindow || !printDoc) throw new Error("Unable to create a clean print document.");
+
+        // Reuse only the form markup and the compiled stylesheets.
+        const stylesheets = Array.from(
+          document.querySelectorAll<HTMLLinkElement | HTMLStyleElement>(
+            'head link[rel="stylesheet"], head style'
+          )
+        ).map((node) => node.outerHTML).join("\n");
+        printDoc.open();
+        printDoc.write(
+          '<!doctype html><html><head><meta charset="utf-8">' +
+          '<base href="' + window.location.origin + '/">' +
+          stylesheets +
+          '<style>' +
+          'html,body{margin:0!important;padding:0!important;width:auto!important;' +
+          'max-width:none!important;height:auto!important;min-height:0!important;' +
+          'overflow:visible!important;scrollbar-width:none!important;}' +
+          'html::-webkit-scrollbar,body::-webkit-scrollbar{display:none!important;width:0!important;}' +
+          '.' + styles.printOnly + '{display:block!important;}' +
+          '@media print{html,body{overflow:visible!important;scrollbar-width:none!important;}' +
+          'html::-webkit-scrollbar,body::-webkit-scrollbar{display:none!important;}}' +
+          '</style></head><body>' +
+          '<div class="' + styles.printOnly + ' ' + styles.printScope + '">' +
+          printDocument.outerHTML + '</div></body></html>'
+        );
+        printDoc.close();
+
+        // Wait for layout CSS, fonts, and the two DepEd images before printing.
+        await Promise.all(
+          Array.from(printDoc.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')).map(
+            (link) => new Promise<void>((resolve, reject) => {
+              if (link.sheet) return resolve();
+              const timeout = window.setTimeout(() => reject(new Error("SF2 print styles could not load.")), 8000);
+              const finish = (ok: boolean) => {
+                window.clearTimeout(timeout);
+                if (ok) resolve(); else reject(new Error("SF2 print styles could not load."));
+              };
+              link.addEventListener("load", () => finish(true), { once: true });
+              link.addEventListener("error", () => finish(false), { once: true });
+            })
+          )
+        );
+        if (printDoc.fonts?.ready) await printDoc.fonts.ready;
+        const images = Array.from(printDoc.querySelectorAll<HTMLImageElement>("img"));
+        await Promise.all(images.map((img) => img.decode?.().catch(() => undefined)));
+        await new Promise<void>((resolve) =>
+          printWindow.requestAnimationFrame(() => printWindow.requestAnimationFrame(() => resolve()))
+        );
+
+        printWindow.addEventListener("afterprint", dispose, { once: true });
+        printWindow.focus();
+        printWindow.print();
+        // Safety cleanup for browsers that do not fire afterprint on iframes.
+        window.setTimeout(dispose, 60000);
+      } catch (error) {
+        dispose();
+        throw error;
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Unable to print SF2.");
     } finally { setPrinting(false); }
   }
 
