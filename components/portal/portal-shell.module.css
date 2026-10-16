@@ -181,9 +181,19 @@
   min-width: 0;
   text-decoration: none;
 }
-.sideIdentity > span {
+.sideAvatar {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.sideIdentityText {
   min-width: 0;
-  flex: 1;
+  flex: 1 1 auto;
 }
 .sideIdentity strong {
   display: block;
