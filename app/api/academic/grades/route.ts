@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 // Keep this check local: grades/teaching integration tests load route modules in isolation.
-const isStemGroup = (value: unknown): value is "STEM_MEDICAL" | "STEM_ENGINEERING" =>
-  value === "STEM_MEDICAL" || value === "STEM_ENGINEERING";
+const isGrade11ElectiveGroup = (value: unknown): value is "STEM_MEDICAL" | "STEM_ENGINEERING" | "TVL_OAP" | "TVL_FOOD_PROCESSING" =>
+  value === "STEM_MEDICAL" || value === "STEM_ENGINEERING" || value === "TVL_OAP" || value === "TVL_FOOD_PROCESSING";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 import { isTechnicalVocationalEducation } from "@/lib/subject-config";
 
@@ -432,7 +432,7 @@ export async function POST(request: NextRequest) {
 
     const expectedEnrollments = (enrollments ?? []).filter(
       (enrollment: { tve_major?: string | null; shs_elective_group?: string | null }) =>
-        isStemGroup(selectedAssignment.major)
+        isGrade11ElectiveGroup(selectedAssignment.major)
           ? enrollment.shs_elective_group === selectedAssignment.major
           : isTveSubject || !selectedAssignment.major || enrollment.tve_major === selectedAssignment.major
     );
@@ -722,7 +722,7 @@ export async function POST(request: NextRequest) {
 
     // STEM grade entry is strictly confined to the learner's Medical or
     // Engineering group. Core subjects (major=null) remain section-wide.
-    if (isStemGroup(selectedAssignment.major) &&
+    if (isGrade11ElectiveGroup(selectedAssignment.major) &&
         enrollments[0].shs_elective_group !== selectedAssignment.major) {
       return NextResponse.json(
         { error: "This learner belongs to the other STEM elective group. Check the learner's group assignment." },
@@ -993,7 +993,7 @@ export async function POST(request: NextRequest) {
 
       const missing = (enrollments ?? []).filter(
         (enrollment: { student_id: string; tve_major?: string | null; shs_elective_group?: string | null }) => {
-          if (isStemGroup(selectedAssignment.major) &&
+          if (isGrade11ElectiveGroup(selectedAssignment.major) &&
               enrollment.shs_elective_group !== selectedAssignment.major) return false;
           const expectedAssignmentId = isTveSubject
             ? assignmentByMajor.get(String(enrollment.tve_major ?? ""))
