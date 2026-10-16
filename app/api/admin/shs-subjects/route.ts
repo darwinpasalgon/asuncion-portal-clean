@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       query("subjects?grade_level=in.(11,12)&select=id,grade_level,name,is_active,is_graded,include_in_school_forms&order=grade_level.asc,name.asc", token),
       year ? query(
         "shs_subject_offerings?school_year_id=eq." + encodeURIComponent(String(year.id)) +
-        "&select=id,subject_id,grade_level,category,program_code,term_no,group_label,is_active&order=grade_level.asc,category.asc,term_no.asc",
+        "&select=id,subject_id,grade_level,category,program_code,term_no,group_label,units,is_active&order=grade_level.asc,category.asc,term_no.asc",
         token
       ) : Promise.resolve([]),
     ]);
@@ -81,6 +81,24 @@ export async function POST(request: NextRequest) {
     const years = await query("school_years?is_active=eq.true&select=id,name&limit=1", token);
     const yearId = String(years[0]?.id ?? "");
     if (!yearId) return NextResponse.json({ error: "No active school year is configured." }, { status: 400 });
+
+    if (action === "set_units") {
+      const id = String(body?.id ?? "");
+      const submitted = body?.units;
+      const units = submitted === null || submitted === "" ? null : Number(submitted);
+      if (!/^[a-f0-9-]{36}$/i.test(id) ||
+          (units !== null && (!Number.isFinite(units) || units < 0 || units > 20 ||
+          Math.round(units * 10) !== units * 10))) {
+        return NextResponse.json({ error: "Enter a valid units value (0–20 in 0.1 increments) or leave it blank." }, { status: 400 });
+      }
+      const changed = await write(
+        "shs_subject_offerings?id=eq." + encodeURIComponent(id) +
+        "&school_year_id=eq." + encodeURIComponent(yearId),
+        "PATCH", { units, updated_at: new Date().toISOString() }, token
+      );
+      if (!changed.length) return NextResponse.json({ error: "Subject offering not found." }, { status: 404 });
+      return NextResponse.json({ success: true, message: "Subject credit units updated for SF9." });
+    }
 
     if (action === "remove_offering") {
       const id = String(body?.id ?? "");
@@ -105,6 +123,11 @@ export async function POST(request: NextRequest) {
     const term = category === "core" ? 0 : Number(body?.termNo);
     const program = category === "core" ? "ALL" : String(body?.programCode ?? "");
     const groupLabel = category === "core" ? String(body?.groupLabel ?? "").trim().slice(0, 100) || null : null;
+    const enteredUnits = body?.units;
+    const units = enteredUnits === null || enteredUnits === "" || enteredUnits === undefined ? null : Number(enteredUnits);
+    if (units !== null && (!Number.isFinite(units) || units < 0 || units > 20 || Math.round(units * 10) !== units * 10)) {
+      return NextResponse.json({ error: "Subject units must be blank or between 0 and 20, in 0.1 increments." }, { status: 400 });
+    }
     if (![11, 12].includes(grade) || !["core", "elective"].includes(category) ||
         (category === "elective" && (!PROGRAMS.has(program) || !Number.isInteger(term) || term < 1 || term > (grade === 11 ? 3 : 2)))) {
       return NextResponse.json({ error: "Choose a valid grade, category, program, and term." }, { status: 400 });
@@ -154,6 +177,7 @@ export async function POST(request: NextRequest) {
         program_code: program,
         term_no: term,
         group_label: groupLabel,
+        units,
         is_active: true,
         updated_at: new Date().toISOString(),
       },
