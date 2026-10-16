@@ -159,7 +159,19 @@ export default function JhsReadinessPage() {
                           <><span className={goodTve ? styles.positive : styles.warning}>
                             {row.missingTve === 0 ? "Majors Assigned" : row.missingTve + " unassigned"}
                           </span>{row.unmatchedTve > 0 && <small className={styles.warning}>
-                            {row.unmatchedTve} without matching teacher: {row.unmatchedMajors.join(", ")}
+                            {row.unmatchedTve} learner{row.unmatchedTve === 1 ? "" : "s"} with no matching teacher
+                            {row.tveSubjectId && row.unmatchedMajors.map((major) => (
+                              <a
+                                key={major}
+                                className={styles.issueLink}
+                                href={"/portal/admin/teaching?focus=subject-teacher&grade=" + row.gradeLevel +
+                                  "&section=" + encodeURIComponent(row.id) +
+                                  "&subject=" + encodeURIComponent(row.tveSubjectId ?? "") +
+                                  "&major=" + encodeURIComponent(major)}
+                              >
+                                Assign {major} Teacher <ArrowUpRight size={12}/>
+                              </a>
+                            ))}
                           </small>}</>}
                       </td>
                       <td>
@@ -179,7 +191,7 @@ export default function JhsReadinessPage() {
                       </td>
                       <td>
                         <div className={styles.actions}>
-                          <a href={"/portal/admin/learners?grade=" + row.gradeLevel + "&section=" + encodeURIComponent(row.id)}>Learners <ArrowUpRight size={13}/></a>
+                          <a href={"/portal/admin/learners?grade=" + row.gradeLevel + "&section=" + encodeURIComponent(row.id) + (row.missingTve > 0 ? "&missing=tve_major" : "")}>Learners <ArrowUpRight size={13}/></a>
                           <a href={"/portal/admin/teaching?focus=subject-teacher&grade=" + row.gradeLevel + "&section=" + encodeURIComponent(row.id)}>Teachers <ArrowUpRight size={13}/></a>
                           <a href={"/portal/attendance?section=" + encodeURIComponent(row.id)}>Attendance <ArrowUpRight size={13}/></a>
                           <a href={"/portal/sf9"}>SF9 <ArrowUpRight size={13}/></a>
