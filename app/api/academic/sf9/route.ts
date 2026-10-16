@@ -6,6 +6,18 @@ import { sf9AttendanceSummary, sf9AttendanceValue, sf9InstructionalDates } from 
 
 type JsonRow = Record<string, any>;
 
+function grade11ProgramLabel(code: string): string {
+  const labels: Record<string, string> = {
+    ASSH: "ASSH",
+    STEM_MEDICAL: "STEM - Medical",
+    STEM_ENGINEERING: "STEM - Engineering",
+    BUSINESS_ENTREPRENEURSHIP: "Business and Entrepreneurship",
+    TVL_OAP: "TVL - Organic Agriculture Production",
+    TVL_FOOD_PROCESSING: "TVL - Food Processing",
+  };
+  return labels[code] ?? "";
+}
+
 function grade11ProgramCode(strand: string, track: string, major: string): string {
   const value = [strand, track, major].join(" ").toUpperCase().replace(/[^A-Z0-9]+/g, " ");
   if (value.includes("FOOD PROCESSING")) return "TVL_FOOD_PROCESSING";
@@ -1176,7 +1188,7 @@ export async function GET(request: NextRequest) {
         grade_level: enrollment.grade_level ?? selectedSection.grade_level,
         section: selectedSection.name,
         section_id: sectionId,
-        track: shsStrand || shsTrack || (shsProgram.startsWith("TVL_") ? "TVL" : shsProgram ? "Academic" : ""),
+        track: selectedSection.grade_level === 11 ? grade11ProgramLabel(shsProgram) || shsStrand || shsTrack : shsStrand || shsTrack,
         shs_program_code: shsProgram,
         elective_offerings: electiveOfferings,
         core_subject_units: coreUnits,
