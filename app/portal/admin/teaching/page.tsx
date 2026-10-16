@@ -16,6 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import styles from "./teaching.module.css";
+import { STEM_GROUPS, stemGroupLabel, isStemGroup } from "@/lib/shs-stem-groups";
 import { captureRefreshScroll, restoreRefreshScroll } from "@/lib/background-refresh";
 import ActionWaitOverlay from "@/app/components/action-wait-overlay";
 import {
@@ -26,7 +27,7 @@ import {
 
 type ActiveYear = { id: string; name: string };
 type Grade = { grade_level: number; label: string; sort_order: number };
-type Section = { id: string; grade_level: number; name: string; is_active: boolean };
+type Section = { id: string; grade_level: number; name: string; is_active: boolean; shs_program_code?: string | null };
 type Subject = {
   id: string;
   grade_level: number;
@@ -54,6 +55,7 @@ type Assignment = {
   is_active: boolean;
   assigned_at: string;
 };
+type StemOffering = { subject_id: string; program_code: string; term_no: number };
 type Grade7TveRotation = {
   id: string;
   section_id: string;
@@ -84,6 +86,8 @@ export default function TeachingSetupPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [advisers, setAdvisers] = useState<Adviser[]>([]);
   const [grade7TveRotations, setGrade7TveRotations] = useState<Grade7TveRotation[]>([]);
+  const [stemElectiveOfferings, setStemElectiveOfferings] = useState<StemOffering[]>([]);
+  const [assignmentSectionId, setAssignmentSectionId] = useState("");
   const [assignmentGrade, setAssignmentGrade] = useState("");
   const [assignmentSubject, setAssignmentSubject] = useState("");
   const [assignmentMajor, setAssignmentMajor] = useState("");
@@ -121,6 +125,7 @@ export default function TeachingSetupPage() {
       setAssignments(result.assignments ?? []);
       setAdvisers(result.advisers ?? []);
       setGrade7TveRotations(result.grade7TveRotations ?? []);
+      setStemElectiveOfferings(result.stemElectiveOfferings ?? []);
     } catch {
       setError("Unable to reach the teaching setup service.");
     } finally {
@@ -188,6 +193,15 @@ export default function TeachingSetupPage() {
   const setupRows = useMemo(
     () =>
       subjectsForSetup.flatMap((subject) => {
+        if (setupSection?.grade_level === 11 && setupSection.shs_program_code === "STEM") {
+          const groupCodes = Array.from(new Set(
+            stemElectiveOfferings.filter((offering) => offering.subject_id === subject.id)
+              .map((offering) => offering.program_code).filter(isStemGroup)
+          ));
+          if (groupCodes.length) return groupCodes.map((major) => ({
+            key: `${subject.id}::${major}`, subject, major,
+          }));
+        }
         if (requiresTechnicalVocationalMajor(subject.grade_level, subject.name)) {
           return TECHNICAL_VOCATIONAL_MAJORS.map((major) => ({
             key: `${subject.id}::${major}`,
@@ -197,7 +211,7 @@ export default function TeachingSetupPage() {
         }
         return [{ key: `${subject.id}::`, subject, major: null as string | null }];
       }),
-    [subjectsForSetup]
+    [subjectsForSetup, setupSection, stemElectiveOfferings]
   );
 
   useEffect(() => {
@@ -333,7 +347,15 @@ function subjectTeacherLabel(teacher: Teacher) {
     activeSubjects
       .filter((subject) => subject.grade_level === section.grade_level)
       .forEach((subject) => {
-        if (requiresTechnicalVocationalMajor(subject.grade_level, subject.name)) {
+        const stemGroups = section.grade_level === 11 && section.shs_program_code === "STEM"
+          ? Array.from(new Set(stemElectiveOfferings.filter((item) => item.subject_id === subject.id)
+              .map((item) => item.program_code).filter(isStemGroup))) : [];
+        if (stemGroups.length) {
+          stemGroups.forEach((major) => {
+            const assignment = assignmentFor(sectionId, subject.id, major);
+            next[`${subject.id}::${major}`] = assignment?.is_active ? assignment.teacher_id : "";
+          });
+        } else if (requiresTechnicalVocationalMajor(subject.grade_level, subject.name)) {
           TECHNICAL_VOCATIONAL_MAJORS.forEach((major) => {
             const assignment = assignmentFor(sectionId, subject.id, major);
             next[`${subject.id}::${major}`] =
@@ -606,6 +628,7 @@ function subjectTeacherLabel(teacher: Teacher) {
       setAssignmentGrade("");
       setAssignmentSubject("");
       setAssignmentMajor("");
+      setAssignmentSectionId("");
       await load(true);
     } catch {
       setError("Unable to reach the teaching setup service.");
@@ -893,7 +916,7 @@ function subjectTeacherLabel(teacher: Teacher) {
                   <thead>
                     <tr>
                       <th>Subject</th>
-                      <th>TVE Major</th>
+                      <th>TVE Major / STEM Elective Group</th>
                       <th>Subject Teacher</th>
                       <th>Status</th>
                     </tr>
@@ -927,7 +950,7 @@ function subjectTeacherLabel(teacher: Teacher) {
                               )}
                           </td>
                           <td>
-                            {exploratoryTve ? "Exploratory Rotation" : row.major ?? "—"}
+                            {exploratoryTve ? "Exploratory Rotation" : isStemGroup(row.major) ? stemGroupLabel(row.major) : row.major ?? "—"}
                           </td>
                           <td>
                             {exploratoryTve ? (
@@ -1187,7 +1210,7 @@ function subjectTeacherLabel(teacher: Teacher) {
               </label>
               <label>
                 <span>Section</span>
-                <select name="sectionId" required defaultValue="" key={`section-${assignmentGrade}`} disabled={!assignmentGrade}>
+                <select name="sectionId" required value={assignmentSectionId} key={`section-${assignmentGrade}`} disabled={!assignmentGrade} onChange={(event) => { setAssignmentSectionId(event.target.value); setAssignmentMajor(""); }}>
                   <option value="" disabled>
                     {assignmentGrade ? "Select section" : "Select Grade Level / Program first"}
                   </option>
@@ -1256,6 +1279,22 @@ function subjectTeacherLabel(teacher: Teacher) {
                 </label>
               )}
 
+              {Number(assignmentGrade) === 11 &&
+                sectionsForAssignment.find((item) => item.id === assignmentSectionId)?.shs_program_code === "STEM" &&
+                stemElectiveOfferings.some((item) => item.subject_id === assignmentSubject) && (
+                  <label>
+                    <span>STEM Elective Group</span>
+                    <select name="stemElectiveGroup" required value={assignmentMajor}
+                      onChange={(event) => setAssignmentMajor(event.target.value)}>
+                      <option value="">Choose Medical or Engineering</option>
+                      {STEM_GROUPS.filter((group) => stemElectiveOfferings.some(
+                        (item) => item.subject_id === assignmentSubject && item.program_code === group.code
+                      )).map((group) => (
+                        <option key={group.code} value={group.code}>{group.shortLabel}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
               {Number(assignmentGrade) === 7 &&
                 isTechnicalVocationalEducation(
                   subjectsForAssignment.find(
