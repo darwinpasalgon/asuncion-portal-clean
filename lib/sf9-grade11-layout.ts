@@ -137,3 +137,21 @@ export function sf9Grade11TotalUnits(rows: Sf9Grade11DisplayRow[]): number {
   return rows.reduce((sum,row) => sum +
     ((row.kind === "group" || row.kind === "subject") && typeof row.units === "number" ? row.units : 0),0);
 }
+
+/** Weighted final average from the 39-unit Grade 11 SF9:
+ * sum(final grade x credited units) / sum(credited units).
+ * Do not publish an average until every credited area has a final grade.
+ * Language components are displayed but not counted separately. */
+export function sf9Grade11WeightedAverage(rows: Sf9Grade11DisplayRow[]): number | null {
+  const credited = rows.filter((row) =>
+    (row.kind === "group" || row.kind === "subject") &&
+    typeof row.units === "number" && row.units > 0
+  );
+  if (!credited.length || credited.some((row) =>
+    typeof row.final_grade !== "number" || !Number.isFinite(row.final_grade))) return null;
+  const total = sf9Grade11TotalUnits(rows);
+  if (!total) return null;
+  const weighted = credited.reduce((sum,row) =>
+    sum + Number(row.final_grade) * Number(row.units),0);
+  return Math.round(weighted / total);
+}
