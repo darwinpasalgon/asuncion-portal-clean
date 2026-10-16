@@ -226,6 +226,8 @@ export async function GET(request: NextRequest) {
     let sections: Array<{ id: string; grade_level: number; name: string }> = [];
 
     if (profile.role === "teacher") {
+      // Fetch only the caller's own active adviser records under RLS. Do not
+      // swallow a query error as a misleading empty section selector.
       const adviserRows = await getRows(
         `section_advisers?school_year_id=eq.${encodeURIComponent(
           activeYear.id
@@ -233,22 +235,21 @@ export async function GET(request: NextRequest) {
           userId
         )}&is_active=eq.true&select=section_id`,
         token
-      ).catch(() => []);
-
-      const sectionIds: string[] = Array.from(
-        new Set<string>(
-          (adviserRows ?? []).map((row: { section_id: string }) =>
-            String(row.section_id)
-          )
-        )
       );
 
-      if (sectionIds.length) {
-        sections = await getRows(
-          `sections?id=in.${encodeURIComponent(
-            inFilter(sectionIds)
-          )}&is_active=eq.true&select=id,grade_level,name&order=grade_level.asc,name.asc`,
+      const sectionIds = new Set<string>(
+        (adviserRows ?? []).map((row: { section_id: string }) => String(row.section_id))
+      );
+
+      if (sectionIds.size) {
+        // Fetch the active section directory and intersect it with confirmed
+        // adviser assignments. Avoid a brittle encoded PostgREST "in" clause.
+        const activeSections = await getRows(
+          "sections?is_active=eq.true&select=id,grade_level,name&order=grade_level.asc,name.asc",
           token
+        );
+        sections = (activeSections ?? []).filter(
+          (row: { id: string }) => sectionIds.has(String(row.id))
         );
       }
     } else {
