@@ -320,3 +320,11 @@
 .shsGroupLabelRow td{font-weight:650!important;text-align:left!important;font-size:6.8pt;padding:.5mm .8mm!important}
 .shsIndentedRow td:first-child{padding-left:4mm!important;font-size:7pt}
 @media print{.shsSectionRow td{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+
+
+/* Seven-column Grade 11 table with an optional college-style credit-units field. */
+.grade11Table .learningAreaCol{width:42%}
+.grade11Table .unitsCol{width:7.5%;font-size:6.8pt}
+.grade11Table .finalCol{width:10.5%}
+.grade11Table .remarksCol{width:16%}
+.grade11Table td:nth-child(2){font-variant-numeric:tabular-nums;text-align:center}
