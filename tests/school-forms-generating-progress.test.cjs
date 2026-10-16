@@ -25,7 +25,7 @@ test("SF2 displays the generating bar for section load, attendance generation an
   assert.match(sf2, /form="SF2"/);
   assert.match(sf2, /Generating monthly SF2/);
   assert.match(sf2, /Preparing SF2 for printing/);
-  assert.match(sf2, /window\.print\(\)/);
+  assert.match(sf2, /printWindow\.print\(\)/);
 });
 
 test("SF9 generating indicator covers section, A4 preview and printing without changing saved report data", () => {
