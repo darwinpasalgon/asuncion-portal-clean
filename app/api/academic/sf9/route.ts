@@ -497,13 +497,19 @@ export async function GET(request: NextRequest) {
       .slice(0, 2);
 
     const allSections = await getRows(
-      "sections?is_active=eq.true&grade_level=gte.7&grade_level=lte.10&select=id,grade_level,name&order=grade_level.asc,name.asc",
+      "sections?is_active=eq.true&grade_level=gte.7&grade_level=lte.12&select=id,grade_level,name&order=grade_level.asc,name.asc",
       token
     );
 
+    // Only active Grades 7–12 sections are eligible for SF9.
+    // Teacher access must also match an active adviser assignment for this year.
+    const activeSectionIds = new Set((allSections ?? []).map((row: JsonRow) => String(row.id)));
     const allowedSectionIds = isAdmin
-      ? new Set((allSections ?? []).map((row: JsonRow) => String(row.id)))
-      : new Set(adviserRows.map((row) => String(row.section_id)));
+      ? activeSectionIds
+      : new Set(
+          adviserRows.map((row) => String(row.section_id))
+            .filter((id) => activeSectionIds.has(id))
+        );
 
     const sections = (allSections ?? []).filter((row: JsonRow) =>
       allowedSectionIds.has(String(row.id))
