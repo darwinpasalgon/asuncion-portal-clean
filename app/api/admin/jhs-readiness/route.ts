@@ -103,12 +103,14 @@ export async function GET(request: NextRequest) {
       const subjectRows = catalog.get(String(gradeLevel)) ?? [];
       const tveSubject = subjectRows.find((subject) => text(subject.name) === "Technical Vocational Education");
       const missingTve = gradeLevel === 7 ? 0 : learners.filter((row) => !text(row.tve_major)).length;
-      const unmatchedTve = gradeLevel === 7 || !tveSubject ? 0 : learners.filter((row) =>
+      const unmatchedLearners = gradeLevel === 7 || !tveSubject ? [] : learners.filter((row) =>
         text(row.tve_major) && !teacherRows.some((assignment) =>
           text(assignment.subject_id) === text(tveSubject.id) &&
           text(assignment.major) === text(row.tve_major)
         )
-      ).length;
+      );
+      const unmatchedTve = unmatchedLearners.length;
+      const unmatchedMajors = [...new Set(unmatchedLearners.map((row) => text(row.tve_major)))];
       // Exploratory Grade 7 uses separate rotation catalog, not individual TVE majors.
       const standardSubjects = subjectRows.filter((subject) =>
         gradeLevel !== 7 || text(subject.name) !== "Technical Vocational Education"
@@ -133,6 +135,8 @@ export async function GET(request: NextRequest) {
         learners: learners.length,
         missingTve,
         unmatchedTve,
+        unmatchedMajors,
+        tveSubjectId: tveSubject ? text(tveSubject.id) : null,
         missingSubjects,
         teachingAssignments: teacherRows.length,
         unscheduledAssignments: teacherRows.filter((row) => !scheduledIds.has(text(row.id))).length,
