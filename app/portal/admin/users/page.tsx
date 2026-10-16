@@ -472,6 +472,7 @@ export default function UsersAccountsPage() {
           <div>
             <a href="/portal/admin/users">Pending Approvals</a>
             {canCreateAccounts && <a href="/portal/admin/create-account">Create Account</a>}
+            {canCreateAccounts && <a href="/portal/admin/personnel-credentials">Personnel Login Credentials</a>}
             <a href="/portal/admin/masterlist">Bulk Account Import</a>
             <a href="/portal/admin/password-resets">Password Resets</a>
           </div>
@@ -489,6 +490,9 @@ export default function UsersAccountsPage() {
           <div className={styles.headerActions}>
             {canCreateAccounts && <a className={styles.createAccountLink} href="/portal/admin/create-account">
               <UserPlus size={17}/> Create Account
+            </a>}
+            {canCreateAccounts && <a className={styles.createAccountLink} href="/portal/admin/personnel-credentials">
+              <KeyRound size={17}/> Personnel Login Credentials
             </a>}
             <div className={styles.security}>
               <ShieldCheck size={18} />
