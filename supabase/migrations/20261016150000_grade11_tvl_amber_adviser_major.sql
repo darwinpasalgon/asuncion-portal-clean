@@ -4,7 +4,7 @@ alter table public.sections add constraint sections_shs_program_code_check
  check (shs_program_code is null or (grade_level=11 and shs_program_code in
  ('STEM','TVL','BUSINESS_ENTREPRENEURSHIP','ASSH','TVL_OAP','TVL_FOOD_PROCESSING')));
 update public.sections set shs_program_code='TVL',updated_at=now()
- where grade_level=11 and name='Amber' and shs_program_code is null;
+ where grade_level=11 and name='Amber' and shs_program_code is distinct from 'TVL';
 alter table public.student_enrollments drop constraint if exists student_enrollments_shs_elective_group_check;
 alter table public.student_enrollments add constraint student_enrollments_shs_elective_group_check
  check (shs_elective_group is null or (grade_level=11 and shs_elective_group in
