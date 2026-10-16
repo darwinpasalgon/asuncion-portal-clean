@@ -583,6 +583,7 @@ export default function TeacherProfileImportPage() {
       <div className={styles.shell}>
         <nav className={styles.topbar}>
           <a href="/portal"><ArrowLeft size={16} />Back to Portal</a>
+          <a href="/portal/admin/personnel-credentials"><KeyRound size={16} />Personnel Login Directory</a>
           <a href="/portal/admin/masterlist"><Users size={16} />Bulk Account Import</a>
         </nav>
 
@@ -605,34 +606,49 @@ export default function TeacherProfileImportPage() {
         {error && <div className={styles.error}>{error}</div>}
         {message && <div className={styles.success}>{message}</div>}
 
-        {recoveryCandidates.length > 0 && (
-          <section className={`${styles.panel} ${styles.recoveryPanel}`}>
-            <div className={styles.panelHead}>
-              <div>
-                <h2>First-Login Credential Recovery</h2>
-                <p>
-                  {recoveryCandidates.length} Teacher account{recoveryCandidates.length === 1 ? "" : "s"} had
-                  the original temporary password replaced by an earlier profile re-import before first login.
-                  Generate one fresh credential set and download it once.
-                </p>
-              </div>
-              <KeyRound size={26} />
+        <section id="first-login-credentials" className={`${styles.panel} ${styles.recoveryPanel}`}>
+          <div className={styles.panelHead}>
+            <div>
+              <h2>First-Login Credential Generation & Download</h2>
+              <p>
+                For eligible Teacher accounts that have never signed in and whose temporary password
+                was replaced during an earlier import. This tool does not reveal existing passwords.
+              </p>
             </div>
-            <div className={styles.recoveryActions}>
-              <div>
-                <strong>{recoveryCandidates.length} affected account{recoveryCandidates.length === 1 ? "" : "s"}</strong>
-                <span>Only Teachers who have never signed in and match the affected import pattern are included.</span>
-              </div>
+            <KeyRound size={26} />
+          </div>
+          <div className={styles.recoveryActions}>
+            <div>
+              <strong>
+                {recoveryCandidates.length > 0
+                  ? `${recoveryCandidates.length} account${recoveryCandidates.length === 1 ? "" : "s"} eligible for recovery`
+                  : "No eligible recovery accounts detected"}
+              </strong>
+              <span>
+                {recoveryCandidates.length > 0
+                  ? "A fresh temporary password will replace each eligible account's unknown first-login password. Download and distribute the CSV securely."
+                  : "Existing passwords cannot be downloaded again. For other personnel, use verified Password Resets."}
+              </span>
+              <a href="/portal/admin/personnel-credentials" style={{ fontSize: 12, color: "#116f86" }}>
+                Download Personnel Login Email Directory (without passwords) →
+              </a>
+            </div>
+            {recoveryCandidates.length > 0 ? (
               <button
+                type="button"
                 onClick={() => void recoverFirstLoginCredentials()}
                 disabled={recoveringCredentials}
               >
                 <Download size={17} />
-                {recoveringCredentials ? "Recovering credentials…" : "Generate & download fresh credentials"}
+                {recoveringCredentials ? "Generating credentials…" : "Generate & Download Fresh Credentials"}
               </button>
-            </div>
-          </section>
-        )}
+            ) : (
+              <a href="/portal/admin/password-resets" className={styles.topLink}>
+                <KeyRound size={17} />Open Password Resets
+              </a>
+            )}
+          </div>
+        </section>
 
         <section className={styles.panel}>
           <div className={styles.panelHead}>
