@@ -31,7 +31,7 @@ test("The Grade 11 table matches the workbook while retaining Grade 7-10 JHS row
  const template = read("app/portal/sf9/Sf9PrintForms.tsx");
  const css = read("app/portal/sf9/sf9.module.css");
  assert.match(template, /card\.grade_level === 11\s*\? sf9Grade11Rows/);
- assert.match(template, /: padGradeRows\(card\.grade_rows\)/);
+ assert.match(template, /grade11Rows \?\? padGradeRows\(card\.grade_rows\)/);
  assert.match(template, /styles\.shsSectionRow/);
  assert.match(template, /styles\.shsGroupLabelRow/);
  assert.match(template, /styles\.shsIndentedRow/);
