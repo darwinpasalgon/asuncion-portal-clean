@@ -26,12 +26,12 @@ test("Revised Grade 11 SF9 column order and Excel merged group rows match templa
     "Term must precede Units");
   assert.match(forms, /td colSpan=\{card\.grade_level === 11 \? 7 : 6\}/);
   assert.match(forms, /<td colSpan=\{4\}>General Average<\/td>/);
-  assert.match(forms, /sf9Grade11TotalUnits\(rows\)/);
+  assert.match(forms, /sf9Grade11TotalUnits\(grade11Rows \?\? \[\]\)/);
   assert.match(forms, /styles\.grade11UnusedTerm/);
   assert.match(css, /\.grade11UnusedTerm\{background:#aaa!important\}/);
   assert.match(css, /\.shsIndentedRow td:first-child\{[^}]*font-style:italic/);
   assert.match(css, /\.grade11GeneralAverage td:first-child\{[^}]*font-style:italic/);
-  assert.match(forms, /: padGradeRows\(card\.grade_rows\)/);
+  assert.match(forms, /grade11Rows \?\? padGradeRows\(card\.grade_rows\)/);
 });
 
 test("Existing Grade 11 elective catalog rows receive three units unless locally overridden", () => {
