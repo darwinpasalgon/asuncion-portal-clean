@@ -101,13 +101,13 @@ export async function GET(request: NextRequest) {
 
     const [sections, enrollments, profiles, learnerInfos] = await Promise.all([
       getRows(
-        "sections?is_active=eq.true&select=id,grade_level,name&order=grade_level.asc,name.asc",
+        "sections?is_active=eq.true&select=id,grade_level,name,shs_program_code&order=grade_level.asc,name.asc",
         auth.token
       ),
       getRows(
         `student_enrollments?school_year_id=eq.${encodeURIComponent(
           year.id
-        )}&enrollment_status=eq.active&select=id,student_id,grade_level,section_id,tve_major,shs_track,shs_strand_program,learner_status&order=grade_level.asc,enrolled_at.asc`,
+        )}&enrollment_status=eq.active&select=id,student_id,grade_level,section_id,tve_major,shs_track,shs_strand_program,shs_elective_group,learner_status&order=grade_level.asc,enrolled_at.asc`,
         auth.token
       ),
       getRows(
@@ -165,6 +165,7 @@ export async function GET(request: NextRequest) {
           tve_major: string | null;
           shs_track: string | null;
           shs_strand_program: string | null;
+          shs_elective_group: string | null;
           learner_status: string;
         }) => {
           const profile = profileMap.get(enrollment.student_id) as
@@ -228,6 +229,9 @@ export async function GET(request: NextRequest) {
             tve_major: enrollment.tve_major ?? null,
             shs_track: enrollment.shs_track ?? null,
             shs_strand_program: enrollment.shs_strand_program ?? null,
+            shs_elective_group: enrollment.shs_elective_group ?? null,
+            section_program: eligibleSections.find((section: { id: string; shs_program_code?: string | null }) =>
+              section.id === enrollment.section_id)?.shs_program_code ?? null,
             learner_status: enrollment.learner_status,
           };
         }
@@ -368,6 +372,27 @@ export async function POST(request: NextRequest) {
       ok: true,
       learnerInformation: Array.isArray(result) ? result[0] ?? null : result,
     });
+  }
+
+  if (action === "set_grade11_major") {
+    const enrollmentId = String(body?.enrollmentId ?? "");
+    const group = String(body?.group ?? "").trim() || null;
+    if (!/^[a-f0-9-]{36}$/i.test(enrollmentId) ||
+        (group !== null && !["STEM_MEDICAL","STEM_ENGINEERING","TVL_FOOD_PROCESSING","TVL_OAP"].includes(group))) {
+      return NextResponse.json({ error: "Select a valid Grade 11 learner major." }, { status: 400 });
+    }
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/rpc/set_adviser_grade11_elective_group`,
+      { method: "POST", headers: { ...authHeaders(auth.token), Prefer: "return=representation" },
+        body: JSON.stringify({ p_enrollment_id: enrollmentId, p_group: group }), cache: "no-store" }
+    );
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return NextResponse.json({
+        error: String(result?.message ?? "Unable to update the Grade 11 learner major."),
+      }, { status: response.status || 400 });
+    }
+    return NextResponse.json({ ok: true, enrollment: Array.isArray(result) ? result[0] ?? null : result });
   }
 
   if (action !== "set_tve_major") {
