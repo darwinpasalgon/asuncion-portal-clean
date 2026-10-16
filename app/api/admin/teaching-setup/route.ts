@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hasAdminPermission } from "@/lib/admin-access";
+import { isStemGroup } from "@/lib/shs-stem-groups";
 import { teachingAssignmentError } from "@/lib/teaching-assignment-error";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 import {
@@ -135,7 +136,7 @@ export async function GET(request: NextRequest) {
       grade7TveRotations,
     ] = await Promise.all([
       getRows("grade_levels?select=grade_level,label,sort_order&order=sort_order.asc", token),
-      getRows("sections?select=id,grade_level,name,is_active&order=grade_level.asc,name.asc", token),
+      getRows("sections?select=id,grade_level,name,is_active,shs_program_code&order=grade_level.asc,name.asc", token),
       getRows("subjects?select=id,grade_level,name,is_active,is_graded,include_in_school_forms&order=grade_level.asc,name.asc", token),
       getRows(
         "profiles?account_status=eq.active&role=neq.student&select=id,full_name,email,role,position&order=full_name.asc",
@@ -199,8 +200,14 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const stemElectiveOfferings = activeYear
+      ? await getRows(
+          `shs_subject_offerings?school_year_id=eq.${encodeURIComponent(activeYear.id)}&grade_level=eq.11&category=eq.elective&is_active=eq.true&program_code=in.(STEM_MEDICAL,STEM_ENGINEERING)&select=subject_id,program_code,term_no`,
+          token
+        ) : [];
     return NextResponse.json({
       activeYear,
+      stemElectiveOfferings,
       grades,
       sections,
       subjects,
@@ -440,7 +447,7 @@ export async function POST(request: NextRequest) {
       getRows(
         `sections?id=eq.${encodeURIComponent(
           sectionId
-        )}&grade_level=eq.${gradeLevel}&is_active=eq.true&select=id,name&limit=1`,
+        )}&grade_level=eq.${gradeLevel}&is_active=eq.true&select=id,name,shs_program_code&limit=1`,
         token
       ),
       getRows(
@@ -488,6 +495,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const stemOfferingRows = gradeLevel === 11 && sectionRows?.[0]?.shs_program_code === "STEM"
+      ? await getRows(
+          `shs_subject_offerings?school_year_id=eq.${encodeURIComponent(activeYear.id)}&grade_level=eq.11&category=eq.elective&is_active=eq.true&program_code=in.(STEM_MEDICAL,STEM_ENGINEERING)&select=subject_id,program_code`,
+          token
+        ) : [];
+    const validStemPairs = new Set(stemOfferingRows.map((row: { subject_id: string; program_code: string }) =>
+      String(row.subject_id) + "::" + String(row.program_code)));
+    const stemElectiveIds = new Set(stemOfferingRows.map((row: { subject_id: string }) => String(row.subject_id)));
+
     const normalizedAssignments: Array<{
       subjectId: string;
       major: string | null;
@@ -529,7 +545,14 @@ export async function POST(request: NextRequest) {
         String(subject.name ?? "")
       );
       const requestedMajor = String(item?.major ?? "").trim();
-      const major = needsMajor ? requestedMajor : null;
+      const isStemElective = gradeLevel === 11 && stemElectiveIds.has(subjectId);
+      const major = needsMajor || isStemElective ? requestedMajor : null;
+      if (isStemElective && !validStemPairs.has(subjectId + "::" + major)) {
+        return NextResponse.json(
+          { error: "Choose the matching STEM Medical or Engineering elective group." },
+          { status: 400 }
+        );
+      }
 
       if (
         needsMajor &&
@@ -807,7 +830,7 @@ export async function POST(request: NextRequest) {
       getRows(
         `sections?id=eq.${encodeURIComponent(
           sectionId
-        )}&grade_level=eq.${gradeLevel}&is_active=eq.true&select=id&limit=1`,
+        )}&grade_level=eq.${gradeLevel}&is_active=eq.true&select=id,shs_program_code&limit=1`,
         token
       ),
     ]).catch(() => [[], []]);
@@ -1008,7 +1031,23 @@ export async function POST(request: NextRequest) {
       String(subjectRows[0].name ?? "")
     );
     const majorRaw = String(body?.major ?? "").trim();
-    const major = requiresMajor ? majorRaw : null;
+    const stemOfferingRows = gradeLevel === 11 && sectionRows?.[0]?.shs_program_code === "STEM"
+      ? await getRows(
+          `shs_subject_offerings?school_year_id=eq.${encodeURIComponent(activeYear.id)}&grade_level=eq.11&category=eq.elective&is_active=eq.true&subject_id=eq.${encodeURIComponent(subjectId)}&select=program_code`,
+          token
+        ) : [];
+    const isStemElective = stemOfferingRows.some(
+      (row: { program_code?: string }) => isStemGroup(row.program_code)
+    );
+    const major = requiresMajor || isStemElective ? majorRaw : null;
+    if (isStemElective && !stemOfferingRows.some(
+      (row: { program_code: string }) => row.program_code === major
+    )) {
+      return NextResponse.json(
+        { error: "Choose the matching Medical or Engineering STEM elective teacher group." },
+        { status: 400 }
+      );
+    }
 
     if (
       requiresMajor &&
