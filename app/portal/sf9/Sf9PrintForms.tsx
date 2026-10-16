@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react";
 import { DEPED_LOGO_DATA_URI } from "../admin/sf10/Sf10LogoData";
 import styles from "./sf9.module.css";
+import { sf9Grade11Rows, type Sf9Grade11Offering } from "@/lib/sf9-grade11-layout";
 
 type GradeRow = {
   key: string;
@@ -151,6 +152,8 @@ export type Sf9CardData = {
   grade_level: number;
   section: string;
   track: string;
+  shs_program_code?: string;
+  elective_offerings?: Sf9Grade11Offering[];
   grade_rows: GradeRow[];
   general_average: number | null;
   general_averages_by_term?: Array<number | null>;
@@ -293,7 +296,9 @@ function FrontCard({
   detail: Sf9Detail;
   layout: Sf9LayoutSettings;
 }) {
-  const rows = padGradeRows(card.grade_rows);
+  const rows = card.grade_level === 11
+    ? sf9Grade11Rows(card.grade_rows, card.elective_offerings ?? [], card.shs_program_code ?? "")
+    : padGradeRows(card.grade_rows);
   return (
     <article className={styles.cardFront}>
       <HeaderBlock
@@ -343,7 +348,7 @@ function FrontCard({
         LEARNING PROGRESS AND ACHIEVEMENT
       </div>
       <table
-        className={styles.gradeTable}
+        className={styles.gradeTable + (card.grade_level === 11 ? " " + styles.grade11Table : "")}
         data-sf9-block="gradeTable"
         style={blockStyle(layout, "gradeTable")}
       >
@@ -361,16 +366,26 @@ function FrontCard({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.key} className={row.component ? styles.componentRow : ""}>
-              <td>{row.label}</td>
-              <td>{displayNumber(row.terms?.[0])}</td>
-              <td>{displayNumber(row.terms?.[1])}</td>
-              <td>{displayNumber(row.terms?.[2])}</td>
-              <td>{displayNumber(row.final_grade)}</td>
-              <td>{row.remarks}</td>
-            </tr>
-          ))}
+          {rows.map((row) => {
+            const kind = "kind" in row ? row.kind : undefined;
+            if (kind === "section" || kind === "group") {
+              return (
+                <tr key={row.key} className={kind === "section" ? styles.shsSectionRow : styles.shsGroupLabelRow}>
+                  <td colSpan={6}>{row.label}</td>
+                </tr>
+              );
+            }
+            return (
+              <tr key={row.key} className={row.component ? styles.componentRow : "indent" in row && row.indent ? styles.shsIndentedRow : ""}>
+                <td>{row.label}</td>
+                <td>{displayNumber(row.terms?.[0])}</td>
+                <td>{displayNumber(row.terms?.[1])}</td>
+                <td>{displayNumber(row.terms?.[2])}</td>
+                <td>{displayNumber(row.final_grade)}</td>
+                <td>{row.remarks}</td>
+              </tr>
+            );
+          })}
           <tr className={styles.generalAverageRow}>
             <td>General Average</td>
             <td>{displayNumber(card.general_averages_by_term?.[0] ?? null)}</td>
