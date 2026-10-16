@@ -388,6 +388,27 @@ function DashboardHome({
         <span className="real-dashboard-role">{displayRole}</span>
       </div>
 
+      {(profile.role === "administrator" ||
+        (profile.role === "staff_administrator" &&
+          ["school_setup.manage", "teaching.manage", "reports.view"].some(
+            (permission) => adminPermissions.includes(permission)
+          ))) && (
+        <a
+          href="/portal/admin/jhs-readiness"
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 9,
+            padding: "11px 15px", marginBottom: 15, borderRadius: 11,
+            width: "fit-content", background: "#e8f6f2",
+            border: "1px solid #c5e4d9", color: "#147665",
+            textDecoration: "none", fontSize: 13, fontWeight: 750,
+          }}
+        >
+          <ClipboardCheck size={17} />
+          Grades 7–10 Readiness Audit
+          <ChevronRight size={15} />
+        </a>
+      )}
+
       <div className="real-dashboard-summary">
         {profile.role === "student" ? (
           <>
