@@ -96,7 +96,6 @@ export default function Sf10Page() {
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    if (!needle) return students;
     const target = advisorySections.find((section) => section.id === selectedSectionId);
     return students.filter((student) =>
       (!target || (student.section === target.name && student.grade_level === target.grade_level)) &&
