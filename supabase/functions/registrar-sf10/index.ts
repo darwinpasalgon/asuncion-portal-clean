@@ -187,18 +187,28 @@ Deno.serve(async (req) => {
 
       if (enrollmentError) return json({ error: "Unable to load advisory learners." }, 500);
 
+      // Send the adviser's own assigned sections independently of learner count.
+      // This distinguishes an empty roster from an unassigned account.
+      const { data: advisorySections, error: sectionsError } = await admin
+        .from("sections")
+        .select("id,grade_level,name")
+        .in("id", caller.adviserSectionIds)
+        .eq("is_active", true)
+        .order("grade_level")
+        .order("name");
+      if (sectionsError) return json({ error: "Unable to load advisory sections." }, 500);
+
       const studentIds = Array.from(
         new Set((enrollmentRows ?? []).map((item) => String(item.student_id)))
       );
       if (!studentIds.length) {
-        return json({ ok: true, access_mode: "adviser", students: [] });
+        return json({ ok: true, access_mode: "adviser", sections: advisorySections ?? [], students: [] });
       }
 
       const [
         { data: students, error: studentError },
         { data: permanentRows },
         { data: learnerInfoRows },
-        { data: sectionRows },
       ] = await Promise.all([
         admin
           .from("profiles")
@@ -214,10 +224,6 @@ Deno.serve(async (req) => {
           .from("learner_information")
           .select("student_id,last_name,first_name,sex")
           .in("student_id", studentIds),
-        admin
-          .from("sections")
-          .select("id,name")
-          .in("id", caller.adviserSectionIds),
       ]);
 
       if (studentError) return json({ error: "Unable to load advisory learners." }, 500);
@@ -232,12 +238,13 @@ Deno.serve(async (req) => {
         (enrollmentRows ?? []).map((item) => [String(item.student_id), item])
       );
       const sectionMap = new Map(
-        (sectionRows ?? []).map((item) => [String(item.id), String(item.name)])
+        (advisorySections ?? []).map((item) => [String(item.id), String(item.name)])
       );
 
       return json({
         ok: true,
         access_mode: "adviser",
+        sections: advisorySections ?? [],
         students: (students ?? [])
           .map((student) => {
             const enrollment = enrollmentMap.get(String(student.id));
