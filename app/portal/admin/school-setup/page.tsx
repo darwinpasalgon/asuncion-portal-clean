@@ -350,6 +350,14 @@ export default function SchoolSetupPage() {
           )}
         </header>
 
+        <div style={{margin:"12px 0",padding:"13px 16px",borderRadius:12,border:"1px solid #cde7e3",background:"#f2fbf8",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+          <div>
+            <strong style={{fontSize:13}}>Grade 11 STEM Elective Groups</strong>
+            <p style={{fontSize:12,margin:"5px 0 0",color:"#567d86"}}>Keep one STEM section and assign Medical or Engineering electives to individual learners.</p>
+          </div>
+          <a href="/portal/admin/stem-elective-groups" style={{fontWeight:750,fontSize:13,color:"#197b74"}}>Assign Learner Elective Groups →</a>
+        </div>
+
         {error && <div className={styles.error}>{error}</div>}
         {success && <div className={styles.success}>{success}</div>}
 
