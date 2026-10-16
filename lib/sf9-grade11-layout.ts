@@ -1,6 +1,5 @@
-// Grade 11 SF9 learning-area layout transcribed from AMOGUIS.xlsx,
-// "SF9 - GRADE 11 ACADEMIC", rows 32–44 (SY 2026–2027).
-// This is a display layout. It never creates learner grades or assignments.
+// Grade 11 SF9 subject arrangement from the original AMOGUIS.xlsx.
+// Credit units are optional until the revised official template supplies them.
 export type Sf9Grade11GradeRow = {
   key: string;
   label: string;
@@ -13,12 +12,14 @@ export type Sf9Grade11GradeRow = {
 export type Sf9Grade11Offering = {
   term_no: number;
   name: string;
+  units?: number | null;
 };
 
 export type Sf9Grade11DisplayRow = Sf9Grade11GradeRow & {
   kind: "section" | "group" | "subject";
   indent?: boolean;
   electiveTerm?: number;
+  units?: number | null;
 };
 
 export const GRADE11_SF9_CORE_ORDER = [
@@ -36,7 +37,8 @@ export const GRADE11_COMMUNICATION_LABEL =
 export function sf9Grade11Rows(
   gradeRows: Sf9Grade11GradeRow[],
   electiveOfferings: Sf9Grade11Offering[] = [],
-  programCode = ""
+  programCode = "",
+  coreUnits: Record<string, number | null> = {}
 ): Sf9Grade11DisplayRow[] {
   const normalize = (text: string) =>
     String(text ?? "").trim().replace(/\s+/g, " ").toLocaleLowerCase();
@@ -44,11 +46,15 @@ export function sf9Grade11Rows(
     gradeRows.map((row) => [normalize(row.label), row])
   );
   const findGradeRow = (label: string) => byName.get(normalize(label));
+  const unitsByName = new Map(
+    Object.entries(coreUnits).map(([name, units]) => [normalize(name), units])
+  );
 
   function subjectRow(label: string, key: string, indent = false): Sf9Grade11DisplayRow {
     const existing = findGradeRow(label);
     return {
       key, label, kind: "subject", indent,
+      units: unitsByName.get(normalize(label)) ?? null,
       terms: existing?.terms ?? [null, null, null],
       final_grade: existing?.final_grade ?? null,
       remarks: existing?.remarks ?? "",
@@ -56,7 +62,8 @@ export function sf9Grade11Rows(
   }
 
   const heading = (key: string, label: string, kind: "section" | "group"): Sf9Grade11DisplayRow => ({
-    key, label, kind, terms: [null, null, null], final_grade: null, remarks: "",
+    key, label, kind, units: null,
+    terms: [null, null, null], final_grade: null, remarks: "",
   });
 
   const rows: Sf9Grade11DisplayRow[] = [
@@ -68,24 +75,21 @@ export function sf9Grade11Rows(
     heading("shs11-elective-heading", "Elective Subjects", "section"),
   ];
 
-  const defaults = programCode === "ASSH"
-    ? ["Social Science Theory and Practice", "Academic Elective 2", "Academic Elective 3"]
-    : ["Academic Elective 1", "Academic Elective 2", "Academic Elective 3"];
-
+  // Names must come from the configured academic/TVL program, not generic
+  // "Academic Elective 1/2/3" placeholders or another section's strand.
+  if (!programCode) return rows;
   for (const termNo of [1, 2, 3]) {
     const chosen = electiveOfferings.filter(
       (offering) => offering.term_no === termNo && offering.name.trim()
     );
-    const names = chosen.length ? chosen.map((offering) => offering.name) : [defaults[termNo - 1]];
-    for (const [index, name] of names.entries()) {
-      const source = findGradeRow(name);
-      // Each elective belongs to its configured term; never copy a grade into
-      // another term's cell or invent a final mark for a single-term subject.
+    for (const [index, offer] of chosen.entries()) {
+      const source = findGradeRow(offer.name);
       const terms: Array<number | null> = [null, null, null];
       terms[termNo - 1] = source?.terms?.[termNo - 1] ?? null;
       rows.push({
         key: "shs11-elective-" + termNo + "-" + index,
-        label: name,
+        label: offer.name,
+        units: offer.units ?? null,
         terms,
         kind: "subject",
         electiveTerm: termNo,
