@@ -77,7 +77,7 @@ test("Grade 11 unit cells are optional and section-selected program supplies exa
  assert.match(sf9, /category === "elective"/);
  assert.match(sf9, /core_subject_units: coreUnits/);
  assert.match(layout, /grade_level === 11 && <th rowSpan=\{2\} className=\{styles.unitsCol\}>Units<\/th>/);
- assert.match(layout, /card.grade_level === 11 && <td>/);
+ assert.match(layout, /card.grade_level === 11 && <td className=\{styles.grade11UnitsCell\}>/);
  assert.match(ui, /Set Units/);
  assert.match(ui, /Credit Units for SF9/);
 });
