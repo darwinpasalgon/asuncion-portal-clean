@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { ArrowLeft, ArrowUpRight, Download, KeyRound, RefreshCw, ShieldCheck, Users } from "lucide-react";
 
 type PersonnelLogin = {
@@ -42,11 +42,11 @@ function downloadDirectory(rows: PersonnelLogin[]) {
   a.remove();
   window.setTimeout(() => URL.revokeObjectURL(objectURL), 1500);
 }
-const panel: React.CSSProperties = {
+const panel: CSSProperties = {
   border: "1px solid #dce8ee", borderRadius: 16,
   padding: 22, background: "#fff", boxShadow: "0 6px 18px #173c4f08",
 };
-const link: React.CSSProperties = {
+const link: CSSProperties = {
   display: "inline-flex", alignItems: "center", gap: 7,
   borderRadius: 10, padding: "10px 14px", fontWeight: 750,
   fontSize: 13, textDecoration: "none", border: "1px solid #bedfdc",
