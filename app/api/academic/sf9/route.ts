@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isGrade11ElectiveGroup } from "@/lib/shs-stem-groups";
+import { sf9Grade11Rows, sf9Grade11WeightedAverage } from "@/lib/sf9-grade11-layout";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 import { generateSf9Remark, type Sf9RemarkSignal } from "@/lib/sf9-remarks";
 import { attendanceStartDate } from "@/lib/attendance-calendar";
@@ -1197,6 +1198,12 @@ export async function GET(request: NextRequest) {
         };
       });
 
+      const officialGrade11Average = selectedSection.grade_level === 11
+        ? sf9Grade11WeightedAverage(
+            sf9Grade11Rows(gradesBuilt.rows, electiveOfferings, shsProgram, coreUnits)
+          )
+        : gradesBuilt.generalAverage;
+
       return {
         id: studentId,
         full_name: student.full_name ?? "",
@@ -1218,7 +1225,7 @@ export async function GET(request: NextRequest) {
         core_subject_units: coreUnits,
         tve_major: enrollment.tve_major ?? null,
         grade_rows: gradesBuilt.rows,
-        general_average: gradesBuilt.generalAverage,
+        general_average: officialGrade11Average,
         general_averages_by_term: gradesBuilt.termAverages,
         attendance: buildAttendance(studentId),
         comments: remarkDetails.map((item) => item.text),
