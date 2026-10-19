@@ -1,5 +1,8 @@
 "use client";
 
+import { gradeLabel } from "@/lib/grade-label";
+import { electiveGroupLabel } from "@/lib/shs-stem-groups";
+
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
@@ -23,6 +26,7 @@ type Learner = {
 
 type AssignedSubject = {
   assignment_id: string;
+  terms?: number[];
   subject: string;
   major: string | null;
 };
@@ -174,7 +178,7 @@ export default function MyLearnersPage() {
               <option value="">All Assigned Sections</option>
               {sections.map((section) => (
                 <option key={section.id} value={section.id}>
-                  Grade {section.grade_level} · {section.name}
+                  {gradeLabel(section.grade_level)} · {section.name}
                 </option>
               ))}
             </select>
@@ -225,21 +229,21 @@ export default function MyLearnersPage() {
                     <div>
                       <span>ASSIGNED SECTION</span>
                       <h2>
-                        Grade {section.grade_level} · {section.name}
+                        {gradeLabel(section.grade_level)} · {section.name}
                       </h2>
                       <p>
                         {(section.pending_tve_major_count ?? 0) > 0
                           ? section.learner_count > 0
-                            ? `${section.learner_count} assigned · ${section.pending_tve_major_count} awaiting TVE major`
-                            : `${section.section_enrollment_count ?? 0} learners in section · TVE major assignment pending`
+                            ? `${section.learner_count} assigned · ${section.pending_tve_major_count} awaiting major`
+                            : `${section.section_enrollment_count ?? 0} learners in section · major assignment pending`
                           : `${section.learner_count} enrolled learner${section.learner_count === 1 ? "" : "s"}`}
                       </p>
                     </div>
                     <div className={styles.subjects}>
                       {section.subjects.map((subject) => (
                         <span key={subject.assignment_id}>
-                          {subject.subject}
-                          {subject.major ? ` · ${subject.major}` : ""}
+                          {subject.subject}{subject.terms?.length ? ` · Term ${subject.terms.join(", ")}` : ""}
+                          {subject.major ? ` · ${section.grade_level === 11 ? electiveGroupLabel(subject.major) : subject.major}` : ""}
                         </span>
                       ))}
                     </div>
@@ -252,7 +256,7 @@ export default function MyLearnersPage() {
                         : section.roster_note
                           ? section.roster_note
                           : (section.pending_tve_major_count ?? 0) > 0
-                            ? `No learner is tagged to your TVE major yet. ${section.pending_tve_major_count} learner${section.pending_tve_major_count === 1 ? "" : "s"} in this section still need a TVE major assigned by the Adviser.`
+                            ? `No learner is tagged to your major yet. ${section.pending_tve_major_count} learner${section.pending_tve_major_count === 1 ? "" : "s"} in this section still need a major assigned by the Adviser.`
                             : "No learners are currently assigned to this subject."}
                     </div>
                   ) : (

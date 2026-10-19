@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { learnerMajor, matchesLearnerMajor, teacherCanSeeAssignment, teacherCanReadRoster, teacherTerms, type TeachingAssignment, type TermTeachingLink } from "@/lib/academic-visibility";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
 function manilaDate() {
@@ -29,12 +30,22 @@ function authHeaders(token: string) {
 }
 
 async function getRows(path: string, token: string) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    headers: authHeaders(token),
-    cache: "no-store",
-  });
-  if (!response.ok) return null;
-  return response.json().catch(() => []);
+  const [table, query = ""] = path.split("?");
+  const params = new URLSearchParams(query);
+  params.set("order", params.has("order") ? `${params.get("order")},id.asc` : "id.asc");
+  const limited = params.has("limit");
+  const rows = [];
+  for (let offset = 0; ; offset += 1000) {
+    if (!limited) { params.set("limit", "1000"); params.set("offset", String(offset)); }
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
+      headers: authHeaders(token), cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const page = await response.json().catch(() => null);
+    if (!Array.isArray(page)) return null;
+    rows.push(...page);
+    if (limited || page.length < 1000) return rows;
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -86,9 +97,12 @@ export async function GET(request: NextRequest) {
     token
   );
 
+  const termLinks: TermTeachingLink[] | null = await getRows(
+    `grade12_term_gradebook?school_year_id=eq.${encodeURIComponent(activeYear.id)}&select=teacher_assignment_id,term_teacher_id,term_no,requires_learner_group`, token
+  );
+  if (!termLinks) return NextResponse.json({ error: "Unable to load term teaching assignments." }, { status: 503 });
   const assignments = (assignmentRows ?? []).filter(
-    (item: { teacher_id: string; co_teacher_ids?: string[] }) =>
-      item.teacher_id === userId || (item.co_teacher_ids ?? []).includes(userId)
+    (item: TeachingAssignment) => teacherCanSeeAssignment(item, termLinks, userId)
   );
 
   if (!assignmentRows) {
@@ -101,7 +115,7 @@ export async function GET(request: NextRequest) {
     getRows(
       `student_enrollments?school_year_id=eq.${encodeURIComponent(
         activeYear.id
-      )}&enrollment_status=eq.active&select=id,grade_level,section_id,tve_major`,
+      )}&enrollment_status=eq.active&select=id,grade_level,section_id,tve_major,shs_elective_group`,
       token
     ),
     getRows(
@@ -118,6 +132,10 @@ export async function GET(request: NextRequest) {
     ).catch(() => []),
   ]);
 
+  if (!sections || !subjects || !enrollments) {
+    return NextResponse.json({ error: "Unable to load assignment details." }, { status: 503 });
+  }
+
   const sectionMap = new Map<string, string>(
     (sections ?? []).map(
       (item: { id: string; name: string }) => [item.id, item.name] as [string, string]
@@ -133,6 +151,8 @@ export async function GET(request: NextRequest) {
   const result = assignments.map(
     (assignment: {
       id: string;
+      teacher_id: string;
+      co_teacher_ids?: string[];
       grade_level: number;
       section_id: string;
       subject_id: string;
@@ -143,14 +163,14 @@ export async function GET(request: NextRequest) {
         (enrollment: { section_id: string | null }) =>
           enrollment.section_id === assignment.section_id
       );
-      const studentCount = sectionEnrollments.filter(
-        (enrollment: { tve_major?: string | null }) =>
-          !assignment.major || enrollment.tve_major === assignment.major
-      ).length;
+      const canReadRoster = teacherCanReadRoster(assignment, termLinks, userId);
+      const studentCount = canReadRoster ? sectionEnrollments.filter(
+        (enrollment: { tve_major?: string | null; shs_elective_group?: string | null }) => matchesLearnerMajor(assignment, enrollment)
+      ).length : 0;
       const pendingTveMajorCount = assignment.major
         ? sectionEnrollments.filter(
-            (enrollment: { tve_major?: string | null }) =>
-              !String(enrollment.tve_major ?? "").trim()
+            (enrollment: { tve_major?: string | null; shs_elective_group?: string | null }) =>
+              !learnerMajor(assignment.grade_level, enrollment)
           ).length
         : 0;
 
@@ -160,6 +180,8 @@ export async function GET(request: NextRequest) {
         section: sectionMap.get(assignment.section_id) ?? "Unknown section",
         subject: subject?.name ?? "Unknown subject",
         major: assignment.major ?? null,
+        terms: teacherTerms(assignment, termLinks, userId).map(link => link.term_no).sort(),
+        roster_restricted: !canReadRoster,
         student_count: studentCount,
         section_student_count: sectionEnrollments.length,
         pending_tve_major_count: pendingTveMajorCount,

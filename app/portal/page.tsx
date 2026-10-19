@@ -1,5 +1,8 @@
 "use client";
 
+import { gradeLabel } from "@/lib/grade-label";
+import { electiveGroupLabel } from "@/lib/shs-stem-groups";
+
 import { useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
@@ -49,6 +52,7 @@ type AcademicContext = {
   tve_major: string | null;
   shs_track: string | null;
   shs_strand_program: string | null;
+  shs_elective_group?: string | null;
   sex: string | null;
 };
 
@@ -62,6 +66,8 @@ type TeacherAssignment = {
   student_count: number;
   section_student_count?: number;
   pending_tve_major_count?: number;
+  terms?: number[];
+  roster_restricted?: boolean;
 };
 
 type AdviserSection = {
@@ -191,6 +197,7 @@ type AcademicSetupAttention = {
 };
 
 type ClassScheduleEntry = {
+  term_no?: number;
   id: string;
   entry_type?: "class" | "block" | "rotation";
   day_of_week: number;
@@ -419,8 +426,8 @@ function DashboardHome({
             <div>
               <span>Grade & Section</span>
               <strong>
-                {academicContext?.grade_level
-                  ? `Grade ${academicContext.grade_level}${academicContext.section ? ` · ${academicContext.section}` : ""}`
+                {academicContext?.grade_level != null
+                  ? `${gradeLabel(academicContext.grade_level)}${academicContext.section ? ` · ${academicContext.section}` : ""}`
                   : "Not Assigned"}
               </strong>
             </div>
@@ -663,10 +670,18 @@ export default function PortalPage() {
   const [academicSetupAttentionLoading, setAcademicSetupAttentionLoading] =
     useState(false);
   const [majorSaving, setMajorSaving] = useState("");
+  const [scheduleTerm, setScheduleTerm] = useState(() => {
+    const requested = Number(searchParams.get("term"));
+    return [1, 2, 3].includes(requested) ? requested : 1;
+  });
+
   const [classSchedules, setClassSchedules] = useState<ClassScheduleEntry[]>(
     [],
   );
   const [classSchedulesLoading, setClassSchedulesLoading] = useState(false);
+  const availableScheduleTerms = [...new Set(classSchedules.flatMap(entry => entry.term_no ? [entry.term_no] : []))].sort();
+  const selectedScheduleTerm = availableScheduleTerms.includes(scheduleTerm) ? scheduleTerm : availableScheduleTerms[0] ?? 1;
+  const visibleClassSchedules = classSchedules.filter(entry => !entry.term_no || entry.term_no === selectedScheduleTerm);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -1244,7 +1259,7 @@ export default function PortalPage() {
                                     href={`/portal/admin/teaching?focus=subject-teacher&grade=${item.grade_level}&section=${encodeURIComponent(item.section_id)}&subject=${encodeURIComponent(item.subject_id)}${item.major ? `&major=${encodeURIComponent(item.major)}` : ""}`}
                                   >
                                     <strong>
-                                      Grade {item.grade_level} · {item.section}
+                                      {gradeLabel(item.grade_level)} · {item.section}
                                     </strong>
                                     <span>
                                       {item.subject}
@@ -1304,7 +1319,7 @@ export default function PortalPage() {
                                     href={`/portal/admin/schedules?view=section&grade=${item.grade_level}&section=${encodeURIComponent(item.section_id)}&assignment=${encodeURIComponent(item.key)}`}
                                   >
                                     <strong>
-                                      Grade {item.grade_level} · {item.section}
+                                      {gradeLabel(item.grade_level)} · {item.section}
                                     </strong>
                                     <span>
                                       {item.subject}
@@ -1488,10 +1503,10 @@ export default function PortalPage() {
                   <div>
                     <dt>Grade & Section</dt>
                     <dd>
-                      {academicContext?.grade_level
-                        ? `Grade ${academicContext.grade_level}${academicContext.section ? ` · ${academicContext.section}` : " · Section not assigned"}`
-                        : profile.grade_level
-                          ? `Grade ${profile.grade_level}${profile.section ? ` · ${profile.section}` : " · Section not assigned"}`
+                      {academicContext?.grade_level != null
+                        ? `${gradeLabel(academicContext.grade_level)}${academicContext.section ? ` · ${academicContext.section}` : " · Section not assigned"}`
+                        : profile.grade_level != null
+                          ? `${gradeLabel(profile.grade_level)}${profile.section ? ` · ${profile.section}` : " · Section not assigned"}`
                           : "Not Assigned yet"}
                     </dd>
                   </div>
@@ -1530,6 +1545,9 @@ export default function PortalPage() {
                           {shsStrandLabel(academicContext.shs_strand_program)}
                         </dd>
                       </div>
+                      {academicContext.grade_level === 11 && academicContext.shs_elective_group && (
+                        <div><dt>Major</dt><dd>{electiveGroupLabel(academicContext.shs_elective_group)}</dd></div>
+                      )}
                     </>
                   )}
                 <div>
@@ -1574,15 +1592,15 @@ export default function PortalPage() {
                         <summary>
                           <div>
                             <span>
-                              Grade {section.grade_level} · {section.name}
+                              {gradeLabel(section.grade_level)} · {section.name}
                             </span>
                             <strong>
                               {section.roster_note
                                 ? "Current Grade 7 TVE rotation"
                                 : (section.pending_tve_major_count ?? 0) > 0
                                   ? section.learner_count > 0
-                                    ? `${section.learner_count} assigned · ${section.pending_tve_major_count} pending TVE major`
-                                    : `${section.section_enrollment_count ?? 0} in section · TVE major pending`
+                                    ? `${section.learner_count} assigned · ${section.pending_tve_major_count} pending major`
+                                    : `${section.section_enrollment_count ?? 0} in section · major pending`
                                   : `${section.learner_count} learner${section.learner_count === 1 ? "" : "s"}`}
                             </strong>
                           </div>
@@ -1622,7 +1640,7 @@ export default function PortalPage() {
                           className="real-my-learners-section-link"
                           href={`/portal/my-learners?section=${section.id}`}
                         >
-                          Open Grade {section.grade_level} · {section.name}
+                          Open {gradeLabel(section.grade_level)} · {section.name}
                           <ChevronRight size={14} />
                         </a>
                       </details>
@@ -1659,20 +1677,21 @@ export default function PortalPage() {
                       <article key={assignment.id}>
                         <div>
                           <span>
-                            Grade {assignment.grade_level} ·{" "}
+                            {gradeLabel(assignment.grade_level)} ·{" "}
                             {assignment.section}
                           </span>
                           <strong>
                             {assignment.subject}
-                            {assignment.major ? ` · ${assignment.major}` : ""}
+                            {assignment.major ? ` · ${assignment.grade_level === 11 ? electiveGroupLabel(assignment.major) : assignment.major}` : ""}
+                        {assignment.terms?.length ? ` · Term ${assignment.terms.join(", ")}` : ""}
                           </strong>
                         </div>
                         <span>
-                          {assignment.major &&
+                          {assignment.roster_restricted ? "Learner group confirmation pending" : assignment.major &&
                           (assignment.pending_tve_major_count ?? 0) > 0
                             ? assignment.student_count > 0
-                              ? `${assignment.student_count} assigned · ${assignment.pending_tve_major_count} pending TVE major`
-                              : `${assignment.section_student_count ?? 0} in section · TVE major pending`
+                              ? `${assignment.student_count} assigned · ${assignment.pending_tve_major_count} pending major`
+                              : `${assignment.section_student_count ?? 0} in section · major pending`
                             : `${assignment.student_count} student${assignment.student_count === 1 ? "" : "s"}`}
                         </span>
                       </article>
@@ -1801,19 +1820,20 @@ export default function PortalPage() {
                   <article key={assignment.id}>
                     <div>
                       <span>
-                        Grade {assignment.grade_level} · {assignment.section}
+                        {gradeLabel(assignment.grade_level)} · {assignment.section}
                       </span>
                       <strong>
                         {assignment.subject}
-                        {assignment.major ? ` · ${assignment.major}` : ""}
+                        {assignment.major ? ` · ${assignment.grade_level === 11 ? electiveGroupLabel(assignment.major) : assignment.major}` : ""}
+                        {assignment.terms?.length ? ` · Term ${assignment.terms.join(", ")}` : ""}
                       </strong>
                     </div>
                     <span>
-                      {assignment.major &&
+                      {assignment.roster_restricted ? "Learner group confirmation pending" : assignment.major &&
                       (assignment.pending_tve_major_count ?? 0) > 0
                         ? assignment.student_count > 0
-                          ? `${assignment.student_count} assigned · ${assignment.pending_tve_major_count} awaiting TVE major`
-                          : `${assignment.section_student_count ?? 0} learners in section · TVE major assignment pending`
+                          ? `${assignment.student_count} assigned · ${assignment.pending_tve_major_count} awaiting major`
+                          : `${assignment.section_student_count ?? 0} learners in section · major assignment pending`
                         : `${assignment.student_count} enrolled student${assignment.student_count === 1 ? "" : "s"}`}
                     </span>
                   </article>
@@ -1836,13 +1856,13 @@ export default function PortalPage() {
                 </div>
                 <div className="real-schedule-heading-actions">
                   <span className="tag blue">
-                    {classSchedules.length} entr
-                    {classSchedules.length === 1 ? "y" : "ies"}
+                    {visibleClassSchedules.length} entr
+                    {visibleClassSchedules.length === 1 ? "y" : "ies"}
                   </span>
                   {profile.role === "teacher" && (
                     <a
                       className="real-schedule-print-link"
-                      href="/portal/my-schedule/print"
+                      href={`/portal/my-schedule/print?term=${selectedScheduleTerm}`}
                       target="_blank"
                       rel="noreferrer"
                     >
@@ -1853,9 +1873,14 @@ export default function PortalPage() {
                 </div>
               </div>
 
+              {availableScheduleTerms.length > 0 && (
+                <label>Term <select value={selectedScheduleTerm} onChange={event => setScheduleTerm(Number(event.target.value))}>
+                  {availableScheduleTerms.map(term => <option key={term} value={term}>Term {term}</option>)}
+                </select></label>
+              )}
               {classSchedulesLoading ? (
                 <p className="real-assignment-empty">Loading class schedule…</p>
-              ) : classSchedules.length === 0 ? (
+              ) : visibleClassSchedules.length === 0 ? (
                 <p className="real-assignment-empty">
                   No official class schedule has been published for your account
                   yet.
@@ -1863,7 +1888,7 @@ export default function PortalPage() {
               ) : (
                 <div className="real-schedule-list">
                   {[1, 2, 3, 4, 5, 6, 7].map((day) => {
-                    const dayEntries = classSchedules.filter(
+                    const dayEntries = visibleClassSchedules.filter(
                       (item) => item.day_of_week === day,
                     );
                     if (dayEntries.length === 0) return null;
@@ -1914,7 +1939,7 @@ export default function PortalPage() {
                               </div>
                               <div>
                                 <span>
-                                  Grade {entry.grade_level ?? ""} ·{" "}
+                                  {gradeLabel(entry.grade_level)} ·{" "}
                                   {entry.section}
                                 </span>
                                 <strong>

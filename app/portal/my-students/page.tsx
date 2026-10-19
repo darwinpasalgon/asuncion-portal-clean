@@ -1,5 +1,7 @@
 "use client";
 
+import { gradeLabel } from "@/lib/grade-label";
+
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
@@ -406,7 +408,7 @@ export default function MyStudentsPage() {
                     <option value="">All Advisory Sections</option>
                     {sections.map((section) => (
                       <option key={section.id} value={section.id}>
-                        Grade {section.grade_level} · {section.name}
+                        {gradeLabel(section.grade_level)} · {section.name}
                       </option>
                     ))}
                   </select>
@@ -444,7 +446,7 @@ export default function MyStudentsPage() {
                           <span>
                             <strong>{displayName(learner)}</strong>
                             <small>
-                              Grade {learner.grade_level} · {learner.section}
+                              {gradeLabel(learner.grade_level)} · {learner.section}
                               {learner.lrn ? ` · LRN ${learner.lrn}` : ""}
                             </small>
                           </span>
@@ -470,7 +472,7 @@ export default function MyStudentsPage() {
                       <span>LEARNER RECORD</span>
                       <h2>{selected.full_name}</h2>
                       <p>
-                        Grade {selected.grade_level} · {selected.section} ·{" "}
+                        {gradeLabel(selected.grade_level)} · {selected.section} ·{" "}
                         {selected.lrn ? `LRN ${selected.lrn}` : "LRN Not Recorded"}
                       </p>
                     </div>

@@ -958,28 +958,38 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const enrollments = await getRows(
-      `student_enrollments?school_year_id=eq.${encodeURIComponent(
-        activeYear.id
-      )}&section_id=eq.${encodeURIComponent(
-        selectedAssignment.section_id
-      )}&enrollment_status=eq.active&select=student_id,tve_major`,
-      token
-    ).catch(() => []);
+    let enrollments;
+    let grades;
+    try {
+      enrollments = await getRows(
+        `student_enrollments?school_year_id=eq.${encodeURIComponent(
+          activeYear.id
+        )}&section_id=eq.${encodeURIComponent(
+          selectedAssignment.section_id
+        )}&enrollment_status=eq.active&select=student_id,tve_major,shs_elective_group`,
+        token
+      );
 
-    const targetIds = targetAssignments.map((item: { id: string }) => item.id);
-    const inFilter = `(${targetIds.join(",")})`;
-    const grades = await getRows(
-      `student_term_grades?teacher_assignment_id=in.${encodeURIComponent(
-        inFilter
-      )}&term_no=eq.${termNo}&select=id,student_id,teacher_assignment_id,status,music_arts_grade,pe_health_grade`,
-      token
-    ).catch(() => []);
+      const targetIds = targetAssignments.map((item: { id: string }) => item.id);
+      const inFilter = `(${targetIds.join(",")})`;
+      grades = await getRows(
+        `student_term_grades?teacher_assignment_id=in.${encodeURIComponent(
+          inFilter
+        )}&term_no=eq.${termNo}&select=id,student_id,teacher_assignment_id,status,music_arts_grade,pe_health_grade`,
+        token
+      );
+
+    } catch {
+      return NextResponse.json({ error: "Unable to validate learner grades. Refresh and try again." }, { status: 503 });
+    }
 
     if (action === "publish_term") {
-      if (!enrollments?.length) {
+      const eligibleEnrollments = (enrollments ?? []).filter(
+        (enrollment: { shs_elective_group?: string | null }) => !isGrade11ElectiveGroup(selectedAssignment.major) || enrollment.shs_elective_group === selectedAssignment.major
+      );
+      if (!eligibleEnrollments.length) {
         return NextResponse.json(
-          { error: "There are no active students in this section." },
+          { error: "There are no active students eligible for this class." },
           { status: 409 }
         );
       }
@@ -993,7 +1003,7 @@ export async function POST(request: NextRequest) {
           ])
       );
 
-      const missing = (enrollments ?? []).filter(
+      const missing = eligibleEnrollments.filter(
         (enrollment: { student_id: string; tve_major?: string | null; shs_elective_group?: string | null }) => {
           if (isGrade11ElectiveGroup(selectedAssignment.major) &&
               enrollment.shs_elective_group !== selectedAssignment.major) return false;

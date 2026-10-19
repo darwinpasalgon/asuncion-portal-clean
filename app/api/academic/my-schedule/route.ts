@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { matchesLearnerMajor } from "@/lib/academic-visibility";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/supabase-config";
 
 function manilaDate() {
@@ -35,12 +36,22 @@ function authHeaders(token: string) {
 }
 
 async function getRows(path: string, token: string) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    headers: authHeaders(token),
-    cache: "no-store",
-  });
-  if (!response.ok) return null;
-  return response.json().catch(() => []);
+  const [table, query = ""] = path.split("?");
+  const params = new URLSearchParams(query);
+  params.set("order", params.has("order") ? `${params.get("order")},id.asc` : "id.asc");
+  const limited = params.has("limit");
+  const rows = [];
+  for (let offset = 0; ; offset += 1000) {
+    if (!limited) { params.set("limit", "1000"); params.set("offset", String(offset)); }
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
+      headers: authHeaders(token), cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const page = await response.json().catch(() => null);
+    if (!Array.isArray(page)) return null;
+    rows.push(...page);
+    if (limited || page.length < 1000) return rows;
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -115,16 +126,15 @@ export async function GET(request: NextRequest) {
         userId
       )}&school_year_id=eq.${encodeURIComponent(
         activeYear.id
-      )}&enrollment_status=eq.active&select=section_id,tve_major&limit=1`,
+      )}&enrollment_status=eq.active&select=section_id,tve_major,shs_elective_group&limit=1`,
       token
     );
     const enrollment = enrollmentRows?.[0] ?? null;
     studentSectionId = String(enrollment?.section_id ?? "");
     visibleAssignments = enrollment
       ? assignments.filter(
-          (item: { section_id: string; major?: string | null }) =>
-            item.section_id === enrollment.section_id &&
-            (!item.major || item.major === enrollment.tve_major)
+          (item: { section_id: string; grade_level: number; major?: string | null }) =>
+            item.section_id === enrollment.section_id && matchesLearnerMajor(item, enrollment)
         )
       : [];
   }
@@ -135,7 +145,7 @@ export async function GET(request: NextRequest) {
 
   const today = manilaDate();
 
-  const [schedules, sections, subjects, teachers, scheduleBlocks, grade7TveRotations] = await Promise.all([
+  const [schedules, sections, subjects, teachers, scheduleBlocks, grade7TveRotations, grade12Periods] = await Promise.all([
     getRows(
       "class_schedules?is_active=eq.true&select=id,teacher_assignment_id,day_of_week,start_time,end_time,room&order=day_of_week.asc,start_time.asc",
       token
@@ -163,7 +173,13 @@ export async function GET(request: NextRequest) {
       )}&select=id,rotation_block,group_label,section_id,phase_no,starts_on,ends_on,major_code,teacher_id,instructor_name,days_of_week,start_time,end_time&order=start_time.asc`,
       token
     ).catch(() => []),
+    getRows(
+      `grade12_term_periods?school_year_id=eq.${encodeURIComponent(activeYear.id)}&select=id,section_id,term_no,day_of_week,start_time,end_time,subject_label,instructor_ids,instructor_label&order=term_no.asc,day_of_week.asc,start_time.asc`, token
+    ),
   ]);
+  if (!schedules || !grade12Periods || !sections || !subjects || !teachers || !scheduleBlocks) {
+    return NextResponse.json({ error: "Unable to load your complete class schedule." }, { status: 503 });
+  }
 
   const assignmentMap = new Map<
     string,
@@ -232,7 +248,7 @@ export async function GET(request: NextRequest) {
 
   const result = (schedules ?? [])
     .filter((schedule: { teacher_assignment_id: string }) =>
-      assignmentIds.has(schedule.teacher_assignment_id)
+      assignmentIds.has(schedule.teacher_assignment_id) && assignmentMap.get(schedule.teacher_assignment_id)?.grade_level !== 12
     )
     .map(
       (schedule: {
@@ -343,10 +359,26 @@ export async function GET(request: NextRequest) {
     })
   );
 
+  const termEntries = grade12Periods.filter(
+    (period: { section_id: string; instructor_ids?: string[] }) => profile.role === "teacher"
+      ? (period.instructor_ids ?? []).includes(userId)
+      : Boolean(studentSectionId && period.section_id === studentSectionId)
+  ).map((period: {
+    id: string; section_id: string; term_no: number; day_of_week: number;
+    start_time: string; end_time: string; subject_label: string;
+    instructor_ids: string[]; instructor_label: string;
+  }) => ({
+    id: `g12-term-${period.id}`, entry_type: "class", term_no: period.term_no,
+    day_of_week: period.day_of_week, start_time: period.start_time, end_time: period.end_time,
+    room: null, grade_level: 12, section: sectionMap.get(period.section_id) ?? "Unknown section",
+    subject: period.subject_label, major: null, purpose: `Term ${period.term_no}`,
+    instructor: (period.instructor_ids ?? []).map(id => teacherMap.get(id) ?? "Assigned Teacher").join(" / ") || period.instructor_label,
+  }));
   return NextResponse.json({
     activeYear,
     role: profile.role,
-    schedules: [...result, ...grade7TveEntries, ...blocks].sort(
+    availableTerms: [...new Set<number>(termEntries.map((entry: { term_no: number }) => entry.term_no))].sort(),
+    schedules: [...result, ...grade7TveEntries, ...blocks, ...termEntries].sort(
       (a, b) =>
         a.day_of_week - b.day_of_week ||
         String(a.start_time).localeCompare(String(b.start_time))

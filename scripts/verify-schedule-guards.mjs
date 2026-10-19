@@ -1,0 +1,53 @@
+// Run with: node scripts/verify-schedule-guards.mjs /absolute/path/to/pglite/dist/index.js
+// Install @electric-sql/pglite@0.3.14 in a temporary directory; no live database is used.
+import { pathToFileURL } from 'node:url';
+const { PGlite } = await import(process.argv[2] ? pathToFileURL(process.argv[2]).href : '@electric-sql/pglite');
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const db = new PGlite();
+await db.exec(`
+create schema private;
+create role anon; create role authenticated;
+create table teacher_assignments(id uuid primary key, school_year_id uuid, section_id uuid, grade_level int, teacher_id uuid, co_teacher_ids uuid[], is_active bool);
+create table grade12_term_periods(id uuid primary key, school_year_id uuid, section_id uuid, term_no smallint, day_of_week smallint, start_time time, end_time time, subject_label text, instructor_ids uuid[], needs_review bool);
+create table class_schedules(id uuid primary key,teacher_assignment_id uuid,day_of_week smallint,start_time time,end_time time,is_active bool,room text);
+create table grade7_tve_rotations(id uuid primary key,school_year_id uuid,section_id uuid,teacher_id uuid,days_of_week smallint[],start_time time,end_time time,starts_on date,ends_on date,is_active bool);
+create table schedule_blocks(id uuid primary key,school_year_id uuid,section_id uuid,day_of_week smallint,start_time time,end_time time,is_active bool);
+`);
+const migration = fs.readdirSync(new URL('../supabase/migrations/', import.meta.url)).find(name => name.endsWith('_cross_source_schedule_conflicts.sql'));
+const sql=fs.readFileSync(new URL(`../supabase/migrations/${migration}`, import.meta.url),'utf8');
+await db.exec(sql);
+const id = n => `00000000-0000-0000-0000-${String(n).padStart(12,'0')}`;
+const [year,section,otherSection,teacher,otherTeacher]=[1,2,3,4,5].map(id);
+const term = (n, { yr=year,sec=section,t=1,staff=teacher,subject='Math',start='08:00',end='09:00' }={})=>db.query('insert into grade12_term_periods(id,school_year_id,section_id,term_no,day_of_week,start_time,end_time,subject_label,instructor_ids) values($1,$2,$3,$4,1,$5,$6,$7,array[$8]::uuid[])',[id(n),yr,sec,t,start,end,subject,staff]);
+let checks=0;
+async function reject(fn, re=/schedule conflicts/) { await assert.rejects(fn,re);checks++; }
+await term(10);
+await reject(()=>term(11,{sec:otherSection}));
+await reject(()=>term(12,{staff:otherTeacher}));
+await term(13,{t:2});checks++;
+await term(14,{start:'09:00',end:'10:00'});checks++;
+await term(15,{yr:id(99)});checks++;
+await db.query('update grade12_term_periods set needs_review=true where id=$1',[id(10)]);checks++;
+await db.exec('truncate grade12_term_periods');
+await term(16,{subject:'FOOD PROCESSING'});
+await term(17,{subject:'ORGANIC AGRICULTURE PRODUCTION',staff:otherTeacher});checks++;
+await reject(()=>term(18,{subject:'ORGANIC AGRICULTURE PRODUCTION'}));
+await db.exec('truncate grade12_term_periods');
+await db.query('insert into teacher_assignments values($1,$2,$3,8,$4,\'{}\',true)',[id(20),year,otherSection,teacher]);
+await db.query('insert into class_schedules values($1,$2,1,\'08:00\',\'09:00\',true,null)',[id(21),id(20)]);
+await reject(()=>term(22),/Junior High or Grade 11/);
+await db.exec('truncate class_schedules');
+await term(23);
+await reject(()=>db.query('insert into class_schedules values($1,$2,1,\'08:00\',\'09:00\',true,null)',[id(24),id(20)]));
+await reject(()=>db.query('insert into grade7_tve_rotations values($1,$2,$3,$4,array[1]::smallint[],\'08:00\',\'09:00\',\'2026-06-01\',\'2027-03-31\',true)',[id(25),year,otherSection,teacher]));
+await db.exec('truncate grade12_term_periods');
+await db.query('insert into grade7_tve_rotations values($1,$2,$3,$4,array[1]::smallint[],\'08:00\',\'09:00\',\'2026-06-01\',\'2027-03-31\',true)',[id(26),year,otherSection,teacher]);
+await reject(()=>term(27),/Grade 7 TVE rotation/);
+await db.exec('truncate grade7_tve_rotations');
+await db.query('insert into schedule_blocks values($1,$2,$3,1,\'08:00\',\'09:00\',true)',[id(28),year,section]);
+await reject(()=>term(29),/reserved section/);
+const privileges=await db.query("select has_function_privilege('authenticated','private.validate_cross_source_schedule()','EXECUTE') as allowed");
+assert.equal(privileges.rows[0].allowed,false);checks++;
+console.log(`${checks} PostgreSQL trigger checks passed`);
+await db.close();

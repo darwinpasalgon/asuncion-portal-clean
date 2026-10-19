@@ -87,6 +87,7 @@ type Session = {
     tve_major: string | null;
     shs_track: string | null;
     shs_strand_program: string | null;
+    shs_elective_group?: string | null;
     sex: string | null;
   } | null;
   adminPermissions: string[];

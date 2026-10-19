@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { learnerMajor, matchesLearnerMajor, teacherCanSeeAssignment, teacherCanReadRoster, teacherTerms } from "../_shared/academic-visibility.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.116.0";
 
 const cors = {
@@ -98,6 +99,7 @@ Deno.serve(async (req) => {
   const [
     { data: assignmentRows, error: assignmentError },
     { data: rotationRows, error: rotationError },
+    { data: termLinks, error: termError },
   ] = await Promise.all([
     admin
       .from("teacher_assignments")
@@ -113,16 +115,18 @@ Deno.serve(async (req) => {
       .eq("is_active", true)
       .lte("starts_on", today)
       .gte("ends_on", today),
+    admin.from("grade12_term_gradebook")
+      .select("teacher_assignment_id,term_teacher_id,term_no,requires_learner_group")
+      .eq("school_year_id", year.id),
   ]);
 
   const assignments = (assignmentRows ?? []).filter(
     (item) =>
-      item.teacher_id === userId ||
-      (item.co_teacher_ids ?? []).includes(userId)
+      teacherCanSeeAssignment(item, termLinks ?? [], userId)
   );
   const rotations = rotationRows ?? [];
 
-  if (assignmentError || rotationError) {
+  if (assignmentError || rotationError || termError) {
     return json({ error: "Unable to load teaching assignments." }, 500);
   }
 
@@ -161,7 +165,7 @@ Deno.serve(async (req) => {
         .in("id", subjectIds),
       admin
         .from("student_enrollments")
-        .select("id,student_id,grade_level,section_id,tve_major")
+        .select("id,student_id,grade_level,section_id,tve_major,shs_elective_group")
         .eq("school_year_id", year.id)
         .eq("enrollment_status", "active")
         .in("section_id", sectionIds),
@@ -176,7 +180,8 @@ Deno.serve(async (req) => {
       (assignments ?? []).some(
         (assignment) =>
           assignment.section_id === enrollment.section_id &&
-          (!assignment.major || assignment.major === enrollment.tve_major)
+          teacherCanReadRoster(assignment, termLinks ?? [], userId) &&
+          matchesLearnerMajor(assignment, enrollment)
       ) ||
       rotations.some(
         (rotation) =>
@@ -272,6 +277,8 @@ Deno.serve(async (req) => {
             assignment_id: assignment.id,
             subject: subject?.name ?? "Unknown Subject",
             major: assignment.major ?? null,
+            terms: teacherTerms(assignment, termLinks ?? [], userId).map(link => link.term_no).sort(),
+            roster_restricted: !teacherCanReadRoster(assignment, termLinks ?? [], userId),
           };
         }),
         ...sectionRotations.map((rotation) => ({
@@ -292,7 +299,7 @@ Deno.serve(async (req) => {
       );
       const pendingTveMajorCount = hasMajorSpecificAssignment
         ? rawSectionEnrollments.filter(
-            (enrollment) => !String(enrollment.tve_major ?? "").trim()
+            (enrollment) => !learnerMajor(section.grade_level, enrollment)
           ).length
         : 0;
 
@@ -301,6 +308,8 @@ Deno.serve(async (req) => {
         grade_level: section.grade_level,
         name: section.name,
         learner_count: sectionLearners.length,
+        roster_note: sectionAssignments.some(assignment => !teacherCanReadRoster(assignment, termLinks ?? [], userId))
+          ? "Mixed-major Grade 12 learner rosters remain restricted until individual learner groups are confirmed." : undefined,
         section_enrollment_count: rawSectionEnrollments.length,
         pending_tve_major_count: pendingTveMajorCount,
         subjects: subjectsForSection,
