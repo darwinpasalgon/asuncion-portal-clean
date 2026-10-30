@@ -58,15 +58,25 @@ export default function PersonnelCredentialsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [eligibleCount, setEligibleCount] = useState<number | null>(null);
   const [type, setType] = useState<"all" | "teacher" | "non-teacher">("all");
 
   const load = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const response = await fetch("/api/admin/personnel-login-directory", { cache: "no-store" });
-      const result = await response.json().catch(() => ({}));
+      setEligibleCount(null);
+      const [response, eligibilityResponse] = await Promise.all([
+        fetch("/api/admin/personnel-login-directory", { cache: "no-store" }),
+        fetch("/api/admin/personnel-first-login", { cache: "no-store" }),
+      ]);
+      const [result, eligibility] = await Promise.all([
+        response.json().catch(() => ({})),
+        eligibilityResponse.json().catch(() => ({})),
+      ]);
       if (!response.ok) throw new Error(result.error ?? "Unable to load personnel login emails.");
       setStaff(result.staff ?? []);
+      if (!eligibilityResponse.ok) throw new Error(eligibility.error ?? "Unable to check first-login accounts.");
+      setEligibleCount(Number(eligibility.count ?? 0));
     } catch (issue) {
       setError(issue instanceof Error ? issue.message : "Unable to load personnel login emails.");
     } finally { setLoading(false); }
@@ -114,16 +124,26 @@ export default function PersonnelCredentialsPage() {
           <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
             <div>
               <strong style={{ display: "block", fontSize: 17 }}>First-Login Credential Generation</strong>
-              <small style={{ color: "#668390" }}>Teacher accounts eligible for one-time credential recovery</small>
+              <small style={{ color: "#668390" }}>{eligibleCount === null ? "Checking first-login eligibility…" : `${eligibleCount} personnel account(s) awaiting first login`}</small>
             </div>
-            <a href="/portal/admin/teacher-import#first-login-credentials" style={link}>
-              <KeyRound size={16}/> Check & Generate Fresh Credentials <ArrowUpRight size={13}/>
-            </a>
+            <form method="post" action="/api/admin/personnel-first-login" onSubmit={(event) => {
+              if (!window.confirm(`Generate fresh temporary passwords for ${eligibleCount ?? 0} personnel accounts that have never signed in? This replaces their previous temporary passwords. Save the downloaded CSV before distributing credentials.`)) event.preventDefault();
+            }}>
+              <input type="hidden" name="confirm" value="ISSUE_FIRST_LOGIN_PASSWORDS" />
+              <button type="submit" disabled={loading || eligibleCount === null || eligibleCount === 0}
+                style={{ ...link, cursor: eligibleCount ? "pointer" : "not-allowed", opacity: eligibleCount ? 1 : 0.55 }}>
+                <KeyRound size={16}/> Generate & Download First-Login CSV <Download size={15}/>
+              </button>
+            </form>
           </div>
           <p style={{ color: "#738b98", lineHeight: 1.5, fontSize: 12 }}>
-            The generation page checks eligibility before offering a download and requires confirmation before
-            changing any password. If there are no eligible accounts, use individual password reset instead.
+            Downloads DepEd login emails and fresh temporary passwords for eligible teaching and staff accounts.
+            Accounts that have already signed in are excluded. Generating another CSV replaces earlier temporary
+            passwords; use only the latest file. Each person must change their password at first login.
           </p>
+          <a href="/portal/admin/teacher-import#first-login-credentials" style={{ fontSize: 12, color: "#126f8c" }}>
+            Legacy Teacher Import Recovery →
+          </a>
           <a href="/portal/admin/password-resets" style={{ fontSize: 13, color: "#126f8c", fontWeight: 700 }}>
             Open Verified Password Resets →
           </a>
