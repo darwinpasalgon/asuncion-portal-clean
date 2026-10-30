@@ -128,15 +128,15 @@ type Sf9LayoutSettings = {
 const DEFAULT_SF9_LAYOUT: Sf9LayoutSettings = {
   paper: "A4",
   orientation: "landscape",
-  pageHorizontalMarginMm: 12.92,
-  leftCardWidthMm: 140.58,
-  rightCardWidthMm: 130.25,
+  pageHorizontalMarginMm: 11.75,
+  leftCardWidthMm: 148.5,
+  rightCardWidthMm: 148.5,
   topMm: 5.5,
   bottomMm: 4.5,
-  leftCardOuterMm: 5.25,
-  leftCardInnerMm: 10.33,
-  rightCardInnerMm: 5.25,
-  rightCardOuterMm: 0,
+  leftCardOuterMm: 11.75,
+  leftCardInnerMm: 11.75,
+  rightCardInnerMm: 11.75,
+  rightCardOuterMm: 11.75,
   centerLineMm: 0.33,
   headerHeightMm: 25.4,
   headerGapMm: 3.83,
@@ -235,27 +235,14 @@ function sanitizeLayoutSettings(input: unknown): Sf9LayoutSettings {
   const source =
     input && typeof input === "object" ? (input as Record<string, unknown>) : {};
 
+  const cardMargin = boundedNumber(source.pageHorizontalMarginMm, DEFAULT_SF9_LAYOUT.pageHorizontalMarginMm, 0, 30);
   return {
     paper: "A4",
     orientation: "landscape",
-    pageHorizontalMarginMm: boundedNumber(
-      source.pageHorizontalMarginMm,
-      DEFAULT_SF9_LAYOUT.pageHorizontalMarginMm,
-      0,
-      30
-    ),
-    leftCardWidthMm: boundedNumber(
-      source.leftCardWidthMm,
-      DEFAULT_SF9_LAYOUT.leftCardWidthMm,
-      110,
-      150
-    ),
-    rightCardWidthMm: boundedNumber(
-      source.rightCardWidthMm,
-      DEFAULT_SF9_LAYOUT.rightCardWidthMm,
-      110,
-      150
-    ),
+    // Equal A5 halves and a shared inset keep both cards centered on A4.
+    pageHorizontalMarginMm: cardMargin,
+    leftCardWidthMm: 148.5,
+    rightCardWidthMm: 148.5,
     topMm: boundedNumber(source.topMm, DEFAULT_SF9_LAYOUT.topMm, 0, 20),
     bottomMm: boundedNumber(
       source.bottomMm,
@@ -263,30 +250,10 @@ function sanitizeLayoutSettings(input: unknown): Sf9LayoutSettings {
       0,
       20
     ),
-    leftCardOuterMm: boundedNumber(
-      source.leftCardOuterMm,
-      DEFAULT_SF9_LAYOUT.leftCardOuterMm,
-      0,
-      25
-    ),
-    leftCardInnerMm: boundedNumber(
-      source.leftCardInnerMm,
-      DEFAULT_SF9_LAYOUT.leftCardInnerMm,
-      0,
-      25
-    ),
-    rightCardInnerMm: boundedNumber(
-      source.rightCardInnerMm,
-      DEFAULT_SF9_LAYOUT.rightCardInnerMm,
-      0,
-      25
-    ),
-    rightCardOuterMm: boundedNumber(
-      source.rightCardOuterMm,
-      DEFAULT_SF9_LAYOUT.rightCardOuterMm,
-      0,
-      25
-    ),
+    leftCardOuterMm: cardMargin,
+    leftCardInnerMm: cardMargin,
+    rightCardInnerMm: cardMargin,
+    rightCardOuterMm: cardMargin,
     centerLineMm: boundedNumber(
       source.centerLineMm,
       DEFAULT_SF9_LAYOUT.centerLineMm,

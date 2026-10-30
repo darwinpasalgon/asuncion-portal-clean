@@ -76,16 +76,15 @@
 .previewPlaceholder{min-height:220px;border:1px dashed #cbd9e0;border-radius:14px;background:#fbfdfe;display:grid;place-items:center;align-content:center;gap:7px;color:#7b8e99}
 .previewCanvas{overflow:auto;padding:14px;border:1px solid #dce5ea;border-radius:14px;background:#e7ecef}
 .printDocument{display:grid;gap:18px;justify-content:center}
-.printSheet{width:297mm;height:210mm;box-sizing:border-box;background:#fff;display:grid;grid-template-columns:var(--sf9-left-card-width,140.58mm) var(--sf9-center-line,.33mm) var(--sf9-right-card-width,130.25mm);justify-content:center;overflow:hidden;box-shadow:0 5px 24px rgba(16,42,61,.18);font-family:"Bookman Old Style","Bookman","URW Bookman",serif;color:#111;font-synthesis:none}
+.printSheet{position:relative;width:297mm;height:210mm;box-sizing:border-box;background:#fff;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));justify-content:center;overflow:hidden;box-shadow:0 5px 24px rgba(16,42,61,.18);font-family:"Bookman Old Style","Bookman","URW Bookman",serif;color:#111;font-synthesis:none}
 .halfSheet{width:auto;height:210mm;box-sizing:border-box;overflow:hidden}
 /* A border remains visible when "Background graphics" is disabled in print. */
-.cutLine{position:relative;width:100%;height:100%;background:none;pointer-events:none}
-.cutLine::before{content:"";position:absolute;left:50%;top:8mm;bottom:2mm;border-left:.25mm dashed #666;transform:translateX(-50%)}
+.cutLine{position:absolute;left:50%;top:0;width:0;height:100%;background:none;pointer-events:none;z-index:1}
+.cutLine::before{content:"";position:absolute;left:50%;top:8mm;bottom:2mm;border-left:var(--sf9-center-line,.33mm) dashed #666;transform:translateX(-50%)}
 .cutLine>svg{position:absolute;top:2mm;left:50%;width:3mm;height:3mm;transform:translateX(-50%) rotate(90deg);color:#666}
 .emptyHalf{width:100%;height:100%;background:#fff}
 .cardFront,.cardBack{height:100%;box-sizing:border-box;position:relative;line-height:var(--sf9-line-height,1.02)}
-.halfSheet:first-child .cardFront,.halfSheet:first-child .cardBack{padding:var(--sf9-top,5.5mm) var(--sf9-left-inner,10.33mm) var(--sf9-bottom,4.5mm) var(--sf9-left-outer,5.25mm)}
-.halfSheet:last-child .cardFront,.halfSheet:last-child .cardBack{padding:var(--sf9-top,5.5mm) var(--sf9-right-outer,0mm) var(--sf9-bottom,4.5mm) var(--sf9-right-inner,5.25mm)}
+.cardFront,.cardBack{padding:var(--sf9-top,5.5mm) var(--sf9-card-margin,11.75mm) var(--sf9-bottom,4.5mm)}
 .cardFront{font-size:var(--sf9-front-font,7.44pt)}
 .cardBack{font-size:var(--sf9-back-font,6.84pt)}
 .formHeader{height:var(--sf9-header-height,25.4mm);position:relative;display:flex;justify-content:center;align-items:flex-start;text-align:center}
