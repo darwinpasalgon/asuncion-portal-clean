@@ -259,6 +259,14 @@ export function portalNavigation(
         keywords: "teacher staff first login username email password credentials CSV download",
       },
       admin && {
+        id: "teacher-activity",
+        label: "Teacher Portal Activity",
+        description: "See recent portal visits and teachers who have never logged in.",
+        href: "/portal/admin/teacher-activity",
+        icon: "users",
+        keywords: "teacher usage activity last login active never opened",
+      },
+      admin && {
         id: "teacher-import",
         label: "Import Personnel Profiles",
         description: "Import teaching personnel information.",

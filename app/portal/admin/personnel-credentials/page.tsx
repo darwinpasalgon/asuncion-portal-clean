@@ -101,6 +101,7 @@ export default function PersonnelCredentialsPage() {
           </a>
           <button type="button" onClick={() => void load()} disabled={loading}
             style={{ ...link, cursor: "pointer" }}><RefreshCw size={15}/> {loading ? "Checking…" : "Refresh"}</button>
+          <a href="/portal/admin/teacher-activity" style={link}>Teacher Portal Activity →</a>
         </nav>
 
         <header style={{ display: "grid", gap: 6 }}>
