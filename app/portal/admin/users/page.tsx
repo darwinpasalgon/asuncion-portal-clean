@@ -473,6 +473,7 @@ export default function UsersAccountsPage() {
             <a href="/portal/admin/users">Pending Approvals</a>
             {canCreateAccounts && <a href="/portal/admin/create-account">Create Account</a>}
             {canCreateAccounts && <a href="/portal/admin/personnel-credentials">Personnel Login Credentials</a>}
+            {canCreateAccounts && <a href="/portal/admin/teacher-activity">Teacher Portal Activity</a>}
             <a href="/portal/admin/masterlist">Bulk Account Import</a>
             <a href="/portal/admin/password-resets">Password Resets</a>
           </div>
