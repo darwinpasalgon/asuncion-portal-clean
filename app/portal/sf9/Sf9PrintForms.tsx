@@ -1,6 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import { Scissors } from "lucide-react";
 import { DEPED_LOGO_DATA_URI } from "../admin/sf10/Sf10LogoData";
 import styles from "./sf9.module.css";
 import { sf9Grade11Rows, sf9Grade11TotalUnits, type Sf9Grade11Offering } from "@/lib/sf9-grade11-layout";
@@ -683,7 +684,7 @@ export function Sf9PrintForms({
         <div className={styles.halfSheet}>
           {first ? <FrontCard card={first} detail={detail} layout={layout} /> : <EmptyHalf />}
         </div>
-        <div className={styles.cutLine} />
+        <div className={styles.cutLine} aria-hidden="true" data-sf9-cut-guide="true"><Scissors /></div>
         <div className={styles.halfSheet}>
           {second ? <FrontCard card={second} detail={detail} layout={layout} /> : <EmptyHalf />}
         </div>
@@ -693,7 +694,7 @@ export function Sf9PrintForms({
         <div className={styles.halfSheet}>
           {first ? <BackCard card={first} detail={detail} layout={layout} /> : <EmptyHalf />}
         </div>
-        <div className={styles.cutLine} />
+        <div className={styles.cutLine} aria-hidden="true" data-sf9-cut-guide="true"><Scissors /></div>
         <div className={styles.halfSheet}>
           {second ? <BackCard card={second} detail={detail} layout={layout} /> : <EmptyHalf />}
         </div>

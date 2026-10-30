@@ -1,5 +1,7 @@
 "use client";
 
+import { gradeLabel } from "@/lib/grade-label";
+
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CalendarDays, Printer } from "lucide-react";
 import styles from "./schedule-print.module.css";
@@ -11,6 +13,7 @@ type Profile = {
 };
 
 type ScheduleEntry = {
+  term_no?: number;
   id: string;
   entry_type?: "class" | "block" | "rotation";
   day_of_week: number;
@@ -40,9 +43,14 @@ export default function TeacherSchedulePrintPage() {
   const [entries, setEntries] = useState<ScheduleEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [term, setTerm] = useState(1);
+  const terms = [...new Set(entries.flatMap(entry => entry.term_no ? [entry.term_no] : []))].sort();
+  const selectedTerm = terms.includes(term) ? term : terms[0] ?? 1;
 
   useEffect(() => {
     let active = true;
+    const requestedTerm = Number(new URLSearchParams(window.location.search).get("term"));
+    if ([1, 2, 3].includes(requestedTerm)) setTerm(requestedTerm);
     async function load() {
       try {
         const [profileResponse, scheduleResponse] = await Promise.all([
@@ -83,19 +91,22 @@ export default function TeacherSchedulePrintPage() {
       [1, 2, 3, 4, 5, 6, 7]
         .map((day) => ({
           day,
-          entries: entries.filter((entry) => entry.day_of_week === day),
+          entries: entries.filter((entry) => entry.day_of_week === day && (!entry.term_no || entry.term_no === selectedTerm)),
         }))
         .filter((item) => item.entries.length > 0),
-    [entries]
+    [entries, selectedTerm]
   );
 
   return (
     <main className={styles.page}>
       <div className={styles.controls}>
-        <a href="/portal?open=schedule">
+        <a href={`/portal?open=schedule&term=${selectedTerm}`}>
           <ArrowLeft size={16} />
           Back to Class Schedule
         </a>
+        {terms.length > 0 && <label>Term <select value={selectedTerm} onChange={event => setTerm(Number(event.target.value))}>
+          {terms.map(value => <option key={value} value={value}>Term {value}</option>)}
+        </select></label>}
         <button type="button" onClick={() => window.print()} disabled={loading || entries.length === 0}>
           <Printer size={16} />
           Print Schedule
@@ -116,7 +127,7 @@ export default function TeacherSchedulePrintPage() {
         <div className={styles.title}>
           <CalendarDays size={24} />
           <div>
-            <h1>Teacher Class Schedule</h1>
+            <h1>Teacher Class Schedule{terms.length ? ` · Term ${selectedTerm}` : ""}</h1>
             <p>School Year {schoolYear || "Current School Year"}</p>
           </div>
         </div>
@@ -150,7 +161,7 @@ export default function TeacherSchedulePrintPage() {
                     {dayEntries.map((entry) => (
                       <tr key={entry.id}>
                         <td>{timeLabel(entry.start_time)} – {timeLabel(entry.end_time)}</td>
-                        <td>{entry.grade_level ? `Grade ${entry.grade_level} · ` : ""}{entry.section}</td>
+                        <td>{gradeLabel(entry.grade_level) ? `${gradeLabel(entry.grade_level)} · ` : ""}{entry.section}</td>
                         <td>
                           {entry.subject}
                           {entry.major ? <><br /><small>{entry.major}</small></> : null}

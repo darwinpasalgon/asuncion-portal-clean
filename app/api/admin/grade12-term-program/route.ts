@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { termPeriodConflicts } from "@/lib/term-schedule-conflicts";
 import { getScopedAdminAccess, isSuperAdministrator } from "@/lib/admin-access";
 import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from "@/lib/supabase-config";
 
@@ -13,12 +14,12 @@ async function query<T = Record<string, unknown>>(path: string, token: string): 
   return response.json();
 }
 type Period = {
-  id: string; section_id: string; term_no: number; day_of_week: number; start_time: string;
+  id: string; school_year_id: string; section_id: string; term_no: number; day_of_week: number; start_time: string;
   end_time: string; subject_label: string; instructor_label: string; instructor_ids: string[];
   needs_review: boolean; review_reason: string | null; source_sheet: string; source_row: number;
   source_file: string;
 };
-const select = "id,section_id,term_no,day_of_week,start_time,end_time,subject_label,instructor_label,instructor_ids,needs_review,review_reason,source_sheet,source_row,source_file";
+const select = "id,school_year_id,section_id,term_no,day_of_week,start_time,end_time,subject_label,instructor_label,instructor_ids,needs_review,review_reason,source_sheet,source_row,source_file";
 
 async function context(request: NextRequest) {
   const token = tokenFrom(request);
@@ -118,17 +119,15 @@ export async function POST(request: NextRequest) {
     const allowed = new Set(available.map(t=>t.id));
     if (teachers.some(t=>!allowed.has(t))) return NextResponse.json({ error: "Select only active teacher accounts." }, { status: 400 });
     const sameTerm = await query<Period>(
-      `grade12_term_periods?term_no=eq.${existing.term_no}&day_of_week=eq.${existing.day_of_week}&select=${select}&limit=1000`,
+      `grade12_term_periods?school_year_id=eq.${encodeURIComponent(existing.school_year_id)}&term_no=eq.${existing.term_no}&day_of_week=eq.${existing.day_of_week}&select=${select}&limit=1000`,
       info.token
     );
-    const conflicts = sameTerm.filter(p => p.id !== existing.id && p.section_id !== existing.section_id &&
-      start < p.end_time.slice(0,5) && p.start_time.slice(0,5) < end &&
-      teachers.some(t => (p.instructor_ids ?? []).includes(t)));
+    const conflicts = termPeriodConflicts({ ...existing, start_time: start, end_time: end, instructor_ids: teachers, subject_label: subject }, sameTerm);
     // Editing text on an existing documented collision does not create a new one.
-    const isChangingStaffOrTime = start !== existing.start_time.slice(0,5) || end !== existing.end_time.slice(0,5) ||
+    const isChangingStaffOrTime = subject !== existing.subject_label || start !== existing.start_time.slice(0,5) || end !== existing.end_time.slice(0,5) ||
       teachers.slice().sort().join(",") !== (existing.instructor_ids ?? []).slice().sort().join(",");
     if (conflicts.length && isChangingStaffOrTime) {
-      return NextResponse.json({ error: "Teacher schedule conflict within this term. Review the existing Grade 12 entries.", conflicts: conflicts.map(p=>({section_id:p.section_id,day:p.day_of_week,start:p.start_time,end:p.end_time,subject:p.subject_label})) }, { status: 409 });
+      return NextResponse.json({ error: "Teacher or section schedule conflict within this term. Review the overlapping entries.", conflicts: conflicts.map(p=>({section_id:p.section_id,day:p.day_of_week,start:p.start_time,end:p.end_time,subject:p.subject_label})) }, { status: 409 });
     }
     const preservedNotes = (existing.review_reason ?? "").split(";").map(note => note.trim()).filter(note =>
       note && !/ends after (the )?4:30 PM|Instructor missing from portal teacher accounts|Instructor account not yet matched|Source timetable has overlapping teacher allocations/i.test(note)
@@ -146,6 +145,9 @@ export async function POST(request: NextRequest) {
       cache: "no-store",
     });
     const result = await response.json().catch(()=>null);
+    if (!response.ok && String(result?.message ?? "").includes("schedule conflicts")) {
+      return NextResponse.json({ error: String(result.message), code: "schedule_conflict" }, { status: 409 });
+    }
     if (!response.ok || !Array.isArray(result) || !result[0]) {
       return NextResponse.json({ error: "Unable to save this term's class period. Verify your scheduling permission." }, { status: response.status >= 400 ? response.status : 500 });
     }
