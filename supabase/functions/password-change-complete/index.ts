@@ -29,6 +29,9 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({}));
   const password = String(body.new_password ?? "");
   if (password.length < 8) return json({ error: "Use a password with at least 8 characters." }, 400);
+  if (password === "Asuncion123") {
+    return json({ error: "Choose a personal password different from the temporary password." }, 400);
+  }
 
   const { data: profile } = await admin
     .from("profiles")
@@ -45,10 +48,11 @@ Deno.serve(async (req) => {
   const { error: passwordError } = await admin.auth.admin.updateUserById(userId, { password });
   if (passwordError) return json({ error: "Could not update the password." }, 500);
 
-  await admin
+  const { error: profileError } = await admin
     .from("profiles")
     .update({ must_change_password: false, temp_password_expires_at: null, updated_at: new Date().toISOString() })
     .eq("id", userId);
+  if (profileError) return json({ error: "Password updated, but first-login setup could not be completed. Please try again." }, 500);
 
   return json({ ok: true, message: "Password updated successfully." });
 });

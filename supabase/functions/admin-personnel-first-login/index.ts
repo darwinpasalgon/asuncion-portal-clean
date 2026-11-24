@@ -13,12 +13,9 @@ function json(body: unknown, status = 200) {
   });
 }
 function newTemporaryPassword(): string {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-  const bytes = new Uint8Array(18);
-  crypto.getRandomValues(bytes);
-  // Modulo bias is negligible for 60 symbols and randomly generated 18 bytes.
-  const random = Array.from(bytes, byte => alphabet[byte % alphabet.length]).join("");
-  return "ANHS-" + random.slice(0, 9) + "-" + random.slice(9);
+  // School-issued starter password for personnel awaiting their first login.
+  // Existing eligibility checks exclude anyone who has already signed in.
+  return "Asuncion123";
 }
 type Candidate = {
   id: string;
