@@ -17,7 +17,7 @@ export default function PortalNotifications({ items, loading, error, refresh, na
   return <Popover open={open} onOpenChange={setOpen}>
     <PopoverTrigger asChild>
       <button type="button" className={styles.trigger} title="Notifications"
-        aria-label={count ? "Notifications, " + count + " updates need attention" : error ? "Notifications, refresh unavailable" : "Notifications"}>
+        aria-label={count ? "Notifications, " + count + (count === 1 ? " update needs attention" : " updates need attention") : error ? "Notifications, refresh unavailable" : "Notifications"}>
         <Bell size={20} aria-hidden="true" />
         {count > 0 && <span className={styles.badge} key={count} aria-hidden="true">{count > 99 ? "99+" : count}</span>}
         {!count && error && <span className={styles.unavailable} aria-hidden="true" />}
@@ -25,7 +25,7 @@ export default function PortalNotifications({ items, loading, error, refresh, na
     </PopoverTrigger>
     <PopoverContent align="end" sideOffset={12} collisionPadding={12} className={styles.panel} aria-label="Portal notifications">
       <div className={styles.header}>
-        <div><h2>Notifications</h2><p>{count ? count + " update" + (count === 1 ? "" : "s") + " need your attention" : "Your school updates"}</p></div>
+        <div><h2>Notifications</h2><p>{count ? count + (count === 1 ? " update needs your attention" : " updates need your attention") : "Your school updates"}</p></div>
         <button type="button" onClick={refresh} disabled={loading} className={styles.refresh} aria-label="Refresh notifications"><RefreshCw size={17} aria-hidden="true" className={loading ? styles.spin : undefined} /></button>
       </div>
       {error && <p className={styles.error} role="status">Some updates could not refresh. Please try again.</p>}

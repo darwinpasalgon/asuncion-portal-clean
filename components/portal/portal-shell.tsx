@@ -647,25 +647,3 @@ function PortalFrame({ children }: { children: ReactNode }) {
 }
 
 
-
-/** Temporary visual QA fixture. Removed before the production merge. */
-export function PortalDesignPreview({ children, student = false }: { children: ReactNode; student?: boolean }) {
-  const session: Session = {
-    profile: { id: "preview-member", full_name: student ? "Alex Rivera" : "Alex Morgan", email: "preview@example.invalid", lrn: null, grade_level: student ? 8 : null, section: student ? "Sample Section" : null,
-      role: student ? "student" : "teacher", requested_role: student ? "student" : "teacher", admin_role: null, position: null, account_status: "active", must_change_password: false },
-    academicContext: { school_year: "2026–2027", school_year_id: null, grade_level: 8, section: "Sample Section", enrollment_status: "enrolled", tve_major: null, shs_track: null, shs_strand_program: null, sex: null },
-    adminPermissions: [], gradeLevelHead: null, isAdviser: !student,
-  };
-  const groups = portalNavigation({ role: session.profile.role, permissions: [], isAdviser: !student, hasPersonnelProfile: !student, gradeLevelHead: null });
-  const attention: ReturnType<typeof usePortalAttention> = {
-    userId: "preview-member", loading: false, error: false, refresh: () => {},
-    personnel: student ? null : { self: { personnel_type: "teaching", complete: false, missing_fields: ["Mobile number", "Address"] }, can_manage: false, incomplete_teaching: [], incomplete_non_teaching: [], teaching_count: 0, non_teaching_count: 0, total_incomplete: 0 },
-    adviser: student ? null : { alerts: [
-      { id: "learner-details", severity: "warning", title: "Learner records need an update", detail: "Two learners in your advisory class need required information.", count: 2, href: "/portal?view=advisory", actionLabel: "Review learners", administratorAction: false },
-      { id: "attendance", severity: "info", title: "Review today's attendance", detail: "Keep your class attendance up to date.", count: 1, href: "/portal/academic/attendance", actionLabel: "Open attendance", administratorAction: false }
-    ], totalAlertTypes: 2 },
-  };
-  return <PortalContext.Provider value={{ session, groups, communityUnread: 3, attention }}>
-    <SidebarProvider className={styles.shell} data-portal-version="2" data-portal-polish="glass" style={{ "--sidebar-width": "17.5rem" } as React.CSSProperties}><PortalFrame>{children}</PortalFrame></SidebarProvider>
-  </PortalContext.Provider>;
-}

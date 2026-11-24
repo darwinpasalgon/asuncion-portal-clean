@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { PORTAL_LABEL } from "@/lib/portal-brand";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -10,7 +11,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Asuncion NHS | Academic Portal",
+  title: PORTAL_LABEL,
   description: "Academic portal for the Asuncion National High School community.",
   icons: {
     icon: "/school-logo.png",
