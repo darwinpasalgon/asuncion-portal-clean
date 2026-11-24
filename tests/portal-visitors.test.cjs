@@ -28,12 +28,12 @@ test("all authenticated roles use the same bounded report without a client-selec
     assert.equal(response.headers.get("vary"),"Cookie");
   }
 });
-test("response exposes only names, ranks, daily totals, and the own-account marker for up to ten people",async()=>{
+test("response exposes only names, ranks, daily totals, and the own-account marker for up to twenty people",async()=>{
   const {portalVisitorsResponse}=await lib;
-  const data=report(15);
+  const data=report(25);
   data.token="do-not-expose";data.visitors.forEach(row=>Object.assign(row,{id:"private-id",email:"private@example.invalid",lrn:"123456789012",last_seen:"private"}));
   const response=await portalVisitorsResponse("fixture",config,async()=>Response.json(data));
-  const result=await response.json();assert.equal(result.visitors.length,10);
+  const result=await response.json();assert.equal(result.visitors.length,20);
   assert.deepEqual(Object.keys(result).sort(),["period_end","period_start","tracking_started_on","visitors"]);
   for (const row of result.visitors) assert.deepEqual(Object.keys(row).sort(),["full_name","is_you","rank","visit_days"]);
   assert.equal(JSON.stringify(result).includes("private"),false);
@@ -69,4 +69,5 @@ test("the report preserves Unicode names and rejects impossible dates and visit 
     assert.throws(()=>normalizePortalVisitorsReport(invalid));
   }
 });
+
 

@@ -55,6 +55,12 @@ import {
 } from "@/lib/portal-navigation";
 import FeatureIcon from "./feature-icon";
 import styles from "./portal-shell.module.css";
+import "./portal-polish.css";
+import PortalLoadingScreen from "./portal-loading";
+import PortalNotifications from "./portal-notifications";
+import usePortalAttention from "./use-portal-attention";
+import { buildPortalNotifications, featureAttentionCount } from "@/lib/portal-attention";
+import { PORTAL_LABEL, PORTAL_NAME, PORTAL_VERSION } from "@/lib/portal-brand";
 
 type Session = {
   profile: {
@@ -99,6 +105,7 @@ type PortalContextValue = {
   session: Session;
   groups: PortalFeatureGroup[];
   communityUnread: number;
+  attention: ReturnType<typeof usePortalAttention>;
 };
 const PortalContext = createContext<PortalContextValue | null>(null);
 export function usePortal() {
@@ -109,16 +116,7 @@ export function usePortal() {
 }
 
 export function PortalLoading() {
-  return (
-    <div className={styles.loading} role="status">
-      <img src="/school-logo.png" alt="" width={64} height={64} />
-      <strong>Opening Your Workspace</strong>
-      <span className={styles.loadingTrack}>
-        <span />
-      </span>
-      <p>Getting your school tools ready…</p>
-    </div>
-  );
+  return <PortalLoadingScreen />;
 }
 
 function roleName(session: Session) {
@@ -140,8 +138,10 @@ export default function PortalShell({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
-  const [hasPersonnelProfile, setHasPersonnelProfile] = useState(false);
   const [communityUnread, setCommunityUnread] = useState(0);
+  const pathname = usePathname();
+  const attention = usePortalAttention(pathname.endsWith("/print") ? undefined : session?.profile.id, session?.profile.role, Boolean(session?.isAdviser), pathname);
+  const hasPersonnelProfile = Boolean(attention.personnel?.self);
 
   useEffect(() => {
     let active = true;
@@ -172,18 +172,7 @@ export default function PortalShell({ children }: { children: ReactNode }) {
           gradeLevelHead: data.gradeLevelHead ?? null,
           isAdviser: Boolean(data.isAdviser),
         });
-        if (data.profile.role === "staff_administrator") {
-          const attention = await fetch("/api/teacher-profiles", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "profile_attention" }),
-            signal: controller.signal,
-          });
-          if (attention.ok) {
-            const result = await attention.json();
-            if (active) setHasPersonnelProfile(Boolean(result.self));
-          }
-        }
+
       } catch (err) {
         if (active && !controller.signal.aborted)
           setError(
@@ -246,24 +235,14 @@ export default function PortalShell({ children }: { children: ReactNode }) {
         : [],
     [session, hasPersonnelProfile],
   );
-  if (!session)
-    return error ? (
-      <div className={styles.loading} role="alert">
-        <strong>We Couldn’t Open Your Workspace</strong>
-        <p>{error}</p>
-        <button onClick={() => setRetry((value) => value + 1)}>
-          Try Again
-        </button>
-        <a href="/">Return to Sign In</a>
-      </div>
-    ) : (
-      <PortalLoading />
-    );
+  if (!session) return <PortalLoadingScreen error={error || undefined} onRetry={() => setRetry(value => value + 1)} />;
+
   return (
-    <PortalContext.Provider value={{ session, groups, communityUnread }}>
+    <PortalContext.Provider value={{ session, groups, communityUnread, attention }}>
       <SidebarProvider
         className={styles.shell}
         data-portal-version="2"
+        data-portal-polish="glass"
         style={{ "--sidebar-width": "17.5rem" } as React.CSSProperties}
       >
         <PortalFrame>{children}</PortalFrame>
@@ -273,8 +252,12 @@ export default function PortalShell({ children }: { children: ReactNode }) {
 }
 
 function PortalFrame({ children }: { children: ReactNode }) {
-  const { session, groups, communityUnread } = usePortal();
+  const { session, groups, communityUnread, attention } = usePortal();
   const { profile } = session;
+  const notifications = useMemo(() => buildPortalNotifications(
+    { role: profile.role, isAdviser: session.isAdviser }, attention, communityUnread,
+    groups.flatMap(group => group.items.map(item => item.href)),
+  ), [profile.role, session.isAdviser, attention.personnel, attention.adviser, communityUnread, groups]);
   const pathname = usePathname();
   const params = useSearchParams();
   const router = useRouter();
@@ -424,8 +407,8 @@ function PortalFrame({ children }: { children: ReactNode }) {
               height={44}
             />
             <span>
-              <strong>ASUNCION NHS</strong>
-              <small>Academic Portal</small>
+              <strong>{PORTAL_NAME}</strong>
+              <small>ver. {PORTAL_VERSION}</small>
             </span>
           </a>
           <button
@@ -488,6 +471,11 @@ function PortalFrame({ children }: { children: ReactNode }) {
                       >
                         <FeatureIcon name={item.icon} size={18} />
                         <span>{item.label}</span>
+                        {item.id !== "community" && featureAttentionCount(notifications, item.id) > 0 && (
+                          <span className={styles.badge} aria-label={featureAttentionCount(notifications, item.id) + " updates need attention"}>
+                            {featureAttentionCount(notifications, item.id) > 99 ? "99+" : featureAttentionCount(notifications, item.id)}
+                          </span>
+                        )}
                         {item.id === "community" && communityUnread > 0 && (
                           <span
                             className={styles.badge}
@@ -541,14 +529,13 @@ function PortalFrame({ children }: { children: ReactNode }) {
               className={styles.menuToggle}
               aria-label="Toggle Navigation"
             />
-            <a href="/portal" className={styles.homeCrumb}>
-              Workspace
+            <a href="/portal" className={styles.homeCrumb} aria-label={PORTAL_LABEL}>
+              <strong>{PORTAL_NAME}</strong><small>ver. {PORTAL_VERSION}</small>
             </a>
-            <ChevronRight size={14} />
-            <span>{current?.item.label ?? "School Tools"}</span>
+            <span className={styles.currentCrumb}><ChevronRight size={13} aria-hidden="true" />{current?.item.label ?? "School Tools"}</span>
           </div>
           <div className={styles.topActions}>
-            <span className={styles.versionPill}>PORTAL 2</span>
+            <PortalNotifications items={notifications} loading={attention.loading} error={attention.error} refresh={attention.refresh} navigate={navigate} />
             <Dialog
               open={searchOpen}
               onOpenChange={(open) => {
@@ -627,7 +614,7 @@ function PortalFrame({ children }: { children: ReactNode }) {
               }
             >
               <FeatureIcon name="message" />
-              {communityUnread > 0 && <span className={styles.chatDot} />}
+              {communityUnread > 0 && <span className={styles.chatDot} aria-hidden="true">{communityUnread > 99 ? "99+" : communityUnread}</span>}
             </a>
           </div>
         </header>
@@ -658,4 +645,5 @@ function PortalFrame({ children }: { children: ReactNode }) {
     </div>
   );
 }
+
 
