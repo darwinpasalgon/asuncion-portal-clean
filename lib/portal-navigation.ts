@@ -165,6 +165,37 @@ export function portalNavigation(
     ],
   );
   group(
+    "learning",
+    student ? "My Learning" : "Teaching & Learning",
+    "Plan lessons and support learning",
+    "book",
+    [
+      (teacher || admin) && {
+        id: "ilaw",
+        label: "ILAW Lesson Plans",
+        description: "Create, review, save and export teacher-led ILAW lesson plans.",
+        href: "/portal/ilaw",
+        icon: "book",
+        keywords: "lesson plan intentions learning experiences assessment ways forward ILAW BOW",
+      },
+      (student || teacher || admin) && {
+        id: "aral-support",
+        label: "ARAL Support",
+        description: student ? "Open your assigned activities and ask your tutor for help." : "Coordinate support, record sessions and follow learner progress.",
+        href: "/portal/aral",
+        icon: "check",
+        keywords: "ARAL reading mathematics science tutorial catch up remediation support",
+      },
+      (student || teacher || can("resources.manage")) && {
+        id: "resources",
+        label: "Learning Resources",
+        description: "Find shared learning files and materials.",
+        href: "/portal/resources",
+        icon: "folder",
+      },
+    ],
+  );
+  group(
     "records",
     "School Forms & Reports",
     "Print forms and review school records",
@@ -289,13 +320,6 @@ export function portalNavigation(
         href: "/portal/announcements",
         icon: "megaphone",
         keywords: "news memo principal",
-      },
-      (student || teacher || can("resources.manage")) && {
-        id: "resources",
-        label: "Learning Resources",
-        description: "Find shared learning files and materials.",
-        href: "/portal/resources",
-        icon: "folder",
       },
       {
         id: "community",
@@ -423,3 +447,4 @@ export function searchPortalFeatures(
     }))
     .filter((group) => group.items.length > 0);
 }
+
