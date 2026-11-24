@@ -1,0 +1,42 @@
+{
+  "packageId": "ph.edu.asuncionnhs.portal",
+  "host": "asuncion-nhs.vercel.app",
+  "name": "ANHS Academic Portal",
+  "launcherName": "ANHS Portal",
+  "display": "standalone",
+  "themeColor": "#1D4B36",
+  "themeColorDark": "#102D24",
+  "navigationColor": "#F5F7F0",
+  "navigationColorDark": "#102D24",
+  "navigationDividerColor": "#DCE4D5",
+  "navigationDividerColorDark": "#1D4B36",
+  "backgroundColor": "#F5F7F0",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "https://asuncion-nhs.vercel.app/school-logo.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "../private-release/anhs-release.p12",
+    "alias": "anhs-portal"
+  },
+  "appVersionName": "2.0.0",
+  "appVersionCode": 2,
+  "shortcuts": [],
+  "generatorApp": "@bubblewrap/cli",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://asuncion-nhs.vercel.app/",
+  "minSdkVersion": 23,
+  "orientation": "default",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "displayOverride": [],
+  "appVersion": "2.0.0"
+}
