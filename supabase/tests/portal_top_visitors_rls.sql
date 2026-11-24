@@ -1,15 +1,16 @@
 -- Transactional authorization and counting probe. All fixture writes roll back.
 begin;
-create temporary table visitor_fixture(role text primary key,user_id uuid not null) on commit drop;
-insert into visitor_fixture(role,user_id)
-select distinct on(p.role) p.role::text,p.id
+create temporary table visitor_fixture(role text primary key,user_id uuid not null,full_name text not null,is_super boolean not null) on commit drop;
+insert into visitor_fixture(role,user_id,full_name,is_super)
+select distinct on(p.role) p.role::text,p.id,btrim(p.full_name),coalesce(p.admin_role='super_administrator',false)
 from public.profiles p join auth.users u on u.id=p.id
 where p.account_status='active' and not coalesce(p.must_change_password,false)
   and u.deleted_at is null and (u.banned_until is null or u.banned_until<=now())
-order by p.role,p.id;
+order by p.role,(p.admin_role='super_administrator') desc nulls last,p.id;
 grant select on visitor_fixture to authenticated;
 do $test$ begin
   if (select count(*) from visitor_fixture)<>4 then raise exception 'Four eligible account types required'; end if;
+  if not exists(select 1 from visitor_fixture where role='administrator' and is_super) then raise exception 'Super administrator fixture required'; end if;
 end; $test$;
 delete from private.portal_visit_days where user_id in(select user_id from visitor_fixture);
 set local role authenticated;
@@ -79,7 +80,7 @@ from (
   where p.account_status='active' and not coalesce(p.must_change_password,false)
     and p.id not in(select user_id from visitor_fixture) and u.deleted_at is null
     and (u.banned_until is null or u.banned_until<=now())
-  order by p.id limit 12
+  order by p.id limit 24
 ) p cross join generate_series(0,1) g(n)
 on conflict do nothing;
 set local role authenticated;
@@ -88,9 +89,10 @@ do $test$
 declare r jsonb; item jsonb; ordinal bigint;
 begin
   r:=public.portal_top_visitors();
-  if jsonb_array_length(r->'visitors')<>10 then raise exception 'Expected exactly ten visitors'; end if;
+  if jsonb_array_length(r->'visitors')<>20 then raise exception 'Expected exactly twenty visitors'; end if;
   if (r->'visitors'->0->>'visit_days')::integer<>15 then raise exception 'Window or ranking incorrect'; end if;
   if not exists(select 1 from jsonb_array_elements(r->'visitors') v where (v->>'is_you')::boolean) then raise exception 'Missing own-account marker for teacher'; end if;
+  if exists(select 1 from jsonb_array_elements(r->'visitors') v join pg_temp.visitor_fixture f on v->>'full_name'=f.full_name where f.is_super) then raise exception 'Super administrator appeared in the ranking'; end if;
   for item,ordinal in select value,ordinality from jsonb_array_elements(r->'visitors') with ordinality loop
     if (item->>'rank')::bigint<>ordinal then raise exception 'Invalid ranks'; end if;
     if (select count(*) from jsonb_object_keys(item))<>4 or item ?| array['id','email','lrn','last_seen_at','role'] then raise exception 'Private account data leaked'; end if;
@@ -102,9 +104,10 @@ do $test$
 declare r jsonb; item jsonb; ordinal bigint;
 begin
   r:=public.portal_top_visitors();
-  if jsonb_array_length(r->'visitors')<>10 then raise exception 'Expected exactly ten visitors'; end if;
+  if jsonb_array_length(r->'visitors')<>20 then raise exception 'Expected exactly twenty visitors'; end if;
   if (r->'visitors'->0->>'visit_days')::integer<>15 then raise exception 'Window or ranking incorrect'; end if;
   if not exists(select 1 from jsonb_array_elements(r->'visitors') v where (v->>'is_you')::boolean) then raise exception 'Missing own-account marker for student'; end if;
+  if exists(select 1 from jsonb_array_elements(r->'visitors') v join pg_temp.visitor_fixture f on v->>'full_name'=f.full_name where f.is_super) then raise exception 'Super administrator appeared in the ranking'; end if;
   for item,ordinal in select value,ordinality from jsonb_array_elements(r->'visitors') with ordinality loop
     if (item->>'rank')::bigint<>ordinal then raise exception 'Invalid ranks'; end if;
     if (select count(*) from jsonb_object_keys(item))<>4 or item ?| array['id','email','lrn','last_seen_at','role'] then raise exception 'Private account data leaked'; end if;
@@ -116,9 +119,10 @@ do $test$
 declare r jsonb; item jsonb; ordinal bigint;
 begin
   r:=public.portal_top_visitors();
-  if jsonb_array_length(r->'visitors')<>10 then raise exception 'Expected exactly ten visitors'; end if;
+  if jsonb_array_length(r->'visitors')<>20 then raise exception 'Expected exactly twenty visitors'; end if;
   if (r->'visitors'->0->>'visit_days')::integer<>15 then raise exception 'Window or ranking incorrect'; end if;
-  if not exists(select 1 from jsonb_array_elements(r->'visitors') v where (v->>'is_you')::boolean) then raise exception 'Missing own-account marker for administrator'; end if;
+  if exists(select 1 from jsonb_array_elements(r->'visitors') v where (v->>'is_you')::boolean) then raise exception 'Super administrator must be excluded'; end if;
+  if exists(select 1 from jsonb_array_elements(r->'visitors') v join pg_temp.visitor_fixture f on v->>'full_name'=f.full_name where f.is_super) then raise exception 'Super administrator appeared in the ranking'; end if;
   for item,ordinal in select value,ordinality from jsonb_array_elements(r->'visitors') with ordinality loop
     if (item->>'rank')::bigint<>ordinal then raise exception 'Invalid ranks'; end if;
     if (select count(*) from jsonb_object_keys(item))<>4 or item ?| array['id','email','lrn','last_seen_at','role'] then raise exception 'Private account data leaked'; end if;
@@ -130,9 +134,10 @@ do $test$
 declare r jsonb; item jsonb; ordinal bigint;
 begin
   r:=public.portal_top_visitors();
-  if jsonb_array_length(r->'visitors')<>10 then raise exception 'Expected exactly ten visitors'; end if;
+  if jsonb_array_length(r->'visitors')<>20 then raise exception 'Expected exactly twenty visitors'; end if;
   if (r->'visitors'->0->>'visit_days')::integer<>15 then raise exception 'Window or ranking incorrect'; end if;
   if not exists(select 1 from jsonb_array_elements(r->'visitors') v where (v->>'is_you')::boolean) then raise exception 'Missing own-account marker for staff_administrator'; end if;
+  if exists(select 1 from jsonb_array_elements(r->'visitors') v join pg_temp.visitor_fixture f on v->>'full_name'=f.full_name where f.is_super) then raise exception 'Super administrator appeared in the ranking'; end if;
   for item,ordinal in select value,ordinality from jsonb_array_elements(r->'visitors') with ordinality loop
     if (item->>'rank')::bigint<>ordinal then raise exception 'Invalid ranks'; end if;
     if (select count(*) from jsonb_object_keys(item))<>4 or item ?| array['id','email','lrn','last_seen_at','role'] then raise exception 'Private account data leaked'; end if;
@@ -183,6 +188,7 @@ do $test$ begin
   exception when insufficient_privilege then null; end;
 end; $test$;
 reset role;
-select 'PASS: four roles; one visit per Manila day; client timestamps ignored; top ten; bounded private response; first-login, inactive, banned and anonymous users blocked' as result;
+select 'PASS: four roles; one visit per Manila day; client timestamps ignored; top twenty excluding super administrator; bounded private response; first-login, inactive, banned and anonymous users blocked' as result;
 rollback;
+
 

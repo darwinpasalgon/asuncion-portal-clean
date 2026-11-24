@@ -210,6 +210,7 @@ export default function MyTeacherProfilePage() {
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error ?? "Unable to save your Teacher Profile.");
+      window.dispatchEvent(new Event("anhs-portal-updated"));
       setRecord(result.record);
       setPersonal(result.record?.personal ?? {});
       setMessage(personnelType === "non_teaching" ? "Personnel Profile saved." : "Teacher Profile saved.");
@@ -570,3 +571,4 @@ export default function MyTeacherProfilePage() {
     </main>
   );
 }
+

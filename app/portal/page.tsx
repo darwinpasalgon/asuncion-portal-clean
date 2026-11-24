@@ -633,7 +633,7 @@ function EmptySection({ page, role }: { page: Page; role: Role }) {
 }
 
 export default function PortalPage() {
-  const { session, communityUnread } = usePortal();
+  const { session, communityUnread, attention } = usePortal();
   const { profile, academicContext, adminPermissions, gradeLevelHead } =
     session;
   const searchParams = useSearchParams();
@@ -659,15 +659,10 @@ export default function PortalPage() {
   const [adviserLearners, setAdviserLearners] = useState<AdviserLearner[]>([]);
   const [adviserMajors, setAdviserMajors] = useState<string[]>([]);
   const [adviserLearnersLoading, setAdviserLearnersLoading] = useState(false);
-  const [adviserAttention, setAdviserAttention] = useState<AdviserAttention>({
-    alerts: [],
-    totalAlertTypes: 0,
-  });
-  const [adviserAttentionLoading, setAdviserAttentionLoading] = useState(false);
-  const [personnelAttention, setPersonnelAttention] =
-    useState<PersonnelProfileAttention | null>(null);
-  const [personnelAttentionLoading, setPersonnelAttentionLoading] =
-    useState(false);
+  const adviserAttention: AdviserAttention = attention.adviser ?? { alerts: [], totalAlertTypes: 0 };
+  const adviserAttentionLoading = attention.loading && session.isAdviser;
+  const personnelAttention: PersonnelProfileAttention | null = attention.personnel;
+  const personnelAttentionLoading = attention.loading && profile.role !== "student";
   const [serviceCreditSummary, setServiceCreditSummary] =
     useState<ServiceCreditSummary | null>(null);
   const [academicSetupAttention, setAcademicSetupAttention] =
@@ -698,34 +693,6 @@ export default function PortalPage() {
         if (active) {
           const loadedProfile = profile;
           const summaries = await Promise.allSettled([
-            (async () => {
-              if (loadedProfile.role !== "student") {
-                setPersonnelAttentionLoading(true);
-                try {
-                  const attentionResponse = await fetch(
-                    "/api/teacher-profiles",
-                    {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ action: "profile_attention" }),
-                      cache: "no-store",
-                    },
-                  );
-                  const attentionResult = await attentionResponse
-                    .json()
-                    .catch(() => ({}));
-                  if (!attentionResponse.ok)
-                    throw new Error("Unable to refresh workspace summary.");
-                  if (active && attentionResponse.ok) {
-                    setPersonnelAttention(
-                      attentionResult as PersonnelProfileAttention,
-                    );
-                  }
-                } finally {
-                  if (active) setPersonnelAttentionLoading(false);
-                }
-              }
-            })(),
             (async () => {
               if (
                 loadedProfile.role === "teacher" ||
@@ -785,13 +752,11 @@ export default function PortalPage() {
                 setTeacherAssignmentsLoading(true);
                 setTeacherLearnersLoading(true);
                 setAdviserLearnersLoading(true);
-                setAdviserAttentionLoading(true);
                 try {
                   const [
                     assignmentResponse,
                     learnersResponse,
                     adviserResponse,
-                    attentionResponse,
                   ] = await Promise.all([
                     fetch("/api/academic/my-assignments", {
                       cache: "no-store",
@@ -800,20 +765,15 @@ export default function PortalPage() {
                     fetch("/api/academic/adviser-students", {
                       cache: "no-store",
                     }),
-                    fetch("/api/academic/adviser-attention", {
-                      cache: "no-store",
-                    }),
                   ]);
                   const [
                     assignmentResult,
                     learnersResult,
                     adviserResult,
-                    attentionResult,
                   ] = await Promise.all([
                     assignmentResponse.json().catch(() => ({})),
                     learnersResponse.json().catch(() => ({})),
                     adviserResponse.json().catch(() => ({})),
-                    attentionResponse.json().catch(() => ({})),
                   ]);
 
                   if (active && assignmentResponse.ok) {
@@ -837,23 +797,12 @@ export default function PortalPage() {
                     );
                     setAdviserMajors((adviserResult.majors ?? []) as string[]);
                   }
-                  if (active && attentionResponse.ok) {
-                    setAdviserAttention({
-                      schoolDate: attentionResult.schoolDate,
-                      isSchoolWeekday: attentionResult.isSchoolWeekday,
-                      alerts: (attentionResult.alerts ??
-                        []) as AdviserAttentionAlert[],
-                      totalAlertTypes: Number(
-                        attentionResult.totalAlertTypes ?? 0,
-                      ),
-                    });
-                  }
+
                 } finally {
                   if (active) {
                     setTeacherAssignmentsLoading(false);
                     setTeacherLearnersLoading(false);
                     setAdviserLearnersLoading(false);
-                    setAdviserAttentionLoading(false);
                   }
                 }
               }
@@ -943,6 +892,7 @@ export default function PortalPage() {
         );
       }
 
+      window.dispatchEvent(new Event("anhs-portal-updated"));
       setAdviserLearners((current) =>
         current.map((learner) =>
           learner.enrollment_id === enrollmentId
@@ -1016,7 +966,10 @@ export default function PortalPage() {
               summaryLoading={loading}
             />
             <TopVisitorsCard key={profile.id} />
-            <WorkspaceDirectory />
+            <details className="portal-tool-directory">
+              <summary><span><LayoutDashboard size={18} aria-hidden="true" /><strong>Browse all school tools</strong></span><ChevronRight size={17} aria-hidden="true" /></summary>
+              <WorkspaceDirectory />
+            </details>
 
             {profile.role !== "student" &&
               (personnelAttentionLoading ||
@@ -1388,7 +1341,7 @@ export default function PortalPage() {
                               : "real-attention-count clear"
                           }
                         >
-                          {adviserAttention.totalAlertTypes > 0
+                          {!attention.adviser && attention.error ? "Unable to check" : adviserAttention.totalAlertTypes > 0
                             ? `${adviserAttention.totalAlertTypes} to review`
                             : "All Clear"}
                         </span>
@@ -1398,6 +1351,10 @@ export default function PortalPage() {
                   {adviserAttentionLoading ? (
                     <div className="real-attention-loading">
                       Checking learner records, attendance, and grades…
+                    </div>
+                  ) : !attention.adviser && attention.error ? (
+                    <div className="real-attention-loading" role="alert">
+                      We could not check your advisory reminders. <button type="button" className="btn secondary" onClick={attention.refresh}>Try again</button>
                     </div>
                   ) : adviserAttention.alerts.length === 0 ? (
                     <div className="real-attention-clear">
@@ -1983,5 +1940,6 @@ export default function PortalPage() {
     </main>
   );
 }
+
 
 

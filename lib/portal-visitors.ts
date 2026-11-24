@@ -1,3 +1,4 @@
+export const PORTAL_VISITOR_LIMIT = 20;
 export type PortalVisitor = {
   rank: number;
   full_name: string;
@@ -27,7 +28,7 @@ export function normalizePortalVisitorsReport(value: unknown): PortalVisitorsRep
   const period_end = schoolDate(data.period_end);
   const tracking_started_on = schoolDate(data.tracking_started_on);
   if (Date.parse(period_end) - Date.parse(period_start) !== 29 * 86_400_000 || tracking_started_on > period_end || !Array.isArray(data.visitors)) throw new Error("Invalid report period.");
-  const visitors = data.visitors.slice(0, 10).map((raw, index): PortalVisitor => {
+  const visitors = data.visitors.slice(0, PORTAL_VISITOR_LIMIT).map((raw, index): PortalVisitor => {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("Invalid visitor.");
     const row = raw as Record<string, unknown>;
     if (row.rank !== index + 1 || typeof row.full_name !== "string" || !row.full_name.trim() ||
@@ -63,4 +64,5 @@ export async function portalVisitorsResponse(
     return error("Unable to load portal visitors. Please try again.", 502);
   }
 }
+
 

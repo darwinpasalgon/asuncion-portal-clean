@@ -1,5 +1,8 @@
 "use client";
 
+import PortalLoadingScreen from "@/components/portal/portal-loading";
+import { PORTAL_LABEL } from "@/lib/portal-brand";
+
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -97,25 +100,7 @@ export default function LoginPage() {
     }
   }
 
-  if (checkingSession) {
-    return (
-      <main className={styles.pageCompact}>
-        <div className={styles.authShell}>
-          <div className={styles.authHeader}>
-            <img src="/school-logo.png" alt="" />
-            <div>
-              <strong>ASUNCION NHS</strong>
-              <span>Academic Portal</span>
-            </div>
-          </div>
-          <div className={styles.authCard}>
-            <h1>Opening Your Portal...</h1>
-            <p>Checking your saved sign-in securely.</p>
-          </div>
-        </div>
-      </main>
-    );
-  }
+  if (checkingSession) return <PortalLoadingScreen detail="Checking your saved sign-in." />;
 
   return (
     <main className={styles.page}>
@@ -162,7 +147,7 @@ export default function LoginPage() {
           </div>
 
           <div className={styles.intro}>
-            <span className={styles.demoPill}>ACADEMIC PORTAL · VERSION 2</span>
+            <span className={styles.demoPill}>{PORTAL_LABEL}</span>
             <h2>Welcome Back</h2>
             <p>
               Students sign in with their 12-digit LRN. Personnel sign in with
@@ -249,4 +234,5 @@ export default function LoginPage() {
     </main>
   );
 }
+
 

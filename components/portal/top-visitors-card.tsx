@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RefreshCw, Trophy } from "lucide-react";
+import { ChevronDown, RefreshCw, Trophy } from "lucide-react";
 import type { PortalVisitorsReport } from "@/lib/portal-visitors";
 import styles from "./top-visitors-card.module.css";
 
@@ -60,46 +60,42 @@ export default function TopVisitorsCard() {
     };
   }, [refresh]);
 
+  return <TopVisitorsView report={report} loading={loading} error={error} onRefresh={() => setRefresh(value => value + 1)} />;
+}
+
+export function TopVisitorsView({ report, loading, error, onRefresh }: {
+  report: PortalVisitorsReport | null; loading: boolean; error: string; onRefresh: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const visitors = report?.visitors ?? [];
+  const visible = expanded ? visitors : visitors.slice(0, 5);
   return (
     <section className={styles.card} aria-labelledby="portal-visitors-heading" aria-busy={loading}>
       <header className={styles.header}>
         <div className={styles.heading}>
-          <span className={styles.icon}><Trophy size={21} aria-hidden="true" /></span>
-          <div>
-            <h2 id="portal-visitors-heading">Top 10 Portal Visitors</h2>
-            <p>Our school community · Last 30 days</p>
-          </div>
+          <span className={styles.icon}><Trophy size={20} aria-hidden="true" /></span>
+          <div><h2 id="portal-visitors-heading">Top 20 Portal Visitors</h2><p>School community · Last 30 days</p></div>
         </div>
-        <button type="button" className={styles.refresh} disabled={loading}
-          onClick={() => setRefresh(value => value + 1)} aria-label="Refresh top visitors">
-          <RefreshCw size={15} aria-hidden="true" className={loading ? styles.spinning : undefined} />
-          Refresh
+        <button type="button" className={styles.refresh} disabled={loading} onClick={onRefresh} aria-label="Refresh top visitors">
+          <RefreshCw size={15} aria-hidden="true" className={loading ? styles.spinning : undefined} /><span>Refresh</span>
         </button>
       </header>
-
       {error && <p className={styles.error} role="alert">{error}</p>}
       {!report && loading && <p className={styles.empty} role="status">Loading portal visitors…</p>}
-      {report && report.visitors.length === 0 && <p className={styles.empty}>Names will appear as members visit the portal.</p>}
-      {report && report.visitors.length > 0 && (
-        <ol className={styles.list}>
-          {report.visitors.map(visitor => (
-            <li key={visitor.rank} className={visitor.is_you ? styles.you : undefined}>
-              <span className={styles.rank} aria-label={"Rank " + visitor.rank}>{visitor.rank}</span>
-              <div className={styles.name}>
-                <strong>{visitor.full_name}</strong>
-                {visitor.is_you && <span className={styles.youBadge}>You</span>}
-              </div>
-              <div className={styles.count}>
-                <strong>{visitor.visit_days}</strong>
-                <span>{visitor.visit_days === 1 ? "day" : "days"}</span>
-              </div>
-            </li>
-          ))}
-        </ol>
-      )}
+      {report && !visitors.length && <p className={styles.empty}>Names will appear as members visit the portal.</p>}
+      {visitors.length > 0 && <ol className={styles.list} id="portal-visitors-list">
+        {visible.map(visitor => <li key={visitor.rank} className={visitor.is_you ? styles.you : undefined}>
+          <span className={styles.rank} aria-label={"Rank " + visitor.rank}>{visitor.rank}</span>
+          <div className={styles.name}><strong>{visitor.full_name}</strong>{visitor.is_you && <span className={styles.youBadge}>You</span>}</div>
+          <div className={styles.count}><strong>{visitor.visit_days}</strong><span>{visitor.visit_days === 1 ? "day" : "days"}</span></div>
+        </li>)}
+      </ol>}
+      {visitors.length > 5 && <button type="button" className={styles.expand} onClick={() => setExpanded(value => !value)} aria-expanded={expanded} aria-controls="portal-visitors-list">
+        {expanded ? "Show less" : "View all " + visitors.length + " visitors"}<ChevronDown size={15} aria-hidden="true" className={expanded ? styles.rotated : undefined} />
+      </button>}
       <footer className={styles.footer}>
         <span>One visit per person per day. Equal totals are listed alphabetically.</span>
-        {report && <span>All-user tracking started {displayDate(report.tracking_started_on)}.</span>}
+        {report && <span>Tracking since {displayDate(report.tracking_started_on)}.</span>}
       </footer>
     </section>
   );
