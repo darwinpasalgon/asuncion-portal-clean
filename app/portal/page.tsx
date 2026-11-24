@@ -1,6 +1,7 @@
 "use client";
 
 import LearningLaunchpad from "@/components/learning/learning-launchpad";
+import TopVisitorsCard from "@/components/portal/top-visitors-card";
 
 import { gradeLabel } from "@/lib/grade-label";
 import { electiveGroupLabel } from "@/lib/shs-stem-groups";
@@ -1014,6 +1015,7 @@ export default function PortalPage() {
               gradeLevelHead={gradeLevelHead}
               summaryLoading={loading}
             />
+            <TopVisitorsCard key={profile.id} />
             <WorkspaceDirectory />
 
             {profile.role !== "student" &&
@@ -1981,4 +1983,5 @@ export default function PortalPage() {
     </main>
   );
 }
+
 
