@@ -263,6 +263,7 @@ export default function PortalShell({ children }: { children: ReactNode }) {
     <PortalContext.Provider value={{ session, groups, communityUnread }}>
       <SidebarProvider
         className={styles.shell}
+        data-portal-version="2"
         style={{ "--sidebar-width": "17.5rem" } as React.CSSProperties}
       >
         <PortalFrame>{children}</PortalFrame>
@@ -283,6 +284,7 @@ function PortalFrame({ children }: { children: ReactNode }) {
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     academics: true,
+    learning: true,
   });
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState("");
@@ -291,6 +293,12 @@ function PortalFrame({ children }: { children: ReactNode }) {
   const searchButton = useRef<HTMLButtonElement>(null);
   const current = activePortalFeature(groups, pathname, params.toString());
   const searchGroups = searchPortalFeatures(groups, query);
+  const dockIds = profile.role === "staff_administrator"
+    ? ["home", "community", "profile"]
+    : ["home", profile.role === "student" ? "resources" : "ilaw", "aral-support"];
+  const dockItems = groups.flatMap(group => group.items)
+    .filter(item => dockIds.includes(item.id))
+    .sort((a, b) => dockIds.indexOf(a.id) - dockIds.indexOf(b.id));
 
   useEffect(() => {
     const shortcut = (event: KeyboardEvent) => {
@@ -322,6 +330,8 @@ function PortalFrame({ children }: { children: ReactNode }) {
 
   const navigate = useCallback(
     (href: string) => {
+      const beforeNavigation = new CustomEvent("anhs-before-navigate", { cancelable: true, detail: { href } });
+      if (!window.dispatchEvent(beforeNavigation)) return;
       setOpenMobile(false);
       setSearchOpen(false);
       setQuery("");
@@ -538,6 +548,7 @@ function PortalFrame({ children }: { children: ReactNode }) {
             <span>{current?.item.label ?? "School Tools"}</span>
           </div>
           <div className={styles.topActions}>
+            <span className={styles.versionPill}>PORTAL 2</span>
             <Dialog
               open={searchOpen}
               onOpenChange={(open) => {
@@ -639,7 +650,12 @@ function PortalFrame({ children }: { children: ReactNode }) {
         >
           {children}
         </div>
+        <nav className={styles.mobileDock} aria-label="Mobile quick access">
+          {dockItems.map(item => <a key={item.id} href={item.href} aria-current={current?.item.id === item.id ? "page" : undefined}><FeatureIcon name={item.icon} size={20}/><span>{item.id === "home" ? "Home" : item.id === "ilaw" ? "ILAW" : item.id === "aral-support" ? "ARAL" : item.id === "resources" ? "Learn" : item.id === "community" ? "Chat" : "Profile"}</span></a>)}
+          <button onClick={() => setOpenMobile(true)} aria-label="Open all school tools"><FeatureIcon name="settings" size={20}/><span>More</span></button>
+        </nav>
       </div>
     </div>
   );
 }
+

@@ -137,12 +137,16 @@ export default function LoginPage() {
             <GraduationCap size={16} />
             School Year 2026–2027
           </span>
-          <h1>Learning starts with being connected.</h1>
+          <h1>A place to learn. Room to grow.</h1>
           <p>
             One secure place for students, teachers, and school administrators
             to access academic information and school resources.
           </p>
-
+          <div className={styles.portalHighlights} aria-label="Learning tools">
+            <div><small>01 · EXPLORE</small><strong>Lessons and resources</strong></div>
+            <div><small>02 · PLAN</small><strong>ILAW lesson planning</strong></div>
+            <div><small>03 · GROW</small><strong>ARAL learning support</strong></div>
+          </div>
         </div>
 
       </section>
@@ -158,11 +162,11 @@ export default function LoginPage() {
           </div>
 
           <div className={styles.intro}>
-            <span className={styles.demoPill}>PORTAL ACCESS</span>
+            <span className={styles.demoPill}>ACADEMIC PORTAL · VERSION 2</span>
             <h2>Welcome Back</h2>
             <p>
-              Students sign in with their LRN. Teachers and staff sign in with
-              their registered email address.
+              Students sign in with their 12-digit LRN. Personnel sign in with
+              their DepEd email address.
             </p>
           </div>
 
@@ -175,6 +179,8 @@ export default function LoginPage() {
                   name="identifier"
                   type="text"
                   autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   placeholder="Student LRN or staff email"
                   aria-label="LRN or Email Address"
                   disabled={loading}
@@ -217,7 +223,7 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {error && <p className={styles.error}>{error}</p>}
+            {error && <p className={styles.error} role="alert">{error}</p>}
 
             <button
               type="submit"
@@ -243,3 +249,4 @@ export default function LoginPage() {
     </main>
   );
 }
+

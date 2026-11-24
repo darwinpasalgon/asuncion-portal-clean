@@ -1,5 +1,7 @@
 "use client";
 
+import LearningLaunchpad from "@/components/learning/learning-launchpad";
+
 import { gradeLabel } from "@/lib/grade-label";
 import { electiveGroupLabel } from "@/lib/shs-stem-groups";
 
@@ -394,6 +396,8 @@ function DashboardHome({
         </div>
         <span className="real-dashboard-role">{displayRole}</span>
       </div>
+
+      <LearningLaunchpad role={profile.role} />
 
       {(profile.role === "administrator" ||
         (profile.role === "staff_administrator" &&
@@ -1977,3 +1981,4 @@ export default function PortalPage() {
     </main>
   );
 }
+
